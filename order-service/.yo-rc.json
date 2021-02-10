@@ -1,0 +1,12 @@
+{
+  "generator-springboot": {
+    "appName": "order-service",
+    "packageName": "com.example.orderservice",
+    "databaseType": "postgresql",
+    "dbMigrationTool": "flywaydb",
+    "features": [],
+    "buildTool": "maven",
+    "packageFolder": "com/example/orderservice",
+    "flywayMigrationCounter": 2
+  }
+}

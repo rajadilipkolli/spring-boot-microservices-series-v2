@@ -1,0 +1,12 @@
+{
+  "generator-springboot": {
+    "appName": "catalogservice",
+    "packageName": "com.example.catalogservice",
+    "databaseType": "postgresql",
+    "dbMigrationTool": "flywaydb",
+    "features": [],
+    "buildTool": "maven",
+    "packageFolder": "com/example/catalogservice",
+    "flywayMigrationCounter": 2
+  }
+}

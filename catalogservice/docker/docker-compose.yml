@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+
+  postgresqldb:
+    image: postgres:12.3
+    environment:
+      - POSTGRES_USER=siva
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    ports:
+      - "5432:5432"
+

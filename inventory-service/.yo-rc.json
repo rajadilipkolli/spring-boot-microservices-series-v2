@@ -1,0 +1,12 @@
+{
+  "generator-springboot": {
+    "appName": "inventory-service",
+    "packageName": "com.example.inventoryservice",
+    "databaseType": "postgresql",
+    "dbMigrationTool": "liquibase",
+    "features": [],
+    "buildTool": "maven",
+    "packageFolder": "com/example/inventoryservice",
+    "liquibaseMigrationCounter": 2
+  }
+}
