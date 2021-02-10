@@ -1,7 +1,8 @@
 package com.example.catalogservice.web.controllers;
 
-import com.example.catalogservice.entities.Catalog;
-import com.example.catalogservice.services.CatalogService;
+import com.example.catalogservice.dtos.ProductDto;
+import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.services.ProductService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,54 +22,54 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/catalog")
 @Slf4j
-public class CatalogController {
+public class ProductController {
 
-    private final CatalogService catalogService;
+    private final ProductService productService;
 
     @Autowired
-    public CatalogController(CatalogService catalogService) {
-        this.catalogService = catalogService;
+    public ProductController(ProductService productService) {
+        this.productService = productService;
     }
 
     @GetMapping
-    public List<Catalog> getAllCatalogs() {
-        return catalogService.findAllCatalogs();
+    public List<Product> getAllProducts() {
+        return productService.findAllProducts();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Catalog> getCatalogById(@PathVariable Long id) {
-        return catalogService
-                .findCatalogById(id)
+    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+        return productService
+                .findProductById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Catalog createCatalog(@RequestBody @Validated Catalog catalog) {
-        return catalogService.saveCatalog(catalog);
+    public Product createProduct(@RequestBody @Validated ProductDto productDto) {
+        return productService.saveProduct(productDto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Catalog> updateCatalog(
-            @PathVariable Long id, @RequestBody Catalog catalog) {
-        return catalogService
-                .findCatalogById(id)
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long id, @RequestBody Product product) {
+        return productService
+                .findProductById(id)
                 .map(
                         catalogObj -> {
-                            catalog.setId(id);
-                            return ResponseEntity.ok(catalogService.saveCatalog(catalog));
+                            product.setId(id);
+                            return ResponseEntity.ok(productService.updateProduct(product));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Catalog> deleteCatalog(@PathVariable Long id) {
-        return catalogService
-                .findCatalogById(id)
+    public ResponseEntity<Product> deleteProduct(@PathVariable Long id) {
+        return productService
+                .findProductById(id)
                 .map(
                         catalog -> {
-                            catalogService.deleteCatalogById(id);
+                            productService.deleteProductById(id);
                             return ResponseEntity.ok(catalog);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
