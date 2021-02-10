@@ -1,6 +1,6 @@
 package com.example.orderservice.web.controllers;
 
-import com.example.orderservice.entities.Order;
+import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -31,12 +31,12 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<Order> getAllOrders() {
+    public List<OrderDto> getAllOrders() {
         return orderService.findAllOrders();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
         return orderService
                 .findOrderById(id)
                 .map(ResponseEntity::ok)
@@ -45,24 +45,25 @@ public class OrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Order createOrder(@RequestBody @Validated Order order) {
-        return orderService.saveOrder(order);
+    public OrderDto createOrder(@RequestBody @Validated OrderDto orderDto) {
+        return orderService.saveOrder(orderDto);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order order) {
+    public ResponseEntity<OrderDto> updateOrder(
+            @PathVariable Long id, @RequestBody OrderDto orderDto) {
         return orderService
                 .findOrderById(id)
                 .map(
                         orderObj -> {
-                            order.setId(id);
-                            return ResponseEntity.ok(orderService.saveOrder(order));
+                            orderDto.setOrderId(id);
+                            return ResponseEntity.ok(orderService.saveOrder(orderDto));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Order> deleteOrder(@PathVariable Long id) {
+    public ResponseEntity<OrderDto> deleteOrder(@PathVariable Long id) {
         return orderService
                 .findOrderById(id)
                 .map(
