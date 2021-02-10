@@ -1,6 +1,8 @@
 package com.example.inventoryservice.services;
 
+import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
@@ -14,9 +16,13 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
 
+    private final InventoryMapper inventoryMapper;
+
     @Autowired
-    public InventoryService(InventoryRepository inventoryRepository) {
+    public InventoryService(
+            InventoryRepository inventoryRepository, InventoryMapper inventoryMapper) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryMapper = inventoryMapper;
     }
 
     public List<Inventory> findAllInventorys() {
@@ -27,11 +33,21 @@ public class InventoryService {
         return inventoryRepository.findById(id);
     }
 
-    public Inventory saveInventory(Inventory inventory) {
+    public Inventory saveInventory(InventoryDto inventoryDto) {
+
+        Inventory inventory = this.inventoryMapper.toEntity(inventoryDto);
         return inventoryRepository.save(inventory);
     }
 
     public void deleteInventoryById(Long id) {
         inventoryRepository.deleteById(id);
+    }
+
+    public Inventory updateInventory(Inventory inventory) {
+        return inventoryRepository.save(inventory);
+    }
+
+    public Optional<Inventory> findInventoryByProductCode(String productCode) {
+        return this.inventoryRepository.findByProductCode(productCode);
     }
 }

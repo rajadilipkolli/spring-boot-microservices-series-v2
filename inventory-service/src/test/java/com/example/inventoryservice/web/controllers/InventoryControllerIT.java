@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.inventoryservice.common.AbstractIntegrationTest;
+import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.ArrayList;
@@ -31,9 +32,9 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         inventoryRepository.deleteAll();
 
         inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "First Inventory"));
-        inventoryList.add(new Inventory(2L, "Second Inventory"));
-        inventoryList.add(new Inventory(3L, "Third Inventory"));
+        inventoryList.add(new Inventory(1L, "First Inventory", 5));
+        inventoryList.add(new Inventory(2L, "Second Inventory", 6));
+        inventoryList.add(new Inventory(3L, "Third Inventory", 7));
         inventoryList = inventoryRepository.saveAll(inventoryList);
     }
 
@@ -46,31 +47,31 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void shouldFindInventoryById() throws Exception {
+    void shouldFindInventoryByProductCode() throws Exception {
         Inventory inventory = inventoryList.get(0);
-        Long inventoryId = inventory.getId();
+        String productCode = inventory.getProductCode();
 
         this.mockMvc
-                .perform(get("/api/inventory/{id}", inventoryId))
+                .perform(get("/api/inventory/{productCode}", productCode))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
     void shouldCreateNewInventory() throws Exception {
-        Inventory inventory = new Inventory(null, "New Inventory");
+        InventoryDto inventory = new InventoryDto("New Inventory", 10);
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
-    void shouldReturn400WhenCreateNewInventoryWithoutText() throws Exception {
-        Inventory inventory = new Inventory(null, null);
+    void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
+        InventoryDto inventory = new InventoryDto(null, 0);
 
         this.mockMvc
                 .perform(
@@ -86,15 +87,15 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("text")))
-                .andExpect(jsonPath("$.violations[0].message", is("Text cannot be empty")))
+                .andExpect(jsonPath("$.violations[0].field", is("productCode")))
+                .andExpect(jsonPath("$.violations[0].message", is("ProductCode can't be blank")))
                 .andReturn();
     }
 
     @Test
     void shouldUpdateInventory() throws Exception {
         Inventory inventory = inventoryList.get(0);
-        inventory.setText("Updated Inventory");
+        inventory.setProductCode("Updated Inventory");
 
         this.mockMvc
                 .perform(
@@ -102,7 +103,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
@@ -112,6 +113,6 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 }

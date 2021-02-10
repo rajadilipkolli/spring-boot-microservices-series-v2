@@ -1,5 +1,6 @@
 package com.example.inventoryservice.web.controllers;
 
+import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.services.InventoryService;
 import java.util.List;
@@ -35,18 +36,18 @@ public class InventoryController {
         return inventoryService.findAllInventorys();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Inventory> getInventoryById(@PathVariable Long id) {
+    @GetMapping("/{productCode}")
+    public ResponseEntity<Inventory> getInventoryByProductCode(@PathVariable String productCode) {
         return inventoryService
-                .findInventoryById(id)
+                .findInventoryByProductCode(productCode)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Inventory createInventory(@RequestBody @Validated Inventory inventory) {
-        return inventoryService.saveInventory(inventory);
+    public Inventory createInventory(@RequestBody @Validated InventoryDto inventoryDto) {
+        return inventoryService.saveInventory(inventoryDto);
     }
 
     @PutMapping("/{id}")
@@ -57,7 +58,7 @@ public class InventoryController {
                 .map(
                         inventoryObj -> {
                             inventory.setId(id);
-                            return ResponseEntity.ok(inventoryService.saveInventory(inventory));
+                            return ResponseEntity.ok(inventoryService.updateInventory(inventory));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

@@ -10,21 +10,21 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public class DBContainerInitializer
         implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-    private static final PostgreSQLContainer<?> sqlContainer =
-            new PostgreSQLContainer<>("postgres:12.3")
+    public static final PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
+            new PostgreSQLContainer<>("postgres:latest")
                     .withDatabaseName("integration-tests-db")
                     .withUsername("username")
                     .withPassword("password");
 
     static {
-        sqlContainer.start();
+        POSTGRE_SQL_CONTAINER.start();
     }
 
     public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
         TestPropertyValues.of(
-                        "spring.datasource.url=" + sqlContainer.getJdbcUrl(),
-                        "spring.datasource.username=" + sqlContainer.getUsername(),
-                        "spring.datasource.password=" + sqlContainer.getPassword())
+                        "spring.datasource.url=" + POSTGRE_SQL_CONTAINER.getJdbcUrl(),
+                        "spring.datasource.username=" + POSTGRE_SQL_CONTAINER.getUsername(),
+                        "spring.datasource.password=" + POSTGRE_SQL_CONTAINER.getPassword())
                 .applyTo(configurableApplicationContext.getEnvironment());
     }
 }

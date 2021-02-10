@@ -7,7 +7,6 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,7 +28,9 @@ public class Inventory {
             allocationSize = 100)
     private Long id;
 
-    @Column(nullable = false)
-    @NotEmpty(message = "Text cannot be empty")
-    private String text;
+    @Column(name = "product_code", nullable = false, unique = true)
+    private String productCode;
+
+    @Column(name = "quantity")
+    private Integer availableQuantity = 0;
 }

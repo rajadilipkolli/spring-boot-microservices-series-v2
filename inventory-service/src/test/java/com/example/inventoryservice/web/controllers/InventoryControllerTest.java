@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.services.InventoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,9 +47,9 @@ class InventoryControllerTest {
     @BeforeEach
     void setUp() {
         this.inventoryList = new ArrayList<>();
-        this.inventoryList.add(new Inventory(1L, "text 1"));
-        this.inventoryList.add(new Inventory(2L, "text 2"));
-        this.inventoryList.add(new Inventory(3L, "text 3"));
+        this.inventoryList.add(new Inventory(1L, "text 1", 1));
+        this.inventoryList.add(new Inventory(2L, "text 2", 2));
+        this.inventoryList.add(new Inventory(3L, "text 3", 3));
 
         objectMapper.registerModule(new ProblemModule());
         objectMapper.registerModule(new ConstraintViolationProblemModule());
@@ -65,15 +66,16 @@ class InventoryControllerTest {
     }
 
     @Test
-    void shouldFindInventoryById() throws Exception {
-        Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "text 1");
-        given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
+    void shouldFindInventoryByProductCode() throws Exception {
+        String productCode = "text 1";
+        Inventory inventory = new Inventory(1L, "text 1", 1);
+        given(inventoryService.findInventoryByProductCode(productCode))
+                .willReturn(Optional.of(inventory));
 
         this.mockMvc
-                .perform(get("/api/inventory/{id}", inventoryId))
+                .perform(get("/api/inventory/{productCode}", productCode))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
@@ -88,23 +90,23 @@ class InventoryControllerTest {
 
     @Test
     void shouldCreateNewInventory() throws Exception {
-        given(inventoryService.saveInventory(any(Inventory.class)))
-                .willAnswer((invocation) -> invocation.getArgument(0));
+        Inventory inventory = new Inventory(1L, "some text", 1);
+        given(inventoryService.saveInventory(any(InventoryDto.class))).willReturn(inventory);
 
-        Inventory inventory = new Inventory(1L, "some text");
+        InventoryDto inventoryDto = new InventoryDto("some text", 1);
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
-    void shouldReturn400WhenCreateNewInventoryWithoutText() throws Exception {
-        Inventory inventory = new Inventory(null, null);
+    void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
+        InventoryDto inventory = new InventoryDto(null, 0);
 
         this.mockMvc
                 .perform(
@@ -120,17 +122,17 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("text")))
-                .andExpect(jsonPath("$.violations[0].message", is("Text cannot be empty")))
+                .andExpect(jsonPath("$.violations[0].field", is("productCode")))
+                .andExpect(jsonPath("$.violations[0].message", is("ProductCode can't be blank")))
                 .andReturn();
     }
 
     @Test
     void shouldUpdateInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Updated text");
+        Inventory inventory = new Inventory(inventoryId, "Updated text", 30);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        given(inventoryService.saveInventory(any(Inventory.class)))
+        given(inventoryService.updateInventory(any(Inventory.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
         this.mockMvc
@@ -139,14 +141,14 @@ class InventoryControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.empty());
-        Inventory inventory = new Inventory(inventoryId, "Updated text");
+        Inventory inventory = new Inventory(inventoryId, "Updated text", 8);
 
         this.mockMvc
                 .perform(
@@ -159,14 +161,14 @@ class InventoryControllerTest {
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Some text");
+        Inventory inventory = new Inventory(inventoryId, "Some text", 5);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
         doNothing().when(inventoryService).deleteInventoryById(inventory.getId());
 
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(inventory.getText())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }
 
     @Test
