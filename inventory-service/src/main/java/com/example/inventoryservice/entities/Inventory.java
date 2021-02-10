@@ -24,9 +24,9 @@ public class Inventory {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inventory_id_generator")
     @SequenceGenerator(
-        name = "inventory_id_generator",
-        sequenceName = "inventory_id_seq",
-        allocationSize = 100)
+            name = "inventory_id_generator",
+            sequenceName = "inventory_id_seq",
+            allocationSize = 100)
     private Long id;
 
     @Column(nullable = false)

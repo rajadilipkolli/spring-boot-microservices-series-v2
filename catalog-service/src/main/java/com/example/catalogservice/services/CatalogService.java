@@ -1,7 +1,7 @@
 package com.example.catalogservice.services;
 
-import com.mycompany.myservice.entities.Customer;
-import com.mycompany.myservice.repositories.CustomerRepository;
+import com.example.catalogservice.entities.Catalog;
+import com.example.catalogservice.repositories.CatalogRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;

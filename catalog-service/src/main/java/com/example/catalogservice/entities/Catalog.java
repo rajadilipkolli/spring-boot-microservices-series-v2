@@ -24,9 +24,9 @@ public class Catalog {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "catalog_id_generator")
     @SequenceGenerator(
-        name = "catalog_id_generator",
-        sequenceName = "catalog_id_seq",
-        allocationSize = 100)
+            name = "catalog_id_generator",
+            sequenceName = "catalog_id_seq",
+            allocationSize = 100)
     private Long id;
 
     @Column(nullable = false)

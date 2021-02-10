@@ -1,7 +1,7 @@
 package com.example.inventoryservice.web.controllers;
 
-import com.mycompany.myservice.entities.Customer;
-import com.mycompany.myservice.services.CustomerService;
+import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.services.InventoryService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

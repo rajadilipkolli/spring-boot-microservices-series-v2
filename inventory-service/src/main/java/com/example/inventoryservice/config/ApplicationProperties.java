@@ -5,5 +5,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Data
 @ConfigurationProperties("application")
-public class ApplicationProperties {
-}
+public class ApplicationProperties {}

@@ -24,9 +24,9 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_id_generator")
     @SequenceGenerator(
-        name = "order_id_generator",
-        sequenceName = "order_id_seq",
-        allocationSize = 100)
+            name = "order_id_generator",
+            sequenceName = "order_id_seq",
+            allocationSize = 100)
     private Long id;
 
     @Column(nullable = false)

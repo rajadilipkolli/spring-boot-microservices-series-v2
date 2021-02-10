@@ -1,7 +1,7 @@
 package com.example.orderservice.web.controllers;
 
-import com.mycompany.myservice.entities.Customer;
-import com.mycompany.myservice.services.CustomerService;
+import com.example.orderservice.entities.Order;
+import com.example.orderservice.services.OrderService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,8 +50,7 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(
-            @PathVariable Long id, @RequestBody Order order) {
+    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order order) {
         return orderService
                 .findOrderById(id)
                 .map(

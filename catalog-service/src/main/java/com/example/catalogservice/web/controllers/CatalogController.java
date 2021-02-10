@@ -1,7 +1,7 @@
 package com.example.catalogservice.web.controllers;
 
-import com.mycompany.myservice.entities.Customer;
-import com.mycompany.myservice.services.CustomerService;
+import com.example.catalogservice.entities.Catalog;
+import com.example.catalogservice.services.CatalogService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -14,9 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.catalogservice.entities.Catalog;
 import com.example.catalogservice.services.CatalogService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -81,9 +81,7 @@ class CatalogControllerTest {
         Long catalogId = 1L;
         given(catalogService.findCatalogById(catalogId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(get("/api/catalog/{id}", catalogId))
-                .andExpect(status().isNotFound());
+        this.mockMvc.perform(get("/api/catalog/{id}", catalogId)).andExpect(status().isNotFound());
     }
 
     @Test

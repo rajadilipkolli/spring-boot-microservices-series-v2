@@ -14,9 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.services.OrderService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -81,9 +81,7 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(get("/api/orders/{id}", orderId))
-                .andExpect(status().isNotFound());
+        this.mockMvc.perform(get("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -174,8 +172,6 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(delete("/api/orders/{id}", orderId))
-                .andExpect(status().isNotFound());
+        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
     }
 }
