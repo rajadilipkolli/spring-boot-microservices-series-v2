@@ -3,6 +3,7 @@ package com.example.catalogservice.web.controllers;
 import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,10 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    //    @Retry(name = "product-api", fallbackMethod = "hardcodedResponse")
+    //  	@CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+    //  	@RateLimiter(name="default")
+    @Bulkhead(name = "product-api")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         return productService
                 .findProductById(id)

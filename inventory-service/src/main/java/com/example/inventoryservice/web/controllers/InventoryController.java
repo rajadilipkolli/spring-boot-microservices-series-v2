@@ -3,6 +3,7 @@ package com.example.inventoryservice.web.controllers;
 import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.services.InventoryService;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,10 @@ public class InventoryController {
     }
 
     @GetMapping("/{productCode}")
+    // @Retry(name = "inventory-api", fallbackMethod = "hardcodedResponse")
+    // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+    @RateLimiter(name = "default")
+    // @Bulkhead(name = "inventory-api")
     public ResponseEntity<Inventory> getInventoryByProductCode(@PathVariable String productCode) {
         return inventoryService
                 .findInventoryByProductCode(productCode)

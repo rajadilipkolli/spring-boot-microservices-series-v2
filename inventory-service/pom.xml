@@ -67,6 +67,15 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-spring-boot2</artifactId>
+		</dependency>
 		<!-- To fix Spring Cloud LoadBalancer is currently working with the default 
 			cache. You can switch to using Caffeine cache, by adding it -->
 		<dependency>

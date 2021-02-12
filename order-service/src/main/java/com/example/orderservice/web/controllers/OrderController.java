@@ -2,8 +2,8 @@ package com.example.orderservice.web.controllers;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
-@Slf4j
 public class OrderController {
 
     private final OrderService orderService;
@@ -36,11 +35,19 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    // @Retry(name = "order-api", fallbackMethod = "hardcodedResponse")
+    @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+    // @RateLimiter(name="default")
+    // @Bulkhead(name = "order-api")
     public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
         return orderService
                 .findOrderById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+        return ResponseEntity.ok("fallback-response for id : " + id);
     }
 
     @PostMapping
