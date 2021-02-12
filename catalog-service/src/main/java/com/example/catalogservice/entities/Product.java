@@ -22,9 +22,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Product implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_id_generator")
     @SequenceGenerator(
             name = "product_id_generator",

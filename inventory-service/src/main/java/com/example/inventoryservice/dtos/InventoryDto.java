@@ -10,9 +10,9 @@ import lombok.Data;
 @AllArgsConstructor
 public class InventoryDto implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@NotBlank(message = "ProductCode can't be blank")
+    @NotBlank(message = "ProductCode can't be blank")
     private String productCode;
 
     @PositiveOrZero(message = "Quantity can't be negative")
