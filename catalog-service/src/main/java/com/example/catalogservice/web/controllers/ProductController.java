@@ -4,7 +4,6 @@ import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/catalog")
-@Slf4j
 public class ProductController {
 
     private final ProductService productService;
