@@ -13,6 +13,7 @@
 	<name>spring-boot-microservices-series-v2</name>
 
 	<modules>
+		<module>config-server</module>
 		<module>catalog-service</module>
 		<module>inventory-service</module>
 		<module>order-service</module>

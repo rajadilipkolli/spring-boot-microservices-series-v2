@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.catalogservice.common.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 
-class CatalogApplicationIntegrationTest extends AbstractIntegrationTest {
+class CatalogServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {

@@ -7,9 +7,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
-public class CatalogApplication {
+public class CatalogServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(CatalogApplication.class, args);
+        SpringApplication.run(CatalogServiceApplication.class, args);
     }
 }
