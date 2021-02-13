@@ -1,4 +1,4 @@
-FROM openjdk:11-jdk-slim
+FROM openjdk:15-jdk-slim
 VOLUME /tmp
 ADD target/config-server-1.0.0-SNAPSHOT.jar app.jar
 RUN sh -c 'touch /app.jar'

@@ -1,6 +1,6 @@
 FROM openjdk:15-jdk-slim
 VOLUME /tmp
-ADD target/inventory-service-0.0.1-SNAPSHOT.jar app.jar
+ADD target/api-gateway-0.0.1-SNAPSHOT.jar app.jar
 RUN sh -c 'touch /app.jar'
 ENV JAVA_OPTS="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8787,suspend=n"
 ENV SPRING_PROFILES_ACTIVE "default"

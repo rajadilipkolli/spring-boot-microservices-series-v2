@@ -67,6 +67,8 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
+
+        <!-- Circuit Breaker -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
@@ -76,13 +78,29 @@
 			<groupId>io.github.resilience4j</groupId>
 			<artifactId>resilience4j-spring-boot2</artifactId>
 		</dependency>
-		<!-- To fix Spring Cloud LoadBalancer is currently working with the default 
+		<!-- To fix Spring Cloud LoadBalancer is currently working with the default
 			cache. You can switch to using Caffeine cache, by adding it -->
 		<dependency>
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
 		</dependency>
-		
+
+        <!-- Zipkin Server -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-sleuth</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-sleuth-zipkin</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit</artifactId>
+        </dependency>
+        <!-- end Zipkin Server -->
 		<dependency>
 			<groupId>org.zalando</groupId>
 			<artifactId>problem-spring-web-starter</artifactId>
@@ -187,6 +205,12 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <image>
+                        <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+                    </image>
+                    <pullPolicy>IF_NOT_PRESENT</pullPolicy>
+                </configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -386,7 +410,7 @@
 							<destFile>${jacoco.utReportFile}</destFile>
 						</configuration>
 					</execution>
-					<!-- Ensures that the code coverage report for unit tests is created 
+					<!-- Ensures that the code coverage report for unit tests is created
 						after unit tests have been run -->
 					<execution>
 						<id>post-unit-test</id>
@@ -409,7 +433,7 @@
 							<destFile>${jacoco.itReportFile}</destFile>
 						</configuration>
 					</execution>
-					<!-- Ensures that the code coverage report for integration tests is 
+					<!-- Ensures that the code coverage report for integration tests is
 						created after integration tests have been run -->
 					<execution>
 						<id>post-integration-tests</id>

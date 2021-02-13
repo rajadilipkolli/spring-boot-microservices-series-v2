@@ -1,0 +1,114 @@
+version: '3.7'
+
+services:
+  naming-server:
+    image: dockertmt/mmv2-service-registry:1.0.0-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "18761:8761"
+    networks:
+      - microservice-network
+
+  config-server:
+    image: dockertmt/mmv2-config-server:1.0.0-SNAPSHOT
+      mem_limit: 700m
+      ports:
+        - "18888:8888"
+      networks:
+        - microservice-network
+
+  api-gateway:
+    image: dockertmt/mmv2-api-gateway:1.0.0-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "18765:8765"
+    networks:
+      - microservice-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+      - zipkin-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  catalog-service:
+    image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "18080:18080"
+    networks:
+      - microservice-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+      - zipkin-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  inventory-service:
+    image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "18181:18181"
+    networks:
+      - microservice-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+      - zipkin-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  order-service:
+    image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "18282:18282"
+    networks:
+      - microservice-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+      - zipkin-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+  zipkin-server:
+    image: openzipkin/zipkin:2.23
+    mem_limit: 300m
+    ports:
+      - "9411:9411"
+    networks:
+      - microservice-network
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3.8.3-management
+    mem_limit: 300m
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservice-network
+
+  networks:
+    microservice-network:
