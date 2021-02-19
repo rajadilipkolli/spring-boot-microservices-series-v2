@@ -1,6 +1,38 @@
-version: '3.7'
+version: "3.7"
 
 services:
+  rabbitmq:
+    image: rabbitmq:3.8.3-management
+    mem_limit: 350m
+    expose:
+      - "5672"
+      - "15672"
+    ports:
+      - 5672:5672
+      - 15672:15672
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservice-network
+
+  zipkin:
+    image: openzipkin/zipkin
+    mem_limit: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microservice-network
+
   naming-server:
     image: dockertmt/mmv2-service-registry:1.0.0-SNAPSHOT
     mem_limit: 700m
@@ -11,11 +43,11 @@ services:
 
   config-server:
     image: dockertmt/mmv2-config-server:1.0.0-SNAPSHOT
-      mem_limit: 700m
-      ports:
-        - "18888:8888"
-      networks:
-        - microservice-network
+    mem_limit: 700m
+    ports:
+      - "18888:8888"
+    networks:
+      - microservice-network
 
   api-gateway:
     image: dockertmt/mmv2-api-gateway:1.0.0-SNAPSHOT
@@ -89,26 +121,5 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
 
-  zipkin-server:
-    image: openzipkin/zipkin:2.23
-    mem_limit: 300m
-    ports:
-      - "9411:9411"
-    networks:
-      - microservice-network
-    environment:
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-    depends_on:
-      - rabbitmq
-
-  rabbitmq:
-    image: rabbitmq:3.8.3-management
-    mem_limit: 300m
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - microservice-network
-
-  networks:
-    microservice-network:
+networks:
+  microservice-network:
