@@ -17,8 +17,6 @@
     <description>Centralized Configuration Server</description>
 
     <properties>
-        <maven.compiler.source>15</maven.compiler.source>
-        <maven.compiler.target>15</maven.compiler.target>
         <java.version>15</java.version>
         <spring-cloud.version>2020.0.1</spring-cloud.version>
     </properties>

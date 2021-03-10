@@ -35,3 +35,4 @@ build/
 ### Misc ###
 *.log
 .DS_Store
+order-service/LOG_FILE_IS_UNDEFINED

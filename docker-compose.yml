@@ -18,7 +18,7 @@ services:
     networks:
       - microservice-network
 
-  zipkin:
+  zipkin-server:
     image: openzipkin/zipkin
     mem_limit: 512m
     expose:
@@ -32,12 +32,26 @@ services:
         condition: service_healthy
     networks:
       - microservice-network
+      
+  postgresqldb:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=siva
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    ports:
+      - "5432:5432"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microservice-network
 
   naming-server:
     image: dockertmt/mmv2-service-registry:1.0.0-SNAPSHOT
     mem_limit: 700m
     ports:
-      - "18761:8761"
+      - "8761:8761"
     networks:
       - microservice-network
 
@@ -45,23 +59,24 @@ services:
     image: dockertmt/mmv2-config-server:1.0.0-SNAPSHOT
     mem_limit: 700m
     ports:
-      - "18888:8888"
+      - "8888:8888"
     networks:
       - microservice-network
 
   api-gateway:
-    image: dockertmt/mmv2-api-gateway:1.0.0-SNAPSHOT
+    image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
     mem_limit: 700m
     ports:
-      - "18765:8765"
+      - "8765:8765"
     networks:
       - microservice-network
     depends_on:
+      - config-server
       - naming-server
       - rabbitmq
       - zipkin-server
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
@@ -78,12 +93,14 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
+      - postgresqldb
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      SPRING_PROFILES_ACTIVE: prod
 
   inventory-service:
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
@@ -96,12 +113,14 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
+      - postgresqldb
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      SPRING_PROFILES_ACTIVE: local
 
   order-service:
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
@@ -114,12 +133,17 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
+      - postgresqldb
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:18761/eureka
-      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://naming-server:8761/eureka
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - RABBIT_URI= amqp://guest:guest@rabbitmq:5672
+      - SPRING_RABBITMQ_HOST= rabbitmq
+      - SPRING_ZIPKIN_SENDER_TYPE= rabbit
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresqldb:5432/appdb
+      - SPRING_DATASOURCE_USERNAME=siva
+      - SPRING_DATASOURCE_PASSWORD=secret
 
 networks:
   microservice-network:

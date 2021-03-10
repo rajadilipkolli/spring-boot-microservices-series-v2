@@ -12,17 +12,26 @@ public class ApiGatewayConfiguration {
     public RouteLocator gatewayRouter(RouteLocatorBuilder builder) {
         return builder.routes()
                 .route(
-                        p ->
-                                p.path("/get")
+                        routeSpec ->
+                                routeSpec
+                                        .path("/get")
                                         .filters(
-                                                f ->
-                                                        f.addRequestHeader("MyHeader", "MyURI")
+                                                filterSpec ->
+                                                        filterSpec
+                                                                .addRequestHeader(
+                                                                        "MyHeader", "MyURI")
                                                                 .addRequestParameter(
                                                                         "Param", "MyValue"))
                                         .uri("http://httpbin.org:80"))
-                .route(p -> p.path("/catalog-service/**").uri("lb://catalog-service"))
-                .route(p -> p.path("/inventory-service/**").uri("lb://inventory-service"))
-                .route(p -> p.path("/order-service/**").uri("lb://order-service"))
+                .route(
+                        routeSpec ->
+                                routeSpec.path("/catalog-service/**").uri("lb://catalog-service"))
+                .route(
+                        routeSpec ->
+                                routeSpec
+                                        .path("/inventory-service/**")
+                                        .uri("lb://inventory-service"))
+                .route(routeSpec -> routeSpec.path("/order-service/**").uri("lb://order-service"))
                 //				.route(p -> p.path("/ORDER-SERVICE-new/**")
                 //						.filters(f -> f.rewritePath(
                 //								"/ORDER-SERVICE-new/(?<segment>.*)",
