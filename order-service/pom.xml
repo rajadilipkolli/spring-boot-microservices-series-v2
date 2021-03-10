@@ -31,7 +31,7 @@
         <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
         <maven-pmd-plugin.version>3.13.0</maven-pmd-plugin.version>
         <spotless.version>2.9.0</spotless.version>
-        <dependency-check-maven.version>6.1.1</dependency-check-maven.version>
+        <dependency-check-maven.version>6.1.2</dependency-check-maven.version>
         <properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
         <fabric8-docker-maven.version>0.34.1</fabric8-docker-maven.version>
         <sonar-maven-plugin.version>3.8.0.2131</sonar-maven-plugin.version>
