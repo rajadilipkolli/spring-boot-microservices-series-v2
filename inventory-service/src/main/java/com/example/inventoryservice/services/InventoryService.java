@@ -25,7 +25,7 @@ public class InventoryService {
         this.inventoryMapper = inventoryMapper;
     }
 
-    public List<Inventory> findAllInventorys() {
+    public List<Inventory> findAllInventories() {
         return inventoryRepository.findAll();
     }
 

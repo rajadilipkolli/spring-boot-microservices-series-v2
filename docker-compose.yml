@@ -33,6 +33,7 @@ services:
     networks:
       - microservice-network
       
+
   postgresqldb:
     image: postgres:latest
     environment:
@@ -44,6 +45,15 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - microservice-network
+
+  mongo:
+    image: mongo
+    volumes:
+      - mongo-data:/data/db/mongo
+    ports:
+      - 27017:27017
     networks:
       - microservice-network
 
@@ -147,3 +157,6 @@ services:
 
 networks:
   microservice-network:
+
+volumes:
+  mongo-data:

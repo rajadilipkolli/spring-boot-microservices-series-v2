@@ -1,4 +1,4 @@
-package com.example.api.gateway;
+package com.example.api.gateway.data;
 
 import com.example.api.gateway.domain.User;
 import com.example.api.gateway.repository.UserRepository;
@@ -13,7 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
-/** @author hantsy */
+
 @Component
 @Slf4j
 @RequiredArgsConstructor

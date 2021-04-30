@@ -31,8 +31,8 @@ public class InventoryController {
     }
 
     @GetMapping
-    public List<Inventory> getAllInventorys() {
-        return inventoryService.findAllInventorys();
+    public List<Inventory> getAllInventories() {
+        return inventoryService.findAllInventories();
     }
 
     @GetMapping("/{productCode}")
