@@ -19,14 +19,15 @@ public class JwtTokenAuthenticationFilter implements WebFilter {
     private final JwtTokenProvider tokenProvider;
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain webFilterChain) {
         String token = resolveToken(exchange.getRequest());
         if (StringUtils.hasText(token) && this.tokenProvider.validateToken(token)) {
             Authentication authentication = this.tokenProvider.getAuthentication(token);
-            return chain.filter(exchange)
+            return webFilterChain
+                    .filter(exchange)
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
         }
-        return chain.filter(exchange);
+        return webFilterChain.filter(exchange);
     }
 
     private String resolveToken(ServerHttpRequest request) {

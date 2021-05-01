@@ -9,6 +9,8 @@ import lombok.ToString;
 @ToString
 class Error implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private final String path;
 
     private final String code;

@@ -13,3 +13,6 @@ http://localhost:8765/catalog-service/catalog-service/api/
 ### Discovery Disabled and Custom Routes Configured
 
 http://localhost:8765/catalog-service/api/
+
+### Swagger URL
+http://localhost:8765/swagger-ui.html

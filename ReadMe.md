@@ -12,6 +12,6 @@ docker-compose up
 
 To start silently use docker-compose -d up , which starts in detached mode
 
-To start infrastructure 
+### Starting infrastructure 
 
-docker-compose up rabbitmq zipkin-server postgresqldb mongo
+docker compose up rabbitmq zipkin-server postgresqldb mongo

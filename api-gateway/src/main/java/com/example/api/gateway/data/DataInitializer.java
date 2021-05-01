@@ -13,13 +13,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
-
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class DataInitializer {
 
-    private final UserRepository users;
+    private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -27,7 +26,7 @@ public class DataInitializer {
     public void init() {
         log.info("start data initialization...");
 
-        this.users
+        this.userRepository
                 .deleteAll()
                 .thenMany(
                         Flux.just("user", "admin")
@@ -49,11 +48,11 @@ public class DataInitializer {
                                                             .email(username + "@example.com")
                                                             .build();
 
-                                            return this.users.save(user);
+                                            return this.userRepository.save(user);
                                         }))
                 .subscribe(
-                        data -> log.info("data:" + data),
-                        err -> log.error("error:" + err),
+                        data -> log.info("data: {}", data),
+                        err -> log.error("error:", err),
                         () -> log.info("done initialization..."));
     }
 }

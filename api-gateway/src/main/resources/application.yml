@@ -1,0 +1,34 @@
+jwt:
+  secret-key: ecf1222c-88fd-47f3-988f-bdd78bade1ad
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+server:
+  port: 8765
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      metrics:
+        enabled: true
+      routes:
+      - id: order-service
+        predicates:
+        - Path=/order-service/**
+        uri: lb://order-service
+      - id: inventory-service
+        predicates:
+        - Path=/inventory-service/**
+        uri: lb://inventory-service
+      - id: catalog-service
+        predicates:
+        - Path=/catalog-service/**
+        uri: lb://catalog-service
+  config:
+    import: optional:configserver:http://localhost:8888/

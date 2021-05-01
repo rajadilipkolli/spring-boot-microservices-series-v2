@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "inStock", ignore = true)
     Product toEntity(ProductDto productDto);
 }

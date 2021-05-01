@@ -36,3 +36,4 @@ build/
 *.log
 .DS_Store
 order-service/LOG_FILE_IS_UNDEFINED
+/catalog-service/logs/

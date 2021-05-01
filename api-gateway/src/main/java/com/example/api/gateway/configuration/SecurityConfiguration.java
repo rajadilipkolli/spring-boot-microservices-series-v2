@@ -3,6 +3,7 @@ package com.example.api.gateway.configuration;
 import com.example.api.gateway.repository.UserRepository;
 import com.example.api.gateway.security.jwt.JwtTokenAuthenticationFilter;
 import com.example.api.gateway.security.jwt.JwtTokenProvider;
+import org.springframework.boot.autoconfigure.security.reactive.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,15 +21,21 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
 import reactor.core.publisher.Mono;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class SecurityConfiguration {
+
+    private static final String[] AUTH_WHITELIST = {
+        // -- Swagger UI v3 (OpenAPI)
+        "/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/auth/**"
+        // other public endpoints of your API may be appended to this array
+    };
 
     @Bean
     SecurityWebFilterChain springWebFilterChain(
             ServerHttpSecurity http,
             JwtTokenProvider tokenProvider,
             ReactiveAuthenticationManager reactiveAuthenticationManager) {
-        final String pathPosts = "/auth/**";
+        final String authenticationPaths = "/auth/**";
 
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
@@ -36,18 +43,21 @@ public class SecurityConfiguration {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(
                         it ->
-                                it.pathMatchers(HttpMethod.GET, pathPosts)
+                                it.pathMatchers(HttpMethod.GET, AUTH_WHITELIST)
                                         .permitAll()
-                                        .pathMatchers(HttpMethod.DELETE, pathPosts)
+                                        .pathMatchers(HttpMethod.POST, authenticationPaths)
+                                        .permitAll()
+                                        .pathMatchers(HttpMethod.DELETE, authenticationPaths)
                                         .hasRole("ADMIN")
-                                        .pathMatchers(pathPosts)
-                                        .authenticated()
-                                        .pathMatchers("/me")
-                                        .authenticated()
-                                        .pathMatchers("/users/{user}/**")
+                                        .pathMatchers(authenticationPaths)
                                         .access(this::currentUserMatchesPath)
+                                        .matchers(
+                                                PathRequest.toStaticResources().atCommonLocations())
+                                        .permitAll()
+                                        .pathMatchers(HttpMethod.OPTIONS)
+                                        .permitAll()
                                         .anyExchange()
-                                        .permitAll())
+                                        .authenticated())
                 .addFilterAt(
                         new JwtTokenAuthenticationFilter(tokenProvider),
                         SecurityWebFiltersOrder.HTTP_BASIC)
@@ -63,10 +73,11 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public ReactiveUserDetailsService userDetailsService(UserRepository users) {
+    public ReactiveUserDetailsService userDetailsService(UserRepository userRepository) {
 
         return username ->
-                users.findByUsername(username)
+                userRepository
+                        .findByUsername(username)
                         .map(
                                 u ->
                                         User.withUsername(u.getUsername())

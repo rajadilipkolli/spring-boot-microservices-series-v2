@@ -24,19 +24,14 @@ public class ApiGatewayConfiguration {
                                                                         "Param", "MyValue"))
                                         .uri("http://httpbin.org:80"))
                 .route(
-                        routeSpec ->
-                                routeSpec.path("/catalog-service/**").uri("lb://catalog-service"))
-                .route(
-                        routeSpec ->
-                                routeSpec
-                                        .path("/inventory-service/**")
-                                        .uri("lb://inventory-service"))
-                .route(routeSpec -> routeSpec.path("/order-service/**").uri("lb://order-service"))
-                //				.route(p -> p.path("/ORDER-SERVICE-new/**")
-                //						.filters(f -> f.rewritePath(
-                //								"/ORDER-SERVICE-new/(?<segment>.*)",
-                //								"/ORDER-SERVICE-feign/${segment}"))
-                //						.uri("lb://ORDER-SERVICE"))
+                        p ->
+                                p.path("/ORDER-SERVICE-new/**")
+                                        .filters(
+                                                f ->
+                                                        f.rewritePath(
+                                                                "/ORDER-SERVICE-new/(?<segment>.*)",
+                                                                "/ORDER-SERVICE-feign/${segment}"))
+                                        .uri("lb://ORDER-SERVICE"))
                 .build();
     }
 }

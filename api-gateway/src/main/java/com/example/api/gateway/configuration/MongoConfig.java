@@ -11,7 +11,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.userdetails.UserDetails;
 import reactor.core.publisher.Mono;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableReactiveMongoAuditing
 public class MongoConfig {
 
