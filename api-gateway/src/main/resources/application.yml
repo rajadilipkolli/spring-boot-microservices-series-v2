@@ -17,11 +17,16 @@ spring:
     gateway:
       metrics:
         enabled: true
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 5s
       routes:
       - id: order-service
         predicates:
         - Path=/order-service/**
         uri: lb://order-service
+        filters:
+        - CircuitBreaker=myCircuitBreaker
       - id: inventory-service
         predicates:
         - Path=/inventory-service/**
