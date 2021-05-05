@@ -35,7 +35,7 @@
         <properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
         <fabric8-docker-maven.version>0.35.0</fabric8-docker-maven.version>
         <sonar-maven-plugin.version>3.9.0.2155</sonar-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.7</jacoco-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
         <jacoco.utReportFolder>${project.build.directory}/jacoco/test</jacoco.utReportFolder>
         <jacoco.utReportFile>${jacoco.utReportFolder}/test.exec</jacoco.utReportFile>
