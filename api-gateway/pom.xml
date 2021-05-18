@@ -23,7 +23,7 @@
 		<jjwt.version>0.11.2</jjwt.version>
 		<springdoc-openapi.version>1.5.8</springdoc-openapi.version>
 		
-		<spotless.version>2.10.3</spotless.version>
+		<spotless.version>2.11.1</spotless.version>
 	</properties>
 
 	<dependencies>
