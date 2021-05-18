@@ -9,6 +9,13 @@
 
 	<name>spring-boot-microservices-series-v2</name>
 
+	<properties>
+	  <sonar.projectKey>rajadileepkolli_spring-boot-microservices-series-v2</sonar.projectKey>
+	  <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
+	  <sonar.organization>rajadileepkolli</sonar.organization>
+	  <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+	</properties>
+	
 	<modules>
 		<module>config-server</module>
 		<module>service-registry</module>
@@ -16,7 +23,7 @@
 		<module>catalog-service</module>
 		<module>inventory-service</module>
 		<module>order-service</module>
-  </modules>
+        </modules>
 
 
 </project>

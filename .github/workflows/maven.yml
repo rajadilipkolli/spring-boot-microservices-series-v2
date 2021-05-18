@@ -1,0 +1,47 @@
+name: Java CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 15
+      uses: actions/setup-java@v1
+      with:
+        java-version: 15
+        
+    - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+        
+    - name: Cache SonarCloud packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+        
+    - name: Cache Maven packages
+      uses: actions/cache@v2.1.0
+      with:
+        # A directory to store and save the cache
+        path: ~/.m2/repository
+        # An explicit key for restoring and saving the cache
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        # An ordered list of keys to use for restoring the cache if no cache hit occurred for key
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - name: Build with Maven and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./mvnw -B package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar --file pom.xml 
