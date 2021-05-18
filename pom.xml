@@ -11,7 +11,7 @@
 
 	<properties>
 	  <sonar.projectKey>rajadileepkolli_spring-boot-microservices-series-v2</sonar.projectKey>
-	  <sonar.moduleKey>${artifactId}</sonar.moduleKey>
+	  <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
 	  <sonar.organization>rajadileepkolli</sonar.organization>
 	  <sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
