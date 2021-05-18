@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0    http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.example</groupId>
+	<groupId>com.example.microservices</groupId>
 	<artifactId>spring-boot-microservices-series-v2-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
@@ -12,8 +12,9 @@
 	<name>spring-boot-microservices-series-v2</name>
 
 	<properties>
-	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	    <sonar.projectKey>rajadileepkolli-${project.groupId}:${project.artifactId}</sonar.projectKey>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<sonar.projectKey>rajadileepkolli_spring-boot-microservices-series-v2</sonar.projectKey>
+		<sonar.moduleKey>${artifactId}</sonar.moduleKey>
 		<sonar.organization>rajadileepkolli</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
