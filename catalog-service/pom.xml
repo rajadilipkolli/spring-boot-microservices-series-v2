@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.5.0</version>
+		<version>2.5.2</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example.catalogservice</groupId>
@@ -31,10 +31,10 @@
 		<project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
 		<maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
 		<maven-pmd-plugin.version>3.14.0</maven-pmd-plugin.version>
-		<spotless.version>2.12.0</spotless.version>
-		<dependency-check-maven.version>6.2.0</dependency-check-maven.version>
+		<spotless.version>2.12.1</spotless.version>
+		<dependency-check-maven.version>6.2.2</dependency-check-maven.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
-		<fabric8-docker-maven.version>0.35.0</fabric8-docker-maven.version>
+		<fabric8-docker-maven.version>0.36.1</fabric8-docker-maven.version>
 		<sonar-maven-plugin.version>3.9.0.2155</sonar-maven-plugin.version>
 		<jacoco-maven-plugin.version>0.8.7</jacoco-maven-plugin.version>
 		<jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
@@ -333,7 +333,7 @@
 					<dependency>
 						<groupId>com.puppycrawl.tools</groupId>
 						<artifactId>checkstyle</artifactId>
-						<version>8.42</version>
+						<version>8.44</version>
 					</dependency>
 				</dependencies>
 				<configuration>
