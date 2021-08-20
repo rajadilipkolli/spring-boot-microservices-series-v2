@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.5.3</version>
+		<version>2.5.4</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example.microservices</groupId>
@@ -16,14 +16,12 @@
 	<description>API Gateway for Microservice</description>
 
 	<properties>
-		<java.version>15</java.version>
+		<java.version>16</java.version>
 		<spring-cloud.version>2020.0.3</spring-cloud.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.11.2</jjwt.version>
 		<springdoc-openapi.version>1.5.10</springdoc-openapi.version>
-		
-		<spotless.version>2.12.2</spotless.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
 	</properties>
 
@@ -206,27 +204,6 @@
 						<includeOnlyProperty>^git.branch$</includeOnlyProperty>
 					</includeOnlyProperties>
 				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>com.diffplug.spotless</groupId>
-				<artifactId>spotless-maven-plugin</artifactId>
-				<version>${spotless.version}</version>
-				<configuration>
-					<java>
-						<googleJavaFormat>
-							<version>1.9</version>
-							<style>AOSP</style>
-						</googleJavaFormat>
-					</java>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>compile</phase>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>

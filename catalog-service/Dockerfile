@@ -1,4 +1,4 @@
-FROM openjdk:11-jdk-slim
+FROM openjdk:16-jdk-slim
 VOLUME /tmp
 ADD target/catalogservice-0.0.1-SNAPSHOT.jar app.jar
 RUN sh -c 'touch /app.jar'

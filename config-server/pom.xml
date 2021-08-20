@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.3</version>
+        <version>2.5.4</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -17,7 +17,7 @@
     <description>Centralized Configuration Server</description>
 
     <properties>
-        <java.version>15</java.version>
+        <java.version>16</java.version>
         <spring-cloud.version>2020.0.3</spring-cloud.version>
     </properties>
 

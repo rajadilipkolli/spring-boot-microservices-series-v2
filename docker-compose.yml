@@ -58,15 +58,17 @@ services:
       - microservice-network
 
   naming-server:
-    image: dockertmt/mmv2-service-registry:1.0.0-SNAPSHOT
+    image: dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT
     mem_limit: 700m
     ports:
       - "8761:8761"
     networks:
       - microservice-network
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
   config-server:
-    image: dockertmt/mmv2-config-server:1.0.0-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     mem_limit: 700m
     ports:
       - "8888:8888"
@@ -85,12 +87,15 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
+      - mongo
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
+      SPRING_DATA_MONGODB_HOST: mongo
 
   catalog-service:
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
