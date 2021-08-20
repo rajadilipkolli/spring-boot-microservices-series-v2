@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '15' ]
+        java: [ '16' ]
     name: Build on Java ${{ matrix.Java }}
     steps:
       - uses: actions/checkout@v2
-      - name: Set up JDK 15
+      - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v2.2.0
         with:
           java-version: ${{ matrix.java }}
@@ -28,10 +28,10 @@ jobs:
           # A directory to store and save the cache
           path: ~/.m2
           # An explicit key for restoring and saving the cache
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           # An ordered list of keys to use for restoring the cache if no cache hit occurred for key
           restore-keys: |
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-m2-
       - name: Build with Maven and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
