@@ -33,7 +33,7 @@
 		<maven-pmd-plugin.version>3.14.0</maven-pmd-plugin.version>
 		<dependency-check-maven.version>6.3.0</dependency-check-maven.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
-		<fabric8-docker-maven.version>0.36.1</fabric8-docker-maven.version>
+		<fabric8-docker-maven.version>0.37.0</fabric8-docker-maven.version>
 		<sonar-maven-plugin.version>3.9.0.2155</sonar-maven-plugin.version>
 		<jacoco-maven-plugin.version>0.8.7</jacoco-maven-plugin.version>
 		<jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
