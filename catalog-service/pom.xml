@@ -21,7 +21,7 @@
 
 		<java.version>16</java.version>
 		<spring-cloud.version>2020.0.3</spring-cloud.version>
-		<problem-spring-web.version>0.26.2</problem-spring-web.version>
+		<problem-spring-web.version>0.27.0</problem-spring-web.version>
 		<swagger.version>3.0.0</swagger.version>
 		<commons-io.version>2.11.0</commons-io.version>
 
