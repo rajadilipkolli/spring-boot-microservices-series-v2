@@ -5,6 +5,8 @@ on:
     branches:
       - master
   pull_request:
+    branches: 
+      - master
     types: [opened, synchronize, reopened]
 
 jobs:
@@ -13,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '16' ]
+        java: [ '17' ]
     name: Build on Java ${{ matrix.Java }}
     steps:
       - uses: actions/checkout@v2
