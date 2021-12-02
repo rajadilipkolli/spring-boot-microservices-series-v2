@@ -174,8 +174,15 @@
 					</excludes>
 					<image>
 						<name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+						<publish>true</publish>
 					</image>
 					<pullPolicy>IF_NOT_PRESENT</pullPolicy>
+					<docker>
+                        <publishRegistry>
+                            <username>dockertmt</username>
+							<password>****</password>
+                        </publishRegistry>
+                    </docker>
 				</configuration>
 				<executions>
 					<execution>

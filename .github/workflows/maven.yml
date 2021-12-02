@@ -29,6 +29,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar spring-boot:build-image --file pom.xml
+        run: mvn -B clean clean spring-boot:build-image -Dspring-boot.build-image.docker.publishRegistry.password= ${{secrets.DOCKER_PASSCODE}} --file pom.xml
 
 
