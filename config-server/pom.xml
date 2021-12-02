@@ -63,7 +63,7 @@
 					<docker>
                         <publishRegistry>
                             <username>dockertmt</username>
-							<password>****</password>
+							<password>dockertmt</password>
                         </publishRegistry>
                     </docker>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
