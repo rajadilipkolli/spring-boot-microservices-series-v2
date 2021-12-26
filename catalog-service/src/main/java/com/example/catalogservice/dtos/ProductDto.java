@@ -13,7 +13,7 @@ public class ProductDto {
     @NotBlank(message = "Product code can't be blank")
     private String code;
 
-    private String name;
+    private String productName;
 
     private String description;
 

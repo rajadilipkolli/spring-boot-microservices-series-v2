@@ -8,5 +8,5 @@
 
 
 ### Useful Links
-* Swagger UI: http://localhost:18181/inventory-service/swagger-ui/index.html
+* Swagger UI: http://localhost:18181/inventory-service/swagger-ui.html
 * Actuator Endpoint: http://localhost:18181/inventory-service/actuator

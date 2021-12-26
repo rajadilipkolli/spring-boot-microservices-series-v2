@@ -1,0 +1,64 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ConfigServerApplication<config-server>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.configserver.ConfigServerApplication",
+            "projectName": "config-server",
+            "args": ""
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-NamingServerApplication<service-registry>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "org.service.registry.NamingServerApplication",
+            "projectName": "service-registry",
+            "args": ""
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-APIGatewayApplication<api-gateway>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.api.gateway.APIGatewayApplication",
+            "projectName": "api-gateway",
+            "args": ""
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-CatalogServiceApplication<catalog-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.catalogservice.CatalogServiceApplication",
+            "projectName": "catalog-service",
+            "args": "--spring.profiles.active=local"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-OrderServiceApplication<order-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.orderservice.OrderServiceApplication",
+            "projectName": "order-service",
+            "args": "--spring.profiles.active=local"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-InventoryServiceApplication<inventory-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.inventoryservice.InventoryServiceApplication",
+            "projectName": "inventory-service",
+            "args": "--spring.profiles.active=local"
+        }
+    ]
+}
