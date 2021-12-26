@@ -1,15 +1,18 @@
-version: "3.7"
+version: "3.8"
 
 services:
   rabbitmq:
     image: rabbitmq:3.8.3-management
-    mem_limit: 350m
     expose:
       - "5672"
       - "15672"
     ports:
-      - 5672:5672
-      - 15672:15672
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      resources:
+        limits:
+          memory: 350m
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 10s
@@ -20,7 +23,10 @@ services:
 
   zipkin-server:
     image: openzipkin/zipkin
-    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     expose:
       - "9411"
     ports:
@@ -53,13 +59,16 @@ services:
     volumes:
       - mongo-data:/data/db/mongo
     ports:
-      - 27017:27017
+      - "27017:27017"
     networks:
       - microservice-network
 
   naming-server:
     image: dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "8761:8761"
     networks:
@@ -69,7 +78,10 @@ services:
 
   config-server:
     image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "8888:8888"
     networks:
@@ -77,7 +89,10 @@ services:
 
   api-gateway:
     image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "8765:8765"
     networks:
@@ -99,7 +114,10 @@ services:
 
   catalog-service:
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "18080:18080"
     networks:
@@ -119,7 +137,10 @@ services:
 
   inventory-service:
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "18181:18181"
     networks:
@@ -139,7 +160,10 @@ services:
 
   order-service:
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-    mem_limit: 700m
+    deploy:
+      resources:
+        limits:
+          memory: 700m
     ports:
       - "18282:18282"
     networks:

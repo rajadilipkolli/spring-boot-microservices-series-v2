@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      author: rajakolli
+      id: createTable-products
+      context: Creates DDL Script for product
+      createSequence:
+        sequenceName: product_id_seq
+        startValue: '1'
+        incrementBy: '50'
+      createTable:
+        columns:
+          - column:
+              constraints:
+                nullable: 'false'
+                primaryKey: 'true'
+                primaryKeyName: pk_products
+              name: id
+              type: BIGINT
+              defaultValueSequenceNext: 'product_id_seq'
+          - column:
+              constraints:
+                nullable: 'false'
+              name: code
+              type: VARCHAR(255)
+          - column:
+              constraints:
+                nullable: 'false'
+              name: product_name
+              type: VARCHAR(255)
+          - column:
+              name: description
+              type: VARCHAR(255)
+          - column:
+              name: price
+              type: 'NUMERIC(19,2)'
+        tableName: products
+      addUniqueConstraint:
+        columnNames: code
+        constraintName: uc_products_code
+        tableName: products

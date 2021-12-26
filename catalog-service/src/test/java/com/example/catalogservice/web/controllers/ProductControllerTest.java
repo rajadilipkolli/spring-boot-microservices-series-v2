@@ -75,7 +75,7 @@ class ProductControllerTest {
                 .perform(get("/api/catalog/{id}", productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.name", is(product.getName())))
+                .andExpect(jsonPath("$.name", is(product.getProductName())))
                 .andExpect(jsonPath("$.description", is(product.getDescription())))
                 .andExpect(jsonPath("$.price", is(product.getPrice())));
     }
@@ -141,7 +141,7 @@ class ProductControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(product)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(product.getName())));
+                .andExpect(jsonPath("$.name", is(product.getProductName())));
     }
 
     @Test
