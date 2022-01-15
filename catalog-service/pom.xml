@@ -33,7 +33,6 @@
 
 		<dependency-check-maven.version>6.5.0</dependency-check-maven.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
-		<fabric8-docker-maven.version>0.38.0</fabric8-docker-maven.version>
 		<sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
 		<jacoco-maven-plugin.version>0.8.7</jacoco-maven-plugin.version>
 		<jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
@@ -207,7 +206,6 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-						<publish>true</publish>
                     </image>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
 					<docker>
@@ -352,7 +350,6 @@
 				</configuration>
 				<executions>
 					<execution>
-						<?m2e execute onConfiguration?>
 						<id>checkstyle-validation</id>
 						<phase>validate</phase>
 						<goals>
@@ -454,29 +451,6 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<groupId>io.fabric8</groupId>
-				<artifactId>docker-maven-plugin</artifactId>
-				<version>${fabric8-docker-maven.version}</version>
-				<configuration>
-					<verbose>true</verbose>
-					<images>
-						<image>
-							<external>
-								<type>compose</type>
-								<basedir>docker</basedir>
-								<composeFile>docker-compose.yml</composeFile>
-							</external>
-							<run>
-								<wait>
-									<time>5000</time>
-									<!--<log>Docker databases are ready to accept connections</log> -->
-								</wait>
-							</run>
-						</image>
-					</images>
-				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.owasp</groupId>

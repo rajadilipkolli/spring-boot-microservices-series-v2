@@ -61,7 +61,7 @@
                     </image>
 					<docker>
                         <publishRegistry>
-                            <username>dockertmt</username>
+                            <email>dockertmt@gmail.com</email>
                         </publishRegistry>
                     </docker>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
