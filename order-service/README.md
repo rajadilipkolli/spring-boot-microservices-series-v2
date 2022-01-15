@@ -8,5 +8,5 @@
 
 
 ### Useful Links
-* Swagger UI: http://localhost:8080/swagger-ui/index.html
-* Actuator Endpoint: http://localhost:8080/actuator
+* Swagger UI: http://localhost:18282/swagger-ui.html
+* Actuator Endpoint: http://localhost:18282/order-service/actuator

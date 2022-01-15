@@ -1,5 +1,6 @@
 package com.example.catalogservice.entities;
 
+import java.io.Serial;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -22,21 +23,21 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Product implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_id_generator")
     @SequenceGenerator(
             name = "product_id_generator",
-            sequenceName = "product_id_seq",
-            allocationSize = 100)
+            sequenceName = "product_id_seq")
     private Long id;
 
     @Column(nullable = false, unique = true)
     private String code;
 
     @Column(nullable = false)
-    private String name;
+    private String productName;
 
     private String description;
 
