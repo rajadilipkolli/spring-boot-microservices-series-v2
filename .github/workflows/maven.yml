@@ -30,6 +30,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}  
-        run: mvn -B clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true --file pom.xml
+        run: mvn -B clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true org.sonarsource.scanner.maven:sonar-maven-plugin:sonar --file pom.xml
 
 
