@@ -58,12 +58,10 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-						<publish>true</publish>
                     </image>
 					<docker>
                         <publishRegistry>
                             <username>dockertmt</username>
-							<password>dockertmt</password>
                         </publishRegistry>
                     </docker>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>

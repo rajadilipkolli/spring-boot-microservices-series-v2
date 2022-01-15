@@ -30,6 +30,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}  
-        run: mvn -B clean clean spring-boot:build-image -Dspring-boot.build-image.docker.publishRegistry.password=${{secrets.DOCKER_PASSCODE}} --file pom.xml
+        run: mvn -B clean clean spring-boot:build-image -Dspring-boot.build-image.docker.publishRegistry.password=${{secrets.DOCKER_PASSCODE}} -Dspring-boot.build-image.publish=true --file pom.xml
 
 
