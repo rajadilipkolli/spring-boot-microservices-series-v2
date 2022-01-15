@@ -21,7 +21,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.11.2</jjwt.version>
-		<springdoc-openapi.version>1.6.3</springdoc-openapi.version>
+		<springdoc-openapi.version>1.6.4</springdoc-openapi.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
 	</properties>
 
@@ -179,8 +179,8 @@
 					<pullPolicy>IF_NOT_PRESENT</pullPolicy>
 					<docker>
                         <publishRegistry>
-                            <username>dockertmt</username>
-							<password>dockertmt</password>
+                            <username>${CI_DOCKER_USERNAME}</username>
+                            <password>${CI_DOCKER_PASSWORD}</password>
                         </publishRegistry>
                     </docker>
 				</configuration>
