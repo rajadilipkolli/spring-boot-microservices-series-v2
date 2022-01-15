@@ -133,7 +133,11 @@ services:
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_DATASOURCE_URL=jdbc: postgresql://postgresqldb:5432/appdb
+      SPRING_DATASOURCE_USERNAME: siva
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
 
   inventory-service:
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
@@ -157,6 +161,7 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
       SPRING_PROFILES_ACTIVE: local
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
 
   order-service:
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
@@ -183,6 +188,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresqldb:5432/appdb
       - SPRING_DATASOURCE_USERNAME=siva
       - SPRING_DATASOURCE_PASSWORD=secret
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
 
 networks:
   microservice-network:

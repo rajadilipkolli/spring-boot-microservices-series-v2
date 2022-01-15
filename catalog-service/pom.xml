@@ -23,6 +23,7 @@
 		<spring-cloud.version>2021.0.0</spring-cloud.version>
 		<problem-spring-web.version>0.27.0</problem-spring-web.version>
 		<commons-io.version>2.11.0</commons-io.version>
+		<springdoc-openapi.version>1.6.4</springdoc-openapi.version>
 
 		<testcontainers.version>1.16.2</testcontainers.version>
 		<org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
@@ -145,7 +146,7 @@
 		<dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.4</version>
+            <version>${springdoc-openapi.version}</version>
         </dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>

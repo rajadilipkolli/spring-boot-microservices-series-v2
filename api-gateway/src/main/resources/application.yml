@@ -10,6 +10,8 @@ management:
         include: '*'
 server:
   port: 8765
+  servlet:
+    contextPath: /${spring.application.name}
 spring:
   application:
     name: api-gateway
