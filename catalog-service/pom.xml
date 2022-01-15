@@ -213,7 +213,7 @@
 					<docker>
                         <publishRegistry>
                             <username>dockertmt</username>
-							<password>****</password>
+							<password>dockertmt</password>
                         </publishRegistry>
                     </docker>
                 </configuration>
