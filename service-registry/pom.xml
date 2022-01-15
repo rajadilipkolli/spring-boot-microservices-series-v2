@@ -21,6 +21,8 @@
 		<java.version>17</java.version>
 		<spring-cloud.version>2021.0.0</spring-cloud.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
+		<CI_DOCKER_PASSWORD/>
+        <CI_DOCKER_USERNAME/>
 	</properties>
 	
 	<dependencies>
@@ -72,6 +74,12 @@
 						<name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
 					</image>
 					<pullPolicy>IF_NOT_PRESENT</pullPolicy>
+					<docker>
+                        <publishRegistry>
+                            <username>${CI_DOCKER_USERNAME}</username>
+                            <password>${CI_DOCKER_PASSWORD}</password>
+                        </publishRegistry>
+                    </docker>
 				</configuration>
 			</plugin>
 			<plugin>
