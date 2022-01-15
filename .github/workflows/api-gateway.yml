@@ -28,11 +28,6 @@ jobs:
           java-version: 17
           distribution: 'microsoft'
           cache: 'maven'
-      - name: Start up databases via docker compose
-        run: |
-          docker compose up -d config-server naming-server rabbitmq zipkin-server mongo
-          sleep 15
-          docker ps -a
 
       - name: Build and analyze
         run: |
