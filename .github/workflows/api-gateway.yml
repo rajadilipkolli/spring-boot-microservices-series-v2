@@ -29,6 +29,12 @@ jobs:
           distribution: 'microsoft'
           cache: 'maven'
 
+      - name: Start up softwares via Docker Compose
+        run: |
+          docker compose up rabbitmq zipkin-server mongo -d
+          sleep 10
+          docker ps -a
+
       - name: Build and analyze
         run: |
           cd api-gateway
