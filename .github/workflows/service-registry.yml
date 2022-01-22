@@ -1,13 +1,13 @@
-name: api-gateway
+name: service-registry
 
 on:
   push:
     paths:
-      - "api-gateway/**"
+      - "service-registry/**"
     branches: [main]
   pull_request:
     paths:
-      - "api-gateway/**"
+      - "service-registry/**"
     types:
       - opened
       - synchronize
@@ -29,14 +29,8 @@ jobs:
           distribution: "microsoft"
           cache: "maven"
 
-      - name: Start up softwares via Docker Compose
-        run: |
-          docker compose up rabbitmq zipkin-server mongo -d
-          sleep 10
-          docker ps -a
-
       - name: Build and analyze
         run: |
-          cd api-gateway
+          cd service-registry
           chmod +x mvnw
           ./mvnw clean package

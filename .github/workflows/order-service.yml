@@ -1,13 +1,13 @@
-name: api-gateway
+name: order-service
 
 on:
   push:
     paths:
-      - "api-gateway/**"
+      - "order-service/**"
     branches: [main]
   pull_request:
     paths:
-      - "api-gateway/**"
+      - "order-service/**"
     types:
       - opened
       - synchronize
@@ -31,12 +31,12 @@ jobs:
 
       - name: Start up softwares via Docker Compose
         run: |
-          docker compose up rabbitmq zipkin-server mongo -d
+          docker compose up rabbitmq zipkin-server postgresqldb -d
           sleep 10
           docker ps -a
 
       - name: Build and analyze
         run: |
-          cd api-gateway
+          cd order-service
           chmod +x mvnw
           ./mvnw clean package

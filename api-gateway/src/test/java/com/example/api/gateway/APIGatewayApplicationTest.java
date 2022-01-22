@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -86,8 +87,11 @@ class APIGatewayApplicationTest {
         AuthenticationRequest body = new AuthenticationRequest();
         body.setUsername("user");
         body.setPassword("password");
-        this.webTestClient.post().bodyValue(body).accept(MediaType.APPLICATION_JSON)
-        .exchange().expectStatus().isOk();
+
+        this.webTestClient.post()
+            .body(BodyInserters.fromValue(body))
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange().expectStatus().isUnauthorized();
     }
 
 }
