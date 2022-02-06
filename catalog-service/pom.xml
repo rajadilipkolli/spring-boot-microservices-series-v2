@@ -23,7 +23,7 @@
 		<spring-cloud.version>2021.0.0</spring-cloud.version>
 		<problem-spring-web.version>0.27.0</problem-spring-web.version>
 		<commons-io.version>2.11.0</commons-io.version>
-		<springdoc-openapi.version>1.6.5</springdoc-openapi.version>
+		<springdoc-openapi.version>1.6.6</springdoc-openapi.version>
 
 		<testcontainers.version>1.16.3</testcontainers.version>
 		<org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
