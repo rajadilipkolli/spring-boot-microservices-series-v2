@@ -21,7 +21,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.11.2</jjwt.version>
-		<springdoc-openapi.version>1.6.5</springdoc-openapi.version>
+		<springdoc-openapi.version>1.6.6</springdoc-openapi.version>
 		<properties-maven-plugin.version>1.0.0</properties-maven-plugin.version>
 	</properties>
 
