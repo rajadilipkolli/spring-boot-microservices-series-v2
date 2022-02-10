@@ -1,4 +1,4 @@
-package com.example.api.gateway.data;
+package com.example.api.gateway.bootstrap;
 
 import com.example.api.gateway.domain.User;
 import com.example.api.gateway.repository.UserRepository;

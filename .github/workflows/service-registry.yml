@@ -1,0 +1,36 @@
+name: service-registry
+
+on:
+  push:
+    paths:
+      - "service-registry/**"
+    branches: [main]
+  pull_request:
+    paths:
+      - "service-registry/**"
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2.5.0
+        with:
+          java-version: 17
+          distribution: "microsoft"
+          cache: "maven"
+
+      - name: Build and analyze
+        run: |
+          cd service-registry
+          chmod +x mvnw
+          ./mvnw clean package
