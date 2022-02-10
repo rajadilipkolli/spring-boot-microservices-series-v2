@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "inventory-service/**"
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
     paths:
       - "inventory-service/**"

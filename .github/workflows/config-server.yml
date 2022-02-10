@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "config-server/**"
-    branches: [main]
+    branches: [master]
   pull_request:
     paths:
       - "config-server/**"
