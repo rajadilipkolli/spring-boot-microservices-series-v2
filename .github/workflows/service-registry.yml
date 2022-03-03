@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "service-registry/**"
-    branches: [main]
+    branches: [master]
   pull_request:
     paths:
       - "service-registry/**"

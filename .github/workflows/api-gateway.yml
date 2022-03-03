@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "api-gateway/**"
-    branches: [main]
+    branches: [ master ]
   pull_request:
     paths:
       - "api-gateway/**"

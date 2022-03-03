@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "order-service/**"
-    branches: [main]
+    branches: [master]
   pull_request:
     paths:
       - "order-service/**"
