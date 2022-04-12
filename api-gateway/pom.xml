@@ -22,7 +22,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.11.2</jjwt.version>
 		<springdoc-openapi.version>1.6.7</springdoc-openapi.version>
-		<testcontainers.version>1.16.3</testcontainers.version>
+		<testcontainers.version>1.17.0</testcontainers.version>
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
 	</properties>
 
