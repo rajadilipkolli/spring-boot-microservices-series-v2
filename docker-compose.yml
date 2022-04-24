@@ -40,8 +40,8 @@ services:
         condition: service_healthy
     networks:
       - microservice-network
-      
-
+  
+  
   postgresql:
     container_name: postgresql
     image: postgres:latest
@@ -73,14 +73,14 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - 22181:2181
+      - "22181:2181"
   
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
     ports:
-      - 29092:29092
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -207,6 +207,7 @@ services:
       - rabbitmq
       - zipkin-server
       - postgresql
+      - kafka
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
