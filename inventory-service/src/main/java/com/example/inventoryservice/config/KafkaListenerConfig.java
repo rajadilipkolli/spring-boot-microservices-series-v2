@@ -14,15 +14,15 @@ import org.springframework.kafka.annotation.KafkaListener;
 @RequiredArgsConstructor
 public class KafkaListenerConfig {
 
-    private final OrderManageService orderManageService;
+  private final OrderManageService orderManageService;
 
-    @KafkaListener(id = "orders", topics = "orders", groupId = "stock")
-    public void onEvent(Order o) {
-        log.info("Received: {}" , o);
-        if (o.getStatus().equals("NEW"))
-            orderManageService.reserve(o);
-        else
-            orderManageService.confirm(o);
+  @KafkaListener(id = "orders", topics = "orders", groupId = "stock")
+  public void onEvent(Order o) {
+    log.info("Received: {}", o);
+    if (o.getStatus().equals("NEW")) {
+      orderManageService.reserve(o);
+    } else {
+      orderManageService.confirm(o);
     }
-
+  }
 }
