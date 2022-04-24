@@ -78,6 +78,8 @@ services:
       - "8761:8761"
     networks:
       - microservice-network
+    depends_on:
+      - config-server
     environment:
       SPRING_PROFILES_ACTIVE: docker
 
