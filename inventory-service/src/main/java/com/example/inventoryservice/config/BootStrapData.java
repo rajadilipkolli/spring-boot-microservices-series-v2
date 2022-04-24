@@ -4,7 +4,6 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -16,7 +15,7 @@ import java.util.Random;
 @RequiredArgsConstructor
 public class BootStrapData {
 
-  private InventoryRepository inventoryRepository;
+  private final InventoryRepository inventoryRepository;
 
   @EventListener(ApplicationReadyEvent.class)
   public void init() {
