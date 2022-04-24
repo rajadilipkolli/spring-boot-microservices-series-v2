@@ -1,13 +1,10 @@
-name: order-service
+name: catalog-service-master
 
 on:
-  pull_request:
+  push:
     paths:
-      - "order-service/**"
-    types:
-      - opened
-      - synchronize
-      - reopened
+      - "catalog-service/**"
+    branches: [ master ]
 
 jobs:
   build:
@@ -25,14 +22,12 @@ jobs:
           distribution: "microsoft"
           cache: "maven"
 
-      - name: Start up softwares via Docker Compose
-        run: |
-          docker compose up rabbitmq zipkin-server postgresqldb -d
-          sleep 10
-          docker ps -a
-
       - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
         run: |
-          cd order-service
+          cd catalog-service
           chmod +x mvnw
-          ./mvnw clean package
+          ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
