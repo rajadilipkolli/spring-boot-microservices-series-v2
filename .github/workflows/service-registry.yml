@@ -1,6 +1,10 @@
 name: service-registry
 
 on:
+  push:
+    paths:
+      - "service-registry/**"
+    branches: [ master]
   pull_request:
     paths:
       - "service-registry/**"
