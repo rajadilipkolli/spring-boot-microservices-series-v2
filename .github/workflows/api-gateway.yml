@@ -1,10 +1,6 @@
 name: api-gateway
 
 on:
-  push:
-    paths:
-      - "api-gateway/**"
-    branches: [ master ]
   pull_request:
     paths:
       - "api-gateway/**"
