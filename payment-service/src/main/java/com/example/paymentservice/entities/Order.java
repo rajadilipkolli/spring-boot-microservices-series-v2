@@ -1,4 +1,4 @@
-package com.example.orderservice.entities;
+package com.example.paymentservice.entities;
 
 import java.util.ArrayList;
 import java.util.List;
