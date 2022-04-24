@@ -1,9 +1,9 @@
-name: order-service
+name: payment-service
 
 on:
   pull_request:
     paths:
-      - "order-service/**"
+      - "payment-service/**"
     types:
       - opened
       - synchronize
@@ -33,6 +33,6 @@ jobs:
 
       - name: Build and analyze
         run: |
-          cd order-service
+          cd payment-service
           chmod +x mvnw
           ./mvnw clean package
