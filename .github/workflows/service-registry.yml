@@ -1,10 +1,6 @@
 name: service-registry
 
 on:
-  push:
-    paths:
-      - "service-registry/**"
-    branches: [ master]
   pull_request:
     paths:
       - "service-registry/**"
@@ -33,4 +29,4 @@ jobs:
         run: |
           cd service-registry
           chmod +x mvnw
-          ./mvnw clean package
+          ./mvnw clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
