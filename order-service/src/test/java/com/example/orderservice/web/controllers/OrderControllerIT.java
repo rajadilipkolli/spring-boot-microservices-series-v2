@@ -53,21 +53,24 @@ class OrderControllerIT {
         orderRepository.deleteAll();
 
         orderList = new ArrayList<>();
-        Order order1 = new Order("email1@junit.com", "address 1");
+        Order order1 = Order.builder().customerEmail("email1@junit.com").customerAddress("address 1")
+		.customerId(1L).build();
         OrderItem orderItem = new OrderItem();
         orderItem.setProductId(1L);
         orderItem.setQuantity(10);
         orderItem.setProductPrice(BigDecimal.TEN);
         order1.addOrderItem(orderItem);
         this.orderList.add(order1);
-        Order order2 = new Order("email2@junit.com", "address 2");
+        Order order2 = Order.builder().customerEmail("email2@junit.com").customerAddress("address 2")
+        		.customerId(2L).build();
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductId(2L);
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
         order2.addOrderItem(orderItem1);
         this.orderList.add(order2);
-        Order order3 = new Order("email3@junit.com", "address 3");
+        Order order3 = Order.builder().customerEmail("email3@junit.com").customerAddress("address 3")
+        		.customerId(3L).build();
         OrderItem orderItem2 = new OrderItem();
         orderItem2.setProductId(2L);
         orderItem2.setQuantity(100);
