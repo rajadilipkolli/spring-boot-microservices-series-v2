@@ -31,6 +31,13 @@ jobs:
           gu --version
           native-image --version
 
+      - name: Cache Maven dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven
+
       - name: Start up softwares via Docker Compose
         run: |
           docker compose up zookeeper rabbitmq zipkin-server postgresql kafka -d
@@ -41,4 +48,4 @@ jobs:
         run: |
           cd payment-service
           chmod +x mvnw
-          ./mvnw clean -Pnative package
+          ./mvnw -B clean -Pnative package -DskipTests
