@@ -1,13 +1,10 @@
-name: service-registry
+name: service-registry-master
 
 on:
-  pull_request:
+  push:
     paths:
       - "service-registry/**"
-    types:
-      - opened
-      - synchronize
-      - reopened
+    branches: [ master ]
 
 jobs:
   build:
@@ -26,7 +23,11 @@ jobs:
           cache: "maven"
 
       - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
         run: |
           cd service-registry
           chmod +x mvnw
-          ./mvnw clean package
+          ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
