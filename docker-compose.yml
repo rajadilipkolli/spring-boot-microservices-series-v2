@@ -77,6 +77,7 @@ services:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
   config-server:
+    container_name: config-server
     image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     deploy:
       resources:
