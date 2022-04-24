@@ -21,3 +21,7 @@ docker compose up rabbitmq zipkin-server postgresqldb mongo config-server naming
  - RabbitMq : http://localhost:15672/
  - Service Registry : http://localhost:8761/
  - API Gateway : http://localhost:8765/swagger-ui.html
+
+ #### References
+  - https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
+  

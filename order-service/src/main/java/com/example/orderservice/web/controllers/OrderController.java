@@ -1,12 +1,22 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.orderservice.dtos.OrderDto;
+import com.example.orderservice.entities.Order;
+import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import lombok.RequiredArgsConstructor;
+
+import java.util.ArrayList;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,14 +30,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
 
-    @Autowired
-    public OrderController(OrderService orderService) {
-        this.orderService = orderService;
-    }
+    private final StreamsBuilderFactoryBean kafkaStreamsFactory;
+    
+    private final OrderGeneratorService orderGeneratorService;
 
     @GetMapping
     public List<OrderDto> getAllOrders() {
@@ -79,5 +89,24 @@ public class OrderController {
                             return ResponseEntity.ok(order);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+    
+    @PostMapping("/generate")
+    public boolean create() {
+        orderGeneratorService.generate();
+        return true;
+    }
+
+    @GetMapping("/all")
+    public List<Order> all() {
+        List<Order> orders = new ArrayList<>();
+        ReadOnlyKeyValueStore<Long, Order> store = kafkaStreamsFactory
+                .getKafkaStreams()
+                .store(StoreQueryParameters.fromNameAndType(
+                        "orders",
+                        QueryableStoreTypes.keyValueStore()));
+        KeyValueIterator<Long, Order> it = store.all();
+        it.forEachRemaining(kv -> orders.add(kv.value));
+        return orders;
     }
 }
