@@ -63,6 +63,10 @@ spring:
     activate:
       on-profile: "docker"
     import: configserver:http://config-server:8888/
+  datasource:
+    password: secret
+    url: jdbc:postgresql://postgresql:5432/appdb
+    username: siva
   rabbitmq:
     addresses: rabbitmq:5672
     host: rabbitmq
