@@ -30,5 +30,5 @@ jobs:
         run: |
           cd api-gateway
           chmod +x mvnw
-          ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
+          ./mvnw clean spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
 
