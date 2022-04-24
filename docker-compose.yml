@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   rabbitmq:
+    container_name: rabbitmq
     image: rabbitmq:3.9.15-management
     expose:
       - "5672"
@@ -23,6 +24,7 @@ services:
 
   zipkin-server:
     image: openzipkin/zipkin
+    container_name: zipkin-server
     deploy:
       resources:
         limits:
@@ -40,7 +42,8 @@ services:
       - microservice-network
       
 
-  postgresqldb:
+  postgresql:
+    container_name: postgresql
     image: postgres:latest
     environment:
       - POSTGRES_USER=siva
@@ -54,7 +57,8 @@ services:
     networks:
       - microservice-network
 
-  mongo:
+  mongodb:
+    container_name: mongodb
     image: mongo
     volumes:
       - mongo-data:/data/db/mongo
@@ -64,6 +68,7 @@ services:
       - microservice-network
 
   naming-server:
+    container_name: naming-server
     image: dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -89,6 +94,7 @@ services:
       - microservice-network
 
   api-gateway:
+    container_name: api-gateway
     image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -103,7 +109,7 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
-      - mongo
+      - mongodb
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
@@ -111,9 +117,10 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
-      SPRING_DATA_MONGODB_HOST: mongo
+      SPRING_DATA_MONGODB_HOST: mongodb
 
   catalog-service:
+    container_name: catalog-service
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -127,7 +134,7 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
-      - postgresqldb
+      - postgresql
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
@@ -135,12 +142,13 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      SPRING_DATASOURCE_URL=jdbc: postgresql://postgresqldb:5432/appdb
+      SPRING_DATASOURCE_URL=jdbc: postgresql://postgresql:5432/appdb
       SPRING_DATASOURCE_USERNAME: siva
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
 
   inventory-service:
+    container_name: inventory-service
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -154,17 +162,18 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
-      - postgresqldb
+      - postgresql
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
 
   order-service:
+    container_name: order-service
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -178,7 +187,7 @@ services:
       - naming-server
       - rabbitmq
       - zipkin-server
-      - postgresqldb
+      - postgresql
     environment:
       - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://naming-server:8761/eureka
       - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
@@ -186,7 +195,7 @@ services:
       - SPRING_RABBITMQ_HOST= rabbitmq
       - SPRING_ZIPKIN_SENDER_TYPE= rabbit
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresqldb:5432/appdb
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/appdb
       - SPRING_DATASOURCE_USERNAME=siva
       - SPRING_DATASOURCE_PASSWORD=secret
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
