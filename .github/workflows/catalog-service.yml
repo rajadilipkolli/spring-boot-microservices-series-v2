@@ -27,7 +27,7 @@ jobs:
 
       - name: Start up softwares via Docker Compose
         run: |
-          docker compose up rabbitmq zipkin-server postgresqldb -d
+          docker compose up rabbitmq zipkin-server postgresql -d
           sleep 10
           docker ps -a
 
