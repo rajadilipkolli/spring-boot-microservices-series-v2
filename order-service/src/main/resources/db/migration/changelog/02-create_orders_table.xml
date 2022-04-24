@@ -18,6 +18,9 @@
             </column>
             <column name="customer_email" type="VARCHAR(255)"/>
             <column name="customer_address" type="VARCHAR(255)"/>
+            <column name="customer_id" type="BIGINT" />
+            <column name="source" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(255)"/>
         </createTable>
 
         <createTable tableName="order_items">
