@@ -48,4 +48,4 @@ jobs:
         run: |
           cd payment-service
           chmod +x mvnw
-          ./mvnw -B clean -Pnative package -DskipTests
+          ./mvnw -B -ntp clean -Pnative package -DskipTests
