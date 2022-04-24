@@ -6,17 +6,8 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,85 +19,77 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderService orderService;
+  private final OrderService orderService;
 
-    private final StreamsBuilderFactoryBean kafkaStreamsFactory;
-    
-    private final OrderGeneratorService orderGeneratorService;
+  private final OrderGeneratorService orderGeneratorService;
 
-    @GetMapping
-    public List<OrderDto> getAllOrders() {
-        return orderService.findAllOrders();
-    }
+  @GetMapping
+  public List<OrderDto> getAllOrders() {
+    return orderService.findAllOrders();
+  }
 
-    @GetMapping("/{id}")
-    // @Retry(name = "order-api", fallbackMethod = "hardcodedResponse")
-    @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    // @RateLimiter(name="default")
-    // @Bulkhead(name = "order-api")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
-        return orderService
-                .findOrderById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+  @GetMapping("/{id}")
+  // @Retry(name = "order-api", fallbackMethod = "hardcodedResponse")
+  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+  // @RateLimiter(name="default")
+  // @Bulkhead(name = "order-api")
+  public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    return orderService
+        .findOrderById(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
 
-    public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
-        return ResponseEntity.ok("fallback-response for id : " + id);
-    }
+  public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+    return ResponseEntity.ok("fallback-response for id : " + id);
+  }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public OrderDto createOrder(@RequestBody @Validated OrderDto orderDto) {
-        return orderService.saveOrder(orderDto);
-    }
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public OrderDto createOrder(@RequestBody @Validated OrderDto orderDto) {
+    return orderService.saveOrder(orderDto);
+  }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<OrderDto> updateOrder(
-            @PathVariable Long id, @RequestBody OrderDto orderDto) {
-        return orderService
-                .findOrderById(id)
-                .map(
-                        orderObj -> {
-                            orderDto.setOrderId(id);
-                            return ResponseEntity.ok(orderService.saveOrder(orderDto));
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+  @PutMapping("/{id}")
+  public ResponseEntity<OrderDto> updateOrder(
+      @PathVariable Long id, @RequestBody OrderDto orderDto) {
+    return orderService
+        .findOrderById(id)
+        .map(
+            orderObj -> {
+              orderDto.setOrderId(id);
+              return ResponseEntity.ok(orderService.saveOrder(orderDto));
+            })
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<OrderDto> deleteOrder(@PathVariable Long id) {
-        return orderService
-                .findOrderById(id)
-                .map(
-                        order -> {
-                            orderService.deleteOrderById(id);
-                            return ResponseEntity.ok(order);
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-    
-    @PostMapping("/generate")
-    public boolean create() {
-        orderGeneratorService.generate();
-        return true;
-    }
+  @DeleteMapping("/{id}")
+  public ResponseEntity<OrderDto> deleteOrder(@PathVariable Long id) {
+    return orderService
+        .findOrderById(id)
+        .map(
+            order -> {
+              orderService.deleteOrderById(id);
+              return ResponseEntity.ok(order);
+            })
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
 
-    @GetMapping("/all")
-    public List<Order> all() {
-        List<Order> orders = new ArrayList<>();
-        ReadOnlyKeyValueStore<Long, Order> store = kafkaStreamsFactory
-                .getKafkaStreams()
-                .store(StoreQueryParameters.fromNameAndType(
-                        "orders",
-                        QueryableStoreTypes.keyValueStore()));
-        KeyValueIterator<Long, Order> it = store.all();
-        it.forEachRemaining(kv -> orders.add(kv.value));
-        return orders;
-    }
+  @PostMapping("/generate")
+  public boolean create() {
+    orderGeneratorService.generate();
+    return true;
+  }
+
+  @GetMapping("/all")
+  public List<Order> all() {
+    return orderGeneratorService.getAllOrders();
+  }
 }

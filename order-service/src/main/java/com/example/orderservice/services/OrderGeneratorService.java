@@ -2,11 +2,18 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
+import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,8 +24,12 @@ public class OrderGeneratorService {
   private final AtomicLong id = new AtomicLong();
   private final KafkaTemplate<Long, Order> template;
 
-  public OrderGeneratorService(KafkaTemplate<Long, Order> template) {
+  private final StreamsBuilderFactoryBean kafkaStreamsFactory;
+
+  public OrderGeneratorService(
+      KafkaTemplate<Long, Order> template, StreamsBuilderFactoryBean kafkaStreamsFactory) {
     this.template = template;
+    this.kafkaStreamsFactory = kafkaStreamsFactory;
   }
 
   @Async
@@ -36,5 +47,18 @@ public class OrderGeneratorService {
       o.addOrderItem(orderItem);
       template.send("orders", o.getId(), o);
     }
+  }
+
+  public List<Order> getAllOrders() {
+    List<Order> orders = new ArrayList<>();
+    ReadOnlyKeyValueStore<Long, Order> store =
+        kafkaStreamsFactory
+            .getKafkaStreams()
+            .store(
+                StoreQueryParameters.fromNameAndType(
+                    "orders", QueryableStoreTypes.keyValueStore()));
+    KeyValueIterator<Long, Order> it = store.all();
+    it.forEachRemaining(kv -> orders.add(kv.value));
+    return orders;
   }
 }
