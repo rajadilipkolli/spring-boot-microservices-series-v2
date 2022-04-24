@@ -18,6 +18,7 @@
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="quantity" type="int" />
+            <column name="reserved_items" type="int" />
         </createTable>
     </changeSet>
 </databaseChangeLog>

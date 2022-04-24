@@ -1,0 +1,22 @@
+server:
+  port: 18181
+  servlet:
+    contextPath: /${spring.application.name}
+spring:
+  application:
+    name: inventory-service
+  config:
+    import: optional:configserver:http://localhost:8888/
+  liquibase:
+    change-log: classpath:/db/migration/liquibase-changelog.xml
+
+spring.kafka:
+  bootstrap-servers: 127.0.0.1:29092
+  consumer:
+    key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+    value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    properties:
+      spring.json.trusted.packages: "*"
+  producer:
+    key-serializer: org.apache.kafka.common.serialization.LongSerializer
+    value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

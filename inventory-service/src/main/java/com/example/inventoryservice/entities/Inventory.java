@@ -33,4 +33,6 @@ public class Inventory {
 
     @Column(name = "quantity")
     private Integer availableQuantity = 0;
+
+    private Integer reservedItems;
 }
