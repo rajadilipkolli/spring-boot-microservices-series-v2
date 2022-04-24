@@ -32,9 +32,9 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         inventoryRepository.deleteAll();
 
         inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "First Inventory", 5));
-        inventoryList.add(new Inventory(2L, "Second Inventory", 6));
-        inventoryList.add(new Inventory(3L, "Third Inventory", 7));
+        inventoryList.add(new Inventory(1L, "First Inventory", 5, 0));
+        inventoryList.add(new Inventory(2L, "Second Inventory", 6, 0));
+        inventoryList.add(new Inventory(3L, "Third Inventory", 7, 0));
         inventoryList = inventoryRepository.saveAll(inventoryList);
     }
 

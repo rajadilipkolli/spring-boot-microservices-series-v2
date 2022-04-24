@@ -47,9 +47,9 @@ class InventoryControllerTest {
     @BeforeEach
     void setUp() {
         this.inventoryList = new ArrayList<>();
-        this.inventoryList.add(new Inventory(1L, "text 1", 1));
-        this.inventoryList.add(new Inventory(2L, "text 2", 2));
-        this.inventoryList.add(new Inventory(3L, "text 3", 3));
+        this.inventoryList.add(new Inventory(1L, "text 1", 1, 0));
+        this.inventoryList.add(new Inventory(2L, "text 2", 2, 0));
+        this.inventoryList.add(new Inventory(3L, "text 3", 3, 0));
 
         objectMapper.registerModule(new ProblemModule());
         objectMapper.registerModule(new ConstraintViolationProblemModule());
@@ -68,7 +68,7 @@ class InventoryControllerTest {
     @Test
     void shouldFindInventoryByProductCode() throws Exception {
         String productCode = "text 1";
-        Inventory inventory = new Inventory(1L, "text 1", 1);
+        Inventory inventory = new Inventory(1L, "text 1", 1, 0);
         given(inventoryService.findInventoryByProductCode(productCode))
                 .willReturn(Optional.of(inventory));
 
@@ -90,7 +90,7 @@ class InventoryControllerTest {
 
     @Test
     void shouldCreateNewInventory() throws Exception {
-        Inventory inventory = new Inventory(1L, "some text", 1);
+        Inventory inventory = new Inventory(1L, "some text", 1, 0);
         given(inventoryService.saveInventory(any(InventoryDto.class))).willReturn(inventory);
 
         InventoryDto inventoryDto = new InventoryDto("some text", 1);
@@ -130,7 +130,7 @@ class InventoryControllerTest {
     @Test
     void shouldUpdateInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Updated text", 30);
+        Inventory inventory = new Inventory(inventoryId, "Updated text", 30, 0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
         given(inventoryService.updateInventory(any(Inventory.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
@@ -148,7 +148,7 @@ class InventoryControllerTest {
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.empty());
-        Inventory inventory = new Inventory(inventoryId, "Updated text", 8);
+        Inventory inventory = new Inventory(inventoryId, "Updated text", 8, 0);
 
         this.mockMvc
                 .perform(
@@ -161,7 +161,7 @@ class InventoryControllerTest {
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Some text", 5);
+        Inventory inventory = new Inventory(inventoryId, "Some text", 5, 0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
         doNothing().when(inventoryService).deleteInventoryById(inventory.getId());
 
