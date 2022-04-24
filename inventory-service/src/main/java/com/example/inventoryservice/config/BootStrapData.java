@@ -20,6 +20,7 @@ public class BootStrapData {
   @EventListener(ApplicationReadyEvent.class)
   public void init() {
     log.info("start data initialization...");
+    this.inventoryRepository.deleteAll();
     Random r = new Random();
     for (int i = 0; i < 1000; i++) {
       int count = r.nextInt(1000);
