@@ -1,0 +1,33 @@
+name: payment-service-master
+
+on:
+  push:
+    paths:
+      - "payment-service/**"
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3.1.1
+        with:
+          java-version: 17
+          distribution: "microsoft"
+          cache: "maven"
+
+      - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
+        run: |
+          cd payment-service
+          chmod +x mvnw
+          ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
