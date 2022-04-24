@@ -78,6 +78,8 @@ services:
       - "8761:8761"
     networks:
       - microservice-network
+    depends_on:
+      - config-server
     environment:
       SPRING_PROFILES_ACTIVE: docker
 
@@ -111,12 +113,8 @@ services:
       - zipkin-server
       - mongodb
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+      SPRING_PROFILES_ACTIVE: docker
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
       SPRING_DATA_MONGODB_HOST: mongodb
 
   catalog-service:
@@ -136,7 +134,7 @@ services:
       - zipkin-server
       - postgresql
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_PROFILES_ACTIVE: docker
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
@@ -164,7 +162,6 @@ services:
       - zipkin-server
       - postgresql
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
@@ -189,7 +186,7 @@ services:
       - zipkin-server
       - postgresql
     environment:
-      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://naming-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE= docker
       - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
       - RABBIT_URI= amqp://guest:guest@rabbitmq:5672
       - SPRING_RABBITMQ_HOST= rabbitmq

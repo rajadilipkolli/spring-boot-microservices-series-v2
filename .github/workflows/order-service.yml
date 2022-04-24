@@ -1,10 +1,6 @@
 name: order-service
 
 on:
-  push:
-    paths:
-      - "order-service/**"
-    branches: [master]
   pull_request:
     paths:
       - "order-service/**"

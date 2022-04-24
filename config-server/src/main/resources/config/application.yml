@@ -1,0 +1,78 @@
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+logging:
+  level:
+    sql: INFO
+    web: INFO
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: configprops,env,health,info,logfile,loggers,metrics,refresh
+server:
+  shutdown: graceful
+spring:
+  datasource:
+    hikari:
+      auto-commit: false
+  jmx:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        connection:
+          provider_disables_autocommit: true
+        generate_statistics: false
+        id:
+          new_generator_mappings: true
+          optimizer:
+            pooled:
+              preferred: pooled-lo
+        jdbc:
+          batch_size: 25
+          lob:
+            non_contextual_creation: true
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        query:
+          fail_on_pagination_over_collection_fetch: true
+          in_clause_parameter_padding: true
+    show-sql: true
+  main:
+    allow-bean-definition-overriding: true
+  sleuth:
+    sampler:
+      probability: 1.0
+  zipkin:
+    baseurl: http://localhost:9411
+    sender:
+      type: rabbit
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "docker"
+    import: configserver:http://config-server:8888/
+  datasource:
+    password: secret
+    url: jdbc:postgresql://postgresql:5432/appdb
+    username: siva
+  rabbitmq:
+    addresses: rabbitmq:5672
+    host: rabbitmq
+  zipkin:
+    base-url: http://zipkin-server:9411/
+eureka:
+  client:
+    service-url:
+      defaultZone: http://naming-server:8761/eureka/

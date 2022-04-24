@@ -1,0 +1,21 @@
+logging:
+  file:
+    name: logs/catalog-service.log
+resilience4j:
+  bulkhead:
+    instances:
+      default:
+        maxConcurrentCalls: 10
+      product-api:
+        maxConcurrentCalls: 10
+  ratelimiter:
+    instances:
+      default:
+        limitForPeriod: 2
+        limitRefreshPeriod: 10s
+  retry:
+    instances:
+      product-api:
+        enableExponentialBackoff: true
+        maxRetryAttempts: 5
+        waitDuration: 1s
