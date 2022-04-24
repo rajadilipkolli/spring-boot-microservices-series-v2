@@ -61,13 +61,13 @@ class APIGatewayApplicationTest {
         propertyRegistry.add("spring.config.import", () ->
                 String.format(
                         "optional:configserver:http://%s:%d/",
-                        configServerContainer.getContainerIpAddress(),
+                        configServerContainer.getHost(),
                         configServerContainer.getMappedPort(CONFIG_SERVER_INTERNAL_PORT)
                 )
         );
         propertyRegistry.add("eureka.client.serviceUrl.defaultZone", () ->
                 String.format("http://%s:%d/eureka/",
-                        namingServerContainer.getContainerIpAddress(),
+                        namingServerContainer.getHost(),
                         namingServerContainer.getMappedPort(NAMING_SERVER_INTERNAL_PORT)
                 )
         );
