@@ -79,7 +79,7 @@ services:
     networks:
       - microservice-network
     environment:
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_PROFILES_ACTIVE: docker
 
   config-server:
     container_name: config-server
