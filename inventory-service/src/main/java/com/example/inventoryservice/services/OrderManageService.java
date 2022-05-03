@@ -24,7 +24,7 @@ public class OrderManageService {
   public void reserve(Order order) {
     Inventory product = repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
     LOG.info("Found: {}", product);
-    if (order.getStatus().equals("NEW")) {
+    if ("NEW".equals(order.getStatus())) {
       int productCount = order.getItems().get(0).getQuantity();
       if (productCount < product.getAvailableQuantity()) {
         product.setReservedItems(product.getReservedItems() + productCount);
@@ -43,10 +43,10 @@ public class OrderManageService {
     Inventory product = repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
     LOG.info("Found: {}", product);
     int productCount = order.getItems().get(0).getQuantity();
-    if (order.getStatus().equals("CONFIRMED")) {
+    if ("CONFIRMED".equals(order.getStatus())) {
       product.setReservedItems(product.getReservedItems() - productCount);
       repository.save(product);
-    } else if (order.getStatus().equals("ROLLBACK") && !order.getSource().equals(SOURCE)) {
+    } else if ("ROLLBACK".equals(order.getStatus()) && !SOURCE.equals(order.getSource())) {
       product.setReservedItems(product.getReservedItems() - productCount);
       product.setAvailableQuantity(product.getAvailableQuantity() + productCount);
       repository.save(product);
