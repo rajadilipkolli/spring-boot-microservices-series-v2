@@ -34,7 +34,7 @@ public class KafkaConfig {
   private final OrderManageService orderManageService;
 
   @Bean
-  public NewTopic orders() {
+  public NewTopic ordersTopic() {
     return TopicBuilder.name(ORDERS).partitions(3).compact().build();
   }
 
