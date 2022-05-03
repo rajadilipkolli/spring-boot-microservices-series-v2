@@ -29,11 +29,13 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class KafkaConfig {
 
+  private static final String ORDERS = "orders";
+  
   private final OrderManageService orderManageService;
 
   @Bean
-  public NewTopic orders() {
-    return TopicBuilder.name("orders").partitions(3).compact().build();
+  public NewTopic ordersTopic() {
+    return TopicBuilder.name(ORDERS).partitions(3).compact().build();
   }
 
   @Bean
@@ -59,17 +61,17 @@ public class KafkaConfig {
             JoinWindows.of(Duration.ofSeconds(10)),
             StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
         .peek((k, o) -> log.info("Output: {}", o))
-        .to("orders");
+        .to(ORDERS);
 
     return stream;
   }
 
   @Bean
   public KTable<Long, Order> table(StreamsBuilder builder) {
-    KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore("orders");
+    KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS);
     JsonSerde<Order> orderSerde = new JsonSerde<>(Order.class);
     KStream<Long, Order> stream =
-        builder.stream("orders", Consumed.with(Serdes.Long(), orderSerde));
+        builder.stream(ORDERS, Consumed.with(Serdes.Long(), orderSerde));
     return stream.toTable(
         Materialized.<Long, Order>as(store).withKeySerde(Serdes.Long()).withValueSerde(orderSerde));
   }

@@ -5,6 +5,12 @@
 image: gitpod/workspace-java-17
 
 tasks:
-  - init: ./mvnw install -DskipTests=false
+  - before: sdk install mvnd
+    init: mvnd verify -DskipTests=true
+
+vscode:
+  extensions:
+    - Pivotal.vscode-boot-dev-pack
+    - vscjava.vscode-java-pack
 
 

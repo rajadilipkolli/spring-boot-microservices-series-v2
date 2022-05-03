@@ -6,6 +6,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderManageService {
 
+  /**
+   *
+   */
+  private static final String ACCEPT = "ACCEPT";
+  private static final String REJECT = "REJECT";
+
   public Order confirm(Order orderPayment, Order orderStock) {
     Order o = new Order();
     o.setCustomerId(orderPayment.getCustomerId());
@@ -13,14 +19,14 @@ public class OrderManageService {
     o.setCustomerAddress(orderPayment.getCustomerAddress());
     o.setCustomerEmail(orderPayment.getCustomerEmail());
     o.setItems(orderPayment.getItems());
-    if (orderPayment.getStatus().equals("ACCEPT") && orderStock.getStatus().equals("ACCEPT")) {
+    if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
       o.setStatus("CONFIRMED");
-    } else if (orderPayment.getStatus().equals("REJECT")
-        && orderStock.getStatus().equals("REJECT")) {
+    } else if (REJECT.equals(orderPayment.getStatus())
+        && REJECT.equals(orderStock.getStatus())) {
       o.setStatus("REJECTED");
-    } else if (orderPayment.getStatus().equals("REJECT")
-        || orderStock.getStatus().equals("REJECT")) {
-      String source = orderPayment.getStatus().equals("REJECT") ? "PAYMENT" : "STOCK";
+    } else if (REJECT.equals(orderPayment.getStatus())
+        || REJECT.equals(orderStock.getStatus())) {
+      String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "STOCK";
       o.setStatus("ROLLBACK");
       o.setSource(source);
     }

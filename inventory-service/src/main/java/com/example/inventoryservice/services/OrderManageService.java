@@ -3,28 +3,27 @@ package com.example.inventoryservice.services;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.entities.Order;
 import com.example.inventoryservice.repositories.InventoryRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class OrderManageService {
 
   private static final String SOURCE = "stock";
-  private static final Logger LOG = LoggerFactory.getLogger(OrderManageService.class);
+  private static final String ROLLBACK = "ROLLBACK";
+  
   private final InventoryRepository repository;
   private final KafkaTemplate<Long, Order> template;
 
-  public OrderManageService(InventoryRepository repository, KafkaTemplate<Long, Order> template) {
-    this.repository = repository;
-    this.template = template;
-  }
-
   public void reserve(Order order) {
     Inventory product = repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
-    LOG.info("Found: {}", product);
-    if (order.getStatus().equals("NEW")) {
+    log.info("Found: {}", product);
+    if ("NEW".equals(order.getStatus())) {
       int productCount = order.getItems().get(0).getQuantity();
       if (productCount < product.getAvailableQuantity()) {
         product.setReservedItems(product.getReservedItems() + productCount);
@@ -35,18 +34,18 @@ public class OrderManageService {
         order.setStatus("REJECT");
       }
       template.send("stock-orders", order.getId(), order);
-      LOG.info("Sent: {}", order);
+      log.info("Sent: {}", order);
     }
   }
 
   public void confirm(Order order) {
     Inventory product = repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
-    LOG.info("Found: {}", product);
+    log.info("Found: {}", product);
     int productCount = order.getItems().get(0).getQuantity();
-    if (order.getStatus().equals("CONFIRMED")) {
+    if ("CONFIRMED".equals(order.getStatus())) {
       product.setReservedItems(product.getReservedItems() - productCount);
       repository.save(product);
-    } else if (order.getStatus().equals("ROLLBACK") && !order.getSource().equals(SOURCE)) {
+    } else if (ROLLBACK.equals(order.getStatus()) && !(SOURCE.equalsIgnoreCase(order.getSource()))) {
       product.setReservedItems(product.getReservedItems() - productCount);
       product.setAvailableQuantity(product.getAvailableQuantity() + productCount);
       repository.save(product);
