@@ -34,7 +34,7 @@ public class OrderGeneratorService {
 
   @Async
   public void generate() {
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 10_000; i++) {
       Order o = new Order();
       o.setId(id.incrementAndGet());
       o.setStatus("NEW");
