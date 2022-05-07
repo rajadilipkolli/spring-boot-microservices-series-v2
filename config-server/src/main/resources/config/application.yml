@@ -76,3 +76,10 @@ eureka:
   client:
     service-url:
       defaultZone: http://naming-server:8761/eureka/
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "native"
+    import: optional:configserver:http://localhost:8888/
