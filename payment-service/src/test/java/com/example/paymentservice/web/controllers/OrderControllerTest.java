@@ -6,8 +6,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -47,9 +45,27 @@ class OrderControllerTest {
     @BeforeEach
     void setUp() {
         this.orderList = new ArrayList<>();
-        this.orderList.add(new Order(1L, "text 1"));
-        this.orderList.add(new Order(2L, "text 2"));
-        this.orderList.add(new Order(3L, "text 3"));
+        this.orderList.add(
+                Order.builder()
+                        .id(1L)
+                        .customerAddress("text 1")
+                        .customerEmail("junit1@email.com")
+                        .customerId(1L)
+                        .build());
+        this.orderList.add(
+                Order.builder()
+                        .id(2L)
+                        .customerAddress("text 2")
+                        .customerEmail("junit2@email.com")
+                        .customerId(1L)
+                        .build());
+        this.orderList.add(
+                Order.builder()
+                        .id(3L)
+                        .customerAddress("text 3")
+                        .customerEmail("junit3@email.com")
+                        .customerId(1L)
+                        .build());
 
         objectMapper.registerModule(new ProblemModule());
         objectMapper.registerModule(new ConstraintViolationProblemModule());
@@ -68,13 +84,19 @@ class OrderControllerTest {
     @Test
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
-        Order order = new Order(orderId, "text 1");
+        Order order =
+                Order.builder()
+                        .id(orderId)
+                        .customerAddress("text 1")
+                        .customerEmail("junit1@email.com")
+                        .customerId(1L)
+                        .build();
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 
     @Test
@@ -90,7 +112,13 @@ class OrderControllerTest {
         given(orderService.saveOrder(any(Order.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
-        Order order = new Order(1L, "some text");
+        Order order =
+                Order.builder()
+                        .id(1L)
+                        .customerAddress("text 1")
+                        .customerEmail("junit1@email.com")
+                        .customerId(1L)
+                        .build();
         this.mockMvc
                 .perform(
                         post("/api/orders")
@@ -98,12 +126,18 @@ class OrderControllerTest {
                                 .content(objectMapper.writeValueAsString(order)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutText() throws Exception {
-        Order order = new Order(null, null);
+        Order order =
+                Order.builder()
+                        .id(null)
+                        .customerAddress("text 1")
+                        .customerEmail(null)
+                        .customerId(1L)
+                        .build();
 
         this.mockMvc
                 .perform(
@@ -119,15 +153,21 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("text")))
-                .andExpect(jsonPath("$.violations[0].message", is("Text cannot be empty")))
+                .andExpect(jsonPath("$.violations[0].field", is("customerEmail")))
+                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be empty")))
                 .andReturn();
     }
 
     @Test
     void shouldUpdateOrder() throws Exception {
         Long orderId = 1L;
-        Order order = new Order(orderId, "Updated text");
+        Order order =
+                Order.builder()
+                        .id(orderId)
+                        .customerAddress("updated Text")
+                        .customerEmail("junit1@email.com")
+                        .customerId(1L)
+                        .build();
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
         given(orderService.saveOrder(any(Order.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
@@ -138,14 +178,20 @@ class OrderControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(order)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 
     @Test
     void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
-        Order order = new Order(orderId, "Updated text");
+        Order order =
+                Order.builder()
+                        .id(orderId)
+                        .customerAddress("Updated text")
+                        .customerEmail("junit1@email.com")
+                        .customerId(1L)
+                        .build();
 
         this.mockMvc
                 .perform(
@@ -153,26 +199,5 @@ class OrderControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(order)))
                 .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Long orderId = 1L;
-        Order order = new Order(orderId, "Some text");
-        given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
-        doNothing().when(orderService).deleteOrderById(order.getId());
-
-        this.mockMvc
-                .perform(delete("/api/orders/{id}", order.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
-    }
-
-    @Test
-    void shouldReturn404WhenDeletingNonExistingOrder() throws Exception {
-        Long orderId = 1L;
-        given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
-
-        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
     }
 }

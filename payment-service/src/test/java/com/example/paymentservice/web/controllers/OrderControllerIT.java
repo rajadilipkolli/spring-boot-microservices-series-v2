@@ -2,7 +2,6 @@ package com.example.paymentservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -11,7 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
+import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.entities.Order;
+import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.repositories.OrderRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,17 +24,46 @@ import org.springframework.http.MediaType;
 class OrderControllerIT extends AbstractIntegrationTest {
 
     @Autowired private OrderRepository orderRepository;
+    @Autowired private CustomerRepository customerRepository;
 
     private List<Order> orderList = null;
+    private Customer customer;
 
     @BeforeEach
     void setUp() {
         orderRepository.deleteAll();
+        customerRepository.deleteAll();
+
+        customer =
+                customerRepository.save(
+                        Customer.builder()
+                                .name("junit")
+                                .amountAvailable(0)
+                                .amountReserved(0)
+                                .build());
 
         orderList = new ArrayList<>();
-        orderList.add(new Order(1L, "First Order"));
-        orderList.add(new Order(2L, "Second Order"));
-        orderList.add(new Order(3L, "Third Order"));
+        this.orderList.add(
+                Order.builder()
+                        .id(1L)
+                        .customerAddress("text 1")
+                        .customerEmail("junit1@email.com")
+                        .customerId(customer.getId())
+                        .build());
+        this.orderList.add(
+                Order.builder()
+                        .id(2L)
+                        .customerAddress("text 2")
+                        .customerEmail("junit2@email.com")
+                        .customerId(customer.getId())
+                        .build());
+        this.orderList.add(
+                Order.builder()
+                        .id(3L)
+                        .customerAddress("text 3")
+                        .customerEmail("junit3@email.com")
+                        .customerId(customer.getId())
+                        .build());
         orderList = orderRepository.saveAll(orderList);
     }
 
@@ -53,24 +83,35 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 
     @Test
     void shouldCreateNewOrder() throws Exception {
-        Order order = new Order(null, "New Order");
+        Order order =
+                Order.builder()
+                        .customerAddress("text 1")
+                        .customerEmail("junit1@email.com")
+                        .customerId(customer.getId())
+                        .build();
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(order)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 
     @Test
-    void shouldReturn400WhenCreateNewOrderWithoutText() throws Exception {
-        Order order = new Order(null, null);
+    void shouldReturn400WhenCreateNewOrderWithoutEmail() throws Exception {
+        Order order =
+                Order.builder()
+                        .id(null)
+                        .customerAddress("text 1")
+                        .customerEmail(null)
+                        .customerId(1L)
+                        .build();
 
         this.mockMvc
                 .perform(
@@ -86,15 +127,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("text")))
-                .andExpect(jsonPath("$.violations[0].message", is("Text cannot be empty")))
+                .andExpect(jsonPath("$.violations[0].field", is("customerEmail")))
+                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be empty")))
                 .andReturn();
     }
 
     @Test
     void shouldUpdateOrder() throws Exception {
         Order order = orderList.get(0);
-        order.setText("Updated Order");
+        order.setCustomerAddress("Updated Order");
+        order.setCustomerEmail("junit5@email.com");
 
         this.mockMvc
                 .perform(
@@ -102,16 +144,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(order)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
-    }
-
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Order order = orderList.get(0);
-
-        this.mockMvc
-                .perform(delete("/api/orders/{id}", order.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.text", is(order.getText())));
+                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
     }
 }

@@ -41,6 +41,7 @@ public class Order {
 
     private String customerAddress;
 
+    @Column(nullable = false)
     private Long customerId;
 
     private String status;
