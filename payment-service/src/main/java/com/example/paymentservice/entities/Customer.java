@@ -1,69 +1,35 @@
 package com.example.paymentservice.entities;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+import javax.validation.constraints.NotEmpty;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@Table(name = "customers")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Customer {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "customer_id_generator")
+    @SequenceGenerator(
+        name = "customer_id_generator",
+        sequenceName = "customer_id_seq",
+        allocationSize = 100)
     private Long id;
-    private String name;
-    private int amountAvailable;
-    private int amountReserved;
 
-    public Customer() {
-    }
-
-    public Customer(Long id, String name, int amountAvailable, int amountReserved) {
-        this.id = id;
-        this.name = name;
-        this.amountAvailable = amountAvailable;
-        this.amountReserved = amountReserved;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAmountAvailable() {
-        return amountAvailable;
-    }
-
-    public void setAmountAvailable(int amountAvailable) {
-        this.amountAvailable = amountAvailable;
-    }
-
-    public int getAmountReserved() {
-        return amountReserved;
-    }
-
-    public void setAmountReserved(int amountReserved) {
-        this.amountReserved = amountReserved;
-    }
-
-    @Override
-    public String toString() {
-        return "Customer{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", amountAvailable=" + amountAvailable +
-                ", amountReserved=" + amountReserved +
-                '}';
-    }
+    @Column(nullable = false)
+    @NotEmpty(message = "Text cannot be empty")
+    private String text;
 }
