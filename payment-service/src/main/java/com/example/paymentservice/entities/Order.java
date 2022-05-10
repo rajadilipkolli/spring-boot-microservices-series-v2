@@ -3,6 +3,7 @@ package com.example.paymentservice.entities;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -34,15 +35,17 @@ public class Order {
             allocationSize = 100)
     private Long id;
 
-    @NotEmpty(message = "Email can't be blank")
+    @Column(nullable = false)
+    @NotEmpty(message = "Email cannot be empty")
     private String customerEmail;
 
     private String customerAddress;
-    
+
+    @Column(nullable = false)
     private Long customerId;
-    
+
     private String status;
-    
+
     private String source;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -35,8 +35,3 @@ build/
 ### Misc ###
 *.log
 .DS_Store
-catalog-service/logs/
-inventory-service/logs/
-order-service/logs/
-order-service/LOG_FILE_IS_UNDEFINED
-inventory-service/LOG_FILE_IS_UNDEFINED
