@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v3.3.0
         with:
           java-version: 18
-          distribution: "microsoft"
+          distribution: "zulu"
           cache: "maven"
 
       - name: Start up softwares via Docker Compose
