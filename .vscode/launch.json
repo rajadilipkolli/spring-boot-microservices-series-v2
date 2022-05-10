@@ -2,13 +2,6 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch PaymentServiceApplication",
-            "request": "launch",
-            "mainClass": "com.example.paymentservice.PaymentServiceApplication",
-            "projectName": "payment-service"
-        },
-        {
-            "type": "java",
             "name": "Spring Boot-ConfigServerApplication<config-server>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
