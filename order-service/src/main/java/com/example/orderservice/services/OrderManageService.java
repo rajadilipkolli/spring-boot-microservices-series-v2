@@ -6,9 +6,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderManageService {
 
-  /**
-   *
-   */
   private static final String ACCEPT = "ACCEPT";
   private static final String REJECT = "REJECT";
 
