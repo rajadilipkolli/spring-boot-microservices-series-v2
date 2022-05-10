@@ -1,7 +1,6 @@
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
@@ -16,9 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -83,9 +82,7 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(get("/api/orders/{id}", orderId))
-                .andExpect(status().isNotFound());
+        this.mockMvc.perform(get("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -176,8 +173,6 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(delete("/api/orders/{id}", orderId))
-                .andExpect(status().isNotFound());
+        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
     }
 }

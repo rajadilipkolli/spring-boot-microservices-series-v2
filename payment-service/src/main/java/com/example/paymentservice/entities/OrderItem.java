@@ -1,39 +1,45 @@
 package com.example.paymentservice.entities;
 
+import java.math.BigDecimal;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "customers")
+@Table(name = "order_items")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Customer {
+public class OrderItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "customer_id_generator")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_item_id_generator")
     @SequenceGenerator(
-            name = "customer_id_generator",
-            sequenceName = "customer_id_seq",
+            name = "order_item_id_generator",
+            sequenceName = "order_item_id_seq",
             allocationSize = 100)
     private Long id;
 
     @Column(nullable = false)
-    @NotEmpty(message = "Name cannot be empty")
-    private String name;
+    private Long productId;
 
-    private int amountAvailable;
+    @Column(nullable = false)
+    private int quantity;
 
-    private int amountReserved;
+    @Column(columnDefinition = "NUMERIC(19,2)")
+    private BigDecimal productPrice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Order order;
 }
