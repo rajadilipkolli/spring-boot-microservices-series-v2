@@ -3,7 +3,6 @@ package com.example.paymentservice.web.controllers;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.services.CustomerService;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/customers")
-@Slf4j
 public class CustomerController {
 
     private final CustomerService customerService;
