@@ -1,0 +1,12 @@
+{
+  "generator-springboot": {
+    "appName": "payment-service",
+    "packageName": "com.example.paymentservice",
+    "databaseType": "postgresql",
+    "dbMigrationTool": "liquibase",
+    "features": [],
+    "buildTool": "maven",
+    "packageFolder": "com/example/paymentservice",
+    "liquibaseMigrationCounter": 3
+  }
+}

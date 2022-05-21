@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    <changeSet author="sivalabs" id="createTable-order-items">
+        <createSequence
+                        sequenceName="order_item_id_seq"
+                        incrementBy="100"
+                        startValue="1"
+                        />
+        <createTable tableName="order_items">
+            <column name="id" type="bigint" defaultValueSequenceNext="order_item_id_seq">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="product_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="product_price" type="numeric"/>
+            <column name="customer_id" type="bigint"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="order_items" baseColumnNames="order_id" constraintName="FK_order_id" referencedTableName="orders" referencedColumnNames="id" />
+    </changeSet>
+</databaseChangeLog>

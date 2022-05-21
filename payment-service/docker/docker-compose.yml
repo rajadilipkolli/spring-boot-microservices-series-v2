@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+
+  postgresqldb:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    ports:
+      - "5432:5432"
+
