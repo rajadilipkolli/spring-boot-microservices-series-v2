@@ -19,7 +19,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>17</java.version>
-        <spring-cloud.version>2021.0.2</spring-cloud.version>
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
         <problem-spring-web.version>0.27.0</problem-spring-web.version>
         <commons-io.version>2.11.0</commons-io.version>
         <org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
