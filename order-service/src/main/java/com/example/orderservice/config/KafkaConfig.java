@@ -1,6 +1,6 @@
 package com.example.orderservice.config;
 
-import com.example.orderservice.entities.Order;
+import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
@@ -48,9 +48,9 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KStream<Long, Order> stream(StreamsBuilder builder) {
-        JsonSerde<Order> orderSerde = new JsonSerde<>(Order.class);
-        KStream<Long, Order> stream =
+    public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
+        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        KStream<Long, OrderDto> stream =
                 builder.stream("payment-orders", Consumed.with(Serdes.Long(), orderSerde));
 
         stream.join(
@@ -65,13 +65,13 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KTable<Long, Order> table(StreamsBuilder builder) {
+    public KTable<Long, OrderDto> table(StreamsBuilder builder) {
         KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS);
-        JsonSerde<Order> orderSerde = new JsonSerde<>(Order.class);
-        KStream<Long, Order> stream =
+        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        KStream<Long, OrderDto> stream =
                 builder.stream(ORDERS, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(
-                Materialized.<Long, Order>as(store)
+                Materialized.<Long, OrderDto>as(store)
                         .withKeySerde(Serdes.Long())
                         .withValueSerde(orderSerde));
     }

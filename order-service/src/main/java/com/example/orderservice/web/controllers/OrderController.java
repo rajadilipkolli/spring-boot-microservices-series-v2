@@ -1,7 +1,6 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.entities.Order;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -88,7 +87,7 @@ public class OrderController {
     }
 
     @GetMapping("/all")
-    public List<Order> all() {
+    public List<OrderDto> all() {
         return orderGeneratorService.getAllOrders();
     }
 }

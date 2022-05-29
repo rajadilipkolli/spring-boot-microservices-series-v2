@@ -1,6 +1,6 @@
 package com.example.orderservice.services;
 
-import com.example.orderservice.entities.Order;
+import com.example.orderservice.dtos.OrderDto;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -9,10 +9,10 @@ public class OrderManageService {
     private static final String ACCEPT = "ACCEPT";
     private static final String REJECT = "REJECT";
 
-    public Order confirm(Order orderPayment, Order orderStock) {
-        Order o = new Order();
+    public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+        OrderDto o = new OrderDto();
         o.setCustomerId(orderPayment.getCustomerId());
-        o.setId(orderPayment.getId());
+        o.setOrderId(orderPayment.getOrderId());
         o.setCustomerAddress(orderPayment.getCustomerAddress());
         o.setCustomerEmail(orderPayment.getCustomerEmail());
         o.setItems(orderPayment.getItems());
