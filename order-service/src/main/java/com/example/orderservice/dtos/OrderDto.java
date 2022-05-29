@@ -22,7 +22,7 @@ public class OrderDto implements Serializable {
 
     private long customerId;
 
-    private String status;
+    private String status = "NEW";
 
     private String source;
 

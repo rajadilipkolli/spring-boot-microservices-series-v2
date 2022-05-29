@@ -6,22 +6,20 @@ import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
 
-    @Autowired
-    public OrderService(OrderRepository orderRepository, OrderMapper orderMapper) {
-        this.orderRepository = orderRepository;
-        this.orderMapper = orderMapper;
-    }
+    private final KafkaTemplate<Long, OrderDto> template;
 
     public List<OrderDto> findAllOrders() {
         return this.orderMapper.toDtoList(orderRepository.findAllOrders());
@@ -33,7 +31,9 @@ public class OrderService {
 
     public OrderDto saveOrder(OrderDto orderDto) {
         Order order = this.orderMapper.toEntity(orderDto);
-        return this.orderMapper.toDto(orderRepository.save(order));
+        OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
+        this.template.send("orders", persistedOrderDto.getOrderId(), persistedOrderDto);
+        return persistedOrderDto;
     }
 
     public void deleteOrderById(Long id) {
