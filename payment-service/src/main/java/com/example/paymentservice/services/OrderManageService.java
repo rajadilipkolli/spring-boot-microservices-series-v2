@@ -1,8 +1,8 @@
 package com.example.paymentservice.services;
 
+import com.example.orderservice.dtos.OrderDto;
+import com.example.orderservice.dtos.OrderItemDto;
 import com.example.paymentservice.entities.Customer;
-import com.example.paymentservice.entities.Order;
-import com.example.paymentservice.entities.OrderItem;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import java.math.BigDecimal;
@@ -17,14 +17,14 @@ import org.springframework.stereotype.Service;
 public class OrderManageService {
 
     private final CustomerRepository repository;
-    private final KafkaTemplate<Long, Order> template;
+    private final KafkaTemplate<Long, OrderDto> template;
 
-    public void reserve(Order order) {
+    public void reserve(OrderDto order) {
         Customer customer = repository.findById(order.getCustomerId()).orElseThrow();
         log.info("Found: {}", customer);
         var orderPrice =
                 order.getItems().stream()
-                        .map(OrderItem::getProductPrice)
+                        .map(OrderItemDto::getProductPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
         if (orderPrice < customer.getAmountAvailable()) {
@@ -36,16 +36,16 @@ public class OrderManageService {
         }
         order.setSource(AppConstants.SOURCE);
         repository.save(customer);
-        template.send("payment-orders", order.getId(), order);
+        template.send("payment-orders", order.getOrderId(), order);
         log.info("Sent: {}", order);
     }
 
-    public void confirm(Order order) {
+    public void confirm(OrderDto order) {
         Customer customer = repository.findById(order.getCustomerId()).orElseThrow();
         log.info("Found: {}", customer);
         var orderPrice =
                 order.getItems().stream()
-                        .map(OrderItem::getProductPrice)
+                        .map(OrderItemDto::getProductPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
         if (order.getStatus().equals("CONFIRMED")) {
