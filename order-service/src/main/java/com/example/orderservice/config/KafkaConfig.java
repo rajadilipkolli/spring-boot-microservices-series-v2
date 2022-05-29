@@ -58,7 +58,7 @@ public class KafkaConfig {
         .join(
             builder.stream("stock-orders"),
             orderManageService::confirm,
-            JoinWindows.of(Duration.ofSeconds(10)),
+            JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
             StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
         .peek((k, o) -> log.info("Output: {}", o))
         .to(ORDERS);
