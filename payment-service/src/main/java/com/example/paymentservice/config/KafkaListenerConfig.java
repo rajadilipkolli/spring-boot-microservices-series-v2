@@ -1,6 +1,6 @@
 package com.example.paymentservice.config;
 
-import com.example.paymentservice.entities.Order;
+import com.example.orderservice.dtos.OrderDto;
 import com.example.paymentservice.services.OrderManageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +17,12 @@ public class KafkaListenerConfig {
     private final OrderManageService orderManageService;
 
     @KafkaListener(id = "orders", topics = "orders", groupId = "payment")
-    public void onEvent(Order o) {
+    public void onEvent(OrderDto o) {
         log.info("Received: {}", o);
-        if (o.getStatus().equals("NEW")) orderManageService.reserve(o);
-        else orderManageService.confirm(o);
+        if (o.getStatus().equals("NEW")) {
+            orderManageService.reserve(o);
+        } else {
+            orderManageService.confirm(o);
+        }
     }
 }

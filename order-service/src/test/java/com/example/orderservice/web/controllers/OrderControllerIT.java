@@ -19,7 +19,6 @@ import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,24 +52,36 @@ class OrderControllerIT {
         orderRepository.deleteAll();
 
         orderList = new ArrayList<>();
-        Order order1 = Order.builder().customerEmail("email1@junit.com").customerAddress("address 1")
-		.customerId(1L).build();
+        Order order1 =
+                Order.builder()
+                        .customerEmail("email1@junit.com")
+                        .customerAddress("address 1")
+                        .customerId(1L)
+                        .build();
         OrderItem orderItem = new OrderItem();
         orderItem.setProductId(1L);
         orderItem.setQuantity(10);
         orderItem.setProductPrice(BigDecimal.TEN);
         order1.addOrderItem(orderItem);
         this.orderList.add(order1);
-        Order order2 = Order.builder().customerEmail("email2@junit.com").customerAddress("address 2")
-        		.customerId(2L).build();
+        Order order2 =
+                Order.builder()
+                        .customerEmail("email2@junit.com")
+                        .customerAddress("address 2")
+                        .customerId(2L)
+                        .build();
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductId(2L);
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
         order2.addOrderItem(orderItem1);
         this.orderList.add(order2);
-        Order order3 = Order.builder().customerEmail("email3@junit.com").customerAddress("address 3")
-        		.customerId(3L).build();
+        Order order3 =
+                Order.builder()
+                        .customerEmail("email3@junit.com")
+                        .customerAddress("address 3")
+                        .customerId(3L)
+                        .build();
         OrderItem orderItem2 = new OrderItem();
         orderItem2.setProductId(2L);
         orderItem2.setQuantity(100);
@@ -104,7 +115,9 @@ class OrderControllerIT {
 
     @Test
     void shouldCreateNewOrder() throws Exception {
-        OrderDto orderDto = new OrderDto(null, "email1@junit.com", "address 1", new ArrayList<>());
+        OrderDto orderDto =
+                new OrderDto(
+                        null, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductId(1L);
         orderItemDto.setQuantity(10);
@@ -122,7 +135,7 @@ class OrderControllerIT {
 
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutEmail() throws Exception {
-        OrderDto order = new OrderDto(null, null, null, null);
+        OrderDto order = new OrderDto(null, null, null, 0, null, null, null);
 
         this.mockMvc
                 .perform(
