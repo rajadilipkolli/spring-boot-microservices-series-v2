@@ -1,12 +1,13 @@
 package com.example.orderservice.dtos;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class OrderItemDto {
+public class OrderItemDto implements Serializable {
 
     private Long itemId;
 
