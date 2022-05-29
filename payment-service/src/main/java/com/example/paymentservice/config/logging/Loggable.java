@@ -1,4 +1,4 @@
-/* (C)2022 */
+/* Licensed under Apache-2.0 2021-2022 */
 package com.example.paymentservice.config.logging;
 
 import static java.lang.annotation.ElementType.METHOD;

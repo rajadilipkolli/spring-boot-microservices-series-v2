@@ -1,4 +1,4 @@
-/* (C)2022 */
+/* Licensed under Apache-2.0 2022 */
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.entities.Customer;

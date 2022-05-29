@@ -289,7 +289,7 @@
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
-                            <content>/* (C)$YEAR */</content>
+                            <content>/* Licensed under Apache-2.0 $YEAR */</content>
                         </licenseHeader>
                     </java>
                 </configuration>
