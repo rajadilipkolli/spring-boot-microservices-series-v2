@@ -29,6 +29,7 @@ public class OrderService {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
 
+    @Transactional
     public OrderDto saveOrder(OrderDto orderDto) {
         Order order = this.orderMapper.toEntity(orderDto);
         OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
