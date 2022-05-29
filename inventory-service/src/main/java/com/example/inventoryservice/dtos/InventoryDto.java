@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.dtos;
 
 import java.io.Serializable;

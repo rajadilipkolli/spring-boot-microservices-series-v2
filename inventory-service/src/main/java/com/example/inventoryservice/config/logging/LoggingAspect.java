@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.config.logging;
 
 import com.example.inventoryservice.utils.AppConstants;

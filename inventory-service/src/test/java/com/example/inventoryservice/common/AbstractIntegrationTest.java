@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.common;
 
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_IT;

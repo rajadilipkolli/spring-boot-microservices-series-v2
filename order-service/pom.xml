@@ -353,7 +353,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.2</version>
+                        <version>10.3</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -496,6 +496,9 @@
                             <version>1.15.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
+                        <licenseHeader>
+                            <content>/* (C)$YEAR */</content>
+                        </licenseHeader>
                     </java>
                 </configuration>
                 <executions>

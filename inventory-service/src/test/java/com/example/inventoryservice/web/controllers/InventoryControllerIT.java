@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;

@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.common;
 
 import org.springframework.boot.test.util.TestPropertyValues;

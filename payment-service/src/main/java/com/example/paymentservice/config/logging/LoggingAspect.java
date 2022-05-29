@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.paymentservice.config.logging;
 
 import com.example.paymentservice.utils.AppConstants;
