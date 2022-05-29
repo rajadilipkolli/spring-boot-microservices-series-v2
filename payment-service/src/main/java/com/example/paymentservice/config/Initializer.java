@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 public class Initializer implements CommandLineRunner {
 
     private final CustomerRepository repository;
-    ;
 
     @Override
     public void run(String... args) {
