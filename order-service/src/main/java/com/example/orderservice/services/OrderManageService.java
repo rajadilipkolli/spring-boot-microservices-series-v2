@@ -1,29 +1,39 @@
 package com.example.orderservice.services;
 
-import com.example.orderservice.entities.Order;
+import com.example.orderservice.dtos.OrderDto;
+import com.example.orderservice.repositories.OrderRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class OrderManageService {
 
-  public Order confirm(Order orderPayment, Order orderStock) {
-    Order o = new Order();
-    o.setCustomerId(orderPayment.getCustomerId());
-    o.setId(orderPayment.getId());
-    o.setCustomerAddress(orderPayment.getCustomerAddress());
-    o.setCustomerEmail(orderPayment.getCustomerEmail());
-    o.setItems(orderPayment.getItems());
-    if (orderPayment.getStatus().equals("ACCEPT") && orderStock.getStatus().equals("ACCEPT")) {
-      o.setStatus("CONFIRMED");
-    } else if (orderPayment.getStatus().equals("REJECT")
-        && orderStock.getStatus().equals("REJECT")) {
-      o.setStatus("REJECTED");
-    } else if (orderPayment.getStatus().equals("REJECT")
-        || orderStock.getStatus().equals("REJECT")) {
-      String source = orderPayment.getStatus().equals("REJECT") ? "PAYMENT" : "STOCK";
-      o.setStatus("ROLLBACK");
-      o.setSource(source);
+    private static final String ACCEPT = "ACCEPT";
+    private static final String REJECT = "REJECT";
+
+    private final OrderRepository orderRepository;
+
+    public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+        OrderDto o = new OrderDto();
+        o.setCustomerId(orderPayment.getCustomerId());
+        o.setOrderId(orderPayment.getOrderId());
+        o.setCustomerAddress(orderPayment.getCustomerAddress());
+        o.setCustomerEmail(orderPayment.getCustomerEmail());
+        o.setItems(orderPayment.getItems());
+        if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
+            o.setStatus("CONFIRMED");
+        } else if (REJECT.equals(orderPayment.getStatus())
+                && REJECT.equals(orderStock.getStatus())) {
+            o.setStatus("REJECTED");
+        } else if (REJECT.equals(orderPayment.getStatus())
+                || REJECT.equals(orderStock.getStatus())) {
+            String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "STOCK";
+            o.setStatus("ROLLBACK");
+            o.setSource(source);
+        }
+        this.orderRepository.updateOrderStatusAndSourceById(
+                o.getOrderId(), o.getStatus(), o.getSource());
+        return o;
     }
-    return o;
-  }
 }

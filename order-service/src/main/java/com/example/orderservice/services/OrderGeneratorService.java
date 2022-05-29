@@ -1,64 +1,75 @@
 package com.example.orderservice.services;
 
-import com.example.orderservice.entities.Order;
-import com.example.orderservice.entities.OrderItem;
-import org.apache.kafka.streams.StoreQueryParameters;
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
+import com.example.orderservice.dtos.OrderDto;
+import com.example.orderservice.dtos.OrderItemDto;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+import net.datafaker.Faker;
+import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
 @Service
 public class OrderGeneratorService {
 
-  private static final Random RAND = new Random();
-  private final AtomicLong id = new AtomicLong();
-  private final KafkaTemplate<Long, Order> template;
+    private static final Random RAND = new Random();
+    private final AtomicLong id = new AtomicLong();
 
-  private final StreamsBuilderFactoryBean kafkaStreamsFactory;
+    private final OrderService orderService;
 
-  public OrderGeneratorService(
-      KafkaTemplate<Long, Order> template, StreamsBuilderFactoryBean kafkaStreamsFactory) {
-    this.template = template;
-    this.kafkaStreamsFactory = kafkaStreamsFactory;
-  }
+    private final StreamsBuilderFactoryBean kafkaStreamsFactory;
 
-  @Async
-  public void generate() {
-    for (int i = 0; i < 10000; i++) {
-      Order o = new Order();
-      o.setId(id.incrementAndGet());
-      o.setStatus("NEW");
-      o.setCustomerId(RAND.nextLong(100) + 1);
-      OrderItem orderItem = new OrderItem();
-      int x = RAND.nextInt(5) + 1;
-      orderItem.setProductPrice(new BigDecimal(100 * x));
-      orderItem.setQuantity(x);
-      orderItem.setProductId(RAND.nextLong(100) + 1);
-      o.addOrderItem(orderItem);
-      template.send("orders", o.getId(), o);
+    public OrderGeneratorService(
+            OrderService orderService, StreamsBuilderFactoryBean kafkaStreamsFactory) {
+        this.orderService = orderService;
+        this.kafkaStreamsFactory = kafkaStreamsFactory;
     }
-  }
 
-  public List<Order> getAllOrders() {
-    List<Order> orders = new ArrayList<>();
-    ReadOnlyKeyValueStore<Long, Order> store =
-        kafkaStreamsFactory
-            .getKafkaStreams()
-            .store(
-                StoreQueryParameters.fromNameAndType(
-                    "orders", QueryableStoreTypes.keyValueStore()));
-    KeyValueIterator<Long, Order> it = store.all();
-    it.forEachRemaining(kv -> orders.add(kv.value));
-    return orders;
-  }
+    @Async
+    public void generate() {
+        Faker faker = new Faker();
+        for (int i = 0; i < 10_000; i++) {
+            OrderDto o = new OrderDto();
+            o.setOrderId(id.incrementAndGet());
+            o.setStatus("NEW");
+            o.setCustomerId(RAND.nextLong(100) + 1);
+            o.setCustomerEmail(faker.internet().safeEmailAddress());
+            o.setCustomerAddress(faker.address().fullAddress());
+            OrderItemDto orderItem = new OrderItemDto();
+            int x = RAND.nextInt(5) + 1;
+            orderItem.setProductPrice(new BigDecimal(100 * x));
+            orderItem.setQuantity(x);
+            orderItem.setProductId(RAND.nextLong(100) + 1);
+            OrderItemDto orderItem1 = new OrderItemDto();
+            int y = RAND.nextInt(5) + 1;
+            orderItem1.setProductPrice(new BigDecimal(100 * y));
+            orderItem1.setQuantity(y);
+            orderItem1.setProductId(RAND.nextLong(100) + 1);
+            List<OrderItemDto> oList = new ArrayList<>();
+            oList.add(orderItem);
+            oList.add(orderItem1);
+            o.setItems(oList);
+            orderService.saveOrder(o);
+        }
+    }
+
+    public List<OrderDto> getAllOrders() {
+        List<OrderDto> orders = new ArrayList<>();
+        ReadOnlyKeyValueStore<Long, OrderDto> store =
+                kafkaStreamsFactory
+                        .getKafkaStreams()
+                        .store(
+                                StoreQueryParameters.fromNameAndType(
+                                        "orders", QueryableStoreTypes.keyValueStore()));
+        KeyValueIterator<Long, OrderDto> it = store.all();
+        it.forEachRemaining(kv -> orders.add(kv.value));
+        return orders;
+    }
 }

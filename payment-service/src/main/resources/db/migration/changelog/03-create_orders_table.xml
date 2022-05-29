@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    <changeSet author="sivalabs" id="createTable-orders">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="order_id_seq" />
+                <tableExists tableName="orders"/>
+            </not>
+        </preConditions>
+        <createSequence
+                        sequenceName="order_id_seq"
+                        incrementBy="100"
+                        startValue="1"
+                        />
+        <createTable tableName="orders">
+            <column name="id" type="bigint" defaultValueSequenceNext="order_id_seq">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_email" type="varchar(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="customer_address" type="varchar(1024)"/>
+            <column name="customer_id" type="bigint"/>
+            <column name="source" type="varchar(1024)"/>
+            <column name="status" type="varchar(1024)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="orders" baseColumnNames="customer_id" constraintName="FK_customer_id" referencedTableName="customers" referencedColumnNames="id" />
+    </changeSet>
+</databaseChangeLog>

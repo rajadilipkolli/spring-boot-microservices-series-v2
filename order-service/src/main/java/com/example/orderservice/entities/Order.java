@@ -38,11 +38,11 @@ public class Order {
     private String customerEmail;
 
     private String customerAddress;
-    
+
     private Long customerId;
-    
+
     private String status;
-    
+
     private String source;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

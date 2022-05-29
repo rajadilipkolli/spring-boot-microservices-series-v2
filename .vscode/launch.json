@@ -2,13 +2,6 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch PaymentServiceApplication",
-            "request": "launch",
-            "mainClass": "com.example.paymentservice.PaymentServiceApplication",
-            "projectName": "payment-service"
-        },
-        {
-            "type": "java",
             "name": "Spring Boot-ConfigServerApplication<config-server>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -66,6 +59,17 @@
             "mainClass": "com.example.inventoryservice.InventoryServiceApplication",
             "projectName": "inventory-service",
             "args": "--spring.profiles.active=local"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-PaymentApplication<payment-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "com.example.paymentservice.PaymentApplication",
+            "projectName": "payment-service",
+            "args": "--spring.profiles.active=local",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

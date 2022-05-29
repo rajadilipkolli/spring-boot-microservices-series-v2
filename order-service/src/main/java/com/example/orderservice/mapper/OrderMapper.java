@@ -33,6 +33,13 @@ public interface OrderMapper {
         if (orderDto.getCustomerAddress() != null) {
             order.setCustomerAddress(orderDto.getCustomerAddress());
         }
+        if (orderDto.getStatus() != null) {
+            order.setStatus(orderDto.getStatus());
+        }
+        if (orderDto.getSource() != null) {
+            order.setSource(orderDto.getSource());
+        }
+        order.setCustomerId(orderDto.getCustomerId());
         List<OrderItem> list = orderItemDtoListToOrderItemList(orderDto.getItems());
         if (list != null) {
             for (OrderItem orderItem : list) {

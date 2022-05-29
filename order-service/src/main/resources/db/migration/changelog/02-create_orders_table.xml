@@ -5,6 +5,14 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
     <changeSet author="rajakolli" id="createTable-orders">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="order_id_seq" />
+                <sequenceExists sequenceName="order_item_id_seq" />
+                <tableExists tableName="orders"/>
+                <tableExists tableName="order_items"/>
+            </not>
+        </preConditions>
         <createSequence
                         sequenceName="order_id_seq"
                         incrementBy="100"

@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.6.7</version>
+        <version>2.7.0</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.inventoryservice</groupId>
@@ -19,15 +19,16 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <java.version>17</java.version>
-        <spring-cloud.version>2021.0.1</spring-cloud.version>
+        <java.version>18</java.version>
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
         <problem-spring-web.version>0.27.0</problem-spring-web.version>
         <commons-io.version>2.11.0</commons-io.version>
 
-        <testcontainers.version>1.17.1</testcontainers.version>
+        <testcontainers.version>1.17.2</testcontainers.version>
         <org.mapstruct.version>1.4.2.Final</org.mapstruct.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
+        <spotless.version>2.22.5</spotless.version>
         <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
         <dependency-check-maven.version>7.1.0</dependency-check-maven.version>
@@ -130,7 +131,7 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.8</version>
+            <version>1.6.9</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -481,6 +482,27 @@
                     <execution>
                         <goals>
                             <goal>sonar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>1.15.0</version>
+                            <style>AOSP</style>
+                        </googleJavaFormat>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>
