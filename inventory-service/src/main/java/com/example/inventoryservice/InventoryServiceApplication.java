@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice;
 
 import com.example.inventoryservice.config.ApplicationProperties;

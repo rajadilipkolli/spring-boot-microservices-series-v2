@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.config;
 
 import com.example.inventoryservice.entities.Inventory;

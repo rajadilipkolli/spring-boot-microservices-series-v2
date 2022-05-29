@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.paymentservice.utils;
 
 public final class AppConstants {

@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.orderservice.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

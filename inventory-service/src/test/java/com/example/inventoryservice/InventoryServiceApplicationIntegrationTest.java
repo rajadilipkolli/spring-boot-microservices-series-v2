@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice;
 
 import static com.example.inventoryservice.common.DBContainerInitializer.POSTGRE_SQL_CONTAINER;

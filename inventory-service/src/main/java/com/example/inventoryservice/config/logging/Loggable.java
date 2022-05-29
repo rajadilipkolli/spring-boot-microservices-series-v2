@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.config.logging;
 
 import static java.lang.annotation.ElementType.METHOD;

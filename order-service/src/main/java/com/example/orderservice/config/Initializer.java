@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.orderservice.config;
 
 import lombok.RequiredArgsConstructor;

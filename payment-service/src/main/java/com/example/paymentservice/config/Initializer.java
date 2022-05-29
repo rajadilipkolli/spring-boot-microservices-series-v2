@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.paymentservice.config;
 
 import com.example.paymentservice.entities.Customer;

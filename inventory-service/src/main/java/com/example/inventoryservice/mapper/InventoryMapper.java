@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.mapper;
 
 import com.example.inventoryservice.dtos.InventoryDto;

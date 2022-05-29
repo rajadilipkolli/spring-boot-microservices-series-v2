@@ -1,3 +1,4 @@
+/* (C)2022 */
 package com.example.inventoryservice.web.controllers;
 
 import com.example.inventoryservice.dtos.InventoryDto;
