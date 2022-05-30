@@ -22,3 +22,10 @@ vscode:
     - vscjava.vscode-maven
     - vscjava.vscode-spring-boot-dashboard
     - vscjava.vscode-spring-initializr
+
+ports:
+  - port: 8761
+    visibility: public
+  - port: 8888
+    visibility: public
+
