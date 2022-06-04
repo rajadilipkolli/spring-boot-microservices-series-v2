@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2021 */
 package com.example.api.gateway.security.jwt;
 
 import lombok.RequiredArgsConstructor;
