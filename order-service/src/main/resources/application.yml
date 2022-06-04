@@ -2,6 +2,7 @@ server:
   port: 18282
   servlet:
     contextPath: /${spring.application.name}
+  forward-headers-strategy: framework
 spring:
   application:
     name: order-service
