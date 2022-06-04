@@ -46,7 +46,7 @@ public class SecurityConfiguration {
                         it ->
                                 it.pathMatchers(HttpMethod.GET, AUTH_WHITELIST)
                                         .permitAll()
-                                        .pathMatchers(HttpMethod.POST, authenticationPaths)
+                                        .pathMatchers(HttpMethod.POST, AUTH_WHITELIST)
                                         .permitAll()
                                         .pathMatchers(HttpMethod.DELETE, authenticationPaths)
                                         .hasRole("ADMIN")

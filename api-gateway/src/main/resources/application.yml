@@ -10,7 +10,6 @@ management:
         include: '*'
 server:
   port: 8765
-  forward-headers-strategy: framework
   servlet:
     contextPath: /${spring.application.name}
 spring:
@@ -38,6 +37,12 @@ spring:
         predicates:
         - Path=/catalog-service/**
         uri: lb://catalog-service
+      - id: openapi
+        uri: http://localhost:${server.port}
+        predicates:
+          - Path=/v3/api-docs/**
+        filters:
+          - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
   config:
     import: optional:configserver:http://localhost:8888/
 
