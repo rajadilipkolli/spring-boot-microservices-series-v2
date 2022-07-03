@@ -40,8 +40,7 @@ services:
         condition: service_healthy
     networks:
       - microservice-network
-  
-  
+
   postgresql:
     container_name: postgresql
     image: postgres:latest
