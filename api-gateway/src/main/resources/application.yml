@@ -17,6 +17,9 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
       metrics:
         enabled: true
       httpclient:
@@ -40,9 +43,9 @@ spring:
       - id: openapi
         uri: http://localhost:${server.port}
         predicates:
-          - Path=/v3/api-docs/**
+        - Path=/v3/api-docs/**
         filters:
-          - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+        - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
   config:
     import: optional:configserver:http://localhost:8888/
 

@@ -11,6 +11,9 @@ spring:
   liquibase:
     change-log: classpath:/db/migration/liquibase-changelog.xml
 
+springdoc:
+  packagesToScan: com.example.orderservice.web.controllers
+
 spring.kafka:
   bootstrap-servers: 127.0.0.1:29092
   producer:
