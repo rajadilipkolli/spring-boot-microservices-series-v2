@@ -7,7 +7,7 @@ spring:
   application:
     name: order-service
   config:
-    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8088}"
+    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   liquibase:
     change-log: classpath:/db/migration/liquibase-changelog.xml
 

@@ -5,7 +5,7 @@
 
 image:
   file: .gitpod.Dockerfile
-  
+
 tasks:
   - before: sdk install mvnd
     init: mvnd verify -DskipTests=true
@@ -22,10 +22,9 @@ vscode:
     - vscjava.vscode-maven
     - vscjava.vscode-spring-boot-dashboard
     - vscjava.vscode-spring-initializr
-
+    - gabrielbb.vscode-lombok
 ports:
   - port: 8761
     visibility: public
   - port: 8888
     visibility: public
-
