@@ -27,7 +27,8 @@ public class SecurityConfiguration {
 
     private static final String[] AUTH_WHITELIST = {
         // -- Swagger UI v3 (OpenAPI)
-        "/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/auth/**"
+        "/swagger-ui.html", "/v3/api-docs/**", "**/v3/api-docs/**", "/swagger-ui/**",
+        "/webjars/**", "/auth/**"
         // other public endpoints of your API may be appended to this array
     };
 
