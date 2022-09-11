@@ -40,8 +40,8 @@ class APIGatewayApplicationTest {
                     DockerImageName.parse("dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"));
 
     @Container
-    static MongoDBContainer mongoDBContainer =
-            new MongoDBContainer(DockerImageName.parse("mongo:latest"));
+    static final MongoDBContainer mongoDBContainer =
+            new MongoDBContainer(DockerImageName.parse("mongo:5.0.12"));
 
     static {
         Startables.deepStart(
