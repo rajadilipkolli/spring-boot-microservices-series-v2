@@ -58,7 +58,7 @@ services:
 
   mongodb:
     container_name: mongodb
-    image: mongo
+    image: mongo:5.0
     volumes:
       - mongo-data:/data/db/mongo
     ports:
