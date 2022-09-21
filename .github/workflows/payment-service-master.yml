@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Run Unit & Integration Tests
+    name: Build Native Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
