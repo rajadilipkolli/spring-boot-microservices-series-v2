@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2021-2022 */
 package com.example.api.gateway.bootstrap;
 
 import com.example.api.gateway.domain.User;
@@ -36,7 +37,9 @@ public class DataInitializer {
                                                     "user".equals(username)
                                                             ? Collections.singletonList("ROLE_USER")
                                                             : Arrays.asList(
-                                                                    "ROLE_USER", "ROLE_ADMIN");
+                                                                    "ROLE_USER",
+                                                                    "ROLE_ADMIN",
+                                                                    "ROLE_ACTUATOR");
 
                                             User user =
                                                     User.builder()

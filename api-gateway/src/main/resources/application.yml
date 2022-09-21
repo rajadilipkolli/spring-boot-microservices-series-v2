@@ -17,6 +17,9 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
       metrics:
         enabled: true
       httpclient:
@@ -37,5 +40,15 @@ spring:
         predicates:
         - Path=/catalog-service/**
         uri: lb://catalog-service
+      - id: openapi
+        uri: http://localhost:${server.port}
+        predicates:
+        - Path=/v3/api-docs/**
+        filters:
+        - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
   config:
-    import: optional:configserver:http://localhost:8888/
+    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
+
+springdoc:
+  cache:
+    disabled: true

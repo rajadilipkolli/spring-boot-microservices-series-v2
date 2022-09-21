@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2021-2022 */
 package com.example.orderservice.utils;
 
 public final class AppConstants {

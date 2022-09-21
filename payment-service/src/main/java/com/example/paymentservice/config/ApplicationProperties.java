@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2022 */
 package com.example.paymentservice.config;
 
 import lombok.Data;

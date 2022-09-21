@@ -3,7 +3,7 @@ version: "3.8"
 services:
   rabbitmq:
     container_name: rabbitmq
-    image: rabbitmq:3.10.2-management
+    image: rabbitmq:3.10.7-management
     expose:
       - "5672"
       - "15672"
@@ -40,8 +40,7 @@ services:
         condition: service_healthy
     networks:
       - microservice-network
-  
-  
+
   postgresql:
     container_name: postgresql
     image: postgres:latest
@@ -59,7 +58,7 @@ services:
 
   mongodb:
     container_name: mongodb
-    image: mongo
+    image: mongo:5.0
     volumes:
       - mongo-data:/data/db/mongo
     ports:
@@ -104,6 +103,8 @@ services:
       - config-server
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
 
   config-server:
     container_name: config-server
@@ -116,6 +117,8 @@ services:
       - "8888:8888"
     networks:
       - microservice-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
 
   api-gateway:
     container_name: api-gateway
@@ -138,6 +141,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_DATA_MONGODB_HOST: mongodb
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
   catalog-service:
     container_name: catalog-service
@@ -166,6 +170,7 @@ services:
       SPRING_DATASOURCE_USERNAME: siva
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
   inventory-service:
     container_name: inventory-service
@@ -190,6 +195,7 @@ services:
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
   order-service:
     container_name: order-service
@@ -219,6 +225,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=siva
       - SPRING_DATASOURCE_PASSWORD=secret
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE:http://naming-server:8761/eureka
 
 networks:
   microservice-network:
