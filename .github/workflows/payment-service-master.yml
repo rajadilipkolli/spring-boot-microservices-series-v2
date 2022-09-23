@@ -10,6 +10,9 @@ jobs:
   build:
     name: Build Native Image
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./payment-service
     steps:
       - uses: actions/checkout@v3
         with:
@@ -27,7 +30,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-        run: |
-          cd payment-service
-          chmod +x mvnw
-          ./mvnw clean spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true -DskipTests
+        run: ./mvnw clean spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true -DskipTests
