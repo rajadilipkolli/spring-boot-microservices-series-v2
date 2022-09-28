@@ -28,7 +28,7 @@
         <org.mapstruct.version>1.5.2.Final</org.mapstruct.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
-        <spotless.version>2.27.0</spotless.version>
+        <spotless.version>2.27.1</spotless.version>
         <maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
         <maven-pmd-plugin.version>3.19.0</maven-pmd-plugin.version>
         <dependency-check-maven.version>7.2.1</dependency-check-maven.version>
