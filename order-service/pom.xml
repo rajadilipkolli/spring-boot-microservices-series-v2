@@ -24,7 +24,7 @@
         <commons-io.version>2.11.0</commons-io.version>
         <org.mapstruct.version>1.5.2.Final</org.mapstruct.version>
 
-        <testcontainers.version>1.17.4</testcontainers.version>
+        <testcontainers.version>1.17.5</testcontainers.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.27.1</spotless.version>
