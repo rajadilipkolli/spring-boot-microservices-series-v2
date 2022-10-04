@@ -21,7 +21,7 @@
 		<java.version>19</java.version>
 		<spring-cloud.version>2021.0.4</spring-cloud.version>
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
-		<testcontainers.version>1.17.4</testcontainers.version>
+		<testcontainers.version>1.17.5</testcontainers.version>
 		<CI_DOCKER_PASSWORD/>
         <CI_DOCKER_USERNAME/>
 	</properties>
