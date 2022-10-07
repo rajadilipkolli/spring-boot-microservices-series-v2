@@ -26,7 +26,7 @@
 		<springdoc-openapi.version>1.6.11</springdoc-openapi.version>
 
 		<testcontainers.version>1.17.5</testcontainers.version>
-		<org.mapstruct.version>1.5.2.Final</org.mapstruct.version>
+		<org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
 
 		<project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
 		<maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
