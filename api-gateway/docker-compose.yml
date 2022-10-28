@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  mongodb:
+    container_name: mongodb
+    image: mongo:5.0
+    volumes:
+      - mongo-data:/data/db/mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - microservice-network
+
+  naming-server:
+    container_name: naming-server
+    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8761:8761"
+    networks:
+      - microservice-network
+    depends_on:
+      - config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8888:8888"
+    networks:
+      - microservice-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+
+
+networks:
+  microservice-network:
+
+volumes:
+  mongo-data:
