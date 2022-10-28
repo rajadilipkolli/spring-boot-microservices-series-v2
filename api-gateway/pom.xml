@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.5</version>
+		<version>3.0.0-RC1</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example.microservices</groupId>
@@ -16,12 +16,12 @@
 	<description>API Gateway for Microservice</description>
 
 	<properties>
-		<java.version>19</java.version>
-		<spring-cloud.version>2021.0.4</spring-cloud.version>
+		<java.version>17</java.version>
+		<spring-cloud.version>2022.0.0-RC1</spring-cloud.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<jjwt.version>0.11.5</jjwt.version>
-		<springdoc-openapi.version>1.6.12</springdoc-openapi.version>
+		<springdoc-openapi.version>2.0.0-RC1</springdoc-openapi.version>
 		<testcontainers.version>1.17.5</testcontainers.version>
 		<spotless.version>2.27.2</spotless.version>
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
@@ -54,14 +54,14 @@
 		</dependency>
 
 		<!-- Zipkin Server -->
-		<dependency>
+		<!-- <dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-sleuth-zipkin</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.amqp</groupId>
 			<artifactId>spring-rabbit</artifactId>
-		</dependency>
+		</dependency> -->
 		<!-- end Zipkin Server -->
 		
 		<!-- To fix Spring Cloud LoadBalancer is currently working with the default 
@@ -98,14 +98,14 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-webflux-ui</artifactId>
+			<artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
 			<version>${springdoc-openapi.version}</version>
 		</dependency>
-		<dependency>
+		<!-- <dependency>
 	      <groupId>org.springdoc</groupId>
-	      <artifactId>springdoc-openapi-security</artifactId>
+	      <artifactId>springdoc-openapi-starter-security</artifactId>
 	      <version>${springdoc-openapi.version}</version>
-	   </dependency>
+	   </dependency> -->
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -275,5 +275,34 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<repositories>
+		<repository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestone</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>netflix-candidates</id>
+			<name>Netflix Candidates</name>
+			<url>https://artifactory-oss.prod.netflix.net/artifactory/maven-oss-candidates</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestone</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
 
 </project>

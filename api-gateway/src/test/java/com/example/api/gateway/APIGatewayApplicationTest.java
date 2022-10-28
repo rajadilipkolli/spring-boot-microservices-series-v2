@@ -32,7 +32,7 @@ class APIGatewayApplicationTest {
     @Container
     static NamingServerContainer namingServerContainer =
             new NamingServerContainer(
-                    DockerImageName.parse("dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT"));
+                    DockerImageName.parse("dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT"));
 
     @Container
     static ConfigServerContainer configServerContainer =

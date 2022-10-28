@@ -3,18 +3,21 @@ package com.example.api.gateway.configuration;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.servers.Server;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springdoc.core.GroupedOpenApi;
-import org.springdoc.core.SwaggerUiConfigParameters;
+import org.springdoc.core.models.GroupedOpenApi;
+import org.springdoc.core.properties.SwaggerUiConfigParameters;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@OpenAPIDefinition(info = @Info(title = "api-gateway", version = "v1"))
+@OpenAPIDefinition(
+        info = @Info(title = "api-gateway", version = "v1"),
+        servers = @Server(url = "."))
 @Slf4j
 public class SwaggerConfig {
 
