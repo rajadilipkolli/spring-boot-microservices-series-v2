@@ -25,3 +25,5 @@ docker compose up rabbitmq zipkin-server postgresql mongodb kafka config-server 
  #### References
   - https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
   
+#### Projects unable to convert to native Image OOTB
+ - config-server
