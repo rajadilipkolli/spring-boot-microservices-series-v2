@@ -4,18 +4,18 @@ on:
   push:
     paths:
       - "service-registry/**"
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
-    name: Run Unit & Integration Tests
+    name: Run Unit & Integration Tests with jdk  ${{ matrix.java }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: "service-registry"
     strategy:
       matrix:
-        java: [ '17', '19' ]
+        java: ["17", "19"]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -23,12 +23,12 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: 'latest'
+          version: "latest"
           java-version: ${{ matrix.java }}
-          components: 'native-image'
+          components: "native-image"
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache: 'maven'
-      
+          cache: "maven"
+
       - name: Printing versions
         run: |
           echo "GRAALVM_HOME: $GRAALVM_HOME"
@@ -42,4 +42,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-        run: ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
+        run: ./mvnw clean -Pnative spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true
