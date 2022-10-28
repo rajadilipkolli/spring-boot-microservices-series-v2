@@ -90,7 +90,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
