@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8888:8888"
+    networks:
+      - microservice-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+
+networks:
+  microservice-network:

@@ -19,7 +19,7 @@ docker compose up rabbitmq zipkin-server postgresql mongodb kafka config-server 
 ### URLS to access services
  - Zipkin : http://localhost:9411/zipkin/
  - RabbitMq : http://localhost:15672/
- - Service Registry : http://localhost:8761/eureka
+ - Service Registry : http://localhost:8761
  - API Gateway : http://localhost:8765/swagger-ui.html
 
  #### References
