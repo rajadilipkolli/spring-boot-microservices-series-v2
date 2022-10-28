@@ -59,7 +59,11 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <image>
-                        <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+                        <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
+                        <buildpacks>
+							<buildpack>gcr.io/paketo-buildpacks/bellsoft-liberica:9.9.0-ea</buildpack>
+							<buildpack>gcr.io/paketo-buildpacks/java-native-image</buildpack>
+						</buildpacks>
                     </image>
 					<docker>
                         <publishRegistry>
