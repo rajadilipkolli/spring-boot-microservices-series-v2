@@ -37,6 +37,12 @@ jobs:
           gu --version
           native-image --version
 
+      - if: ${{ github.ref == 'refs/heads/main' }}
+        name: SonarQube Scan
+        run: ./mvnw compile sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Build and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
