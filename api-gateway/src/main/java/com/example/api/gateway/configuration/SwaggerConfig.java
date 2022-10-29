@@ -3,43 +3,43 @@ package com.example.api.gateway.configuration;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.servers.Server;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.models.GroupedOpenApi;
-import org.springdoc.core.properties.SwaggerUiConfigParameters;
-import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@OpenAPIDefinition(
-        info = @Info(title = "api-gateway", version = "v1"),
-        servers = @Server(url = "."))
-@Slf4j
+@OpenAPIDefinition(info = @Info(title = "api-gateway", version = "v1"))
 public class SwaggerConfig {
 
+    // return type should be a list, cant be mono or flux.
     @Bean
-    public List<GroupedOpenApi> apis(
-            SwaggerUiConfigParameters swaggerUiConfigParameters, RouteDefinitionLocator locator) {
-        List<GroupedOpenApi> groups = new ArrayList<>();
-        List<RouteDefinition> definitions = locator.getRouteDefinitions().collectList().block();
-        for (RouteDefinition definition : definitions) {
-            log.info("id: " + definition.getId() + "  " + definition.getUri().toString());
-        }
-        definitions.stream()
-                .filter(routeDefinition -> routeDefinition.getId().matches(".*-service"))
-                .forEach(
-                        routeDefinition -> {
-                            String name = routeDefinition.getId().replaceAll("-service", "");
-                            swaggerUiConfigParameters.addGroup(name);
-                            GroupedOpenApi.builder()
-                                    .pathsToMatch("/" + name + "/**")
-                                    .group(name)
-                                    .build();
-                        });
-        return groups;
+    public List<GroupedOpenApi> apis(RouteDefinitionLocator locator) {
+        var groupedOpenApiList =
+                new java.util.ArrayList<>(
+                        locator.getRouteDefinitions()
+                                .filter(
+                                        routeDefinition ->
+                                                routeDefinition.getId().matches(".*-service"))
+                                .map(
+                                        routeDefinition -> {
+                                            String name =
+                                                    routeDefinition
+                                                            .getId()
+                                                            .replaceAll("-service", "");
+                                            return GroupedOpenApi.builder()
+                                                    .pathsToMatch("/" + name + "/**")
+                                                    .group(name)
+                                                    .build();
+                                        })
+                                .toStream()
+                                .toList());
+        // we need api-gateway as well in the swagger hence manually
+        groupedOpenApiList.add(
+                GroupedOpenApi.builder().pathsToMatch("/**").group("api-gateway").build());
+        groupedOpenApiList.sort(Comparator.comparing(GroupedOpenApi::getGroup));
+        return groupedOpenApiList;
     }
 }

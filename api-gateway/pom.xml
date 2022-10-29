@@ -63,9 +63,13 @@
 			<artifactId>spring-rabbit</artifactId>
 		</dependency> -->
 		<!-- end Zipkin Server -->
-		
+
 		<!-- To fix Spring Cloud LoadBalancer is currently working with the default 
 			cache. You can switch to using Caffeine cache, by adding it -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
@@ -197,11 +201,11 @@
 					</image>
 					<pullPolicy>IF_NOT_PRESENT</pullPolicy>
 					<docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
+						<publishRegistry>
+							<username>${CI_DOCKER_USERNAME}</username>
+							<password>${CI_DOCKER_PASSWORD}</password>
+						</publishRegistry>
+					</docker>
 				</configuration>
 				<executions>
 					<execution>
