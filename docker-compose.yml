@@ -45,7 +45,7 @@ services:
     container_name: postgresql
     image: postgres:latest
     environment:
-      - POSTGRES_USER=siva
+      - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=appdb
     ports:

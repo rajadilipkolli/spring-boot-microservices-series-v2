@@ -11,5 +11,5 @@ $ ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
 
 ### Useful Links
-* Swagger UI: http://localhost:8080/swagger-ui.html
-* Actuator Endpoint: http://localhost:8080/actuator
+* Swagger UI: http://localhost:18085/payment-service/swagger-ui.html
+* Actuator Endpoint: http://localhost:18085/payment-service/actuator

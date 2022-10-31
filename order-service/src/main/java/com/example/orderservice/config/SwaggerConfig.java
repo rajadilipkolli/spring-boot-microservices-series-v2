@@ -3,6 +3,7 @@ package com.example.orderservice.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.ForwardedHeaderFilter;
@@ -13,7 +14,8 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
                 @Info(
                         title = "order-service",
                         version = "v1",
-                        description = "APIs related to Orders"))
+                        description = "APIs related to Orders"),
+        servers = @Server(url = "/"))
 public class SwaggerConfig {
 
     @Bean
