@@ -8,5 +8,5 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(title = "catalog-service", version = "v1"),
-        servers = @Server(url = "/"))
+        servers = @Server(url = "/${spring.application.name}"))
 public class SwaggerConfig {}

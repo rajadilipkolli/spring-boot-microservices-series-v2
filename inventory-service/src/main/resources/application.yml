@@ -9,6 +9,9 @@ spring:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   liquibase:
     change-log: classpath:/db/migration/liquibase-changelog.xml
+  mvc:
+    problemdetails:
+      enabled: true
 
 spring.kafka:
   bootstrap-servers: 127.0.0.1:29092

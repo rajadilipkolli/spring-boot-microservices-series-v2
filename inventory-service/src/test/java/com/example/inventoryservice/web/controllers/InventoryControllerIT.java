@@ -2,7 +2,6 @@
 package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -33,9 +32,9 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         inventoryRepository.deleteAll();
 
         inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "First Inventory", 5, 0));
-        inventoryList.add(new Inventory(2L, "Second Inventory", 6, 0));
-        inventoryList.add(new Inventory(3L, "Third Inventory", 7, 0));
+        inventoryList.add(new Inventory(null, "First Inventory", 5, 0));
+        inventoryList.add(new Inventory(null, "Second Inventory", 6, 0));
+        inventoryList.add(new Inventory(null, "Third Inventory", 7, 0));
         inventoryList = inventoryRepository.saveAll(inventoryList);
     }
 
@@ -81,15 +80,11 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(
-                        jsonPath(
-                                "$.type",
-                                is("https://zalando.github.io/problem/constraint-violation")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                .andExpect(jsonPath("$.type", is("about:blank")))
+                .andExpect(jsonPath("$.title", is("Bad Request")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("productCode")))
-                .andExpect(jsonPath("$.violations[0].message", is("ProductCode can't be blank")))
+                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                .andExpect(jsonPath("$.instance", is("/api/inventory")))
                 .andReturn();
     }
 
