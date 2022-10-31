@@ -1,6 +1,46 @@
 version: "3.8"
 
 services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.11.2-management
+    expose:
+      - "5672"
+      - "15672"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      resources:
+        limits:
+          memory: 350m
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservice-network
+
+  zipkin-server:
+    image: openzipkin/zipkin
+    container_name: zipkin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microservice-network
+
   mongodb:
     container_name: mongodb
     image: mongo:5.0.12
