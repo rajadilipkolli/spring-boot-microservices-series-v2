@@ -216,24 +216,8 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>pl.project13.maven</groupId>
-				<artifactId>git-commit-id-plugin</artifactId>
-				<executions>
-					<execution>
-						<goals>
-							<goal>revision</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<failOnNoGitDirectory>false</failOnNoGitDirectory>
-					<failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
-					<includeOnlyProperties>
-						<includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
-						<includeOnlyProperty>^git.commit.id.describe$</includeOnlyProperty>
-						<includeOnlyProperty>^git.branch$</includeOnlyProperty>
-					</includeOnlyProperties>
-				</configuration>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
