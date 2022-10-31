@@ -30,7 +30,7 @@ jobs:
 
       - name: Start up softwares via Docker Compose
         run: |
-          docker compose up rabbitmq zipkin-server -d
+          docker compose up rabbitmq zipkin-server naming-server -d
           sleep 10
           docker ps -a
 

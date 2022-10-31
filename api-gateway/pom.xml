@@ -218,6 +218,10 @@
 			<plugin>
 				<groupId>io.github.git-commit-id</groupId>
 				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<configuration>
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+					<failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>

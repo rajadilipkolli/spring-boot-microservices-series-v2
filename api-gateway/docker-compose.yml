@@ -66,7 +66,7 @@ services:
       - config-server
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://localhost:8761/eureka
       SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
 
   config-server:
