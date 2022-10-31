@@ -10,7 +10,7 @@ public class DBContainerInitializer
         implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     private static final PostgreSQLContainer<?> sqlContainer =
-            new PostgreSQLContainer<>("postgres:14-alpine")
+            new PostgreSQLContainer<>("postgres:15-alpine")
                     .withDatabaseName("integration-tests-db")
                     .withUsername("username")
                     .withPassword("password");
