@@ -8,10 +8,11 @@ management:
     web:
       exposure:
         include: '*'
+  info:
+    git:
+      mode: full
 server:
   port: 8765
-  servlet:
-    contextPath: /${spring.application.name}
 spring:
   application:
     name: api-gateway
@@ -48,7 +49,10 @@ spring:
         - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
+  webflux:
+    base-path: /${spring.application.name}
 
 springdoc:
   cache:
     disabled: true
+  packagesToScan: com.example.api.gateway.web

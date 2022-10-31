@@ -14,6 +14,9 @@ management:
     web:
       exposure:
         include: configprops,env,health,info,logfile,loggers,metrics,refresh
+  info:
+    git:
+      mode: full
 server:
   shutdown: graceful
 spring:
@@ -66,7 +69,7 @@ spring:
   datasource:
     password: secret
     url: jdbc:postgresql://postgresql:5432/appdb
-    username: siva
+    username: appuser
   rabbitmq:
     addresses: rabbitmq:5672
     host: rabbitmq

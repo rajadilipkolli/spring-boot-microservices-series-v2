@@ -24,9 +24,13 @@ vscode:
     - vscjava.vscode-spring-initializr
     - gabrielbb.vscode-lombok
 ports:
+  - port: 5672
+    visibility: public
   - port: 8761
     visibility: public
   - port: 8765
     visibility: public
   - port: 8888
+    visibility: public
+  - port: 9411
     visibility: public

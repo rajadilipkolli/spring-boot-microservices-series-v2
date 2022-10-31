@@ -15,4 +15,4 @@ http://localhost:8765/catalog-service/catalog-service/api/
 http://localhost:8765/catalog-service/api/
 
 ### Swagger URL
-http://localhost:8765/swagger-ui.html
+http://localhost:8765/api-gateway/swagger-ui.html

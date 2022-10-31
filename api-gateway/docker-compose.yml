@@ -1,9 +1,49 @@
 version: "3.8"
 
 services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.11.2-management
+    expose:
+      - "5672"
+      - "15672"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      resources:
+        limits:
+          memory: 350m
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservice-network
+
+  zipkin-server:
+    image: openzipkin/zipkin
+    container_name: zipkin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microservice-network
+
   mongodb:
     container_name: mongodb
-    image: mongo:5.0
+    image: mongo:5.0.12
     volumes:
       - mongo-data:/data/db/mongo
     ports:
@@ -26,7 +66,7 @@ services:
       - config-server
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://localhost:8761/eureka
       SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
 
   config-server:

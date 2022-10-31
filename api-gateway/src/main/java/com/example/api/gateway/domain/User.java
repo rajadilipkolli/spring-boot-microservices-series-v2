@@ -2,9 +2,9 @@
 package com.example.api.gateway.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.Email;
 import java.util.ArrayList;
 import java.util.List;
-import javax.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

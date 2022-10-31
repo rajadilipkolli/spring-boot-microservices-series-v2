@@ -2,8 +2,8 @@
 package com.example.api.gateway.web;
 
 import com.example.api.gateway.security.jwt.JwtTokenProvider;
+import jakarta.validation.Valid;
 import java.util.Map;
-import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
