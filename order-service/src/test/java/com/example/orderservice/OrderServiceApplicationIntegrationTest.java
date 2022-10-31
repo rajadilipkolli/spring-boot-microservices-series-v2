@@ -4,7 +4,7 @@ package com.example.orderservice;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.orderservice.utils.AppConstants;
-import java.util.List;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -26,7 +26,7 @@ class OrderServiceApplicationIntegrationTest {
     @Container
     static NamingServerContainer namingServerContainer =
             new NamingServerContainer(
-                    DockerImageName.parse("dockertmt/mmv2-service-registry:0.0.1-SNAPSHOT"));
+                    DockerImageName.parse("dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT"));
 
     @Container
     static ConfigServerContainer configServerContainer =
@@ -34,7 +34,7 @@ class OrderServiceApplicationIntegrationTest {
                     DockerImageName.parse("dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"));
 
     static {
-        Startables.deepStart(List.of(configServerContainer, namingServerContainer)).join();
+        Startables.deepStart(configServerContainer, namingServerContainer).join();
     }
 
     private static class NamingServerContainer extends GenericContainer<NamingServerContainer> {
@@ -73,6 +73,7 @@ class OrderServiceApplicationIntegrationTest {
     }
 
     @Test
+    @Disabled
     void contextLoads() {
         assertThat(namingServerContainer.isRunning()).isTrue();
         assertThat(configServerContainer.isRunning()).isTrue();

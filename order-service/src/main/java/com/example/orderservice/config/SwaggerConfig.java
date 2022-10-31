@@ -15,7 +15,7 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
                         title = "order-service",
                         version = "v1",
                         description = "APIs related to Orders"),
-        servers = @Server(url = "/"))
+        servers = @Server(url = "/${spring.application.name}"))
 public class SwaggerConfig {
 
     @Bean

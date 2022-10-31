@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>3.0.0-RC1</version>
+        <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.orderservice</groupId>
     <artifactId>order-service</artifactId>
@@ -19,10 +19,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>17</java.version>
-        <spring-cloud.version>2021.0.4</spring-cloud.version>
-        <problem-spring-web.version>0.27.0</problem-spring-web.version>
+        <spring-cloud.version>2022.0.0-RC1</spring-cloud.version>
         <commons-io.version>2.11.0</commons-io.version>
-        <org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
+        <org-mapstruct.version>1.5.3.Final</org-mapstruct.version>
+        <org-springdoc.version>2.0.0-RC1</org-springdoc.version>
 
         <testcontainers.version>1.17.5</testcontainers.version>
 
@@ -60,14 +60,14 @@
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
         <dependency>
-	      <groupId>org.springframework.cloud</groupId>
-	      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-	    </dependency>
-	    <dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-aop</artifactId>
-		</dependency>
-		<dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
@@ -76,27 +76,22 @@
             <artifactId>kafka-streams</artifactId>
         </dependency>
 
-		<dependency>
-			<groupId>io.github.resilience4j</groupId>
-			<artifactId>resilience4j-spring-boot2</artifactId>
-		</dependency>
-	    <!-- To fix Spring Cloud LoadBalancer is currently working with the default
-			cache. You can switch to using Caffeine cache, by adding it -->
-		<dependency>
-			<groupId>com.github.ben-manes.caffeine</groupId>
-			<artifactId>caffeine</artifactId>
-		</dependency>
         <dependency>
-            <groupId>org.zalando</groupId>
-            <artifactId>problem-spring-web-starter</artifactId>
-            <version>${problem-spring-web.version}</version>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot2</artifactId>
+        </dependency>
+        <!-- To fix Spring Cloud LoadBalancer is currently working with the default
+			cache. You can switch to using Caffeine cache, by adding it -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
             <version>1.6.0</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -118,7 +113,7 @@
         </dependency>
 
         <!-- Zipkin Server -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-sleuth-zipkin</artifactId>
         </dependency>
@@ -126,7 +121,7 @@
         <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit</artifactId>
-        </dependency>
+        </dependency> -->
         <!-- end Zipkin Server -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -144,8 +139,8 @@
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.12</version>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${org-springdoc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -159,7 +154,7 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>${org.mapstruct.version}</version>
+            <version>${org-mapstruct.version}</version>
         </dependency>
 
         <dependency>
@@ -167,11 +162,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
-        </dependency>
+        </dependency> -->
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
@@ -223,7 +218,7 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                     </image>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
-					<docker>
+                    <docker>
                         <publishRegistry>
                             <username>${CI_DOCKER_USERNAME}</username>
                             <password>${CI_DOCKER_PASSWORD}</password>
@@ -248,7 +243,7 @@
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
-                            <version>${org.mapstruct.version}</version>
+                            <version>${org-mapstruct.version}</version>
                         </path>
                         <!-- other annotation processors -->
                         <path>
@@ -499,6 +494,28 @@
             <id>spring-milestones</id>
             <name>Spring Milestones</name>
             <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>netflix-candidates</id>
+            <name>Netflix Candidates</name>
+            <url>https://artifactory-oss.prod.netflix.net/artifactory/maven-oss-candidates</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
 </project>

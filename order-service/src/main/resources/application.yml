@@ -10,6 +10,9 @@ spring:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   liquibase:
     change-log: classpath:/db/migration/liquibase-changelog.xml
+  mvc:
+    problemdetails:
+      enabled: true
 
 springdoc:
   packagesToScan: com.example.orderservice.web.controllers
