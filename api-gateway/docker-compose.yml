@@ -43,7 +43,7 @@ services:
 
   mongodb:
     container_name: mongodb
-    image: mongo:5.0.12
+    image: mongo:5.0.13
     volumes:
       - mongo-data:/data/db/mongo
     ports:
