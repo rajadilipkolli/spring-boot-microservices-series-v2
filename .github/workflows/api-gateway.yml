@@ -13,6 +13,9 @@ jobs:
   build:
     name: Run Unit & Integration Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "api-gateway"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -32,7 +35,4 @@ jobs:
           docker ps -a
 
       - name: Build and analyze
-        run: |
-          cd api-gateway
-          chmod +x mvnw
-          ./mvnw clean package
+        run: ./mvnw clean verify
