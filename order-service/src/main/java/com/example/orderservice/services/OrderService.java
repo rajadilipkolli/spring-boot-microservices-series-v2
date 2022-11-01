@@ -7,6 +7,8 @@ import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;
 import java.util.Optional;
+
+import com.example.orderservice.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -34,7 +36,7 @@ public class OrderService {
     public OrderDto saveOrder(OrderDto orderDto) {
         Order order = this.orderMapper.toEntity(orderDto);
         OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
-        this.template.send("orders", persistedOrderDto.getOrderId(), persistedOrderDto);
+        this.template.send(AppConstants.ORDERS_TOPIC, persistedOrderDto.getOrderId(), persistedOrderDto);
         return persistedOrderDto;
     }
 

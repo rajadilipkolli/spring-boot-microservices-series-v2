@@ -3,6 +3,7 @@ package com.example.paymentservice.config;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.paymentservice.services.OrderManageService;
+import com.example.paymentservice.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -17,7 +18,7 @@ public class KafkaListenerConfig {
 
     private final OrderManageService orderManageService;
 
-    @KafkaListener(id = "orders", topics = "orders", groupId = "payment")
+    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(OrderDto o) {
         log.info("Received: {}", o);
         if (o.getStatus().equals("NEW")) {

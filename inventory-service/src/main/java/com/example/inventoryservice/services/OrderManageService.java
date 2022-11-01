@@ -3,6 +3,7 @@ package com.example.inventoryservice.services;
 
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.AppConstants;
 import com.example.orderservice.dtos.OrderDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,44 +15,41 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OrderManageService {
 
-    private static final String SOURCE = "stock";
-    private static final String ROLLBACK = "ROLLBACK";
+    private final InventoryRepository inventoryRepository;
+    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
-    private final InventoryRepository repository;
-    private final KafkaTemplate<Long, OrderDto> template;
-
-    public void reserve(OrderDto order) {
+    public void reserve(OrderDto orderDto) {
         Inventory product =
-                repository.findByProductCode(order.getItems().get(0).getProductId()).orElseThrow();
+            inventoryRepository.findByProductCode(orderDto.getItems().get(0).getProductId()).orElseThrow();
         log.info("Found: {}", product);
-        if ("NEW".equals(order.getStatus())) {
-            int productCount = order.getItems().get(0).getQuantity();
+        if ("NEW".equals(orderDto.getStatus())) {
+            int productCount = orderDto.getItems().get(0).getQuantity();
             if (productCount < product.getAvailableQuantity()) {
                 product.setReservedItems(product.getReservedItems() + productCount);
                 product.setAvailableQuantity(product.getAvailableQuantity() - productCount);
-                order.setStatus("ACCEPT");
-                repository.save(product);
+                orderDto.setStatus("ACCEPT");
+                inventoryRepository.save(product);
             } else {
-                order.setStatus("REJECT");
+                orderDto.setStatus("REJECT");
             }
-            template.send("stock-orders", order.getOrderId(), order);
-            log.info("Sent: {}", order);
+            kafkaTemplate.send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+            log.info("Sent: {}", orderDto);
         }
     }
 
-    public void confirm(OrderDto order) {
+    public void confirm(OrderDto orderDto) {
         Inventory product =
-                repository.findByProductCode(order.getItems().get(0).getProductId()).orElseThrow();
+            inventoryRepository.findByProductCode(orderDto.getItems().get(0).getProductId()).orElseThrow();
         log.info("Found: {}", product);
-        int productCount = order.getItems().get(0).getQuantity();
-        if ("CONFIRMED".equals(order.getStatus())) {
+        int productCount = orderDto.getItems().get(0).getQuantity();
+        if ("CONFIRMED".equals(orderDto.getStatus())) {
             product.setReservedItems(product.getReservedItems() - productCount);
-            repository.save(product);
-        } else if (ROLLBACK.equals(order.getStatus())
-                && !(SOURCE.equalsIgnoreCase(order.getSource()))) {
+            inventoryRepository.save(product);
+        } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
+            && !(AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource()))) {
             product.setReservedItems(product.getReservedItems() - productCount);
             product.setAvailableQuantity(product.getAvailableQuantity() + productCount);
-            repository.save(product);
+            inventoryRepository.save(product);
         }
     }
 }

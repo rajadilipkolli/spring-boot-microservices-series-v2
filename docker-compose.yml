@@ -50,9 +50,6 @@ services:
       - POSTGRES_DB=appdb
     ports:
       - "5432:5432"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     networks:
       - microservice-network
 

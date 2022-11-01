@@ -2,6 +2,7 @@
 package com.example.inventoryservice.config;
 
 import com.example.inventoryservice.services.OrderManageService;
+import com.example.inventoryservice.utils.AppConstants;
 import com.example.orderservice.dtos.OrderDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,7 @@ public class KafkaListenerConfig {
 
     private final OrderManageService orderManageService;
 
-    @KafkaListener(id = "orders", topics = "orders", groupId = "stock")
+    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(OrderDto order) {
         log.info("Received: {}", order);
         if ("NEW".equals(order.getStatus())) {

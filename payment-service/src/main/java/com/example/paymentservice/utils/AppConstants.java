@@ -7,4 +7,6 @@ public final class AppConstants {
     public static final String PROFILE_TEST = "test";
     public static final String PROFILE_NOT_TEST = "!" + PROFILE_TEST;
     public static final String SOURCE = "payment";
+    public static final String ORDERS_TOPIC = "orders";
+    public static final String PAYMENT_ORDERS_TOPIC = "payment-orders";
 }
