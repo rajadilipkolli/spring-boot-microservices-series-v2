@@ -4,7 +4,7 @@ Code generated using [springboot generator](https://github.com/sivaprasadreddy/g
 
 To run in local first build all services using command 
 
-mvnw clean spring-boot:build-image -DskipTests
+mvnw clean spotless:apply spring-boot:build-image -DskipTests
 
 To start docker using 
 
