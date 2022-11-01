@@ -41,6 +41,10 @@ spring:
         predicates:
         - Path=/catalog-service/**
         uri: lb://catalog-service
+      - id: payment-service
+        predicates:
+        - Path=/payment-service/**
+        uri: lb://payment-service
       - id: openapi
         uri: http://localhost:${server.port}
         predicates:

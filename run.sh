@@ -22,8 +22,14 @@ function stop() {
 }
 
 function start_infra() {
-    echo "Starting rabbitmq zipkin-server postgresql mongodb kafka config-server naming-server...."
-    docker-compose -f ${dc_main} up --build --force-recreate -d rabbitmq zipkin-server postgresql mongodb kafka config-server naming-server
+    echo "Starting rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka config-server ...."
+    docker-compose -f ${dc_main} up -d rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka config-server
+    docker-compose -f ${dc_main} logs -f
+}
+
+function start_services() {
+    echo "Starting naming-server api-gateway catalog-service inventory-service order-service payment-service ...."
+    docker-compose -f ${dc_main} up -d naming-server api-gateway catalog-service inventory-service order-service payment-service
     docker-compose -f ${dc_main} logs -f
 }
 

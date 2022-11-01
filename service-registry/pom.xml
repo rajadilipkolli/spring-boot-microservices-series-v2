@@ -23,6 +23,7 @@
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
 		<testcontainers.version>1.17.5</testcontainers.version>
 		<sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
+		<spotless.version>2.27.2</spotless.version>
 		<CI_DOCKER_PASSWORD />
 		<CI_DOCKER_USERNAME />
 	</properties>
@@ -90,10 +91,10 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<image>
-						<buildpacks>
+						<!-- <buildpacks>
 							<buildpack>gcr.io/paketo-buildpacks/bellsoft-liberica:9.9.0-ea</buildpack>
 							<buildpack>gcr.io/paketo-buildpacks/java-native-image</buildpack>
-						</buildpacks>
+						</buildpacks> -->
 						<name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
 					</image>
 					<pullPolicy>IF_NOT_PRESENT</pullPolicy>
@@ -135,6 +136,30 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>1.15.0</version>
+                            <style>AOSP</style>
+                        </googleJavaFormat>
+                        <licenseHeader>
+                            <content>/* Licensed under Apache-2.0 $YEAR */</content>
+                        </licenseHeader>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 		</plugins>
 	</build>
 

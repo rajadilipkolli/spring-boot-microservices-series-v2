@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.orderservice.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,7 @@ class OrderControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     private List<Order> orderList;
+    private List<OrderDto> orderListDto;
 
     @BeforeEach
     void setUp() {
@@ -64,11 +66,36 @@ class OrderControllerTest {
                         .customerEmail("junit3@email.com")
                         .customerId(1L)
                         .build());
+        {
+            this.orderListDto = new ArrayList<>();
+            this.orderListDto.add(
+                    OrderDto.builder()
+                            .orderId(1L)
+                            .customerAddress("text 1")
+                            .customerEmail("junit1@email.com")
+                            .customerId(1L)
+                            .build());
+            this.orderListDto.add(
+                    OrderDto.builder()
+                            .orderId(2L)
+                            .customerAddress("text 2")
+                            .customerEmail("junit2@email.com")
+                            .customerId(1L)
+                            .build());
+            this.orderListDto.add(
+                    OrderDto.builder()
+                            .orderId(3L)
+                            .customerAddress("text 3")
+                            .customerEmail("junit3@email.com")
+                            .customerId(1L)
+                            .build());
+        }
     }
 
     @Test
     void shouldFetchAllOrders() throws Exception {
-        given(orderService.findAllOrders()).willReturn(this.orderList);
+
+        given(orderService.findAllOrders()).willReturn(this.orderListDto);
 
         this.mockMvc
                 .perform(get("/api/orders"))
@@ -86,7 +113,7 @@ class OrderControllerTest {
                         .customerEmail("junit1@email.com")
                         .customerId(1L)
                         .build();
-        given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
+        given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
@@ -159,7 +186,7 @@ class OrderControllerTest {
                         .customerEmail("junit1@email.com")
                         .customerId(1L)
                         .build();
-        given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
+        given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
         given(orderService.saveOrder(any(Order.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 

@@ -61,7 +61,7 @@ class OrderControllerIT {
                         .customerId(1L)
                         .build();
         OrderItem orderItem = new OrderItem();
-        orderItem.setProductId(1L);
+        orderItem.setProductId("Product1");
         orderItem.setQuantity(10);
         orderItem.setProductPrice(BigDecimal.TEN);
         order1.addOrderItem(orderItem);
@@ -73,7 +73,7 @@ class OrderControllerIT {
                         .customerId(2L)
                         .build();
         OrderItem orderItem1 = new OrderItem();
-        orderItem1.setProductId(2L);
+        orderItem1.setProductId("Product2");
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
         order2.addOrderItem(orderItem1);
@@ -85,7 +85,7 @@ class OrderControllerIT {
                         .customerId(3L)
                         .build();
         OrderItem orderItem2 = new OrderItem();
-        orderItem2.setProductId(2L);
+        orderItem2.setProductId("Product2");
         orderItem2.setQuantity(100);
         orderItem2.setProductPrice(BigDecimal.ONE);
         order3.addOrderItem(orderItem2);
@@ -121,7 +121,7 @@ class OrderControllerIT {
                 new OrderDto(
                         null, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
         OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductId(1L);
+        orderItemDto.setProductId("Product1");
         orderItemDto.setQuantity(10);
         orderItemDto.setProductPrice(BigDecimal.TEN);
         orderDto.setItems(List.of(orderItemDto));

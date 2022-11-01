@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.paymentservice.web.controllers;
 
+import com.example.orderservice.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
 import java.util.List;
@@ -29,12 +30,12 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<Order> getAllOrders() {
+    public List<OrderDto> getAllOrders() {
         return orderService.findAllOrders();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
         return orderService
                 .findOrderById(id)
                 .map(ResponseEntity::ok)
