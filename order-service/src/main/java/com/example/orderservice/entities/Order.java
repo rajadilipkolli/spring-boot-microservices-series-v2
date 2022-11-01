@@ -42,8 +42,7 @@ public class Order {
 
     private Long customerId;
 
-    @Builder.Default
-    private String status = "NEW";
+    @Builder.Default private String status = "NEW";
 
     private String source;
 

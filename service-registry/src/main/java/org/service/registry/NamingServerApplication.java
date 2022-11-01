@@ -1,3 +1,4 @@
+/* Licensed under Apache-2.0 2022 */
 package org.service.registry;
 
 import org.springframework.boot.SpringApplication;
@@ -8,8 +9,7 @@ import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 @SpringBootApplication
 public class NamingServerApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(NamingServerApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(NamingServerApplication.class, args);
+    }
 }
