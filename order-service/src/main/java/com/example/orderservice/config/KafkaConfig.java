@@ -3,6 +3,7 @@ package com.example.orderservice.config;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
+import com.example.orderservice.utils.AppConstants;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,48 +30,49 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 @RequiredArgsConstructor
 public class KafkaConfig {
 
-    private static final String ORDERS = "orders";
-
     private final OrderManageService orderManageService;
 
     @Bean
     public NewTopic ordersTopic() {
-        return TopicBuilder.name(ORDERS).partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.ORDERS_TOPIC).partitions(3).compact().build();
     }
 
     @Bean
     public NewTopic paymentTopic() {
-        return TopicBuilder.name("payment-orders").partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC).partitions(3).compact().build();
     }
 
     @Bean
     public NewTopic stockTopic() {
-        return TopicBuilder.name("stock-orders").partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC).partitions(3).compact().build();
     }
 
     @Bean
     public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream("payment-orders", Consumed.with(Serdes.Long(), orderSerde));
+                builder.stream(
+                        AppConstants.PAYMENT_ORDERS_TOPIC,
+                        Consumed.with(Serdes.Long(), orderSerde));
 
         stream.join(
-                        builder.stream("stock-orders"),
+                        builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output: {}", o))
-                .to(ORDERS);
+                .peek((k, o) -> log.info("Output of Steam: {}", o))
+                .to(AppConstants.ORDERS_TOPIC);
 
         return stream;
     }
 
     @Bean
     public KTable<Long, OrderDto> table(StreamsBuilder builder) {
-        KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS);
+        KeyValueBytesStoreSupplier store =
+                Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream(ORDERS, Consumed.with(Serdes.Long(), orderSerde));
+                builder.stream(AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(
                 Materialized.<Long, OrderDto>as(store)
                         .withKeySerde(Serdes.Long())

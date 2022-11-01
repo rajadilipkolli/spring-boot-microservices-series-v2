@@ -3,6 +3,7 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.dtos.OrderItemDto;
+import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +69,8 @@ public class OrderGeneratorService {
                 Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
                         .store(
                                 StoreQueryParameters.fromNameAndType(
-                                        "orders", QueryableStoreTypes.keyValueStore()));
+                                        AppConstants.ORDERS_TOPIC,
+                                        QueryableStoreTypes.keyValueStore()));
         KeyValueIterator<Long, OrderDto> it = store.all();
         it.forEachRemaining(kv -> orders.add(kv.value));
         return orders;

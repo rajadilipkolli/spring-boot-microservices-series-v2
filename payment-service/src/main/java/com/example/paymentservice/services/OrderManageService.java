@@ -17,12 +17,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OrderManageService {
 
-    private final CustomerRepository repository;
-    private final KafkaTemplate<Long, OrderDto> template;
+    private final CustomerRepository customerRepository;
+    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto order) {
-        Customer customer = repository.findById(order.getCustomerId()).orElseThrow();
-        log.info("Found: {}", customer);
+        Customer customer = customerRepository.findById(order.getCustomerId()).orElseThrow();
+        log.info("Found Customer: {}", customer);
         var orderPrice =
                 order.getItems().stream()
                         .map(OrderItemDto::getProductPrice)
@@ -36,14 +36,14 @@ public class OrderManageService {
             order.setStatus("REJECT");
         }
         order.setSource(AppConstants.SOURCE);
-        repository.save(customer);
-        template.send("payment-orders", order.getOrderId(), order);
+        customerRepository.save(customer);
+        kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, order.getOrderId(), order);
         log.info("Sent: {}", order);
     }
 
     public void confirm(OrderDto order) {
-        Customer customer = repository.findById(order.getCustomerId()).orElseThrow();
-        log.info("Found: {}", customer);
+        Customer customer = customerRepository.findById(order.getCustomerId()).orElseThrow();
+        log.info("Found Customer: {}", customer);
         var orderPrice =
                 order.getItems().stream()
                         .map(OrderItemDto::getProductPrice)
@@ -51,12 +51,12 @@ public class OrderManageService {
                         .intValue();
         if (order.getStatus().equals("CONFIRMED")) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-            repository.save(customer);
+            customerRepository.save(customer);
         } else if (order.getStatus().equals("ROLLBACK")
                 && !order.getSource().equals(AppConstants.SOURCE)) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
-            repository.save(customer);
+            customerRepository.save(customer);
         }
     }
 }
