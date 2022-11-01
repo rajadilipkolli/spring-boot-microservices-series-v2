@@ -5,11 +5,10 @@ import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.dtos.OrderItemDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.entities.OrderItem;
+import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValueCheckStrategy;
-
-import java.util.List;
 
 @Mapper(componentModel = "spring", nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS)
 public interface OrderMapper {

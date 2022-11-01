@@ -69,26 +69,26 @@ class OrderControllerTest {
         {
             this.orderListDto = new ArrayList<>();
             this.orderListDto.add(
-                OrderDto.builder()
-                    .orderId(1L)
-                    .customerAddress("text 1")
-                    .customerEmail("junit1@email.com")
-                    .customerId(1L)
-                    .build());
+                    OrderDto.builder()
+                            .orderId(1L)
+                            .customerAddress("text 1")
+                            .customerEmail("junit1@email.com")
+                            .customerId(1L)
+                            .build());
             this.orderListDto.add(
-                OrderDto.builder()
-                    .orderId(2L)
-                    .customerAddress("text 2")
-                    .customerEmail("junit2@email.com")
-                    .customerId(1L)
-                    .build());
+                    OrderDto.builder()
+                            .orderId(2L)
+                            .customerAddress("text 2")
+                            .customerEmail("junit2@email.com")
+                            .customerId(1L)
+                            .build());
             this.orderListDto.add(
-                OrderDto.builder()
-                    .orderId(3L)
-                    .customerAddress("text 3")
-                    .customerEmail("junit3@email.com")
-                    .customerId(1L)
-                    .build());
+                    OrderDto.builder()
+                            .orderId(3L)
+                            .customerAddress("text 3")
+                            .customerEmail("junit3@email.com")
+                            .customerId(1L)
+                            .build());
         }
     }
 
