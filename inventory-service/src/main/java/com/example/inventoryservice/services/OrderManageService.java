@@ -22,7 +22,7 @@ public class OrderManageService {
 
     public void reserve(OrderDto order) {
         Inventory product =
-                repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
+                repository.findByProductCode(order.getItems().get(0).getProductId()).orElseThrow();
         log.info("Found: {}", product);
         if ("NEW".equals(order.getStatus())) {
             int productCount = order.getItems().get(0).getQuantity();
@@ -41,7 +41,7 @@ public class OrderManageService {
 
     public void confirm(OrderDto order) {
         Inventory product =
-                repository.findById(order.getItems().get(0).getProductId()).orElseThrow();
+                repository.findByProductCode(order.getItems().get(0).getProductId()).orElseThrow();
         log.info("Found: {}", product);
         int productCount = order.getItems().get(0).getQuantity();
         if ("CONFIRMED".equals(order.getStatus())) {

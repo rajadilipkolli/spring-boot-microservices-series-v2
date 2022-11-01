@@ -6,6 +6,7 @@ import com.example.orderservice.dtos.OrderItemDto;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import net.datafaker.Faker;
@@ -47,12 +48,12 @@ public class OrderGeneratorService {
             int x = RAND.nextInt(5) + 1;
             orderItem.setProductPrice(new BigDecimal(100 * x));
             orderItem.setQuantity(x);
-            orderItem.setProductId(RAND.nextLong(100) + 1);
+            orderItem.setProductId("Product" + RAND.nextInt(100) + 1);
             OrderItemDto orderItem1 = new OrderItemDto();
             int y = RAND.nextInt(5) + 1;
             orderItem1.setProductPrice(new BigDecimal(100 * y));
             orderItem1.setQuantity(y);
-            orderItem1.setProductId(RAND.nextLong(100) + 1);
+            orderItem1.setProductId("Product" + RAND.nextInt(100) + 1);
             List<OrderItemDto> oList = new ArrayList<>();
             oList.add(orderItem);
             oList.add(orderItem1);
@@ -64,8 +65,7 @@ public class OrderGeneratorService {
     public List<OrderDto> getAllOrders() {
         List<OrderDto> orders = new ArrayList<>();
         ReadOnlyKeyValueStore<Long, OrderDto> store =
-                kafkaStreamsFactory
-                        .getKafkaStreams()
+                Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
                         .store(
                                 StoreQueryParameters.fromNameAndType(
                                         "orders", QueryableStoreTypes.keyValueStore()));

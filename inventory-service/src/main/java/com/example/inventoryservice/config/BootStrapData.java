@@ -3,6 +3,8 @@ package com.example.inventoryservice.config;
 
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,12 +22,14 @@ public class BootStrapData {
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         log.info("start data initialization...");
-        this.inventoryRepository.deleteAll();
+        this.inventoryRepository.deleteAllInBatch();
         Random r = new Random();
+        List<Inventory> inventoryList = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
             int count = r.nextInt(1000);
-            Inventory p = new Inventory(null, "Product" + i, count, 0);
-            inventoryRepository.save(p);
+            Inventory inventory = new Inventory(null, "Product" + i, count, 0);
+            inventoryList.add(inventory);
         }
+        inventoryRepository.saveAll(inventoryList);
     }
 }

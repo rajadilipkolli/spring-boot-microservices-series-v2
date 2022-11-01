@@ -12,7 +12,7 @@ public class OrderItemDto implements Serializable {
 
     private Long itemId;
 
-    private Long productId;
+    private String productId;
 
     private int quantity;
 
