@@ -20,10 +20,11 @@ docker compose up rabbitmq zipkin-server postgresql mongodb kafka config-server 
  - Zipkin : http://localhost:9411/zipkin/
  - RabbitMq : http://localhost:15672/
  - Service Registry : http://localhost:8761
- - API Gateway : http://localhost:8765/swagger-ui.html
+ - API Gateway : http://localhost:8765/api-gateway/swagger-ui.html
 
  #### References
   - https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
   
 #### Projects unable to convert to native Image OOTB
  - config-server
+ - api-gateway
