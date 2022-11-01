@@ -56,6 +56,19 @@ services:
     networks:
       - microservice-network
 
+  pgadmin4:
+    container_name: pgadmin4
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgresql
+    networks:
+      - microservice-network
+
   mongodb:
     container_name: mongodb
     image: mongo:5.0.13
