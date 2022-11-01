@@ -3,14 +3,13 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.dtos.OrderItemDto;
+import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.example.orderservice.utils.AppConstants;
 import net.datafaker.Faker;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.KeyValueIterator;
@@ -70,7 +69,8 @@ public class OrderGeneratorService {
                 Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
                         .store(
                                 StoreQueryParameters.fromNameAndType(
-                                    AppConstants.ORDERS_TOPIC, QueryableStoreTypes.keyValueStore()));
+                                        AppConstants.ORDERS_TOPIC,
+                                        QueryableStoreTypes.keyValueStore()));
         KeyValueIterator<Long, OrderDto> it = store.all();
         it.forEachRemaining(kv -> orders.add(kv.value));
         return orders;

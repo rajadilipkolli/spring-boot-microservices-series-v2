@@ -13,14 +13,16 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class OrderManageService {
+public class InventoryOrderManageService {
 
     private final InventoryRepository inventoryRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
         Inventory product =
-            inventoryRepository.findByProductCode(orderDto.getItems().get(0).getProductId()).orElseThrow();
+                inventoryRepository
+                        .findByProductCode(orderDto.getItems().get(0).getProductId())
+                        .orElseThrow();
         log.info("Found: {}", product);
         if ("NEW".equals(orderDto.getStatus())) {
             int productCount = orderDto.getItems().get(0).getQuantity();
@@ -39,14 +41,16 @@ public class OrderManageService {
 
     public void confirm(OrderDto orderDto) {
         Inventory product =
-            inventoryRepository.findByProductCode(orderDto.getItems().get(0).getProductId()).orElseThrow();
+                inventoryRepository
+                        .findByProductCode(orderDto.getItems().get(0).getProductId())
+                        .orElseThrow();
         log.info("Found: {}", product);
         int productCount = orderDto.getItems().get(0).getQuantity();
         if ("CONFIRMED".equals(orderDto.getStatus())) {
             product.setReservedItems(product.getReservedItems() - productCount);
             inventoryRepository.save(product);
         } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
-            && !(AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource()))) {
+                && !(AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource()))) {
             product.setReservedItems(product.getReservedItems() - productCount);
             product.setAvailableQuantity(product.getAvailableQuantity() + productCount);
             inventoryRepository.save(product);

@@ -3,9 +3,8 @@ package com.example.orderservice.config;
 
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
-import java.time.Duration;
-
 import com.example.orderservice.utils.AppConstants;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -52,7 +51,9 @@ public class KafkaConfig {
     public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream(AppConstants.PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+                builder.stream(
+                        AppConstants.PAYMENT_ORDERS_TOPIC,
+                        Consumed.with(Serdes.Long(), orderSerde));
 
         stream.join(
                         builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
@@ -67,7 +68,8 @@ public class KafkaConfig {
 
     @Bean
     public KTable<Long, OrderDto> table(StreamsBuilder builder) {
-        KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
+        KeyValueBytesStoreSupplier store =
+                Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
                 builder.stream(AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
