@@ -4,6 +4,7 @@ package com.example.orderservice.web.controllers;
 import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
+import com.example.orderservice.utils.AppConstants;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,8 +32,28 @@ public class OrderController {
     private final OrderGeneratorService orderGeneratorService;
 
     @GetMapping
-    public List<OrderDto> getAllOrders() {
-        return orderService.findAllOrders();
+    public List<OrderDto> getAllOrders(
+            @RequestParam(
+                            value = "pageNo",
+                            defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
+                            required = false)
+                    int pageNo,
+            @RequestParam(
+                            value = "pageSize",
+                            defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
+                            required = false)
+                    int pageSize,
+            @RequestParam(
+                            value = "sortBy",
+                            defaultValue = AppConstants.DEFAULT_SORT_BY,
+                            required = false)
+                    String sortBy,
+            @RequestParam(
+                            value = "sortDir",
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
+                    String sortDir) {
+        return orderService.findAllOrders(pageNo, pageSize, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")
@@ -88,7 +110,17 @@ public class OrderController {
     }
 
     @GetMapping("/all")
-    public List<OrderDto> all() {
-        return orderGeneratorService.getAllOrders();
+    public List<OrderDto> all(
+            @RequestParam(
+                            value = "pageNo",
+                            defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
+                            required = false)
+                    int pageNo,
+            @RequestParam(
+                            value = "pageSize",
+                            defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
+                            required = false)
+                    int pageSize) {
+        return orderGeneratorService.getAllOrders(pageNo, pageSize);
     }
 }

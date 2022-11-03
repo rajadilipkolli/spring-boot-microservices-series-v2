@@ -64,20 +64,26 @@ public class InventoryOrderManageService {
     }
 
     public void confirm(OrderDto orderDto) {
-        Inventory product =
-                inventoryRepository
-                        .findByProductCode(orderDto.getItems().get(0).getProductId())
-                        .orElseThrow();
-        log.info("Found: {}", product);
-        int productCount = orderDto.getItems().get(0).getQuantity();
-        if ("CONFIRMED".equals(orderDto.getStatus())) {
-            product.setReservedItems(product.getReservedItems() - productCount);
-            inventoryRepository.save(product);
-        } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
-                && !(AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource()))) {
-            product.setReservedItems(product.getReservedItems() - productCount);
-            product.setAvailableQuantity(product.getAvailableQuantity() + productCount);
-            inventoryRepository.save(product);
+        List<String> productCodeList =
+                orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
+        List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
+
+        for (Inventory inventory : inventoryList) {
+            for (OrderItemDto orderItemDto : orderDto.getItems()) {
+                if (inventory.getProductCode().equals(orderItemDto.getProductId())) {
+                    Integer productCount = orderItemDto.getQuantity();
+                    if ("CONFIRMED".equals(orderDto.getStatus())) {
+                        inventory.setReservedItems(inventory.getReservedItems() - productCount);
+                    } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
+                            && !(AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource()))) {
+                        inventory.setReservedItems(inventory.getReservedItems() - productCount);
+                        inventory.setAvailableQuantity(
+                                inventory.getAvailableQuantity() + productCount);
+                    }
+                    break;
+                }
+            }
         }
+        inventoryRepository.saveAll(inventoryList);
     }
 }

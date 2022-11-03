@@ -79,7 +79,7 @@ class OrderControllerTest {
         orderListDto.add(
                 new OrderDto(
                         null, "email3@junit.com", "address 3", 1, "NEW", "", new ArrayList<>()));
-        given(orderService.findAllOrders()).willReturn(orderListDto);
+        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderListDto);
 
         this.mockMvc
                 .perform(get("/api/orders"))
