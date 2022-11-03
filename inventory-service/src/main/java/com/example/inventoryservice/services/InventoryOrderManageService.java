@@ -5,6 +5,9 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import com.example.orderservice.dtos.OrderDto;
+import com.example.orderservice.dtos.OrderItemDto;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,23 +22,44 @@ public class InventoryOrderManageService {
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
-        Inventory product =
-                inventoryRepository
-                        .findByProductCode(orderDto.getItems().get(0).getProductId())
-                        .orElseThrow();
-        log.info("Found: {}", product);
-        if ("NEW".equals(orderDto.getStatus())) {
-            int productCount = orderDto.getItems().get(0).getQuantity();
-            if (productCount < product.getAvailableQuantity()) {
-                product.setReservedItems(product.getReservedItems() + productCount);
-                product.setAvailableQuantity(product.getAvailableQuantity() - productCount);
-                orderDto.setStatus("ACCEPT");
-                inventoryRepository.save(product);
-            } else {
-                orderDto.setStatus("REJECT");
+        List<String> productCodeList =
+                orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
+        List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
+        if (inventoryList.size() == productCodeList.size()) {
+            log.info("All Products Exists");
+            if ("NEW".equals(orderDto.getStatus())) {
+                List<Inventory> persistInventoryList = new ArrayList<>();
+
+                outerLoopBreakVariable:
+                for (OrderItemDto orderItemDto : orderDto.getItems()) {
+                    for (Inventory inventory : inventoryList) {
+                        if (inventory.getProductCode().equals(orderItemDto.getProductId())) {
+                            int productCount = orderItemDto.getQuantity();
+                            if (productCount < inventory.getAvailableQuantity()) {
+                                inventory.setReservedItems(
+                                        inventory.getReservedItems() + productCount);
+                                inventory.setAvailableQuantity(
+                                        inventory.getAvailableQuantity() - productCount);
+                                persistInventoryList.add(inventory);
+                            } else {
+                                break outerLoopBreakVariable;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (inventoryList.size() == persistInventoryList.size()) {
+                    orderDto.setStatus("ACCEPT");
+                    inventoryRepository.saveAll(persistInventoryList);
+                } else {
+                    orderDto.setStatus("REJECT");
+                }
+                kafkaTemplate.send(
+                        AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+                log.info("Sent: {}", orderDto);
             }
-            kafkaTemplate.send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
-            log.info("Sent: {}", orderDto);
+        } else {
+            log.error("Not all products requested exists");
         }
     }
 
