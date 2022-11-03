@@ -58,6 +58,17 @@ class ProductControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldFindProductByProductCode() throws Exception {
+        Product product = productList.get(0);
+
+        this.mockMvc
+                .perform(get("/api/catalog/{productCode}", product.getCode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(product.getId())))
+                .andExpect(jsonPath("$.code", is(product.getCode())));
+    }
+
+    @Test
     void shouldCreateNewProduct() throws Exception {
         ProductDto productDto = new ProductDto("code 4", "name 4", "description 4", 19.0);
         this.mockMvc

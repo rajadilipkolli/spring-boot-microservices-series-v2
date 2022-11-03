@@ -47,6 +47,14 @@ public class ProductController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{productCode}")
+    public ResponseEntity<Product> getProductByProductCode(@PathVariable String productCode) {
+        return productService
+                .findProductByProductCode(productCode)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Product createProduct(@RequestBody @Validated ProductDto productDto) {

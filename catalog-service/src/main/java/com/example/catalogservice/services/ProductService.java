@@ -32,6 +32,10 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
+    public Optional<Product> findProductByProductCode(String productCode) {
+        return productRepository.findByCodeAllIgnoreCase(productCode);
+    }
+
     public Product saveProduct(ProductDto productDto) {
         Product product = this.productMapper.toEntity(productDto);
         return productRepository.save(product);
