@@ -66,7 +66,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
+                .andExpect(jsonPath("$.productCode", is(inventory.productCode())));
     }
 
     @Test

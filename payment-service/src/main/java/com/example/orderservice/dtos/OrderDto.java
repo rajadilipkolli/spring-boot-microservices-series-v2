@@ -29,5 +29,5 @@ public class OrderDto implements Serializable {
 
     private String source;
 
-    private List<OrderItemDto> items = new ArrayList<>();
+    @Builder.Default private List<OrderItemDto> items = new ArrayList<>();
 }

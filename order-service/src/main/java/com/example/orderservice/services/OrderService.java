@@ -9,6 +9,9 @@ import com.example.orderservice.utils.AppConstants;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +26,15 @@ public class OrderService {
 
     private final KafkaTemplate<Long, OrderDto> template;
 
-    public List<OrderDto> findAllOrders() {
-        return this.orderMapper.toDtoList(orderRepository.findAllOrders());
+    public List<OrderDto> findAllOrders(int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+
+        // create Pageable instance
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        return this.orderMapper.toDtoList(orderRepository.findAll(pageable).getContent());
     }
 
     public Optional<OrderDto> findOrderById(Long id) {

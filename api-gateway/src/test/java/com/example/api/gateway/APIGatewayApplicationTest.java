@@ -26,7 +26,7 @@ class APIGatewayApplicationTest {
 
     @Container
     static final MongoDBContainer mongoDBContainer =
-            new MongoDBContainer(DockerImageName.parse("mongo:5.0.12"));
+            new MongoDBContainer(DockerImageName.parse("mongo:6.0.2"));
 
     static {
         Startables.deepStart(mongoDBContainer).join();

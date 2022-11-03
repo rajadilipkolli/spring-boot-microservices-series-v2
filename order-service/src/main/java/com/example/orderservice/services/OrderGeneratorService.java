@@ -63,7 +63,7 @@ public class OrderGeneratorService {
         }
     }
 
-    public List<OrderDto> getAllOrders() {
+    public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
         List<OrderDto> orders = new ArrayList<>();
         ReadOnlyKeyValueStore<Long, OrderDto> store =
                 Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
@@ -71,7 +71,9 @@ public class OrderGeneratorService {
                                 StoreQueryParameters.fromNameAndType(
                                         AppConstants.ORDERS_TOPIC,
                                         QueryableStoreTypes.keyValueStore()));
-        KeyValueIterator<Long, OrderDto> it = store.all();
+        var from = pageNo * pageSize;
+        var to = from + pageSize;
+        KeyValueIterator<Long, OrderDto> it = store.range((long) from + 1, (long) to);
         it.forEachRemaining(kv -> orders.add(kv.value));
         return orders;
     }
