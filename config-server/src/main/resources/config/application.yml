@@ -3,6 +3,8 @@ eureka:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
 logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
   level:
     sql: INFO
     web: INFO
@@ -17,6 +19,9 @@ management:
   info:
     git:
       mode: full
+  tracing:
+    sampling:
+      probability: 1.0
 server:
   shutdown: graceful
 spring:
@@ -52,13 +57,6 @@ spring:
     show-sql: true
   main:
     allow-bean-definition-overriding: true
-  sleuth:
-    sampler:
-      probability: 1.0
-  zipkin:
-    baseurl: http://localhost:9411
-    sender:
-      type: rabbit
 
 ---
 spring:

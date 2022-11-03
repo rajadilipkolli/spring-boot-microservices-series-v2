@@ -28,3 +28,9 @@ docker compose up rabbitmq zipkin-server postgresql mongodb kafka config-server 
 #### Projects unable to convert to native Image OOTB
  - config-server
  - api-gateway
+
+#### Breaking Changes in 3.0
+ - Migration to jakarta namespace from javax
+ - Spring Cloud Seluth is deprecated in favor of Micrometer
+ - With New Observability we cant use Rabbit as sender type and use asynchronous communication
+ 
