@@ -35,10 +35,10 @@ public class ProductController {
         return productService.findAllProducts();
     }
 
-    @GetMapping("/{id}")
-    //    @Retry(name = "product-api", fallbackMethod = "hardcodedResponse")
-    //  	@CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    //  	@RateLimiter(name="default")
+    @GetMapping("/id/{id}")
+    //  @Retry(name = "product-api", fallbackMethod = "hardcodedResponse")
+    //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+    //  @RateLimiter(name="default")
     @Bulkhead(name = "product-api")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         return productService
@@ -47,7 +47,7 @@ public class ProductController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{productCode}")
+    @GetMapping("/productCode/{productCode}")
     public ResponseEntity<Product> getProductByProductCode(@PathVariable String productCode) {
         return productService
                 .findProductByProductCode(productCode)

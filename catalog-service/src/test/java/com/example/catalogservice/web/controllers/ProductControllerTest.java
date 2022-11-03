@@ -66,7 +66,7 @@ class ProductControllerTest {
         given(productService.findProductById(productId)).willReturn(Optional.of(product));
 
         this.mockMvc
-                .perform(get("/api/catalog/{id}", productId))
+                .perform(get("/api/catalog/id/{id}", productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(product.getCode())))
                 .andExpect(jsonPath("$.productName", is(product.getProductName())))
@@ -79,7 +79,9 @@ class ProductControllerTest {
         Long productId = 1L;
         given(productService.findProductById(productId)).willReturn(Optional.empty());
 
-        this.mockMvc.perform(get("/api/catalog/{id}", productId)).andExpect(status().isNotFound());
+        this.mockMvc
+                .perform(get("/api/catalog/id/{id}", productId))
+                .andExpect(status().isNotFound());
     }
 
     @Test

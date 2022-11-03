@@ -52,9 +52,13 @@ class ProductControllerIT extends AbstractIntegrationTest {
         Long productId = product.getId();
 
         this.mockMvc
-                .perform(get("/api/catalog/{id}", productId))
+                .perform(get("/api/catalog/id/{id}", productId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code", is(product.getCode())));
+                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
+                .andExpect(jsonPath("$.code", is(product.getCode())))
+                .andExpect(jsonPath("$.productName", is(product.getProductName())))
+                .andExpect(jsonPath("$.description", is(product.getDescription())))
+                .andExpect(jsonPath("$.price", is(product.getPrice())));
     }
 
     @Test
@@ -62,10 +66,13 @@ class ProductControllerIT extends AbstractIntegrationTest {
         Product product = productList.get(0);
 
         this.mockMvc
-                .perform(get("/api/catalog/{productCode}", product.getCode()))
+                .perform(get("/api/catalog/productCode/{productCode}", product.getCode()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(product.getId())))
-                .andExpect(jsonPath("$.code", is(product.getCode())));
+                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
+                .andExpect(jsonPath("$.code", is(product.getCode())))
+                .andExpect(jsonPath("$.productName", is(product.getProductName())))
+                .andExpect(jsonPath("$.description", is(product.getDescription())))
+                .andExpect(jsonPath("$.price", is(product.getPrice())));
     }
 
     @Test
@@ -78,7 +85,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(productDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.code", is(productDto.getCode())));
+                .andExpect(jsonPath("$.code", is(productDto.getCode())))
+                .andExpect(jsonPath("$.productName", is(productDto.getProductName())))
+                .andExpect(jsonPath("$.description", is(productDto.getDescription())))
+                .andExpect(jsonPath("$.price", is(productDto.getPrice())));
     }
 
     @Test
@@ -111,7 +121,11 @@ class ProductControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(product)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.description", is(product.getDescription())));
+                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
+                .andExpect(jsonPath("$.code", is(product.getCode())))
+                .andExpect(jsonPath("$.productName", is(product.getProductName())))
+                .andExpect(jsonPath("$.description", is(product.getDescription())))
+                .andExpect(jsonPath("$.price", is(product.getPrice())));
     }
 
     @Test
@@ -121,6 +135,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/catalog/{id}", product.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code", is(product.getCode())));
+                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
+                .andExpect(jsonPath("$.code", is(product.getCode())))
+                .andExpect(jsonPath("$.productName", is(product.getProductName())))
+                .andExpect(jsonPath("$.description", is(product.getDescription())))
+                .andExpect(jsonPath("$.price", is(product.getPrice())));
     }
 }
