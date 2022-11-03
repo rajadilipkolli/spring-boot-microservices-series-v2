@@ -7,11 +7,16 @@ import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @Transactional
 public class InventoryService {
 
@@ -26,8 +31,21 @@ public class InventoryService {
         this.inventoryMapper = inventoryMapper;
     }
 
-    public List<Inventory> findAllInventories() {
-        return inventoryRepository.findAll();
+    public List<Inventory> findAllInventories(
+            int pageNo, int pageSize, String sortBy, String sortDir) {
+        log.info(
+                "Fetching findAllInventories for pageNo {} with pageSize {}, sorting BY {} {}",
+                pageNo,
+                pageSize,
+                sortBy,
+                sortDir);
+
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        return inventoryRepository.findAll(pageable).getContent();
     }
 
     public Optional<Inventory> findInventoryById(Long id) {
