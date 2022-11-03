@@ -15,7 +15,7 @@ jobs:
         working-directory: "catalog-service"
     strategy:
       matrix:
-        java: ["17", "19"]
+        java: ["17"]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -39,7 +39,7 @@ jobs:
 
       - if: ${{ github.ref == 'refs/heads/master' }}
         name: SonarQube Scan
-        run: ./mvnw compile sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        run: ./mvnw compile package sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
