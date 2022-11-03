@@ -52,7 +52,8 @@ class InventoryControllerTest {
 
     @Test
     void shouldFetchAllInventorys() throws Exception {
-        given(inventoryService.findAllInventories()).willReturn(this.inventoryList);
+        given(inventoryService.findAllInventories(0, 10, "id", "asc"))
+                .willReturn(this.inventoryList);
 
         this.mockMvc
                 .perform(get("/api/inventory"))
