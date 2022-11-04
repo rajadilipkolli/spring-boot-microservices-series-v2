@@ -29,7 +29,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        productRepository.deleteAll();
+        productRepository.deleteAllInBatch();
 
         this.productList = new ArrayList<>();
         this.productList.add(new Product(null, "code 1", "name 1", "description 1", 9.0, true));
@@ -85,10 +85,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(productDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.code", is(productDto.getCode())))
-                .andExpect(jsonPath("$.productName", is(productDto.getProductName())))
-                .andExpect(jsonPath("$.description", is(productDto.getDescription())))
-                .andExpect(jsonPath("$.price", is(productDto.getPrice())));
+                .andExpect(jsonPath("$.code", is(productDto.code())))
+                .andExpect(jsonPath("$.productName", is(productDto.productName())))
+                .andExpect(jsonPath("$.description", is(productDto.description())))
+                .andExpect(jsonPath("$.price", is(productDto.price())));
     }
 
     @Test

@@ -1,21 +1,9 @@
 package com.example.catalogservice.dtos;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class ProductDto {
-
-    @NotBlank(message = "Product code can't be blank")
-    private String code;
-
-    private String productName;
-
-    private String description;
-
-    private double price;
-}
+public record ProductDto(
+        @NotBlank(message = "Product code can't be blank") String code,
+        String productName,
+        String description,
+        double price) {}
