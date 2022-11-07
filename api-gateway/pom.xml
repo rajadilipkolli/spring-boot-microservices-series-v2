@@ -25,6 +25,8 @@
 		<testcontainers.version>1.17.5</testcontainers.version>
 		<spotless.version>2.27.2</spotless.version>
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
+		<CI_DOCKER_USERNAME />
+		<CI_DOCKER_PASSWORD />
 	</properties>
 
 	<dependencies>
@@ -53,16 +55,23 @@
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
 
-		<!-- Zipkin Server -->
-		<!-- <dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-sleuth-zipkin</artifactId>
-		</dependency>
+		<!-- Observability -->
+		<!-- Metrics -->
 		<dependency>
-			<groupId>org.springframework.amqp</groupId>
-			<artifactId>spring-rabbit</artifactId>
-		</dependency> -->
-		<!-- end Zipkin Server -->
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<!-- Tracing -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-otel</artifactId>
+		</dependency>
+		<!-- Latency Visualization -->
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-zipkin</artifactId>
+		</dependency>
+		<!-- end Observability -->
 
 		<!-- To fix Spring Cloud LoadBalancer is currently working with the default 
 			cache. You can switch to using Caffeine cache, by adding it -->

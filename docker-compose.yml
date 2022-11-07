@@ -3,7 +3,7 @@ version: "3.8"
 services:
   rabbitmq:
     container_name: rabbitmq
-    image: rabbitmq:3.11.2-management
+    image: rabbitmq:3.11.2-management-alpine
     expose:
       - "5672"
       - "15672"
@@ -33,17 +33,17 @@ services:
       - "9411"
     ports:
       - "9411:9411"
-    environment:
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+#    environment:
+#      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+#    depends_on:
+#      rabbitmq:
+#        condition: service_healthy
     networks:
       - microservice-network
 
   postgresql:
     container_name: postgresql
-    image: postgres:latest
+    image: postgres:15-alpine
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -77,7 +77,7 @@ services:
       - microservice-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.3.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -85,7 +85,7 @@ services:
       - "22181:2181"
   
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.3.0
     depends_on:
       - zookeeper
     ports:
