@@ -33,11 +33,6 @@ services:
       - "9411"
     ports:
       - "9411:9411"
-    environment:
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     networks:
       - microservice-network
 
@@ -71,7 +66,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
