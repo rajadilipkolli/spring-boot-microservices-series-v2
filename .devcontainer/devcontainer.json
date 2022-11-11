@@ -2,9 +2,13 @@
 	"name": "Java",
 	"image": "mcr.microsoft.com/devcontainers/java:17",
 	"features": {
-		"ghcr.io/devcontainers/features/java:1": {},
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "22.3.r17-nik",
+			"installMaven": "true",
+			"installGradle": "false"
+		},
 		"ghcr.io/devcontainers/features/node:1": {
-			"version": "lts"
+			"version": "none"
 		},
 		"ghcr.io/devcontainers/features/docker-from-docker:1": {},
 		"ghcr.io/devcontainers/features/git-lfs:1": {},
@@ -16,7 +20,8 @@
 			"extensions": [
 				"vscjava.vscode-java-pack",
 				"Pivotal.vscode-boot-dev-pack",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"DavidAnson.vscode-markdownlint"
 			]
 		}
 	}
