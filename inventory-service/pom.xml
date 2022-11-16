@@ -24,7 +24,7 @@
         <commons-io.version>2.11.0</commons-io.version>
         <org-springdoc.version>2.0.0-RC1</org-springdoc.version>
 
-        <testcontainers.version>1.17.5</testcontainers.version>
+        <testcontainers.version>1.17.6</testcontainers.version>
         <org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
