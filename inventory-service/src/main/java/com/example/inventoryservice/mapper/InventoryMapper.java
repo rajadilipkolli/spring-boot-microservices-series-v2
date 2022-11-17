@@ -10,5 +10,6 @@ import org.mapstruct.Mapping;
 public interface InventoryMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "reservedItems", ignore = true)
     Inventory toEntity(InventoryDto inventoryDto);
 }

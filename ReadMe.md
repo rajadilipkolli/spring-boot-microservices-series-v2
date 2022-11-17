@@ -6,13 +6,13 @@ Initial Code generated using [springboot generator](https://github.com/sivaprasa
 
 To run in local first build all services using command 
 
-```bash
-mvnw clean spotless:apply spring-boot:build-image -DskipTests
+```shell
+./mvnw clean spotless:apply spring-boot:build-image -DskipTests
 ```
 
 To start docker using 
 
-```bash
+```shell
 docker compose up
 ```
 
