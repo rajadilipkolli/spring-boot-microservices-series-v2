@@ -15,7 +15,7 @@ jobs:
         working-directory: "config-server"
     strategy:
       matrix:
-        java: ["17", "19"]
+        java: ["17"]
     steps:
       - uses: actions/checkout@v3
         with:
