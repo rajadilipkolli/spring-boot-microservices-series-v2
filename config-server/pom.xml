@@ -67,6 +67,9 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <image>
+                        <env>
+                            <BP_JVM_VERSION>17</BP_JVM_VERSION>
+                        </env>
                         <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
                     </image>
                     <docker>
