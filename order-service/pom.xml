@@ -22,7 +22,7 @@
         <spring-cloud.version>2022.0.0-RC2</spring-cloud.version>
         <commons-io.version>2.11.0</commons-io.version>
         <org-mapstruct.version>1.5.3.Final</org-mapstruct.version>
-        <org-springdoc.version>2.0.0</org-springdoc.version>
+        <springdoc-openapi.version>2.0.0</springdoc-openapi.version>
 
         <testcontainers.version>1.17.6</testcontainers.version>
 
@@ -149,7 +149,7 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>${org-springdoc.version}</version>
+            <version>${springdoc-openapi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
