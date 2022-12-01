@@ -5,6 +5,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,10 +42,7 @@ public class ProductController {
     //  @RateLimiter(name="default")
     @Bulkhead(name = "product-api")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        return productService
-                .findProductById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(productService.findProductById(id));
     }
 
     @GetMapping("/productCode/{productCode}")
@@ -64,8 +62,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(
             @PathVariable Long id, @RequestBody Product product) {
-        return productService
-                .findProductById(id)
+        return Optional.of(productService.findProductById(id))
                 .map(
                         catalogObj -> {
                             product.setId(id);
@@ -76,8 +73,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Product> deleteProduct(@PathVariable Long id) {
-        return productService
-                .findProductById(id)
+        return Optional.of(productService.findProductById(id))
                 .map(
                         catalog -> {
                             productService.deleteProductById(id);
