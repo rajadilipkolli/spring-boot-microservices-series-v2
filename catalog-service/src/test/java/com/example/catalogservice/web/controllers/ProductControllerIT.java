@@ -93,7 +93,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
-        ProductDto productDto = new ProductDto(null, null, null, 0);
+        ProductDto productDto = new ProductDto(null, null, null, null);
 
         this.mockMvc
                 .perform(
