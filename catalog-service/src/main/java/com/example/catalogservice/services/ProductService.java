@@ -2,6 +2,7 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.ProductRepository;
 import java.util.List;
@@ -28,8 +29,8 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-    public Optional<Product> findProductById(Long id) {
-        return productRepository.findById(id);
+    public Product findProductById(Long id) {
+        return productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     public Optional<Product> findProductByProductCode(String productCode) {

@@ -62,6 +62,24 @@ class ProductControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldNotFindProductById() throws Exception {
+        Long productId = 100L;
+
+        this.mockMvc
+                .perform(get("/api/catalog/id/{id}", productId))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
+                .andExpect(jsonPath("$.title", is("Product Not Found")))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.detail", is("Product with id 100 not found")))
+                .andExpect(jsonPath("$.instance", is("/api/catalog/id/100")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()))
+                .andExpect(jsonPath("$.errorCategory", is("Generic")))
+                .andReturn();
+    }
+
+    @Test
     void shouldFindProductByProductCode() throws Exception {
         Product product = productList.get(0);
 

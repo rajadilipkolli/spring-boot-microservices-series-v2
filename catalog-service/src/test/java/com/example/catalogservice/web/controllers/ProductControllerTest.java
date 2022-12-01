@@ -15,11 +15,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.services.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +63,7 @@ class ProductControllerTest {
     void shouldFindProductById() throws Exception {
         Long productId = 1L;
         Product product = new Product(productId, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(Optional.of(product));
+        given(productService.findProductById(productId)).willReturn(product);
 
         this.mockMvc
                 .perform(get("/api/catalog/id/{id}", productId))
@@ -77,7 +77,8 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenFetchingNonExistingProduct() throws Exception {
         Long productId = 1L;
-        given(productService.findProductById(productId)).willReturn(Optional.empty());
+        given(productService.findProductById(productId))
+                .willThrow(new ProductNotFoundException(productId));
 
         this.mockMvc
                 .perform(get("/api/catalog/id/{id}", productId))
@@ -123,7 +124,7 @@ class ProductControllerTest {
     void shouldUpdateProduct() throws Exception {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(Optional.of(product));
+        given(productService.findProductById(productId)).willReturn(product);
         given(productService.updateProduct(any(Product.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
@@ -139,7 +140,8 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() throws Exception {
         Long productId = 1L;
-        given(productService.findProductById(productId)).willReturn(Optional.empty());
+        given(productService.findProductById(productId))
+                .willThrow(new ProductNotFoundException(productId));
         Product product =
                 new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
 
@@ -155,7 +157,7 @@ class ProductControllerTest {
     void shouldDeleteProduct() throws Exception {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(Optional.of(product));
+        given(productService.findProductById(productId)).willReturn(product);
         doNothing().when(productService).deleteProductById(product.getId());
 
         this.mockMvc
@@ -167,7 +169,8 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenDeletingNonExistingProduct() throws Exception {
         Long productId = 1L;
-        given(productService.findProductById(productId)).willReturn(Optional.empty());
+        given(productService.findProductById(productId))
+                .willThrow(new ProductNotFoundException(productId));
 
         this.mockMvc
                 .perform(delete("/api/catalog/{id}", productId))
