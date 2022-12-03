@@ -34,7 +34,7 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return this.orderMapper.toDtoList(orderRepository.findAll(pageable).getContent());
+        return this.orderMapper.orderToDtoList(orderRepository.findAll(pageable).getContent());
     }
 
     public Optional<OrderDto> findOrderById(Long id) {
