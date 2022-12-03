@@ -26,7 +26,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Autowired private OrderRepository orderRepository;
     @Autowired private CustomerRepository customerRepository;
 
-    private List<Order> orderList = null;
+    private List<Order> orderList = new ArrayList<>();
     private Customer customer;
 
     @BeforeEach
@@ -44,26 +44,32 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         orderList = new ArrayList<>();
         this.orderList.add(
-                Order.builder()
-                        .id(1L)
-                        .customerAddress("text 1")
-                        .customerEmail("junit1@email.com")
-                        .customerId(customer.getId())
-                        .build());
+                new Order(
+                        null,
+                        "junit1@email.com",
+                        "text 1",
+                        customer.getId(),
+                        null,
+                        null,
+                        new ArrayList<>()));
         this.orderList.add(
-                Order.builder()
-                        .id(2L)
-                        .customerAddress("text 2")
-                        .customerEmail("junit2@email.com")
-                        .customerId(customer.getId())
-                        .build());
+                new Order(
+                        null,
+                        "junit2@email.com",
+                        "text 2",
+                        customer.getId(),
+                        null,
+                        null,
+                        new ArrayList<>()));
         this.orderList.add(
-                Order.builder()
-                        .id(3L)
-                        .customerAddress("text 3")
-                        .customerEmail("junit3@email.com")
-                        .customerId(customer.getId())
-                        .build());
+                new Order(
+                        null,
+                        "junit3@email.com",
+                        "text 3",
+                        customer.getId(),
+                        null,
+                        null,
+                        new ArrayList<>()));
         orderList = orderRepository.saveAll(orderList);
     }
 
@@ -89,11 +95,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewOrder() throws Exception {
         Order order =
-                Order.builder()
-                        .customerAddress("text 1")
-                        .customerEmail("junit1@email.com")
-                        .customerId(customer.getId())
-                        .build();
+                new Order(
+                        null,
+                        "junit1@email.com",
+                        "text 1",
+                        customer.getId(),
+                        null,
+                        null,
+                        new ArrayList<>());
         this.mockMvc
                 .perform(
                         post("/api/orders")
@@ -106,13 +115,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutEmail() throws Exception {
         Order order =
-                Order.builder()
-                        .id(null)
-                        .customerAddress("text 1")
-                        .customerEmail(null)
-                        .customerId(1L)
-                        .build();
-
+                new Order(null, null, "text 1", customer.getId(), null, null, new ArrayList<>());
         this.mockMvc
                 .perform(
                         post("/api/orders")

@@ -44,26 +44,12 @@ class OrderControllerTest {
     void setUp() {
         this.orderList = new ArrayList<>();
         this.orderList.add(
-                Order.builder()
-                        .id(1L)
-                        .customerEmail("email1@junit.com")
-                        .customerAddress("address 1")
-                        .customerId(1L)
-                        .build());
+                new Order(1L, "email1@junit.com", "address 1", 1L, "NEW", null, new ArrayList<>()));
         this.orderList.add(
-                Order.builder()
-                        .id(2L)
-                        .customerEmail("email2@junit.com")
-                        .customerAddress("address 2")
-                        .customerId(2L)
-                        .build());
+                new Order(2L, "email2@junit.com", "address 2", 2L, "NEW", null, new ArrayList<>()));
         this.orderList.add(
-                Order.builder()
-                        .id(3L)
-                        .customerEmail("email3@junit.com")
-                        .customerAddress("address 3")
-                        .customerId(3L)
-                        .build());
+                new Order(3L, "email3@junit.com", "address 3", 3L, "NEW", null, new ArrayList<>()));
+        ;
     }
 
     @Test
@@ -170,12 +156,14 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
         Order order =
-                Order.builder()
-                        .id(1L)
-                        .customerEmail("email1@junit.com")
-                        .customerAddress("address updated")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        1L,
+                        "email1@junit.com",
+                        "address updated",
+                        1L,
+                        "NEW",
+                        null,
+                        new ArrayList<>());
 
         this.mockMvc
                 .perform(

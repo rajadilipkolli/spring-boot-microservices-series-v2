@@ -46,50 +46,37 @@ class OrderControllerTest {
     void setUp() {
         this.orderList = new ArrayList<>();
         this.orderList.add(
-                Order.builder()
-                        .id(1L)
+                new Order(
+                        1L, "junit1@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
+        this.orderList.add(
+                new Order(
+                        2L, "junit2@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
+        this.orderList.add(
+                new Order(
+                        3L, "junit3@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
+
+        this.orderListDto = new ArrayList<>();
+        this.orderListDto.add(
+                OrderDto.builder()
+                        .orderId(1L)
                         .customerAddress("text 1")
                         .customerEmail("junit1@email.com")
                         .customerId(1L)
                         .build());
-        this.orderList.add(
-                Order.builder()
-                        .id(2L)
+        this.orderListDto.add(
+                OrderDto.builder()
+                        .orderId(2L)
                         .customerAddress("text 2")
                         .customerEmail("junit2@email.com")
                         .customerId(1L)
                         .build());
-        this.orderList.add(
-                Order.builder()
-                        .id(3L)
+        this.orderListDto.add(
+                OrderDto.builder()
+                        .orderId(3L)
                         .customerAddress("text 3")
                         .customerEmail("junit3@email.com")
                         .customerId(1L)
                         .build());
-        {
-            this.orderListDto = new ArrayList<>();
-            this.orderListDto.add(
-                    OrderDto.builder()
-                            .orderId(1L)
-                            .customerAddress("text 1")
-                            .customerEmail("junit1@email.com")
-                            .customerId(1L)
-                            .build());
-            this.orderListDto.add(
-                    OrderDto.builder()
-                            .orderId(2L)
-                            .customerAddress("text 2")
-                            .customerEmail("junit2@email.com")
-                            .customerId(1L)
-                            .build());
-            this.orderListDto.add(
-                    OrderDto.builder()
-                            .orderId(3L)
-                            .customerAddress("text 3")
-                            .customerEmail("junit3@email.com")
-                            .customerId(1L)
-                            .build());
-        }
     }
 
     @Test
@@ -107,12 +94,14 @@ class OrderControllerTest {
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
         Order order =
-                Order.builder()
-                        .id(orderId)
-                        .customerAddress("text 1")
-                        .customerEmail("junit1@email.com")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        orderId,
+                        "junit1@email.com",
+                        "Updated Text",
+                        1L,
+                        null,
+                        null,
+                        new ArrayList<>());
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
 
         this.mockMvc
@@ -135,12 +124,14 @@ class OrderControllerTest {
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
         Order order =
-                Order.builder()
-                        .id(1L)
-                        .customerAddress("text 1")
-                        .customerEmail("junit1@email.com")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        100L,
+                        "junit1@email.com",
+                        "Updated Text",
+                        1L,
+                        null,
+                        null,
+                        new ArrayList<>());
         this.mockMvc
                 .perform(
                         post("/api/orders")
@@ -152,14 +143,8 @@ class OrderControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenCreateNewOrderWithoutText() throws Exception {
-        Order order =
-                Order.builder()
-                        .id(null)
-                        .customerAddress("text 1")
-                        .customerEmail(null)
-                        .customerId(1L)
-                        .build();
+    void shouldReturn400WhenCreateNewOrderWithoutCustomerEmail() throws Exception {
+        Order order = new Order(null, null, "junit1@email.com", 1L, null, null, new ArrayList<>());
 
         this.mockMvc
                 .perform(
@@ -180,12 +165,14 @@ class OrderControllerTest {
     void shouldUpdateOrder() throws Exception {
         Long orderId = 1L;
         Order order =
-                Order.builder()
-                        .id(orderId)
-                        .customerAddress("updated Text")
-                        .customerEmail("junit1@email.com")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        orderId,
+                        "junit1@email.com",
+                        "Updated Text",
+                        1L,
+                        null,
+                        null,
+                        new ArrayList<>());
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
         given(orderService.saveOrder(any(Order.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
@@ -204,12 +191,14 @@ class OrderControllerTest {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
         Order order =
-                Order.builder()
-                        .id(orderId)
-                        .customerAddress("Updated text")
-                        .customerEmail("junit1@email.com")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        orderId,
+                        "Updated text",
+                        "junit1@email.com",
+                        1L,
+                        null,
+                        null,
+                        new ArrayList<>());
 
         this.mockMvc
                 .perform(

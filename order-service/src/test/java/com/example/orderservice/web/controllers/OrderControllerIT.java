@@ -55,11 +55,8 @@ class OrderControllerIT {
 
         orderList = new ArrayList<>();
         Order order1 =
-                Order.builder()
-                        .customerEmail("email1@junit.com")
-                        .customerAddress("address 1")
-                        .customerId(1L)
-                        .build();
+                new Order(
+                        null, "email1@junit.com", "address 1", 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem = new OrderItem();
         orderItem.setProductId("Product1");
         orderItem.setQuantity(10);
@@ -67,11 +64,8 @@ class OrderControllerIT {
         order1.addOrderItem(orderItem);
         this.orderList.add(order1);
         Order order2 =
-                Order.builder()
-                        .customerEmail("email2@junit.com")
-                        .customerAddress("address 2")
-                        .customerId(2L)
-                        .build();
+                new Order(
+                        null, "email2@junit.com", "address 2", 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductId("Product2");
         orderItem1.setQuantity(100);
@@ -79,11 +73,8 @@ class OrderControllerIT {
         order2.addOrderItem(orderItem1);
         this.orderList.add(order2);
         Order order3 =
-                Order.builder()
-                        .customerEmail("email3@junit.com")
-                        .customerAddress("address 3")
-                        .customerId(3L)
-                        .build();
+                new Order(
+                        null, "email3@junit.com", "address 3", 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem2 = new OrderItem();
         orderItem2.setProductId("Product2");
         orderItem2.setQuantity(100);

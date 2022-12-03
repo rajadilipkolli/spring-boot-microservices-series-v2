@@ -35,7 +35,6 @@ public class OrderService {
                                                 () -> this.orderMapper.toDto(order)))
                         .toList();
         return completableFutureList.stream().map(CompletableFuture::join).toList();
-        ;
     }
 
     public Optional<OrderDto> findOrderById(Long id) {
