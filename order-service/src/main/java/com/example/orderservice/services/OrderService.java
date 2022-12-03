@@ -8,6 +8,7 @@ import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,7 +35,14 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return this.orderMapper.orderToDtoList(orderRepository.findAll(pageable).getContent());
+        List<CompletableFuture<OrderDto>> completableFutureList =
+                orderRepository.findAll(pageable).getContent().stream()
+                        .map(
+                                order ->
+                                        CompletableFuture.supplyAsync(
+                                                () -> this.orderMapper.toDto(order)))
+                        .toList();
+        return completableFutureList.stream().map(CompletableFuture::join).toList();
     }
 
     public Optional<OrderDto> findOrderById(Long id) {

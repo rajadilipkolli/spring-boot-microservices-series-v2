@@ -5,7 +5,6 @@ import com.example.orderservice.dtos.OrderDto;
 import com.example.orderservice.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
-import java.util.List;
 import java.util.function.Consumer;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -20,9 +19,8 @@ public interface OrderMapper {
     OrderDto toDto(Order order);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "items", ignore = true)
     Order toEntity(OrderDto orderDto);
-
-    List<OrderDto> orderToDtoList(List<Order> orderList);
 
     @Mapping(target = "itemId", source = "id")
     OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);

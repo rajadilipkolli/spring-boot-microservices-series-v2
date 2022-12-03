@@ -7,6 +7,7 @@ import com.example.paymentservice.mapper.OrderMapper;
 import com.example.paymentservice.repositories.OrderRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,16 @@ public class OrderService {
     }
 
     public List<OrderDto> findAllOrders() {
-        return this.orderMapper.toDtoList(orderRepository.findAll());
+
+        var completableFutureList =
+                orderRepository.findAll().stream()
+                        .map(
+                                order ->
+                                        CompletableFuture.supplyAsync(
+                                                () -> this.orderMapper.toDto(order)))
+                        .toList();
+        return completableFutureList.stream().map(CompletableFuture::join).toList();
+        ;
     }
 
     public Optional<OrderDto> findOrderById(Long id) {
