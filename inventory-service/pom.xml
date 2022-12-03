@@ -221,6 +221,9 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+                        <env>
+                            <BP_JVM_VERSION>17</BP_JVM_VERSION>
+                        </env>
                     </image>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                     <docker>
