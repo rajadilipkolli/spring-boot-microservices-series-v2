@@ -20,7 +20,7 @@
 
         <java.version>17</java.version>
         <spring-cloud.version>2022.0.0-RC3</spring-cloud.version>
-        <springdoc-openapi.version>2.0.0</springdoc-openapi.version>
+        <springdoc-openapi.version>2.0.1</springdoc-openapi.version>
         <commons-io.version>2.11.0</commons-io.version>
         <org-mapstruct.version>1.5.3.Final</org-mapstruct.version>
 
