@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @ConfigurationPropertiesScan
-// This is the hack to fetch the MutiOpenGroupAPI
-@SpringBootApplication(scanBasePackages = {"org.springdoc.webflux.api", "com.example.api.gateway"})
+@SpringBootApplication
 public class APIGatewayApplication {
 
     public static void main(String[] args) {

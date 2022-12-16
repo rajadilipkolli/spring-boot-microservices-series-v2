@@ -3,5 +3,4 @@ package com.example.api.gateway.domain;
 
 import java.io.Serializable;
 
-public record UsernameDTO(String username) implements Serializable {
-}
+public record UsernameDTO(String username) implements Serializable {}
