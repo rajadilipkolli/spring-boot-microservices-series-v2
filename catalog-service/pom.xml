@@ -20,9 +20,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>17</java.version>
-        <spring-cloud.version>2022.0.0-RC3</spring-cloud.version>
+        <spring-cloud.version>2022.0.0</spring-cloud.version>
         <commons-io.version>2.11.0</commons-io.version>
-        <springdoc-openapi.version>2.0.0</springdoc-openapi.version>
+        <springdoc-openapi.version>2.0.2</springdoc-openapi.version>
 
         <testcontainers.version>1.17.6</testcontainers.version>
         <org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
