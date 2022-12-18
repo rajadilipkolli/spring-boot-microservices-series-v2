@@ -1,5 +1,6 @@
 package com.example.catalogservice.web.controllers;
 
+import static com.example.catalogservice.utils.AppConstants.PROFILE_IT;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,7 +31,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = ProductController.class)
-@ActiveProfiles("test")
+@ActiveProfiles({PROFILE_IT})
 class ProductControllerTest {
 
     @Autowired private MockMvc mockMvc;
