@@ -20,7 +20,8 @@ class NamingServerApplicationTests {
     static ConfigServerContainer configServerContainer =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
-                    .withEnv("SPRING_PROFILES_ACTIVE", "native");
+                    .withEnv("SPRING_PROFILES_ACTIVE", "native")
+                    .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
 
     static {
         configServerContainer.start();
@@ -29,7 +30,6 @@ class NamingServerApplicationTests {
     private static class ConfigServerContainer extends GenericContainer<ConfigServerContainer> {
         public ConfigServerContainer(final DockerImageName dockerImageName) {
             super(dockerImageName);
-            withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
         }
     }
 
