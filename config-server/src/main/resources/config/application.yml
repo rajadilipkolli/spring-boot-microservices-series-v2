@@ -57,6 +57,9 @@ spring:
     show-sql: true
   main:
     allow-bean-definition-overriding: true
+  mvc:
+    problemdetails:
+      enabled: true
 
 ---
 spring:

@@ -9,4 +9,54 @@ services:
       - POSTGRES_DB=appdb
     ports:
       - "5432:5432"
+    networks:
+      - catalog-network
 
+  zipkin-server:
+    image: openzipkin/zipkin
+    container_name: zipkin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    networks:
+      - catalog-network
+
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8888:8888"
+    networks:
+      - catalog-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+
+  naming-server:
+    container_name: naming-server
+    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8761:8761"
+    networks:
+      - catalog-network
+    depends_on:
+      - config-server
+    environment:
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+    restart: unless-stopped
+
+networks:
+  catalog-network:
