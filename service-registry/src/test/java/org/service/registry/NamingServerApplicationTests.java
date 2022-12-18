@@ -19,7 +19,8 @@ class NamingServerApplicationTests {
     @Container
     static ConfigServerContainer configServerContainer =
             new ConfigServerContainer(
-                    DockerImageName.parse("dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"));
+                            DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
+                    .withEnv("SPRING_PROFILES_ACTIVE", "native");
 
     static {
         configServerContainer.start();
