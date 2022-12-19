@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
     <changeSet author="rajakolli" id="createTable-inventorys">
         <createSequence
-                        sequenceName="inventory_id_seq"
-                        incrementBy="100"
-                        startValue="1"
-                        />
+            sequenceName="inventorys_seq"
+            incrementBy="50"
+            startValue="1"
+        />
         <createTable tableName="inventorys">
-            <column name="id" type="bigint" defaultValueSequenceNext="inventory_id_seq">
-                <constraints primaryKey="true" nullable="false"/>
+            <column name="id" type="bigint" defaultValueSequenceNext="inventorys_seq">
+                <constraints primaryKey="true" nullable="false" />
             </column>
             <column name="product_code" type="varchar(1024)">
-                <constraints nullable="false" unique="true"/>
+                <constraints nullable="false" unique="true" />
             </column>
             <column name="quantity" type="int" />
             <column name="reserved_items" type="int" />

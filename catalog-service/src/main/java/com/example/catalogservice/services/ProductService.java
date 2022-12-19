@@ -7,32 +7,30 @@ import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.ProductRepository;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
 
     private final ProductMapper productMapper;
 
-    @Autowired
-    public ProductService(ProductRepository productRepository, ProductMapper productMapper) {
-        this.productRepository = productRepository;
-        this.productMapper = productMapper;
-    }
-
+    @Transactional(readOnly = true)
     public List<Product> findAllProducts() {
         return productRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Product findProductById(Long id) {
         return productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
     }
 
+    @Transactional(readOnly = true)
     public Optional<Product> findProductByProductCode(String productCode) {
         return productRepository.findByCodeAllIgnoreCase(productCode);
     }

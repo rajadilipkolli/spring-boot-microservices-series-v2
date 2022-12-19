@@ -7,8 +7,8 @@ import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 @Transactional
 public class InventoryService {
 
@@ -24,13 +25,7 @@ public class InventoryService {
 
     private final InventoryMapper inventoryMapper;
 
-    @Autowired
-    public InventoryService(
-            InventoryRepository inventoryRepository, InventoryMapper inventoryMapper) {
-        this.inventoryRepository = inventoryRepository;
-        this.inventoryMapper = inventoryMapper;
-    }
-
+    @Transactional(readOnly = true)
     public List<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         log.info(
@@ -48,6 +43,7 @@ public class InventoryService {
         return inventoryRepository.findAll(pageable).getContent();
     }
 
+    @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryById(Long id) {
         return inventoryRepository.findById(id);
     }
@@ -66,6 +62,7 @@ public class InventoryService {
         return inventoryRepository.save(inventory);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
         return this.inventoryRepository.findByProductCode(productCode);
     }

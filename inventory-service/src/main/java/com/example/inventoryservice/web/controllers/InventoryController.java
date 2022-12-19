@@ -6,7 +6,7 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -21,16 +21,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/inventory")
 public class InventoryController {
 
     private final InventoryService inventoryService;
-
-    @Autowired
-    public InventoryController(InventoryService inventoryService) {
-        this.inventoryService = inventoryService;
-    }
 
     @GetMapping
     public List<Inventory> getAllInventories(

@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
@@ -25,11 +24,7 @@ import lombok.Setter;
 public class OrderItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_item_id_generator")
-    @SequenceGenerator(
-            name = "order_item_id_generator",
-            sequenceName = "order_item_id_seq",
-            allocationSize = 100)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     @Column(nullable = false)

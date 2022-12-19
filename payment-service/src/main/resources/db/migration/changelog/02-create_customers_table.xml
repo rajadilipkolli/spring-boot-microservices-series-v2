@@ -6,15 +6,15 @@
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
     <changeSet author="sivalabs" id="createTable-customers">
         <createSequence
-                        sequenceName="customer_id_seq"
-                        incrementBy="100"
+                        sequenceName="customers_seq"
+                        incrementBy="50"
                         startValue="1"
                         />
         <createTable tableName="customers">
-            <column name="id" type="bigint" defaultValueSequenceNext="customer_id_seq">
+            <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="name" type="varchar(1024)">
+            <column name="name" type="text">
                 <constraints nullable="false"/>
             </column>
             <column name="amount_available" type="int"/>

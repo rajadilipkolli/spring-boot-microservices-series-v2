@@ -6,7 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,11 +21,7 @@ import lombok.Setter;
 public class Inventory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inventory_id_generator")
-    @SequenceGenerator(
-            name = "inventory_id_generator",
-            sequenceName = "inventory_id_seq",
-            allocationSize = 100)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     @Column(name = "product_code", nullable = false, unique = true)

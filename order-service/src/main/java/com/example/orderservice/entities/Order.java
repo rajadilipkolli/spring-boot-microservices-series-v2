@@ -7,7 +7,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.ArrayList;
@@ -26,11 +25,7 @@ import lombok.Setter;
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_id_generator")
-    @SequenceGenerator(
-            name = "order_id_generator",
-            sequenceName = "order_id_seq",
-            allocationSize = 100)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     @NotEmpty(message = "Email can't be blank")

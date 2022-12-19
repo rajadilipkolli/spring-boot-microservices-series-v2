@@ -8,23 +8,19 @@ import com.example.paymentservice.repositories.OrderRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
 
-    @Autowired
-    public OrderService(OrderRepository orderRepository, OrderMapper orderMapper) {
-        this.orderRepository = orderRepository;
-        this.orderMapper = orderMapper;
-    }
-
+    @Transactional(readOnly = true)
     public List<OrderDto> findAllOrders() {
 
         var completableFutureList =
@@ -37,6 +33,7 @@ public class OrderService {
         return completableFutureList.stream().map(CompletableFuture::join).toList();
     }
 
+    @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderById(Long id) {
         return orderRepository.findById(id).map(this.orderMapper::toDto);
     }

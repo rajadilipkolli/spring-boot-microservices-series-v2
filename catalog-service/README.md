@@ -10,3 +10,4 @@
 ### Useful Links
 * Swagger UI: http://localhost:18080/catalog-service/swagger-ui.html
 * Actuator Endpoint: http://localhost:18080/catalog-service/actuator
+* Actuator Health Endpoint : http://localhost:18080/catalog-service/actuator/health
