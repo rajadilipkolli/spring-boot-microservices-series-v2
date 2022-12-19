@@ -1,26 +1,6 @@
 version: "3.8"
 
 services:
-  rabbitmq:
-    container_name: rabbitmq
-    image: rabbitmq:3.11.5-management-alpine
-    expose:
-      - "5672"
-      - "15672"
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    deploy:
-      resources:
-        limits:
-          memory: 350m
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - microservice-network
 
   zipkin-server:
     image: openzipkin/zipkin
@@ -33,6 +13,12 @@ services:
       - "9411"
     ports:
       - "9411:9411"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9411/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 #    environment:
 #      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
 #    depends_on:
@@ -63,6 +49,7 @@ services:
       - "5050:80"
     depends_on:
       - postgresql
+    restart: unless-stopped
     networks:
       - microservice-network
 
@@ -83,11 +70,18 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "22181:2181"
+    healthcheck:
+      test: [ "CMD-SHELL", "echo ruok | nc localhost 2181" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
   
   kafka:
-    image: confluentinc/cp-kafka:7.3.1
+    image: confluentinc/cp-kafka:7.3.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "29092:29092"
     environment:
@@ -97,6 +91,12 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9092" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   naming-server:
     container_name: naming-server
@@ -110,11 +110,12 @@ services:
     networks:
       - microservice-network
     depends_on:
-      - config-server
+      config-server:
+        condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+    restart: unless-stopped
 
   config-server:
     container_name: config-server
@@ -144,12 +145,10 @@ services:
     depends_on:
       - config-server
       - naming-server
-      - rabbitmq
       - zipkin-server
       - mongodb
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_DATA_MONGODB_HOST: mongodb
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
 
@@ -165,22 +164,21 @@ services:
     networks:
       - microservice-network
     depends_on:
-      - naming-server
-      - rabbitmq
-      - zipkin-server
-      - postgresql
+      naming-server:
+        condition: service_started
+      zipkin-server:
+        condition: service_healthy
+      postgresql:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       RABBIT_URI: amqp://guest:guest@rabbitmq:5672
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      SPRING_DATASOURCE_URL=jdbc: postgresql://postgresql:5432/appdb
-      SPRING_DATASOURCE_USERNAME: siva
-      SPRING_DATASOURCE_PASSWORD: secret
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka
+    restart: unless-stopped
 
   inventory-service:
     container_name: inventory-service
@@ -190,22 +188,22 @@ services:
         limits:
           memory: 700m
     ports:
-      - "18181:18181"
+      - "18080:18080"
     networks:
       - microservice-network
     depends_on:
-      - naming-server
-      - rabbitmq
-      - zipkin-server
-      - postgresql
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      postgresql:
+        condition: service_started
     environment:
-      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888/
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+    restart: unless-stopped
 
   order-service:
     container_name: order-service
@@ -219,26 +217,46 @@ services:
     networks:
       - microservice-network
     depends_on:
-      - naming-server
-      - rabbitmq
-      - zipkin-server
-      - postgresql
-      - kafka
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      postgresql:
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
-      - RABBIT_URI= amqp://guest:guest@rabbitmq:5672
-      - SPRING_RABBITMQ_HOST= rabbitmq
-      - SPRING_ZIPKIN_SENDER_TYPE= rabbit
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/appdb
-      - SPRING_DATASOURCE_USERNAME=siva
-      - SPRING_DATASOURCE_PASSWORD=secret
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE:http://naming-server:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+    restart: unless-stopped
+
+  payment-service:
+    container_name: payment-service
+    image: dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "18085:18085"
+    networks:
+      - microservice-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      postgresql:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+    restart: unless-stopped
 
 networks:
   microservice-network:
 
 volumes:
   mongo-data:
+  postgres_data:
+    driver: local
