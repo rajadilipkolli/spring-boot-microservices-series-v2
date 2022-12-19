@@ -1,8 +1,17 @@
+# https://docs.liquibase.com/concepts/changelogs/yaml-format.html
 databaseChangeLog:
   - changeSet:
       author: rajakolli
       id: createTable-products
       context: Creates DDL Script for product
+      preConditions:
+        onFail: 'MARK_RAN'
+        not:
+          sequenceExists:
+            schemaName: public
+            sequenceName: products_seq
+          tableExists:
+            tableName: products
       createSequence:
         sequenceName: products_seq
         startValue: '1'

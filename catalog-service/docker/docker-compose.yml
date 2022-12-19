@@ -3,6 +3,7 @@ services:
 
   postgresqldb:
     image: postgres:15-alpine
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -14,6 +15,7 @@ services:
 
   zipkin-server:
     image: openzipkin/zipkin
+    extra_hosts: ['host.docker.internal:host-gateway']
     container_name: zipkin-server
     deploy:
       resources:
@@ -28,6 +30,7 @@ services:
 
   config-server:
     container_name: config-server
+    extra_hosts: ['host.docker.internal:host-gateway']
     image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
     deploy:
       resources:
@@ -42,6 +45,7 @@ services:
 
   naming-server:
     container_name: naming-server
+    extra_hosts: ['host.docker.internal:host-gateway']
     image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
     deploy:
       resources:
