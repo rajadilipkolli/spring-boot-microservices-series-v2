@@ -1,34 +1,7 @@
-version: "3.8"
-
+version: '3.8'
 services:
 
-  zipkin-server:
-    image: openzipkin/zipkin
-    container_name: zipkin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
-    ports:
-      - "9411:9411"
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9411/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-#    environment:
-#      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-#    depends_on:
-#      rabbitmq:
-#        condition: service_healthy
-    networks:
-      - microservice-network
-
   postgresql:
-    container_name: postgresql
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=appuser
@@ -63,40 +36,72 @@ services:
     networks:
       - microservice-network
 
+  zipkin-server:
+    image: openzipkin/zipkin
+    container_name: zipkin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    networks:
+      - microservice-network
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.1
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "22181:2181"
     healthcheck:
       test: [ "CMD-SHELL", "echo ruok | nc localhost 2181" ]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
-  
+    ports:
+      - "22181:2181"
+    networks:
+      - microservice-network
+
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:7.3.1
     depends_on:
-      zookeeper:
-        condition: service_healthy
+      - zookeeper
     ports:
       - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 9092" ]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - microservice-network
+
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8888:8888"
+    depends_on:
+      zipkin-server:
+        condition: service_healthy
+    networks:
+      - microservice-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
 
   naming-server:
     container_name: naming-server
@@ -117,20 +122,6 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
     restart: unless-stopped
 
-  config-server:
-    container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    ports:
-      - "8888:8888"
-    networks:
-      - microservice-network
-    environment:
-      SPRING_PROFILES_ACTIVE: native
-
   api-gateway:
     container_name: api-gateway
     image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
@@ -148,9 +139,11 @@ services:
       - zipkin-server
       - mongodb
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATA_MONGODB_HOST: mongodb
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_HOST=mongodb
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+    restart: unless-stopped
 
   catalog-service:
     container_name: catalog-service
@@ -164,20 +157,17 @@ services:
     networks:
       - microservice-network
     depends_on:
+      kafka:
+        condition: service_healthy
       naming-server:
         condition: service_started
-      zipkin-server:
-        condition: service_healthy
       postgresql:
         condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
-      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
-      EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE: http://naming-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
     restart: unless-stopped
 
   inventory-service:
@@ -188,7 +178,7 @@ services:
         limits:
           memory: 700m
     ports:
-      - "18080:18080"
+      - "18081:18081"
     networks:
       - microservice-network
     depends_on:
@@ -227,6 +217,7 @@ services:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
     restart: unless-stopped
 
   payment-service:
@@ -251,6 +242,7 @@ services:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
     restart: unless-stopped
 
 networks:
