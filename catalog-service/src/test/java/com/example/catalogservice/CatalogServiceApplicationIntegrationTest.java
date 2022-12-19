@@ -1,6 +1,5 @@
 package com.example.catalogservice;
 
-import static com.example.catalogservice.common.DBContainerInitializer.POSTGRE_SQL_CONTAINER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.catalogservice.common.AbstractIntegrationTest;
