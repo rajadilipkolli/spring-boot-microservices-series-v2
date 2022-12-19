@@ -8,7 +8,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest
@@ -16,7 +15,6 @@ class NamingServerApplicationTests {
 
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
 
-    @Container
     static ConfigServerContainer configServerContainer =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
