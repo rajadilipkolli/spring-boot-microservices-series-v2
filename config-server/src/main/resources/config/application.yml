@@ -66,14 +66,12 @@ spring:
   config:
     activate:
       on-profile: "docker"
-    import: configserver:http://config-server:8888/
   datasource:
     password: secret
     url: jdbc:postgresql://postgresql:5432/appdb
     username: appuser
-  rabbitmq:
-    addresses: rabbitmq:5672
-    host: rabbitmq
+  kafka:
+    bootstrap-servers=kafka:29092
   zipkin:
     base-url: http://zipkin-server:9411/
 eureka:
