@@ -5,9 +5,12 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.catalogservice.utils.AppConstants;
+import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,8 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     private final ProductMapper productMapper;
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public List<Product> findAllProducts() {
@@ -35,9 +40,13 @@ public class ProductService {
         return productRepository.findByCodeAllIgnoreCase(productCode);
     }
 
+    // saves product to db and sends message that new product is available for inventory
+    @Observed(name = "product.save", contextualName = "saving-prouduct")
     public Product saveProduct(ProductDto productDto) {
         Product product = this.productMapper.toEntity(productDto);
-        return productRepository.save(product);
+        Product persistedProduct = productRepository.save(product);
+        this.kafkaTemplate.send(AppConstants.KAFKA_TOPIC, persistedProduct);
+        return persistedProduct;
     }
 
     public Product updateProduct(Product product) {
