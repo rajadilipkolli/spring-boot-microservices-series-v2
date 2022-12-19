@@ -4,9 +4,111 @@ services:
   postgresqldb:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=siva
+      - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=appdb
     ports:
       - "5432:5432"
+    networks:
+      - inventory-network
 
+  zipkin-server:
+    image: openzipkin/zipkin
+    container_name: zipkin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    expose:
+      - "9411"
+    ports:
+      - "9411:9411"
+    networks:
+      - inventory-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+    networks:
+      - inventory-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.1
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - inventory-network
+
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8888:8888"
+    depends_on:
+      - zipkin-server
+    networks:
+      - inventory-network
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+
+  naming-server:
+    container_name: naming-server
+    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "8761:8761"
+    networks:
+      - inventory-network
+    depends_on:
+      - config-server
+      - zipkin-server
+    environment:
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+    restart: unless-stopped
+
+  catalog-service:
+    container_name: catalog-service
+    image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "18080:18080"
+    networks:
+      - inventory-network
+    depends_on:
+      - naming-server
+      - zipkin-server
+      - postgresqldb
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE=http://naming-server:8761/eureka
+    restart: unless-stopped
+
+networks:
+  inventory-network:
