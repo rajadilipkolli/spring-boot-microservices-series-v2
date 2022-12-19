@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.inventoryservice.config;
 
-import com.example.inventoryservice.dtos.ProductDto;
+import com.example.catalogservice.entities.Product;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
@@ -32,7 +32,7 @@ public class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(ProductDto product) {
+    public void onSaveProductEvent(Product product) {
         log.info("Received Product: {}", product);
         productManageService.manage(product);
     }

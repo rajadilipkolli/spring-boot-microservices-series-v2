@@ -48,18 +48,18 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
+    public KStream<String, OrderDto> stream(StreamsBuilder builder) {
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<Long, OrderDto> stream =
+        KStream<String, OrderDto> stream =
                 builder.stream(
                         AppConstants.PAYMENT_ORDERS_TOPIC,
-                        Consumed.with(Serdes.Long(), orderSerde));
+                        Consumed.with(Serdes.String(), orderSerde));
 
         stream.join(
                         builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
+                        StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
                 .peek((k, o) -> log.info("Output of Steam: {}", o))
                 .to(AppConstants.ORDERS_TOPIC);
 
@@ -67,15 +67,16 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KTable<Long, OrderDto> table(StreamsBuilder builder) {
+    public KTable<String, OrderDto> table(StreamsBuilder builder) {
         KeyValueBytesStoreSupplier store =
                 Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<Long, OrderDto> stream =
-                builder.stream(AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+        KStream<String, OrderDto> stream =
+                builder.stream(
+                        AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
         return stream.toTable(
-                Materialized.<Long, OrderDto>as(store)
-                        .withKeySerde(Serdes.Long())
+                Materialized.<String, OrderDto>as(store)
+                        .withKeySerde(Serdes.String())
                         .withValueSerde(orderSerde));
     }
 }

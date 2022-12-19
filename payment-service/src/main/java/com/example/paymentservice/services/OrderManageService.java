@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class OrderManageService {
 
     private final CustomerRepository customerRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto order) {
         Customer customer = customerRepository.findById(order.getCustomerId()).orElseThrow();
@@ -37,7 +37,8 @@ public class OrderManageService {
         }
         order.setSource(AppConstants.SOURCE);
         customerRepository.save(customer);
-        kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, order.getOrderId(), order);
+        kafkaTemplate.send(
+                AppConstants.PAYMENT_ORDERS_TOPIC, String.valueOf(order.getOrderId()), order);
         log.info("Sent: {}", order);
     }
 

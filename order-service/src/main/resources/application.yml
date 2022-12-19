@@ -12,11 +12,11 @@ spring:
   kafka:
     bootstrap-servers: 127.0.0.1:29092
     producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     streams:
       properties:
-        default.key.serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
         default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
         spring.json.trusted.packages: "*"
       # state-dir: /tmp/kafka-streams/
