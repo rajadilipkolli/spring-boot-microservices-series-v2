@@ -23,7 +23,7 @@ public class ProductService {
 
     private final ProductMapper productMapper;
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, Product> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public List<Product> findAllProducts() {
