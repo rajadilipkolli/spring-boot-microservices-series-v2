@@ -1,7 +1,9 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.inventoryservice.config;
 
+import com.example.inventoryservice.dtos.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
+import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
 import com.example.orderservice.dtos.OrderDto;
 import lombok.RequiredArgsConstructor;
@@ -17,14 +19,21 @@ import org.springframework.kafka.annotation.KafkaListener;
 public class KafkaListenerConfig {
 
     private final InventoryOrderManageService orderManageService;
+    private final ProductManageService productManageService;
 
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(OrderDto order) {
-        log.info("Received: {}", order);
+        log.info("Received Order: {}", order);
         if ("NEW".equals(order.getStatus())) {
             orderManageService.reserve(order);
         } else {
             orderManageService.confirm(order);
         }
+    }
+
+    @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
+    public void onSaveProductEvent(ProductDto product) {
+        log.info("Received Product: {}", product);
+        productManageService.manage(product);
     }
 }

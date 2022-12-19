@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class InventoryOrderManageService {
 
     private final InventoryRepository inventoryRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
         List<String> productCodeList =
@@ -55,7 +55,9 @@ public class InventoryOrderManageService {
                     orderDto.setStatus("REJECT");
                 }
                 kafkaTemplate.send(
-                        AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+                        AppConstants.STOCK_ORDERS_TOPIC,
+                        String.valueOf(orderDto.getOrderId()),
+                        orderDto);
                 log.info("Sent: {}", orderDto);
             }
         } else {
