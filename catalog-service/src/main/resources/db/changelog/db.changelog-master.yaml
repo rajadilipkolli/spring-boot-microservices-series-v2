@@ -4,7 +4,7 @@ databaseChangeLog:
       id: createTable-products
       context: Creates DDL Script for product
       createSequence:
-        sequenceName: product_id_seq
+        sequenceName: products_seq
         startValue: '1'
         incrementBy: '50'
       createTable:
@@ -16,20 +16,20 @@ databaseChangeLog:
                 primaryKeyName: pk_products
               name: id
               type: BIGINT
-              defaultValueSequenceNext: 'product_id_seq'
+              defaultValueSequenceNext: 'products_seq'
           - column:
               constraints:
                 nullable: 'false'
               name: code
-              type: VARCHAR(255)
+              type: text
           - column:
               constraints:
                 nullable: 'false'
               name: product_name
-              type: VARCHAR(255)
+              type: text
           - column:
               name: description
-              type: VARCHAR(255)
+              type: text
           - column:
               name: price
               type: 'NUMERIC(19,2)'
