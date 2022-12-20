@@ -16,3 +16,10 @@ http://localhost:8765/catalog-service/api/
 
 ### Swagger URL
 http://localhost:8765/api-gateway/swagger-ui.html
+
+#### useful URLS
+
+ - http://localhost:8765/api-gateway/actuator/gateway/routes - find all defined routes
+ - http://localhost:8765/api-gateway/actuator/gateway/globalfilters - list global filters
+ - http://localhost:8765/api-gateway/actuator/gateway/routefilters - list route filters
+ - http://localhost:8765/api-gateway/actuator/gateway/routes/catalog-service - Details about the service
