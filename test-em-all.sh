@@ -37,6 +37,21 @@ function assertCurl() {
   fi
 }
 
+function assertEqual() {
+
+  local expected=$1
+  local actual=$2
+
+  if [[ "$actual" = "$expected" ]]
+  then
+    echo "Test OK (actual value: $actual)"
+    return 0
+  else
+    echo "Test FAILED, EXPECTED VALUE: $expected, ACTUAL VALUE: $actual, WILL ABORT"
+    return 1
+  fi
+}
+
 function testUrl() {
     url=$@
     if curl ${url} -ks -f -o /dev/null
@@ -70,10 +85,11 @@ function recreateComposite() {
     local identifier=$1
     local composite=$2
     local baseURL=$3
+    local methodType=$4
 
     echo "calling URL" http://${HOST}:${PORT}/${baseURL}
 #    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
-    curl -X POST -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+    curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite"
 }
 
@@ -83,17 +99,17 @@ function setupTestData() {
     body+=\
 '","productName":"product name A","price":100, "description": "A Beautiful Product"}'
 
-    recreateComposite "$PROD_CODE" "$body" "CATALOG-SERVICE/catalog-service/api/catalog"
+    recreateComposite "$PROD_CODE" "$body" "CATALOG-SERVICE/catalog-service/api/catalog" "POST"
 
     # Verify that a normal request works, expect record exists with product code
     assertCurl 200 "curl -k http://$HOST:$PORT/INVENTORY-SERVICE/inventory-service/api/inventory/$PROD_CODE"
-    assertEqual ${PROD_CODE} $(echo ${RESPONSE} | jq .productCode)
+    assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
 
-    local inventoryId = "$(echo "$RESPONSE" | jq -r .id)"
+    body="{\"productCode\":\"$PROD_CODE"
+    body+=\
+'","reservedItems":0,"availableQuantity":100}'
 
-    echo ${inventoryId}
-
-
+    recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "INVENTORY-SERVICE/inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 }
 
 set -e
