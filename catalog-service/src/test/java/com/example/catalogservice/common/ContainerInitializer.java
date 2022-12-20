@@ -3,6 +3,7 @@ package com.example.catalogservice.common;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
@@ -12,6 +13,9 @@ public abstract class ContainerInitializer {
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
     private static final int SERVICE_REGISTRY_INTERNAL_PORT = 8761;
     private static final int ZIPKIN_INTERNAL_PORT = 9411;
+
+    protected static final KafkaContainer KAFKA_CONTAINER =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.1"));
 
     public static final PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
             new PostgreSQLContainer<>("postgres:15-alpine")
@@ -37,6 +41,7 @@ public abstract class ContainerInitializer {
 
     static {
         Startables.deepStart(
+                        KAFKA_CONTAINER,
                         CONFIG_SERVER_CONTAINER,
                         POSTGRE_SQL_CONTAINER,
                         SERVICE_REGISTRY_CONTAINER,
@@ -52,6 +57,8 @@ public abstract class ContainerInitializer {
                 "spring.datasource.username", POSTGRE_SQL_CONTAINER::getUsername);
         dynamicPropertyRegistry.add(
                 "spring.datasource.password", POSTGRE_SQL_CONTAINER::getPassword);
+        dynamicPropertyRegistry.add(
+                "spring.kafka.bootstrap-servers", KAFKA_CONTAINER::getBootstrapServers);
         dynamicPropertyRegistry.add(
                 "spring.config.import",
                 () ->
