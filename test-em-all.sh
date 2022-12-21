@@ -103,7 +103,7 @@ function setupTestData() {
 #    Creating Product
     recreateComposite "$PROD_CODE" "$body" "CATALOG-SERVICE/catalog-service/api/catalog" "POST"
 
-    body="{\"name\": \"$CUSTOMER_NAME",
+    body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
 '","amountAvailable":1000,"amountReserved":0}'
 
@@ -126,6 +126,19 @@ function setupTestData() {
     # Verify that a normal request works, expect record exists with CustomerName
     assertCurl 200 "curl -k http://$HOST:$PORT/PAYMENT-SERVICE/payment-service/api/customers/name/$CUSTOMER_NAME"
     assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
+
+    body="{\"customerId\": $(echo ${RESPONSE} | jq .id)"
+    body+=\
+',"customerEmail": "docker@email.com","customerAddress": "docker Address","items":[{"productId": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 10,"productPrice": 5}]}'
+
+    echo "Order Body" ${body}
+
+    # Creating Order
+    recreateComposite "$CUSTOMER_NAME" "$body" "ORDER-SERVICE/order-service/api/orders" "POST"
+
 }
 
 set -e
@@ -145,6 +158,18 @@ then
 fi
 
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
+
+# waiting for services to come up
+echo "Sleeping for 60 sec for services to start"
+sleep 60
+
+waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
+
+waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health
+
+waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health
+
+waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health
 
 setupTestData
 
