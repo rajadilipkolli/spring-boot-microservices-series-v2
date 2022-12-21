@@ -134,8 +134,6 @@ function setupTestData() {
     body+=\
 '","quantity": 10,"productPrice": 5}]}'
 
-    echo "Order Body" ${body}
-
     # Creating Order
     recreateComposite "$CUSTOMER_NAME" "$body" "ORDER-SERVICE/order-service/api/orders" "POST"
 
