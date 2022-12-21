@@ -1,3 +1,7 @@
+# API-GATEWAY
+
+Spring Cloud Gateway is a web application gateway built on top of the Spring framework. It provides a simple, yet powerful way to route requests to different services based on various criteria, such as URI, host, and header values. It also offers features such as load balancing, rate limiting, and circuit breaking to help manage the flow of traffic to your services. Spring Cloud Gateway can be easily integrated with other Spring Cloud services, such as Eureka and Hystrix, to provide a robust, scalable, and secure platform for building microservices-based applications.
+
 ## URL's
 
 Make sure you are using the right URLs when calling ?
