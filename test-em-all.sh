@@ -11,6 +11,7 @@ echo -e "Starting 'Store μServices' for [end-2-end] testing....\n"
 : ${HOST=localhost}
 : ${PORT=8765}
 : ${PROD_CODE=ProductCode1}
+: ${$CUSTOMER_NAME=dockerCustomer}
 
 function assertCurl() {
 
@@ -99,8 +100,18 @@ function setupTestData() {
     body+=\
 '","productName":"product name A","price":100, "description": "A Beautiful Product"}'
 
+#    Creating Product
     recreateComposite "$PROD_CODE" "$body" "CATALOG-SERVICE/catalog-service/api/catalog" "POST"
 
+    body="{\"name\": \"$CUSTOMER_NAME",
+    body+=\
+'","amountAvailable":1000,"amountReserved":0}'
+
+#    Creating Customer
+    recreateComposite "$CUSTOMER_NAME" "$body" "PAYMENT-SERVICE/payment-service/api/customers" "POST"
+
+    # waiting for kafka to process the catalog creation request
+    sleep 5
     # Verify that a normal request works, expect record exists with product code
     assertCurl 200 "curl -k http://$HOST:$PORT/INVENTORY-SERVICE/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
@@ -109,7 +120,9 @@ function setupTestData() {
     body+=\
 '","reservedItems":0,"availableQuantity":100}'
 
+    # Update the product available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "INVENTORY-SERVICE/inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
+
 }
 
 set -e

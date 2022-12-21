@@ -25,8 +25,9 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
 
-    private final KafkaTemplate<Long, OrderDto> template;
+    private final KafkaTemplate<String, OrderDto> template;
 
+    @Transactional(readOnly = true)
     public List<OrderDto> findAllOrders(int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
@@ -45,6 +46,7 @@ public class OrderService {
         return completableFutureList.stream().map(CompletableFuture::join).toList();
     }
 
+    @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderById(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
@@ -54,7 +56,9 @@ public class OrderService {
         Order order = this.orderMapper.toEntity(orderDto);
         OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
         this.template.send(
-                AppConstants.ORDERS_TOPIC, persistedOrderDto.getOrderId(), persistedOrderDto);
+                AppConstants.ORDERS_TOPIC,
+                String.valueOf(persistedOrderDto.getOrderId()),
+                persistedOrderDto);
         return persistedOrderDto;
     }
 
