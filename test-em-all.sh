@@ -107,7 +107,7 @@ function setupTestData() {
     body+=\
 '","amountAvailable":1000,"amountReserved":0}'
 
-#    Creating Customer
+    # Creating Customer
     recreateComposite "$CUSTOMER_NAME" "$body" "PAYMENT-SERVICE/payment-service/api/customers" "POST"
 
     # waiting for kafka to process the catalog creation request

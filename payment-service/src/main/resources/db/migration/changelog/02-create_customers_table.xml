@@ -14,7 +14,7 @@
             <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="name" type="text">
+            <column name="name" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="amount_available" type="int"/>
