@@ -38,6 +38,14 @@ public class CustomerController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/name/{name}")
+    public ResponseEntity<Customer> getCustomerByName(@PathVariable String name) {
+        return customerService
+                .findCustomerByName(name)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Customer createCustomer(@RequestBody @Validated Customer customer) {

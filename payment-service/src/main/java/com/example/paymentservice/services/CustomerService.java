@@ -26,6 +26,11 @@ public class CustomerService {
         return customerRepository.findById(id);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Customer> findCustomerByName(String name) {
+        return customerRepository.findByName(name);
+    }
+
     public Customer saveCustomer(Customer customer) {
         return customerRepository.save(customer);
     }

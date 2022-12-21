@@ -11,7 +11,7 @@ echo -e "Starting 'Store μServices' for [end-2-end] testing....\n"
 : ${HOST=localhost}
 : ${PORT=8765}
 : ${PROD_CODE=ProductCode1}
-: ${$CUSTOMER_NAME=dockerCustomer}
+: ${CUSTOMER_NAME=dockerCustomer}
 
 function assertCurl() {
 
@@ -123,6 +123,9 @@ function setupTestData() {
     # Update the product available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "INVENTORY-SERVICE/inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
+    # Verify that a normal request works, expect record exists with CustomerName
+    assertCurl 200 "curl -k http://$HOST:$PORT/PAYMENT-SERVICE/payment-service/api/customers/name/$CUSTOMER_NAME"
+    assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
 }
 
 set -e
