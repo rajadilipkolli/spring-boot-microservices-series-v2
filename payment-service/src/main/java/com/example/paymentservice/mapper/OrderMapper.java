@@ -1,8 +1,8 @@
 /* Licensed under Apache-2.0 2021-2022 */
 package com.example.paymentservice.mapper;
 
-import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.dtos.OrderItemDto;
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.entities.OrderItem;
 import java.util.function.Consumer;

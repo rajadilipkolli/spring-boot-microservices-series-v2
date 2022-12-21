@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.services;
 
-import com.example.orderservice.dtos.OrderDto;
+import com.example.common.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

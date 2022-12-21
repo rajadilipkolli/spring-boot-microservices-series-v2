@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2021-2022 */
-package com.example.orderservice.dtos;
+package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
 import java.io.Serializable;

@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.orderservice.dtos.OrderDto;
+import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;

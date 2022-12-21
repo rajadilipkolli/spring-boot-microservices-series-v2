@@ -11,9 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.catalogservice.common.AbstractIntegrationTest;
-import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

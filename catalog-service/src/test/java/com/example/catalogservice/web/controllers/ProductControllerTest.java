@@ -14,10 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.services.ProductService;
+import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;

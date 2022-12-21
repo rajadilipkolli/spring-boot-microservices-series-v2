@@ -1,17 +1,19 @@
 /* Licensed under Apache-2.0 2021-2022 */
-package com.example.orderservice.dtos;
+package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class OrderDto implements Serializable {
 
     private Long orderId;
@@ -23,9 +25,9 @@ public class OrderDto implements Serializable {
 
     private long customerId;
 
-    private String status = "NEW";
+    private String status;
 
     private String source;
 
-    private List<OrderItemDto> items = new ArrayList<>();
+    @Builder.Default private List<OrderItemDto> items = new ArrayList<>();
 }

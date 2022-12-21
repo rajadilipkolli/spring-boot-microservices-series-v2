@@ -1,4 +1,5 @@
-package com.example.catalogservice.dtos;
+/* Licensed under Apache-2.0 2022 */
+package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;

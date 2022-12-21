@@ -39,5 +39,5 @@ public class Product implements Serializable {
     @Column(columnDefinition = "NUMERIC(19,2)")
     private double price;
 
-    @Transient private boolean inStock = true;
+    @Transient private boolean inStock;
 }

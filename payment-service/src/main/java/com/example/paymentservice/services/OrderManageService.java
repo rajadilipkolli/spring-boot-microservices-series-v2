@@ -1,8 +1,8 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.paymentservice.services;
 
-import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.dtos.OrderItemDto;
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;

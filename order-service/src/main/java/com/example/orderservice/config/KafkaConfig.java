@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.config;
 
-import com.example.orderservice.dtos.OrderDto;
+import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import com.example.orderservice.utils.AppConstants;
 import java.time.Duration;

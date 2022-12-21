@@ -100,8 +100,7 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      zipkin-server:
-        condition: service_healthy
+      - zipkin-server
     networks:
       - microservice-network
     environment:

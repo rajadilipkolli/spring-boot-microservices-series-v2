@@ -11,9 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
-import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.mapper.OrderMapper;

@@ -1,7 +1,7 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.paymentservice.web.controllers;
 
-import com.example.orderservice.dtos.OrderDto;
+import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
 import java.util.List;

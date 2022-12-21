@@ -2,9 +2,9 @@
 ### Sample usage:
 #
 #   for local run
-#     HOST=localhost PORT=8765 ./test-em-all.bash
+#     HOST=localhost PORT=8765 ./test-em-all.sh
 #   with docker compose
-#     HOST=localhost PORT=8765 ./test-em-all.bash start stop
+#     HOST=localhost PORT=8765 ./test-em-all.sh start stop
 #
 echo -e "Starting 'Store μServices' for [end-2-end] testing....\n"
 
@@ -158,8 +158,8 @@ fi
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
-echo "Sleeping for 60 sec for services to start"
-sleep 60
+echo "Sleeping for 120 sec for services to start"
+sleep 120
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 

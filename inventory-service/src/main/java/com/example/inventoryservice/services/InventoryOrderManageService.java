@@ -1,11 +1,11 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.inventoryservice.services;
 
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
-import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.dtos.OrderItemDto;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

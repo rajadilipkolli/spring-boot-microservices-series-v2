@@ -1,8 +1,8 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.services;
 
-import com.example.orderservice.dtos.OrderDto;
-import com.example.orderservice.dtos.OrderItemDto;
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;

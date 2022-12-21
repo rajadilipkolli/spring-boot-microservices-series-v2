@@ -1,11 +1,11 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.inventoryservice.config;
 
-import com.example.catalogservice.entities.Product;
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
-import com.example.orderservice.dtos.OrderDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +32,7 @@ public class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(Product product) {
+    public void onSaveProductEvent(ProductDto product) {
         log.info("Received Product: {}", product);
         productManageService.manage(product);
     }

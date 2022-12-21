@@ -9,7 +9,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.example.orderservice.dtos.OrderDto;
+import com.example.common.dtos.OrderDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
