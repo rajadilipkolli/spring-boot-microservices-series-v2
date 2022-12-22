@@ -89,6 +89,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <dependency>
+			<groupId>net.ttddyy.observation</groupId>
+			<artifactId>datasource-micrometer-spring-boot</artifactId>
+			<version>1.0.0</version>
+		</dependency>
         <!-- Tracing -->
         <dependency>
             <groupId>io.micrometer</groupId>

@@ -4,6 +4,7 @@ services:
   postgresql:
     container_name: postgresql
     image: postgres:15-alpine
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -16,6 +17,7 @@ services:
   pgadmin4:
     container_name: pgadmin4
     image: dpage/pgadmin4
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
       - PGADMIN_DEFAULT_PASSWORD=admin
@@ -27,19 +29,21 @@ services:
     networks:
       - microservice-network
 
-  mongodb:
-    container_name: mongodb
-    image: mongo:6.0.3
-    volumes:
-      - mongo-data:/data/db/mongo
-    ports:
-      - "27017:27017"
-    networks:
-      - microservice-network
+  # mongodb:
+  #   container_name: mongodb
+  #   image: mongo:6.0.3
+  #   extra_hosts: ['host.docker.internal:host-gateway']
+  #   volumes:
+  #     - mongo-data:/data/db/mongo
+  #   ports:
+  #     - "27017:27017"
+  #   networks:
+  #     - microservice-network
 
   zipkin-server:
     image: openzipkin/zipkin
     container_name: zipkin-server
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -54,6 +58,7 @@ services:
   zookeeper:
     container_name: zookeeper
     image: confluentinc/cp-zookeeper:7.3.1
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -70,6 +75,7 @@ services:
   kafka:
     container_name: kafka
     image: confluentinc/cp-kafka:7.3.1
+    extra_hosts: ['host.docker.internal:host-gateway']
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -93,6 +99,7 @@ services:
   config-server:
     container_name: config-server
     image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -109,6 +116,7 @@ services:
   naming-server:
     container_name: naming-server
     image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -129,6 +137,7 @@ services:
   api-gateway:
     container_name: api-gateway
     image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -141,7 +150,7 @@ services:
       - config-server
       - naming-server
       - zipkin-server
-      - mongodb
+      # - mongodb
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_HOST=mongodb
@@ -153,6 +162,7 @@ services:
   catalog-service:
     container_name: catalog-service
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -179,6 +189,7 @@ services:
   inventory-service:
     container_name: inventory-service
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -205,6 +216,7 @@ services:
   order-service:
     container_name: order-service
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -231,6 +243,7 @@ services:
   payment-service:
     container_name: payment-service
     image: dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
@@ -258,6 +271,6 @@ networks:
   microservice-network:
 
 volumes:
-  mongo-data:
+  # mongo-data:
   postgres_data:
     driver: local
