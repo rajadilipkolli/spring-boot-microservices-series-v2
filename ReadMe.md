@@ -32,13 +32,13 @@ docker compose up rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka confi
 
 ### Swagger URLs for accessing Services
 
-| **Service Name**  | **URL**                                                  |
-|-------------------|----------------------------------------------------------|
-| api gateway       | http://localhost:8765/api-gateway/swagger-ui.html        |
-| catalog service   | http://localhost:18080/catalog-service/swagger-ui.html   |
-| inventory service | http://localhost:18181/inventory-service/swagger-ui.html |
-| order service     | http://localhost:18282/order-service/swagger-ui.html     |
-| payment service   | http://localhost:18085/payment-service/swagger-ui.html   |
+| **Service Name**  | **URL**                                                  | **Gateway URL**                                          |
+|-------------------|----------------------------------------------------------|----------------------------------------------------------|
+| api gateway       | http://localhost:8765/swagger-ui.html                    | http://localhost:8765/swagger-ui.html                    |
+| catalog service   | http://localhost:18080/catalog-service/swagger-ui.html   | http://localhost:8765/catalog-service/swagger-ui.html    |
+| inventory service | http://localhost:18181/inventory-service/swagger-ui.html | http://localhost:8765/inventory-service/swagger-ui.html  |
+| order service     | http://localhost:18282/order-service/swagger-ui.html     | http://localhost:8765/order-service/swagger-ui.html      |
+| payment service   | http://localhost:18085/payment-service/swagger-ui.html   | http://localhost:8765/payment-service/swagger-ui.html    |
 
 
 #### References
