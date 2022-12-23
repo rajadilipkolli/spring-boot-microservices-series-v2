@@ -23,7 +23,7 @@ public class ProductService {
 
     private final ProductMapper productMapper;
 
-    private final KafkaTemplate<String, Product> kafkaTemplate;
+    private final KafkaTemplate<String, ProductDto> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public List<Product> findAllProducts() {
@@ -45,7 +45,7 @@ public class ProductService {
     public Product saveProduct(ProductDto productDto) {
         Product product = this.productMapper.toEntity(productDto);
         Product persistedProduct = productRepository.save(product);
-        this.kafkaTemplate.send(AppConstants.KAFKA_TOPIC, persistedProduct);
+        this.kafkaTemplate.send(AppConstants.KAFKA_TOPIC, productDto);
         return persistedProduct;
     }
 

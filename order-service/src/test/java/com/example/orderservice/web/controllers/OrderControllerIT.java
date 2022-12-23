@@ -133,6 +133,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateOrder() throws Exception {
+        mockProductExistsRequest(true);
         Order order = orderList.get(0);
 
         OrderDto orderDto = this.orderMapper.toDto(order);

@@ -13,9 +13,9 @@ public class ProductManageService {
 
     private final InventoryRepository inventoryRepository;
 
-    public void manage(ProductDto product) {
+    public void manage(ProductDto productDto) {
         Inventory inventory = new Inventory();
-        inventory.setProductCode(product.code());
+        inventory.setProductCode(productDto.code());
         inventory.setAvailableQuantity(0);
         this.inventoryRepository.save(inventory);
     }

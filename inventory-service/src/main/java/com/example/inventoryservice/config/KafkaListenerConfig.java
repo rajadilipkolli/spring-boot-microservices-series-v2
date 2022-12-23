@@ -32,8 +32,8 @@ public class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(ProductDto product) {
-        log.info("Received Product: {}", product);
-        productManageService.manage(product);
+    public void onSaveProductEvent(ProductDto productDto) {
+        log.info("Received Product: {}", productDto);
+        productManageService.manage(productDto);
     }
 }
