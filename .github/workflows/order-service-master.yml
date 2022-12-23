@@ -24,16 +24,14 @@ jobs:
           java-version: 17
           distribution: "zulu"
           cache: "maven"
-
+      - if: ${{ github.ref == 'refs/heads/master' }}
+        name: SonarQube Scan
+        run: ./mvnw clean verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-        run: ./mvnw clean spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 
-
-      - if: ${{ github.ref == 'refs/heads/master' }}
-        name: SonarQube Scan
-        run: ./mvnw verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./mvnw spring-boot:build-image -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true 

@@ -31,7 +31,7 @@ public class ContainerInitializer {
 
     protected static final MockServerContainer MOCK_SERVER_CONTAINER =
             new MockServerContainer(
-                    DockerImageName.parse("jamesdbloom/mockserver:mockserver-5.14.0"));
+                    DockerImageName.parse("jamesdbloom/mockserver:mockserver-5.13.2"));
 
     static final NamingServerContainer NAMING_SERVER_CONTAINER =
             new NamingServerContainer(
