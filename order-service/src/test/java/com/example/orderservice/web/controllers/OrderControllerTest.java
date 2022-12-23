@@ -10,10 +10,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
+import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = OrderController.class)
-@ActiveProfiles("test")
+@ActiveProfiles(AppConstants.PROFILE_TEST)
 class OrderControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -102,7 +105,11 @@ class OrderControllerTest {
 
         OrderDto orderDto =
                 new OrderDto(10L, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
-
+        OrderItemDto orderItemDto = new OrderItemDto();
+        orderItemDto.setProductId("Product1");
+        orderItemDto.setQuantity(10);
+        orderItemDto.setProductPrice(BigDecimal.TEN);
+        orderDto.setItems(List.of(orderItemDto));
         this.mockMvc
                 .perform(
                         post("/api/orders")
@@ -114,7 +121,29 @@ class OrderControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenCreateNewOrderWithoutText() throws Exception {
+    void shouldFailCreatingNewOrder() throws Exception {
+        given(orderService.saveOrder(any(OrderDto.class)))
+                .willAnswer((invocation) -> invocation.getArgument(0));
+
+        OrderDto orderDto =
+                new OrderDto(10L, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
+
+        this.mockMvc
+                .perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(orderDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(jsonPath("$.type", is("about:blank")))
+                .andExpect(jsonPath("$.title", is("Bad Request")))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                .andExpect(jsonPath("$.instance", is("/api/orders")));
+    }
+
+    @Test
+    void shouldReturn400WhenCreateNewOrderWithoutCustomerEmail() throws Exception {
         Order order = new Order();
 
         this.mockMvc
