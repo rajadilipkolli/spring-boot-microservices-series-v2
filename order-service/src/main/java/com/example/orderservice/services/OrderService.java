@@ -2,7 +2,9 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
@@ -24,6 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
+    private final CatalogServiceProxy catalogServiceProxy;
 
     private final KafkaTemplate<String, OrderDto> template;
 
@@ -53,13 +56,24 @@ public class OrderService {
 
     @Transactional
     public OrderDto saveOrder(OrderDto orderDto) {
-        Order order = this.orderMapper.toEntity(orderDto);
-        OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
-        this.template.send(
-                AppConstants.ORDERS_TOPIC,
-                String.valueOf(persistedOrderDto.getOrderId()),
-                persistedOrderDto);
-        return persistedOrderDto;
+        // Verify if items exists
+        List<String> productIds =
+                orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
+        if (productsExistsAndInStock(productIds)) {
+            Order order = this.orderMapper.toEntity(orderDto);
+            OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
+            this.template.send(
+                    AppConstants.ORDERS_TOPIC,
+                    String.valueOf(persistedOrderDto.getOrderId()),
+                    persistedOrderDto);
+            return persistedOrderDto;
+        } else {
+            throw new ProductNotFoundException(productIds);
+        }
+    }
+
+    private boolean productsExistsAndInStock(List<String> productIds) {
+        return catalogServiceProxy.productsExists(productIds);
     }
 
     public void deleteOrderById(Long id) {
