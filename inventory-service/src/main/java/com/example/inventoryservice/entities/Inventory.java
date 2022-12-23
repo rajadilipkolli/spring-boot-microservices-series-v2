@@ -24,7 +24,7 @@ public class Inventory {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    @Column(name = "product_code", nullable = false, unique = true)
+    @Column(name = "product_code", nullable = false, unique = true, updatable = false)
     private String productCode;
 
     @Column(name = "quantity")

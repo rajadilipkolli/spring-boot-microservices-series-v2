@@ -10,10 +10,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Hibernate;
 
 @Entity
 @Table(name = "order_items")
@@ -38,4 +40,17 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        OrderItem orderItem = (OrderItem) o;
+        return id != null && Objects.equals(id, orderItem.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

@@ -8,7 +8,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -29,11 +28,6 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
-
-    @NotEmpty(message = "Email can't be blank")
-    private String customerEmail;
-
-    private String customerAddress;
 
     private Long customerId;
 
