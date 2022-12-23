@@ -4,16 +4,20 @@ server:
     contextPath: /${spring.application.name}
   forward-headers-strategy: framework
 
+KAFKA_BROKER: localhost:9092
+
 spring:
   application:
     name: order-service
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   kafka:
-    bootstrap-servers: 127.0.0.1:29092
+    bootstrap-servers: ${KAFKA_BROKER}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
     streams:
       properties:
         default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
@@ -25,7 +29,3 @@ spring:
   mvc:
     problemdetails:
       enabled: true
-
-springdoc:
-  packagesToScan: com.example.orderservice.web.controllers
-  version: '@springdoc.version@'
