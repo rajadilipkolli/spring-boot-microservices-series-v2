@@ -20,44 +20,45 @@ public class OrderManageService {
     private final CustomerRepository customerRepository;
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
-    public void reserve(OrderDto order) {
-        Customer customer = customerRepository.findById(order.getCustomerId()).orElseThrow();
-        log.info("Found Customer: {}", customer);
+    public void reserve(OrderDto orderDto) {
+        log.debug("Reserving Order {}", orderDto);
+        Customer customer = customerRepository.findById(orderDto.getCustomerId()).orElseThrow();
+        log.info("Found Customer: {}", customer.getId());
         var orderPrice =
-                order.getItems().stream()
+                orderDto.getItems().stream()
                         .map(OrderItemDto::getProductPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
         if (orderPrice < customer.getAmountAvailable()) {
-            order.setStatus("ACCEPT");
+            orderDto.setStatus("ACCEPT");
             customer.setAmountReserved(customer.getAmountReserved() + orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() - orderPrice);
         } else {
-            order.setStatus("REJECT");
+            orderDto.setStatus("REJECT");
         }
-        order.setSource(AppConstants.SOURCE);
+        orderDto.setSource(AppConstants.SOURCE);
         customerRepository.save(customer);
         kafkaTemplate.send(
-                AppConstants.PAYMENT_ORDERS_TOPIC, String.valueOf(order.getOrderId()), order);
-        log.info("Sent: {}", order);
+                AppConstants.PAYMENT_ORDERS_TOPIC, String.valueOf(orderDto.getOrderId()), orderDto);
+        log.info("Sent Reserved Order: {}", orderDto);
     }
 
-    public void confirm(OrderDto order) {
-        Customer customer = customerRepository.findById(order.getCustomerId()).orElseThrow();
-        log.info("Found Customer: {}", customer);
+    public void confirm(OrderDto orderDto) {
+        log.debug("Confirming Order {}", orderDto);
+        Customer customer = customerRepository.findById(orderDto.getCustomerId()).orElseThrow();
+        log.info("Found Customer: {}", customer.getId());
         var orderPrice =
-                order.getItems().stream()
+                orderDto.getItems().stream()
                         .map(OrderItemDto::getProductPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
-        if (order.getStatus().equals("CONFIRMED")) {
+        if (orderDto.getStatus().equals("CONFIRMED")) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-            customerRepository.save(customer);
-        } else if (order.getStatus().equals("ROLLBACK")
-                && !order.getSource().equals(AppConstants.SOURCE)) {
+        } else if (orderDto.getStatus().equals("ROLLBACK")
+                && !orderDto.getSource().equals(AppConstants.SOURCE)) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
-            customerRepository.save(customer);
         }
+        customerRepository.save(customer);
     }
 }
