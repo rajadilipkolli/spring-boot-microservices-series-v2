@@ -7,9 +7,10 @@ import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 
 // @HttpExchange("lb://catalog-service/")
-@HttpExchange("http://localhost:18080/catalog-service/api/catalog")
+// @HttpExchange("http://localhost:18080/catalog-service/api/catalog")
+// @HttpExchange(url = "${application.catalog-service-url}")
 public interface CatalogServiceProxy {
 
-    @GetExchange("/exists/{productIds}")
+    @GetExchange("/api/catalog/exists/{productIds}")
     Boolean productsExists(@PathVariable List<String> productIds);
 }

@@ -1,10 +1,16 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.common;
 
+import static org.mockserver.model.HttpRequest.request;
+import static org.mockserver.model.HttpResponse.response;
+
+import org.mockserver.client.MockServerClient;
+import org.mockserver.model.Header;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.MockServerContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
@@ -23,6 +29,10 @@ public class ContainerInitializer {
                     .withUsername("username")
                     .withPassword("password");
 
+    protected static final MockServerContainer MOCK_SERVER_CONTAINER =
+            new MockServerContainer(
+                    DockerImageName.parse("jamesdbloom/mockserver:mockserver-5.14.0"));
+
     static final NamingServerContainer NAMING_SERVER_CONTAINER =
             new NamingServerContainer(
                             DockerImageName.parse(
@@ -37,13 +47,16 @@ public class ContainerInitializer {
             new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
                     .withExposedPorts(ZIPKIN_INTERNAL_PORT);
 
+    protected static MockServerClient mockServerClient;
+
     static {
         Startables.deepStart(
                         CONFIG_SERVER_CONTAINER,
                         NAMING_SERVER_CONTAINER,
                         POSTGRE_SQL_CONTAINER,
                         ZIPKIN_CONTAINER,
-                        KAFKA_CONTAINER)
+                        KAFKA_CONTAINER,
+                        MOCK_SERVER_CONTAINER)
                 .join();
     }
 
@@ -97,5 +110,21 @@ public class ContainerInitializer {
                                 "http://%s:%d/",
                                 ZIPKIN_CONTAINER.getHost(),
                                 ZIPKIN_CONTAINER.getMappedPort(ZIPKIN_INTERNAL_PORT)));
+        propertyRegistry.add("application.catalog-service-url", MOCK_SERVER_CONTAINER::getEndpoint);
+        mockServerClient =
+                new MockServerClient(
+                        MOCK_SERVER_CONTAINER.getHost(), MOCK_SERVER_CONTAINER.getServerPort());
+    }
+
+    protected static void mockProductExistsRequest(boolean status) {
+        mockServerClient
+                .when(request().withMethod("GET").withPath("/api/catalog/exists/Product1"))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header(
+                                                "Content-Type", "application/json; charset=utf-8"))
+                                .withBody(String.valueOf(status)));
     }
 }

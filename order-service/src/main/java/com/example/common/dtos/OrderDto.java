@@ -27,5 +27,6 @@ public class OrderDto implements Serializable {
 
     private String source;
 
+    @NotEmpty(message = "Order without items not valid")
     private List<OrderItemDto> items = new ArrayList<>();
 }

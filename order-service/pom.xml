@@ -28,6 +28,7 @@
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.28.0</spotless.version>
+        <mockserver-netty.version>5.14.0</mockserver-netty.version>
         <maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
         <dependency-check-maven.version>7.4.1</dependency-check-maven.version>
         <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
@@ -203,6 +204,17 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mockserver</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mock-server</groupId>
+            <artifactId>mockserver-netty</artifactId>
+            <version>${mockserver-netty.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

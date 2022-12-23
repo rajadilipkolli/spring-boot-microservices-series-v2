@@ -18,7 +18,6 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,17 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 
 class OrderControllerIT extends AbstractIntegrationTest {
 
     @Autowired private OrderRepository orderRepository;
 
     @Autowired private OrderMapper orderMapper;
-
-    @Autowired private MockMvc mockMvc;
-
-    @Autowired private ObjectMapper objectMapper;
 
     private List<Order> orderList = null;
 
@@ -99,6 +93,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewOrder() throws Exception {
+        mockProductExistsRequest(true);
         OrderDto orderDto =
                 new OrderDto(
                         null, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
