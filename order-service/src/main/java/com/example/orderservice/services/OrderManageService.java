@@ -4,9 +4,11 @@ package com.example.orderservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrderManageService {
 
@@ -16,12 +18,9 @@ public class OrderManageService {
     private final OrderRepository orderRepository;
 
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+        log.info("Setting Status for order :{}", orderPayment);
         OrderDto o = new OrderDto();
-        o.setCustomerId(orderPayment.getCustomerId());
         o.setOrderId(orderPayment.getOrderId());
-        o.setCustomerAddress(orderPayment.getCustomerAddress());
-        o.setCustomerEmail(orderPayment.getCustomerEmail());
-        o.setItems(orderPayment.getItems());
         if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
             o.setStatus("CONFIRMED");
         } else if (REJECT.equals(orderPayment.getStatus())
@@ -35,6 +34,7 @@ public class OrderManageService {
         }
         this.orderRepository.updateOrderStatusAndSourceById(
                 o.getOrderId(), o.getStatus(), o.getSource());
+        log.info("Updated Status for orderId :{}", o.getOrderId());
         return o;
     }
 }
