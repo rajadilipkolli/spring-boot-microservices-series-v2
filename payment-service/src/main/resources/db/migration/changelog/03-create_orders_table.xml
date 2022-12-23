@@ -19,10 +19,6 @@
             <column name="id" type="bigint" defaultValueSequenceNext="orders_seq">
                 <constraints primaryKey="true" nullable="false" />
             </column>
-            <column name="customer_email" type="varchar(1024)">
-                <constraints nullable="false" />
-            </column>
-            <column name="customer_address" type="varchar(1024)" />
             <column name="customer_id" type="bigint" />
             <column name="source" type="varchar(1024)" />
             <column name="status" type="varchar(1024)" />

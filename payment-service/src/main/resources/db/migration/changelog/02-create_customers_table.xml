@@ -17,6 +17,10 @@
             <column name="name" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="email" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="address" type="varchar(1024)" />
             <column name="amount_available" type="int"/>
             <column name="amount_reserved" type="int"/>
         </createTable>

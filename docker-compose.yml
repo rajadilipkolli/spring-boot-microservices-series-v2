@@ -249,7 +249,6 @@ services:
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
-#      - APPLICATION_CATALOG-SERVICE-URL=http://catalog-service:18080/catalog-service
     restart: unless-stopped
 
   payment-service:

@@ -2,6 +2,7 @@
 package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,12 +17,8 @@ public class OrderDto implements Serializable {
 
     private Long orderId;
 
-    @NotEmpty(message = "Email can't be blank")
-    private String customerEmail;
-
-    private String customerAddress;
-
-    private long customerId;
+    @Positive(message = "CustomerId should be positive")
+    private Long customerId;
 
     private String status = "NEW";
 

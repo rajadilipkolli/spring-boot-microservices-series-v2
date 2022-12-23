@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,46 +30,20 @@ class OrderControllerTest {
 
     @MockBean private OrderService orderService;
 
-    @Autowired private ObjectMapper objectMapper;
-
     private List<Order> orderList;
     private List<OrderDto> orderListDto;
 
     @BeforeEach
     void setUp() {
         this.orderList = new ArrayList<>();
-        this.orderList.add(
-                new Order(
-                        1L, "junit1@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
-        this.orderList.add(
-                new Order(
-                        2L, "junit2@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
-        this.orderList.add(
-                new Order(
-                        3L, "junit3@email.com", "Updated Text", 1L, null, null, new ArrayList<>()));
+        this.orderList.add(new Order(1L, 1L, null, null, new ArrayList<>()));
+        this.orderList.add(new Order(2L, 1L, null, null, new ArrayList<>()));
+        this.orderList.add(new Order(3L, 1L, null, null, new ArrayList<>()));
 
         this.orderListDto = new ArrayList<>();
-        this.orderListDto.add(
-                OrderDto.builder()
-                        .orderId(1L)
-                        .customerAddress("text 1")
-                        .customerEmail("junit1@email.com")
-                        .customerId(1L)
-                        .build());
-        this.orderListDto.add(
-                OrderDto.builder()
-                        .orderId(2L)
-                        .customerAddress("text 2")
-                        .customerEmail("junit2@email.com")
-                        .customerId(1L)
-                        .build());
-        this.orderListDto.add(
-                OrderDto.builder()
-                        .orderId(3L)
-                        .customerAddress("text 3")
-                        .customerEmail("junit3@email.com")
-                        .customerId(1L)
-                        .build());
+        this.orderListDto.add(OrderDto.builder().orderId(1L).customerId(1L).build());
+        this.orderListDto.add(OrderDto.builder().orderId(2L).customerId(1L).build());
+        this.orderListDto.add(OrderDto.builder().orderId(3L).customerId(1L).build());
     }
 
     @Test
@@ -87,21 +60,13 @@ class OrderControllerTest {
     @Test
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
-        Order order =
-                new Order(
-                        orderId,
-                        "junit1@email.com",
-                        "Updated Text",
-                        1L,
-                        null,
-                        null,
-                        new ArrayList<>());
+        Order order = new Order(orderId, 1L, null, null, new ArrayList<>());
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
+                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
     }
 
     @Test
