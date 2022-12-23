@@ -122,9 +122,11 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.detail", is("Invalid request content.")))
                 .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("items")))
-                .andExpect(jsonPath("$.violations[0].message", is("Order without items not valid")))
+                .andExpect(jsonPath("$.violations", hasSize(2)))
+                .andExpect(jsonPath("$.violations[0].field", is("customerId")))
+                .andExpect(jsonPath("$.violations[0].message", is("CustomerId should be positive")))
+                .andExpect(jsonPath("$.violations[1].field", is("items")))
+                .andExpect(jsonPath("$.violations[1].message", is("Order without items not valid")))
                 .andReturn();
     }
 
