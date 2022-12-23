@@ -106,7 +106,8 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code", is(productDto.code())))
                 .andExpect(jsonPath("$.productName", is(productDto.productName())))
                 .andExpect(jsonPath("$.description", is(productDto.description())))
-                .andExpect(jsonPath("$.price", is(productDto.price())));
+                .andExpect(jsonPath("$.price", is(productDto.price())))
+                .andExpect(header().exists("Location"));
     }
 
     @Test

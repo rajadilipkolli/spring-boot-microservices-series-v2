@@ -4,10 +4,10 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -56,9 +55,10 @@ public class ProductController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Product createProduct(@RequestBody @Validated ProductDto productDto) {
-        return productService.saveProduct(productDto);
+    public ResponseEntity<Product> createProduct(@RequestBody @Validated ProductDto productDto) {
+        Product product = productService.saveProduct(productDto);
+        return ResponseEntity.created(URI.create("/api/catalog/id/" + product.getId()))
+                .body(product);
     }
 
     @PutMapping("/{id}")
