@@ -3,7 +3,6 @@ package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

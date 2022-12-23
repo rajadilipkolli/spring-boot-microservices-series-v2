@@ -24,7 +24,14 @@ public class Initializer implements CommandLineRunner {
         Faker faker = new Faker();
         for (int i = 0; i < 100; i++) {
             int count = r.nextInt(1000);
-            Customer c = new Customer(null, faker.name().fullName(), count, 0);
+            Customer c =
+                    new Customer(
+                            null,
+                            faker.name().fullName(),
+                            faker.name().lastName() + "@gmail.com",
+                            faker.address().fullAddress(),
+                            count,
+                            0);
             repository.save(c);
         }
     }

@@ -34,38 +34,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 customerRepository.save(
                         Customer.builder()
                                 .name("junit")
+                                .address("junitAddress")
+                                .email("junit@email.com")
                                 .amountAvailable(0)
                                 .amountReserved(0)
                                 .build());
 
         orderList = new ArrayList<>();
-        this.orderList.add(
-                new Order(
-                        null,
-                        "junit1@email.com",
-                        "text 1",
-                        customer.getId(),
-                        null,
-                        null,
-                        new ArrayList<>()));
-        this.orderList.add(
-                new Order(
-                        null,
-                        "junit2@email.com",
-                        "text 2",
-                        customer.getId(),
-                        null,
-                        null,
-                        new ArrayList<>()));
-        this.orderList.add(
-                new Order(
-                        null,
-                        "junit3@email.com",
-                        "text 3",
-                        customer.getId(),
-                        null,
-                        null,
-                        new ArrayList<>()));
+        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
+        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
+        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
         orderList = orderRepository.saveAll(orderList);
     }
 
@@ -85,6 +63,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())));
+                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
     }
 }

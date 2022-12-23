@@ -3,6 +3,7 @@ package com.example.orderservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -80,7 +81,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId())))
+                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
                 .andExpect(jsonPath("$.status", is(order.getStatus())))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
     }
@@ -101,7 +102,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId())))
+                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class))
                 .andExpect(jsonPath("$.status", is(orderDto.getStatus())));
     }
 
@@ -117,10 +118,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
                 .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Bad Request")))
+                .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.detail", is("Invalid request content.")))
                 .andExpect(jsonPath("$.instance", is("/api/orders")))
+                .andExpect(jsonPath("$.violations", hasSize(1)))
+                .andExpect(jsonPath("$.violations[0].field", is("items")))
+                .andExpect(jsonPath("$.violations[0].message", is("Order without items not valid")))
                 .andReturn();
     }
 
