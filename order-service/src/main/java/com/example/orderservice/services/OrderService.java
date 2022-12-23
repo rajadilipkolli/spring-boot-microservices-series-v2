@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @Transactional
 @RequiredArgsConstructor
 public class OrderService {
@@ -65,7 +67,12 @@ public class OrderService {
             this.template.send(
                     AppConstants.ORDERS_TOPIC,
                     String.valueOf(persistedOrderDto.getOrderId()),
-                    persistedOrderDto);
+                    orderDto);
+            log.info(
+                    "Sent Order : {} from order service to topic {}",
+                    orderDto,
+                    AppConstants.ORDERS_TOPIC);
+
             return persistedOrderDto;
         } else {
             throw new ProductNotFoundException(productIds);

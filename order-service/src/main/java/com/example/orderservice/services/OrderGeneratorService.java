@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-import net.datafaker.Faker;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -37,7 +36,6 @@ public class OrderGeneratorService {
 
     @Async
     public void generate() {
-        Faker faker = new Faker();
         for (int i = 0; i < 10_000; i++) {
             OrderDto o = new OrderDto();
             o.setOrderId(id.incrementAndGet());

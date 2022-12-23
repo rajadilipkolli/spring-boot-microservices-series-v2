@@ -21,7 +21,7 @@ public class OrderManageService {
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
-        log.debug("Reserving Order {}", orderDto);
+        log.debug("Reserving Order in payment Service {}", orderDto);
         Customer customer = customerRepository.findById(orderDto.getCustomerId()).orElseThrow();
         log.info("Found Customer: {}", customer.getId());
         var orderPrice =
@@ -44,7 +44,7 @@ public class OrderManageService {
     }
 
     public void confirm(OrderDto orderDto) {
-        log.debug("Confirming Order {}", orderDto);
+        log.debug("Confirming Order in payment service {}", orderDto);
         Customer customer = customerRepository.findById(orderDto.getCustomerId()).orElseThrow();
         log.info("Found Customer: {}", customer.getId());
         var orderPrice =

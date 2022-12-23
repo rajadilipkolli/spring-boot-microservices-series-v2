@@ -58,10 +58,13 @@ public class InventoryOrderManageService {
                         AppConstants.STOCK_ORDERS_TOPIC,
                         String.valueOf(orderDto.getOrderId()),
                         orderDto);
-                log.info("Sent: {}", orderDto);
+                log.info(
+                        "Sent Order : {} from inventory service to topic {}",
+                        orderDto,
+                        AppConstants.STOCK_ORDERS_TOPIC);
             }
         } else {
-            log.error("Not all products requested exists");
+            log.error("Not all products requested exists, Hence Ignoring");
         }
     }
 
