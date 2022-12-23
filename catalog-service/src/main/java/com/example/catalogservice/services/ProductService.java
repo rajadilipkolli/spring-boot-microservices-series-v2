@@ -1,11 +1,11 @@
 package com.example.catalogservice.services;
 
-import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.utils.AppConstants;
+import com.example.common.dtos.ProductDto;
 import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import java.util.Optional;

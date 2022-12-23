@@ -1,8 +1,8 @@
 package com.example.catalogservice.web.controllers;
 
-import com.example.catalogservice.dtos.ProductDto;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
+import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.util.List;
 import java.util.Optional;
