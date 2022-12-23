@@ -41,9 +41,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .build());
 
         orderList = new ArrayList<>();
-        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
-        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
-        this.orderList.add(new Order(null, customer.getId(), null, null, new ArrayList<>()));
+        this.orderList.add(new Order(null, null, null, customer, new ArrayList<>()));
+        this.orderList.add(new Order(null, null, null, customer, new ArrayList<>()));
+        this.orderList.add(new Order(null, null, null, customer, new ArrayList<>()));
         orderList = orderRepository.saveAll(orderList);
     }
 
@@ -63,6 +63,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
+                .andExpect(jsonPath("$.status", is(order.getStatus())))
+                .andExpect(jsonPath("$.source", is(order.getSource())));
     }
 }

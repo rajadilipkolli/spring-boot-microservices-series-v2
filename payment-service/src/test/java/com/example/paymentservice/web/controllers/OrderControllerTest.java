@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.common.dtos.OrderDto;
+import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.services.OrderService;
 import java.util.ArrayList;
@@ -32,13 +33,16 @@ class OrderControllerTest {
 
     private List<Order> orderList;
     private List<OrderDto> orderListDto;
+    private Customer customer;
 
     @BeforeEach
     void setUp() {
         this.orderList = new ArrayList<>();
-        this.orderList.add(new Order(1L, 1L, null, null, new ArrayList<>()));
-        this.orderList.add(new Order(2L, 1L, null, null, new ArrayList<>()));
-        this.orderList.add(new Order(3L, 1L, null, null, new ArrayList<>()));
+        customer =
+                new Customer(1L, "custName", "custEmail", "custAddress", 1, 1, new ArrayList<>());
+        this.orderList.add(new Order(1L, null, null, customer, new ArrayList<>()));
+        this.orderList.add(new Order(2L, null, null, customer, new ArrayList<>()));
+        this.orderList.add(new Order(3L, null, null, customer, new ArrayList<>()));
 
         this.orderListDto = new ArrayList<>();
         this.orderListDto.add(OrderDto.builder().orderId(1L).customerId(1L).build());
@@ -60,13 +64,13 @@ class OrderControllerTest {
     @Test
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
-        Order order = new Order(orderId, 1L, null, null, new ArrayList<>());
+        Order order = new Order(orderId, null, null, customer, new ArrayList<>());
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(orderListDto.get(0)));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
+                .andExpect(jsonPath("$.status", is(order.getStatus())));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.example.paymentservice.config;
 
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.repositories.CustomerRepository;
+import java.util.ArrayList;
 import java.util.Random;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,8 @@ public class Initializer implements CommandLineRunner {
                             faker.name().lastName() + "@gmail.com",
                             faker.address().fullAddress(),
                             count,
-                            0);
+                            0,
+                            new ArrayList<>());
             repository.save(c);
         }
     }

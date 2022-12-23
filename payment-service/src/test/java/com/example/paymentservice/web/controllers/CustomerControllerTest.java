@@ -46,11 +46,32 @@ class CustomerControllerTest {
     void setUp() {
         this.customerList = new ArrayList<>();
         this.customerList.add(
-                new Customer(1L, "text 1", "first@customer.email", "First Address", 0, 0));
+                new Customer(
+                        1L,
+                        "text 1",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>()));
         this.customerList.add(
-                new Customer(2L, "text 2", "second@customer.email", "Second Address", 0, 0));
+                new Customer(
+                        2L,
+                        "text 2",
+                        "second@customer.email",
+                        "Second Address",
+                        0,
+                        0,
+                        new ArrayList<>()));
         this.customerList.add(
-                new Customer(3L, "text 3", "third@customer.email", "Third Address", 0, 0));
+                new Customer(
+                        3L,
+                        "text 3",
+                        "third@customer.email",
+                        "Third Address",
+                        0,
+                        0,
+                        new ArrayList<>()));
     }
 
     @Test
@@ -67,7 +88,14 @@ class CustomerControllerTest {
     void shouldFindCustomerById() throws Exception {
         Long customerId = 1L;
         Customer customer =
-                new Customer(customerId, "text 1", "first@customer.email", "First Address", 0, 0);
+                new Customer(
+                        customerId,
+                        "text 1",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
         given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
 
         this.mockMvc
@@ -92,7 +120,14 @@ class CustomerControllerTest {
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
         Customer customer =
-                new Customer(1L, "some text", "first@customer.email", "First Address", 0, 0);
+                new Customer(
+                        1L,
+                        "some text",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -105,7 +140,7 @@ class CustomerControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutEmail() throws Exception {
-        Customer customer = new Customer(null, null, null, null, 0, 0);
+        Customer customer = new Customer(null, null, null, null, 0, 0, null);
 
         this.mockMvc
                 .perform(
@@ -127,7 +162,13 @@ class CustomerControllerTest {
         Long customerId = 1L;
         Customer customer =
                 new Customer(
-                        customerId, "Updated Name", "first@customer.email", "First Address", 0, 0);
+                        customerId,
+                        "Updated Name",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
         given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
         given(customerService.saveCustomer(any(Customer.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
@@ -147,7 +188,13 @@ class CustomerControllerTest {
         given(customerService.findCustomerById(customerId)).willReturn(Optional.empty());
         Customer customer =
                 new Customer(
-                        customerId, "Updated text", "first@customer.email", "First Address", 0, 0);
+                        customerId,
+                        "Updated text",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
 
         this.mockMvc
                 .perform(
@@ -162,7 +209,13 @@ class CustomerControllerTest {
         Long customerId = 1L;
         Customer customer =
                 new Customer(
-                        customerId, "Some text", "first@customer.email", "First Address", 0, 0);
+                        customerId,
+                        "Some text",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
         given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
         doNothing().when(customerService).deleteCustomerById(customer.getId());
 

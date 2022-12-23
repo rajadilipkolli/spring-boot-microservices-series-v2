@@ -33,7 +33,13 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         customerList = new ArrayList<>();
         customerList.add(
                 new Customer(
-                        null, "First Customer", "first@customer.email", "First Address", 100, 0));
+                        null,
+                        "First Customer",
+                        "first@customer.email",
+                        "First Address",
+                        100,
+                        0,
+                        new ArrayList<>()));
         customerList.add(
                 new Customer(
                         null,
@@ -41,10 +47,17 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "second@customer.email",
                         "Second Address",
                         100,
-                        0));
+                        0,
+                        new ArrayList<>()));
         customerList.add(
                 new Customer(
-                        null, "Third Customer", "third@customer.email", "Third Address", 100, 0));
+                        null,
+                        "Third Customer",
+                        "third@customer.email",
+                        "Third Address",
+                        100,
+                        0,
+                        new ArrayList<>()));
         customerList = customerRepository.saveAll(customerList);
     }
 
@@ -70,7 +83,14 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewCustomer() throws Exception {
         Customer customer =
-                new Customer(null, "New Customer", "first@customer.email", "First Address", 0, 0);
+                new Customer(
+                        null,
+                        "New Customer",
+                        "first@customer.email",
+                        "First Address",
+                        0,
+                        0,
+                        new ArrayList<>());
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -82,7 +102,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutText() throws Exception {
-        Customer customer = new Customer(null, null, null, null, 0, 0);
+        Customer customer = new Customer(null, null, null, null, 0, 0, new ArrayList<>());
 
         this.mockMvc
                 .perform(
