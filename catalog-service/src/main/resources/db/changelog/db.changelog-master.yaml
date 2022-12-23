@@ -29,15 +29,15 @@ databaseChangeLog:
               constraints:
                 nullable: 'false'
               name: code
-              type: text
+              type: varchar(255)
           - column:
               constraints:
                 nullable: 'false'
               name: product_name
-              type: text
+              type: varchar(255)
           - column:
               name: description
-              type: text
+              type: varchar(255)
           - column:
               name: price
               type: 'NUMERIC(19,2)'
