@@ -39,27 +39,21 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderRepository.deleteAll();
 
         orderList = new ArrayList<>();
-        Order order1 =
-                new Order(
-                        null, "email1@junit.com", "address 1", 1L, "NEW", null, new ArrayList<>());
+        Order order1 = new Order(null, 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem = new OrderItem();
         orderItem.setProductId("Product1");
         orderItem.setQuantity(10);
         orderItem.setProductPrice(BigDecimal.TEN);
         order1.addOrderItem(orderItem);
         this.orderList.add(order1);
-        Order order2 =
-                new Order(
-                        null, "email2@junit.com", "address 2", 1L, "NEW", null, new ArrayList<>());
+        Order order2 = new Order(null, 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductId("Product2");
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
         order2.addOrderItem(orderItem1);
         this.orderList.add(order2);
-        Order order3 =
-                new Order(
-                        null, "email3@junit.com", "address 3", 1L, "NEW", null, new ArrayList<>());
+        Order order3 = new Order(null, 1L, "NEW", null, new ArrayList<>());
         OrderItem orderItem2 = new OrderItem();
         orderItem2.setProductId("Product2");
         orderItem2.setQuantity(100);
@@ -86,17 +80,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerAddress", is(order.getCustomerAddress())))
-                .andExpect(jsonPath("$.customerEmail", is(order.getCustomerEmail())))
+                .andExpect(jsonPath("$.customerId", is(order.getCustomerId())))
+                .andExpect(jsonPath("$.status", is(order.getStatus())))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
     }
 
     @Test
     void shouldCreateNewOrder() throws Exception {
         mockProductExistsRequest(true);
-        OrderDto orderDto =
-                new OrderDto(
-                        null, "email1@junit.com", "address 1", 1, "NEW", "", new ArrayList<>());
+        OrderDto orderDto = new OrderDto(null, 1L, "NEW", "", new ArrayList<>());
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductId("Product1");
         orderItemDto.setQuantity(10);
@@ -109,12 +101,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerAddress", is(orderDto.getCustomerAddress())));
+                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId())))
+                .andExpect(jsonPath("$.status", is(orderDto.getStatus())));
     }
 
     @Test
-    void shouldReturn400WhenCreateNewOrderWithoutEmail() throws Exception {
-        OrderDto order = new OrderDto(null, null, null, 0, null, null, null);
+    void shouldReturn400WhenCreateNewOrderWithoutItems() throws Exception {
+        OrderDto order = new OrderDto(null, 0L, null, null, new ArrayList<>());
 
         this.mockMvc
                 .perform(
@@ -137,7 +130,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         Order order = orderList.get(0);
 
         OrderDto orderDto = this.orderMapper.toDto(order);
-        orderDto.setCustomerAddress("Updated Address");
+        orderDto.setStatus("Completed");
 
         this.mockMvc
                 .perform(
@@ -145,7 +138,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerAddress", is(orderDto.getCustomerAddress())));
+                .andExpect(jsonPath("$.status", is(orderDto.getStatus())));
     }
 
     @Test
@@ -155,6 +148,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerAddress", is(order.getCustomerAddress())));
+                .andExpect(jsonPath("$.status", is(order.getStatus())));
     }
 }

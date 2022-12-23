@@ -43,8 +43,6 @@ public class OrderGeneratorService {
             o.setOrderId(id.incrementAndGet());
             o.setStatus("NEW");
             o.setCustomerId(RAND.nextLong(100) + 1);
-            o.setCustomerEmail(faker.internet().safeEmailAddress());
-            o.setCustomerAddress(faker.address().fullAddress());
             OrderItemDto orderItem = new OrderItemDto();
             int x = RAND.nextInt(5) + 1;
             orderItem.setProductPrice(new BigDecimal(100 * x));

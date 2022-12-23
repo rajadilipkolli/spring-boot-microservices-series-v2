@@ -6,6 +6,7 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
+@Validated
 public class OrderController {
 
     private final OrderService orderService;
@@ -74,7 +76,7 @@ public class OrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderDto createOrder(@RequestBody @Validated OrderDto orderDto) {
+    public OrderDto createOrder(@RequestBody @Valid OrderDto orderDto) {
         return orderService.saveOrder(orderDto);
     }
 

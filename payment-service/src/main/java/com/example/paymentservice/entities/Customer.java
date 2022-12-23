@@ -31,6 +31,12 @@ public class Customer {
     @NotEmpty(message = "Name cannot be empty")
     private String name;
 
+    @Column(nullable = false)
+    @NotEmpty(message = "Email cannot be empty")
+    private String email;
+
+    private String address;
+
     private int amountAvailable;
 
     private int amountReserved;
