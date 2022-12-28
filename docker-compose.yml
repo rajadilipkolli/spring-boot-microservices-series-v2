@@ -107,6 +107,21 @@ services:
     networks:
       - microservice-network
 
+  kafdrop:
+    container_name: kafdrop
+    image: obsidiandynamics/kafdrop
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    restart: "no"
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:19092"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - microservice-network
+
   config-server:
     container_name: config-server
     image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
@@ -167,7 +182,7 @@ services:
       - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   catalog-service:
@@ -194,7 +209,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   inventory-service:
@@ -221,7 +236,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   order-service:
@@ -248,7 +263,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   payment-service:
@@ -275,7 +290,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
 networks:
