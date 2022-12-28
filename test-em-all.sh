@@ -127,9 +127,9 @@ function setupTestData() {
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/name/$CUSTOMER_NAME"
     assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
 
-    local customerId=$(echo ${RESPONSE} | jq .id)
+    CUSTOMER_ID=$(echo ${RESPONSE} | jq .id)
 
-    body="{\"customerId\": $customerId"
+    body="{\"customerId\": $CUSTOMER_ID"
     body+=\
 ',"items":[{"productId": '
     body+="\"$PROD_CODE"
@@ -139,16 +139,8 @@ function setupTestData() {
     # Creating Order
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
-    local orderId=$(echo ${response} | jq .orderId)
+    ORDER_ID=$(echo ${response} | jq .orderId)
  
-    echo "Sleeping for 5 sec for order processing"
-    sleep 5
-
-    # Verify that a normal request works, expect record exists with CustomerName
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$orderId"
-    assertEqual $orderId $(echo ${RESPONSE} | jq .orderId)
-    assertEqual $customerId $(echo ${RESPONSE} | jq .customerId)
-    assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
 }
 
 set -e
@@ -182,6 +174,20 @@ waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuat
 waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health
 
 setupTestData
+
+echo "Sleeping for 5 sec for order processing"
+sleep 5
+
+# Verify that order processing is completed and status is CONFIRMED
+assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+
+# Verify that amountAvailable id deducted as per order
+assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
+assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
 echo "End, all tests OK:" `date`
 

@@ -24,15 +24,15 @@ public class OrderManageService {
         log.debug("Reserving Order in payment Service {}", orderDto);
         Customer customer = customerRepository.findById(orderDto.getCustomerId()).orElseThrow();
         log.info("Found Customer: {}", customer.getId());
-        var orderPrice =
+        var totalOrderPrice =
                 orderDto.getItems().stream()
-                        .map(OrderItemDto::getProductPrice)
+                        .map(OrderItemDto::getPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
-        if (orderPrice < customer.getAmountAvailable()) {
+        if (totalOrderPrice < customer.getAmountAvailable()) {
             orderDto.setStatus("ACCEPT");
-            customer.setAmountReserved(customer.getAmountReserved() + orderPrice);
-            customer.setAmountAvailable(customer.getAmountAvailable() - orderPrice);
+            customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
+            customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
         } else {
             orderDto.setStatus("REJECT");
         }
@@ -50,7 +50,7 @@ public class OrderManageService {
         log.info("Found Customer: {}", customer.getId());
         var orderPrice =
                 orderDto.getItems().stream()
-                        .map(OrderItemDto::getProductPrice)
+                        .map(OrderItemDto::getPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
         if (orderDto.getStatus().equals("CONFIRMED")) {
