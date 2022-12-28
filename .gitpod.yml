@@ -39,5 +39,8 @@ ports:
     visibility: public
   - port: 8888
     visibility: public
+  - port: 8888
+    visibility: public
+    onOpen: open-browser
   - port: 9411
     visibility: public
