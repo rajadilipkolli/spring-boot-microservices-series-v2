@@ -14,6 +14,21 @@ services:
     networks:
       - microservice-network
 
+  pgadmin4:
+    container_name: pgadmin4
+    image: dpage/pgadmin4
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgresql
+    restart: unless-stopped
+    networks:
+      - microservice-network
+
   # mongodb:
   #   container_name: mongodb
   #   image: mongo:6.0.3
@@ -89,6 +104,21 @@ services:
       KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
+    networks:
+      - microservice-network
+
+  kafdrop:
+    container_name: kafdrop
+    image: obsidiandynamics/kafdrop
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    restart: "no"
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:19092"
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - microservice-network
 
