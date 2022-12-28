@@ -74,7 +74,7 @@ public class OrderService {
                     persistedOrderDto);
             log.info(
                     "Sent Order : {} from order service to topic {}",
-                    orderDto,
+                    persistedOrderDto,
                     AppConstants.ORDERS_TOPIC);
 
             return persistedOrderDto;

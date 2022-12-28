@@ -4,6 +4,10 @@ server:
     contextPath: /${spring.application.name}
   forward-headers-strategy: framework
 
+logging:
+  level:
+    org.apache.kafka.clients.Metadata: WARN
+
 KAFKA_BROKER: localhost:9092
 
 spring:

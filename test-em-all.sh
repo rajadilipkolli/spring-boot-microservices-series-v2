@@ -146,10 +146,9 @@ function setupTestData() {
 
     # Verify that a normal request works, expect record exists with CustomerName
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$orderId"
-    echo "order response" ${RESPONSE}
     assertEqual $orderId $(echo ${RESPONSE} | jq .orderId)
     assertEqual $customerId $(echo ${RESPONSE} | jq .customerId)
-    assertEqual \"COMPLETED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
 }
 
 set -e

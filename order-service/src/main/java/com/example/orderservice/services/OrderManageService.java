@@ -20,7 +20,9 @@ public class OrderManageService {
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = new OrderDto();
+        // need to set all values as the same object will be sent to downstream via kafka
         orderDto.setOrderId(orderPayment.getOrderId());
+        orderDto.setCustomerId(orderPayment.getCustomerId());
         if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
             orderDto.setStatus("CONFIRMED");
         } else if (REJECT.equals(orderPayment.getStatus())
@@ -32,9 +34,13 @@ public class OrderManageService {
             orderDto.setStatus("ROLLBACK");
             orderDto.setSource(source);
         }
+        orderDto.setItems(orderPayment.getItems());
         this.orderRepository.updateOrderStatusAndSourceById(
                 orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
-        log.info("Updated Status for orderId :{}", orderDto.getOrderId());
+        log.info(
+                "Updated Status as {} for orderId :{}",
+                orderDto.getStatus(),
+                orderDto.getOrderId());
         return orderDto;
     }
 }

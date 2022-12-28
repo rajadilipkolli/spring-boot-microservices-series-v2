@@ -60,7 +60,7 @@ public class KafkaConfig {
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output of Steam: {}", o))
+                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
                 .to(AppConstants.ORDERS_TOPIC);
 
         return stream;

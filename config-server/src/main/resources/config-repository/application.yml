@@ -31,6 +31,7 @@ logging:
     sql: INFO
     web: INFO
     datasource-query-logger: INFO
+    org.apache.kafka.clients.Metadata: WARN
 management:
   endpoint:
     health:
