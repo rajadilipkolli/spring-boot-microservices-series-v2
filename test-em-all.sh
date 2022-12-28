@@ -101,19 +101,19 @@ function setupTestData() {
 '","productName":"product name A","price":100, "description": "A Beautiful Product"}'
 
 #    Creating Product
-    recreateComposite "$PROD_CODE" "$body" "CATALOG-SERVICE/catalog-service/api/catalog" "POST"
+    recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
     body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
-'","amountAvailable":1000,"amountReserved":0}'
+'","email": "docker@email.com","address": "docker Address","amountAvailable":1000,"amountReserved":0}'
 
     # Creating Customer
-    recreateComposite "$CUSTOMER_NAME" "$body" "PAYMENT-SERVICE/payment-service/api/customers" "POST"
+    recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"
 
     # waiting for kafka to process the catalog creation request
     sleep 5
     # Verify that a normal request works, expect record exists with product code
-    assertCurl 200 "curl -k http://$HOST:$PORT/INVENTORY-SERVICE/inventory-service/api/inventory/$PROD_CODE"
+    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
 
     body="{\"productCode\":\"$PROD_CODE"
@@ -121,21 +121,23 @@ function setupTestData() {
 '","reservedItems":0,"availableQuantity":100}'
 
     # Update the product available Quantity
-    recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "INVENTORY-SERVICE/inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
+    recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
     # Verify that a normal request works, expect record exists with CustomerName
-    assertCurl 200 "curl -k http://$HOST:$PORT/PAYMENT-SERVICE/payment-service/api/customers/name/$CUSTOMER_NAME"
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/name/$CUSTOMER_NAME"
     assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
 
     body="{\"customerId\": $(echo ${RESPONSE} | jq .id)"
     body+=\
-',"customerEmail": "docker@email.com","customerAddress": "docker Address","items":[{"productId": '
+',"items":[{"productId": '
     body+="\"$PROD_CODE"
     body+=\
 '","quantity": 10,"productPrice": 5}]}'
 
+    echo "Order Body" ${body}
+
     # Creating Order
-    recreateComposite "$CUSTOMER_NAME" "$body" "ORDER-SERVICE/order-service/api/orders" "POST"
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
 }
 

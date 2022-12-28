@@ -60,7 +60,10 @@ public class OrderService {
     public OrderDto saveOrder(OrderDto orderDto) {
         // Verify if items exists
         List<String> productIds =
-                orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
+                orderDto.getItems().stream()
+                        .map(OrderItemDto::getProductId)
+                        .map(String::toUpperCase)
+                        .toList();
         if (productsExistsAndInStock(productIds)) {
             Order order = this.orderMapper.toEntity(orderDto);
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
