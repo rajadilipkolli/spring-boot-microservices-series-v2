@@ -67,10 +67,11 @@ public class OrderService {
         if (productsExistsAndInStock(productIds)) {
             Order order = this.orderMapper.toEntity(orderDto);
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
+            // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             this.template.send(
                     AppConstants.ORDERS_TOPIC,
                     String.valueOf(persistedOrderDto.getOrderId()),
-                    orderDto);
+                    persistedOrderDto);
             log.info(
                     "Sent Order : {} from order service to topic {}",
                     orderDto,

@@ -29,6 +29,8 @@ docker compose up rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka confi
  - RabbitMq : http://localhost:15672/
  - Service Registry : http://localhost:8761
  - PgAdmin : http://localhost:5050
+ - kafdrop : http://localhost:9000
+ 
 
 ### Swagger URLs for accessing Services
 
