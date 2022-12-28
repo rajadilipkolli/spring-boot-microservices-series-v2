@@ -10,8 +10,8 @@ echo -e "Starting 'Store μServices' for [end-2-end] testing....\n"
 
 : ${HOST=localhost}
 : ${PORT=8765}
-: ${PROD_CODE=ProductCode1}
-: ${CUSTOMER_NAME=dockerCustomer}
+: ${PROD_CODE=ProductCode83}
+: ${CUSTOMER_NAME=dockerCustomer83}
 
 function assertCurl() {
 
@@ -90,7 +90,7 @@ function recreateComposite() {
 
     echo "calling URL" http://${HOST}:${PORT}/${baseURL}
 #    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
-    response=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
 }
 
@@ -103,15 +103,8 @@ function setupTestData() {
 #    Creating Product
     recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
-    body="{\"name\": \"$CUSTOMER_NAME"
-    body+=\
-'","email": "docker@email.com","address": "docker Address","amountAvailable":1000,"amountReserved":0}'
-
-    # Creating Customer
-    recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"
-
     # waiting for kafka to process the catalog creation request
-    sleep 5
+    sleep 3
     # Verify that a normal request works, expect record exists with product code
     assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
@@ -123,11 +116,19 @@ function setupTestData() {
     # Update the product available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
-    # Verify that a normal request works, expect record exists with CustomerName
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/name/$CUSTOMER_NAME"
-    assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
+    body="{\"name\": \"$CUSTOMER_NAME"
+    body+=\
+'","email": "docker@email.com","address": "docker Address","amountAvailable":1000,"amountReserved":0}'
 
-    CUSTOMER_ID=$(echo ${RESPONSE} | jq .id)
+    # Creating Customer
+    recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"
+    CUSTOMER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .id)
+ 
+}
+
+function verifyAPIs() {
+
+     # Step 1 Creating Order and it should be CONFIRMED
 
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
@@ -139,8 +140,76 @@ function setupTestData() {
     # Creating Order
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
-    ORDER_ID=$(echo ${response} | jq .orderId)
- 
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 3 sec for order processing"
+    sleep 3
+
+    # Verify that order processing is completed and status is CONFIRMED
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+
+    # Verify that amountAvailable is deducted as per order
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+    # Step2, Order Should be rejected
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productId": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 100,"productPrice": 5}]}'
+
+    # Creating 2nd Order, this should ROLLBACK as Inventory is not available
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 3 sec for order processing"
+    sleep 3
+
+    # Verify that order processing is completed and status is CONFIRMED
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
+    assertEqual \"STOCK\" $(echo ${RESPONSE} | jq .source)
+
+    # Verify that amountAvailable is not deducted as per order
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+    # Step 3, Order Should be CONFIRMED 
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productId": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 80,"productPrice": 5}]}'
+
+    # Creating 3nd Order, this should CONFIRMED as Inventory is available
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 3 sec for order processing"
+    sleep 3
+
+    # Verify that order processing is completed and status is CONFIRMED
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+
+    # Verify that amountAvailable is deducted as per order
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 550 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 }
 
 set -e
@@ -175,19 +244,7 @@ waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/ac
 
 setupTestData
 
-echo "Sleeping for 5 sec for order processing"
-sleep 5
-
-# Verify that order processing is completed and status is CONFIRMED
-assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
-assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
-assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
-assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
-
-# Verify that amountAvailable id deducted as per order
-assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
-assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
-assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+verifyAPIs
 
 echo "End, all tests OK:" `date`
 
