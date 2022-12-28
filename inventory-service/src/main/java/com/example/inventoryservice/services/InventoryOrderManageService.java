@@ -22,6 +22,7 @@ public class InventoryOrderManageService {
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
+        log.info("Reserving Order in Inventory Service {}", orderDto);
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
         List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
@@ -50,8 +51,14 @@ public class InventoryOrderManageService {
                 }
                 if (inventoryList.size() == persistInventoryList.size()) {
                     orderDto.setStatus("ACCEPT");
+                    log.info(
+                            "Setting status as ACCEPT for inventoryIds : {}",
+                            persistInventoryList.stream().map(inv -> inv.getId()).toList());
                     inventoryRepository.saveAll(persistInventoryList);
                 } else {
+                    log.info(
+                            "Setting status as REJECT for OrderId in Inventory Service : {}",
+                            orderDto.getOrderId());
                     orderDto.setStatus("REJECT");
                 }
                 kafkaTemplate.send(
@@ -59,12 +66,14 @@ public class InventoryOrderManageService {
                         String.valueOf(orderDto.getOrderId()),
                         orderDto);
                 log.info(
-                        "Sent Order : {} from inventory service to topic {}",
+                        "Sent Order after reserving : {} from inventory service to topic {}",
                         orderDto,
                         AppConstants.STOCK_ORDERS_TOPIC);
             }
         } else {
-            log.error("Not all products requested exists, Hence Ignoring");
+            log.error(
+                    "Not all products requested exists, Hence Ignoring OrderID :{}",
+                    orderDto.getOrderId());
         }
     }
 
@@ -90,5 +99,8 @@ public class InventoryOrderManageService {
             }
         }
         inventoryRepository.saveAll(inventoryList);
+        log.info(
+                "Saving inventoryIds : {} After Confirmation",
+                inventoryList.stream().map(inv -> inv.getId()).toList());
     }
 }

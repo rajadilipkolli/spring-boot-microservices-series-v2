@@ -37,6 +37,7 @@ public class OrderManageService {
             orderDto.setStatus("REJECT");
         }
         orderDto.setSource(AppConstants.SOURCE);
+        log.info("Saving customer after reserving:{}", customer.getId());
         customerRepository.save(customer);
         kafkaTemplate.send(
                 AppConstants.PAYMENT_ORDERS_TOPIC, String.valueOf(orderDto.getOrderId()), orderDto);
@@ -59,6 +60,7 @@ public class OrderManageService {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
         }
+        log.info("Saving customer After Confirmation:{}", customer.getId());
         customerRepository.save(customer);
     }
 }

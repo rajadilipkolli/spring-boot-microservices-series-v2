@@ -22,12 +22,12 @@ public class KafkaListenerConfig {
     private final ProductManageService productManageService;
 
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
-    public void onEvent(OrderDto order) {
-        log.info("Received Order: {}", order);
-        if ("NEW".equals(order.getStatus())) {
-            orderManageService.reserve(order);
+    public void onEvent(OrderDto orderDto) {
+        log.info("Received Order: {}", orderDto);
+        if ("NEW".equals(orderDto.getStatus())) {
+            orderManageService.reserve(orderDto);
         } else {
-            orderManageService.confirm(order);
+            orderManageService.confirm(orderDto);
         }
     }
 

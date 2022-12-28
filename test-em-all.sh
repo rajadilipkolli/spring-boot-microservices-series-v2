@@ -90,8 +90,8 @@ function recreateComposite() {
 
     echo "calling URL" http://${HOST}:${PORT}/${baseURL}
 #    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
-    curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
-    --data "$composite"
+    response=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+    --data "$composite")
 }
 
 function setupTestData() {
@@ -127,18 +127,29 @@ function setupTestData() {
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/name/$CUSTOMER_NAME"
     assertEqual \"${CUSTOMER_NAME}\" $(echo ${RESPONSE} | jq .name)
 
-    body="{\"customerId\": $(echo ${RESPONSE} | jq .id)"
+    local customerId=$(echo ${RESPONSE} | jq .id)
+
+    body="{\"customerId\": $customerId"
     body+=\
 ',"items":[{"productId": '
     body+="\"$PROD_CODE"
     body+=\
 '","quantity": 10,"productPrice": 5}]}'
 
-    echo "Order Body" ${body}
-
     # Creating Order
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
+    local orderId=$(echo ${response} | jq .orderId)
+ 
+    echo "Sleeping for 5 sec for order processing"
+    sleep 5
+
+    # Verify that a normal request works, expect record exists with CustomerName
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$orderId"
+    echo "order response" ${RESPONSE}
+    assertEqual $orderId $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $customerId $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"COMPLETED\" $(echo ${RESPONSE} | jq .status)
 }
 
 set -e
