@@ -24,7 +24,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "V5Zc3AtVk"
+          "uid": "prometheus-micro-service"
         },
         "enable": true,
         "expr": "resets(process_uptime_seconds{application=\"$application\", instance=\"$instance\"}[1m]) > 0",
@@ -43,6 +43,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 4701,
   "graphTooltip": 1,
+  "id": 3,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -50,7 +51,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "V5Zc3AtVk"
+        "uid": "prometheus-micro-service"
       },
       "gridPos": {
         "h": 1,
@@ -3486,10 +3487,9 @@
     "list": [
       {
         "current": {
-          "isNone": true,
           "selected": false,
-          "text": "None",
-          "value": ""
+          "text": "api-gateway",
+          "value": "api-gateway"
         },
         "datasource": {
           "type": "prometheus",
@@ -3518,9 +3518,10 @@
       {
         "allFormat": "glob",
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "host.docker.internal:8765",
-          "value": "host.docker.internal:8765"
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "prometheus",

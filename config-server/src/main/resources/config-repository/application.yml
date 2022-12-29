@@ -33,6 +33,13 @@ logging:
     datasource-query-logger: INFO
     '[org.apache.kafka.clients.Metadata]': WARN
 management:
+  # For Exemplars to work we need histogram buckets
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
   endpoint:
     health:
       show-details: always
