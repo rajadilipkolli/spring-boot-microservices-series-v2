@@ -30,8 +30,9 @@ docker compose up rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka confi
  - Service Registry : http://localhost:8761
  - PgAdmin : http://localhost:5050
  - kafdrop : http://localhost:9000
- - Grafana : http://localhost:3000
- 
+ - Grafana : http://localhost:3000 (user/password)
+ - Prometheus : http://localhost:9090
+
 
 ### Swagger URLs for accessing Services
 
