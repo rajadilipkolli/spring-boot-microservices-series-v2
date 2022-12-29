@@ -30,7 +30,7 @@
         <spotless.version>2.28.0</spotless.version>
         <mockserver-netty.version>5.14.0</mockserver-netty.version>
         <maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
-        <dependency-check-maven.version>7.4.2</dependency-check-maven.version>
+        <dependency-check-maven.version>7.4.3</dependency-check-maven.version>
         <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
         <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.8</jacoco-maven-plugin.version>
