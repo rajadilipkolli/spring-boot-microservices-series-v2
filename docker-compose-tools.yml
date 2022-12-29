@@ -342,7 +342,7 @@ services:
     networks:
       - microservice-network
   loki:
-    image: grafana/loki:2.6.1
+    image: grafana/loki:2.7.1
     container_name: loki
     depends_on:
       - fluent-bit
