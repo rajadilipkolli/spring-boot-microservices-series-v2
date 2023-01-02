@@ -93,7 +93,12 @@ class APIGatewayApplicationTest {
                 .isOk()
                 .expectBody(String.class)
                 .consumeWith(
-                        res -> assertThat(res.getResponseBody()).isEqualTo("{\"status\":\"UP\"}"));
+                        res ->
+                                assertThat(res.getResponseBody())
+                                        .contains(
+                                                "{\"status\":\"UP\"",
+                                                "\"components\"",
+                                                "\"refreshScope\":{\"status\":\"UP\"}"));
     }
 
     private static class NamingServerContainer extends GenericContainer<NamingServerContainer> {
