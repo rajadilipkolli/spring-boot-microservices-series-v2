@@ -19,22 +19,28 @@ public class OrderManageService {
 
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         log.info("Setting Status for order :{}", orderPayment);
-        OrderDto o = new OrderDto();
-        o.setOrderId(orderPayment.getOrderId());
+        OrderDto orderDto = new OrderDto();
+        // need to set all values as the same object will be sent to downstream via kafka
+        orderDto.setOrderId(orderPayment.getOrderId());
+        orderDto.setCustomerId(orderPayment.getCustomerId());
         if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
-            o.setStatus("CONFIRMED");
+            orderDto.setStatus("CONFIRMED");
         } else if (REJECT.equals(orderPayment.getStatus())
                 && REJECT.equals(orderStock.getStatus())) {
-            o.setStatus("REJECTED");
+            orderDto.setStatus("REJECTED");
         } else if (REJECT.equals(orderPayment.getStatus())
                 || REJECT.equals(orderStock.getStatus())) {
             String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "STOCK";
-            o.setStatus("ROLLBACK");
-            o.setSource(source);
+            orderDto.setStatus("ROLLBACK");
+            orderDto.setSource(source);
         }
+        orderDto.setItems(orderPayment.getItems());
         this.orderRepository.updateOrderStatusAndSourceById(
-                o.getOrderId(), o.getStatus(), o.getSource());
-        log.info("Updated Status for orderId :{}", o.getOrderId());
-        return o;
+                orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
+        log.info(
+                "Updated Status as {} for orderId :{}",
+                orderDto.getStatus(),
+                orderDto.getOrderId());
+        return orderDto;
     }
 }

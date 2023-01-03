@@ -103,7 +103,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.orderId", notNullValue()))
                 .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class))
-                .andExpect(jsonPath("$.status", is(orderDto.getStatus())));
+                .andExpect(jsonPath("$.status", is(orderDto.getStatus())))
+                .andExpect(header().exists("Location"));
     }
 
     @Test

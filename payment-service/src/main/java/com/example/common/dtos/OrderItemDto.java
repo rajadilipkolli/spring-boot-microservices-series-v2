@@ -19,6 +19,6 @@ public class OrderItemDto implements Serializable {
     private BigDecimal productPrice;
 
     public BigDecimal getPrice() {
-        return productPrice.multiply(new BigDecimal(quantity));
+        return productPrice.multiply(BigDecimal.valueOf(quantity));
     }
 }

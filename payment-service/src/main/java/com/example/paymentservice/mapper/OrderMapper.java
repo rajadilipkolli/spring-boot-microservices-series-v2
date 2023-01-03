@@ -16,10 +16,12 @@ import org.mapstruct.NullValueCheckStrategy;
 public interface OrderMapper {
 
     @Mapping(source = "id", target = "orderId")
+    @Mapping(source = "customer.id", target = "customerId")
     OrderDto toDto(Order order);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "customer.id", source = "customerId")
     Order toEntity(OrderDto orderDto);
 
     @Mapping(target = "itemId", source = "id")

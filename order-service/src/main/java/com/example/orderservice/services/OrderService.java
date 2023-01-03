@@ -60,17 +60,21 @@ public class OrderService {
     public OrderDto saveOrder(OrderDto orderDto) {
         // Verify if items exists
         List<String> productIds =
-                orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
+                orderDto.getItems().stream()
+                        .map(OrderItemDto::getProductId)
+                        .map(String::toUpperCase)
+                        .toList();
         if (productsExistsAndInStock(productIds)) {
             Order order = this.orderMapper.toEntity(orderDto);
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
+            // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             this.template.send(
                     AppConstants.ORDERS_TOPIC,
                     String.valueOf(persistedOrderDto.getOrderId()),
-                    orderDto);
+                    persistedOrderDto);
             log.info(
                     "Sent Order : {} from order service to topic {}",
-                    orderDto,
+                    persistedOrderDto,
                     AppConstants.ORDERS_TOPIC);
 
             return persistedOrderDto;
