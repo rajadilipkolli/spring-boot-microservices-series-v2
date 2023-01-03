@@ -22,34 +22,17 @@ import org.testcontainers.utility.DockerImageName;
 class APIGatewayApplicationTest {
 
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
-    private static final int NAMING_SERVER_INTERNAL_PORT = 8761;
-    private static final int ZIPKIN_INTERNAL_PORT = 9411;
 
     static final MongoDBContainer MONGO_DB_CONTAINER =
             new MongoDBContainer(DockerImageName.parse("mongo:6.0.3"));
-
-    static final NamingServerContainer NAMING_SERVER_CONTAINER =
-            new NamingServerContainer(
-                            DockerImageName.parse(
-                                    "dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT"))
-                    .withExposedPorts(NAMING_SERVER_INTERNAL_PORT);
 
     static final ConfigServerContainer CONFIG_SERVER_CONTAINER =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
                     .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
 
-    static final ZipkinContainer ZIPKIN_CONTAINER =
-            new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
-                    .withExposedPorts(ZIPKIN_INTERNAL_PORT);
-
     static {
-        Startables.deepStart(
-                        MONGO_DB_CONTAINER,
-                        NAMING_SERVER_CONTAINER,
-                        CONFIG_SERVER_CONTAINER,
-                        ZIPKIN_CONTAINER)
-                .join();
+        Startables.deepStart(MONGO_DB_CONTAINER, CONFIG_SERVER_CONTAINER).join();
     }
 
     @DynamicPropertySource
@@ -63,21 +46,6 @@ class APIGatewayApplicationTest {
                                 CONFIG_SERVER_CONTAINER.getHost(),
                                 CONFIG_SERVER_CONTAINER.getMappedPort(
                                         CONFIG_SERVER_INTERNAL_PORT)));
-        propertyRegistry.add(
-                "eureka.client.serviceUrl.defaultZone",
-                () ->
-                        String.format(
-                                "http://%s:%d/eureka/",
-                                NAMING_SERVER_CONTAINER.getHost(),
-                                NAMING_SERVER_CONTAINER.getMappedPort(
-                                        NAMING_SERVER_INTERNAL_PORT)));
-        propertyRegistry.add(
-                "spring.zipkin.baseurl",
-                () ->
-                        String.format(
-                                "http://%s:%d/",
-                                ZIPKIN_CONTAINER.getHost(),
-                                ZIPKIN_CONTAINER.getMappedPort(ZIPKIN_INTERNAL_PORT)));
     }
 
     @Autowired private WebTestClient webTestClient;
@@ -101,22 +69,9 @@ class APIGatewayApplicationTest {
                                                 "\"refreshScope\":{\"status\":\"UP\"}"));
     }
 
-    private static class NamingServerContainer extends GenericContainer<NamingServerContainer> {
-
-        public NamingServerContainer(final DockerImageName dockerImageName) {
-            super(dockerImageName);
-        }
-    }
-
     private static class ConfigServerContainer extends GenericContainer<ConfigServerContainer> {
 
         public ConfigServerContainer(final DockerImageName dockerImageName) {
-            super(dockerImageName);
-        }
-    }
-
-    private static class ZipkinContainer extends GenericContainer<ZipkinContainer> {
-        public ZipkinContainer(DockerImageName dockerImageName) {
             super(dockerImageName);
         }
     }

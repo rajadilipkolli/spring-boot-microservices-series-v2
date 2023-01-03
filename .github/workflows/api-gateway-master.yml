@@ -38,7 +38,7 @@ jobs:
           native-image --version
       - name: Start up softwares via Docker Compose
         run: |
-          docker compose up zipkin-server -d
+          docker compose up zipkin-server naming-server -d
           sleep 10
           docker ps -a
       - if: ${{ github.ref == 'refs/heads/master' }}
