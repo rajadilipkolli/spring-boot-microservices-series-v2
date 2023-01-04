@@ -16,7 +16,7 @@ Once above step is completed, start solution in docker using
 docker compose up
 ```
 
-To start silently use `docker compose -d up` , which starts in detached mode
+To start silently use `docker compose -d up` , which starts in detached mode and can observe logs using `docker compose logs -f `
 
 To test end to end run the below script from project root directory
 
@@ -33,11 +33,10 @@ docker compose up zipkin-server postgresql pgadmin4 kafka config-server naming-s
 
 ### URLs to access pieces of software
 
- - Zipkin : http://localhost:9411/zipkin/
- - RabbitMq : http://localhost:15672/
+ - Zipkin (Centralized logs tracing) : http://localhost:9411/zipkin/ 
  - Service Registry : http://localhost:8761
- - PgAdmin : http://localhost:5050
- - kafdrop : http://localhost:9000
+ - PgAdmin (UI for Postgres Database) : http://localhost:5050
+ - kafdrop (UI for kafka Messages) : http://localhost:9000
  - Grafana : http://localhost:3000 (user/password)
  - Prometheus : http://localhost:9090
 
