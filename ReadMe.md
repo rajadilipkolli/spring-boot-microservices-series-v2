@@ -2,15 +2,15 @@
 
 Initial Code generated using [springboot generator](https://github.com/sivaprasadreddy/generator-springboot)
 
-### Local SetUp
+### Local SetUp and running using docker
 
-To run in local first build all services using command 
+To run in local, first build all services using command 
 
 ```shell
 ./mvnw clean spotless:apply spring-boot:build-image -DskipTests
 ```
 
-To start docker using 
+Once above step is completed, start solution in docker using 
 
 ```shell
 docker compose up
@@ -18,13 +18,21 @@ docker compose up
 
 To start silently use `docker compose -d up` , which starts in detached mode
 
+To test end to end run the below script from project root directory
+
+```shell
+HOST=localhost PORT=8765 ./test-em-all.sh start stop
+
+```
+
 ### Starting infrastructure 
 
 ```bash
-docker compose up rabbitmq zipkin-server postgresql pgadmin4 mongodb kafka config-server naming-server
+docker compose up zipkin-server postgresql pgadmin4 kafka config-server naming-server
 ```
 
 ### URLs to access pieces of software
+
  - Zipkin : http://localhost:9411/zipkin/
  - RabbitMq : http://localhost:15672/
  - Service Registry : http://localhost:8761
