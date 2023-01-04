@@ -1,6 +1,6 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)
 
-Initial Code generated using [springboot generator](https://github.com/sivaprasadreddy/generator-springboot)
+Initial Code generated using [springboot generator](https://github.com/sivaprasadreddy/generator-springboot) where I have recently joined as co-commiter to the project
 
 ### Local SetUp and running using docker
 
