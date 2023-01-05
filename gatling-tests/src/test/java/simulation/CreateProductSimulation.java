@@ -123,7 +123,7 @@ public class CreateProductSimulation extends Simulation {
     }
 
     public CreateProductSimulation() {
-        this.setUp(scn.injectOpen(constantUsersPerSec(10).during(Duration.ofSeconds(30))))
+        this.setUp(scn.injectOpen(constantUsersPerSec(5).during(Duration.ofSeconds(30))))
                 .protocols(httpProtocol);
     }
 }

@@ -38,7 +38,7 @@ jobs:
       - name: Start up softwares via Docker Compose
         run: |
           docker compose up -d
-          sleep 300
+          sleep 240
           docker ps -a
 
       - name: Build and analyze
