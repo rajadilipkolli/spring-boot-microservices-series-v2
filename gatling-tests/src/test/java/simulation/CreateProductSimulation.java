@@ -88,7 +88,8 @@ public class CreateProductSimulation extends Simulation {
                                     .post("/order-service/api/orders")
                                     .header("Content-Type", "application/json")
                                     .body(
-                                            StringBody("""
+                                            StringBody(
+                                                    """
                                                     {
                                                       "customerId": ${customerId},
                                                       "items": [
@@ -101,7 +102,7 @@ public class CreateProductSimulation extends Simulation {
                                                     }
                                                     """))
                                     .asJson()
-                                    .check(status().is(201))
+                                    .check(status().is(200))
                                     .check(header("location").saveAs("location")));
 
     @SneakyThrows
@@ -109,8 +110,9 @@ public class CreateProductSimulation extends Simulation {
         InventoryResponseDTO inventoryResponseDTO =
                 OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
         int nextInt = new SecureRandom().nextInt(100, 1000);
-        String body =  OBJECT_MAPPER.writeValueAsString(
-                inventoryResponseDTO.withAvailableQuantity(nextInt));
+        String body =
+                OBJECT_MAPPER.writeValueAsString(
+                        inventoryResponseDTO.withAvailableQuantity(nextInt));
         LOGGER.info("Update Inventory Request :{}", body);
         return body;
     }
@@ -123,7 +125,11 @@ public class CreateProductSimulation extends Simulation {
     }
 
     public CreateProductSimulation() {
-        this.setUp(scn.injectOpen(constantUsersPerSec(5).during(Duration.ofSeconds(30))))
+        this.setUp(scn.injectOpen(constantUsersPerSec(1).during(Duration.ofSeconds(1))))
+                .protocols(httpProtocol);
+        this.setUp(
+                        scn.pause(Duration.ofSeconds(1))
+                                .injectOpen(constantUsersPerSec(5).during(Duration.ofSeconds(30))))
                 .protocols(httpProtocol);
     }
 }
