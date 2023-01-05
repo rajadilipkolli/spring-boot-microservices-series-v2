@@ -1,4 +1,4 @@
-name: gatling-tests-master
+name: gatling-tests
 
 on:
   push:
@@ -34,6 +34,12 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: "zulu"
           cache: "maven"
+      
+      - name: Start up softwares via Docker Compose
+        run: |
+          docker compose up -d
+          sleep 300
+          docker ps -a
 
       - name: Build and analyze
-        run: ./mvnw clean verify
+        run: ./mvnw clean gatling:test
