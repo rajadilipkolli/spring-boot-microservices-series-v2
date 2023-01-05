@@ -1,5 +1,13 @@
 # https://docs.liquibase.com/concepts/changelogs/yaml-format.html
 databaseChangeLog:
+  -  property:
+       dbms:  postgresql
+       name:  string.type
+       value:  text
+  -  property:
+       dbms:  h2
+       name:  string.type
+       value:  varchar(255)
   - changeSet:
       author: rajakolli
       id: createTable-products
@@ -29,15 +37,15 @@ databaseChangeLog:
               constraints:
                 nullable: 'false'
               name: code
-              type: varchar(255)
+              type: ${string.type}
           - column:
               constraints:
                 nullable: 'false'
               name: product_name
-              type: varchar(255)
+              type: ${string.type}
           - column:
               name: description
-              type: varchar(255)
+              type: ${string.type}
           - column:
               name: price
               type: 'NUMERIC(19,2)'
