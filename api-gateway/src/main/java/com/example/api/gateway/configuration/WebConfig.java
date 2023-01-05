@@ -15,10 +15,14 @@ public class WebConfig {
 
     @Bean
     CorsWebFilter corsWebFilter() {
-        var corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("localhost", "mytrustedwebsite.com"));
-        var source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
+        final CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowedOrigins(List.of("localhost", "mytrustedwebsite.com"));
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "OPTIONS", "HEAD", "PUT"));
+        corsConfig.addAllowedHeader("Access-Control-Allow-Origin");
+
+        final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+
         return new CorsWebFilter(source);
     }
 }

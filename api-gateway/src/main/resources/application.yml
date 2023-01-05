@@ -63,4 +63,13 @@ spring:
 springdoc:
   cache:
     disabled: true
-  packagesToScan: com.example.api.gateway.web
+# We should display api-gateway as well
+  swagger-ui:
+    urls[0]:
+      name: api-gateway
+      url: /v3/api-docs
+# adding this so that 
+  group-configs[0]:
+    group: api-service
+    pathsToMatch: /**
+#  packagesToScan: com.example.api.gateway.web
