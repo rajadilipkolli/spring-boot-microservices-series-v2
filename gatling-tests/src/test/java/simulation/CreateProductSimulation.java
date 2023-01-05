@@ -101,7 +101,7 @@ public class CreateProductSimulation extends Simulation {
                                                     }
                                                     """))
                                     .asJson()
-                                    .check(status().is(200))
+                                    .check(status().is(201))
                                     .check(header("location").saveAs("location")));
 
     @SneakyThrows
@@ -123,7 +123,7 @@ public class CreateProductSimulation extends Simulation {
     }
 
     public CreateProductSimulation() {
-        this.setUp(scn.injectOpen(constantUsersPerSec(1).during(Duration.ofSeconds(1))))
+        this.setUp(scn.injectOpen(constantUsersPerSec(10).during(Duration.ofSeconds(30))))
                 .protocols(httpProtocol);
     }
 }
