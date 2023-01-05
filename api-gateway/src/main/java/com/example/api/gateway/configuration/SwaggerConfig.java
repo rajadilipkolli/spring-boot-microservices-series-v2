@@ -17,14 +17,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @OpenAPIDefinition(
         info =
-        @Info(
-                title = "api-gateway",
-                description = "Documentation for all the Microservices in Demo Application",
-                version = "v1",
-                contact =
-                @Contact(
-                        name = "Raja Kolli",
-                        url = "https://github.com/rajadilipkolli")),
+                @Info(
+                        title = "api-gateway",
+                        description = "Documentation for all the Microservices in Demo Application",
+                        version = "v1",
+                        contact =
+                                @Contact(
+                                        name = "Raja Kolli",
+                                        url = "https://github.com/rajadilipkolli")),
         servers = @Server(url = "/"))
 public class SwaggerConfig {
 
