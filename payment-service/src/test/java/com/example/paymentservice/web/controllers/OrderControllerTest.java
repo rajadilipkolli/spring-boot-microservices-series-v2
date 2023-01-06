@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.entities.Order;
+import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.OrderService;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -53,12 +56,23 @@ class OrderControllerTest {
     @Test
     void shouldFetchAllOrders() throws Exception {
 
-        given(orderService.findAllOrders()).willReturn(this.orderListDto);
+        Page<OrderDto> page = new PageImpl<>(orderListDto);
+        PagedResult<OrderDto> orderDtoPagedResult = new PagedResult<>(page);
+
+        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderDtoPagedResult);
 
         this.mockMvc
                 .perform(get("/api/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(orderList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(orderListDto.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test
