@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.orderservice.common;
 
 import com.example.orderservice.utils.AppConstants;
