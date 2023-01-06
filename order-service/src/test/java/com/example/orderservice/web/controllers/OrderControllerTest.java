@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,7 +53,6 @@ class OrderControllerTest {
         this.orderList.add(new Order(1L, 1L, "NEW", null, new ArrayList<>()));
         this.orderList.add(new Order(2L, 2L, "NEW", null, new ArrayList<>()));
         this.orderList.add(new Order(3L, 3L, "NEW", null, new ArrayList<>()));
-        ;
     }
 
     @Test
@@ -60,12 +62,23 @@ class OrderControllerTest {
         orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
         orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
         orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
-        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderListDto);
+        Page<OrderDto> page = new PageImpl<>(orderListDto);
+        PagedResult<OrderDto> inventoryPagedResult = new PagedResult<>(page);
+
+        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(inventoryPagedResult);
 
         this.mockMvc
                 .perform(get("/api/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(orderList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(orderListDto.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

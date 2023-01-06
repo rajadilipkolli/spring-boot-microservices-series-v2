@@ -2,6 +2,7 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
@@ -33,7 +34,7 @@ public class OrderController {
     private final OrderGeneratorService orderGeneratorService;
 
     @GetMapping
-    public List<OrderDto> getAllOrders(
+    public PagedResult<OrderDto> getAllOrders(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,

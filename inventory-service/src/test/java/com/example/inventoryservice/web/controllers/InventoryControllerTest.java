@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -22,8 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.apache.commons.math.stat.descriptive.summary.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,8 +58,7 @@ class InventoryControllerTest {
         Page<Inventory> page = new PageImpl<>(inventoryList);
         PagedResult<Inventory> inventoryPagedResult = new PagedResult<>(page);
         given(inventoryService.findAllInventories(0, 10, "id", "asc"))
-        .willReturn(inventoryPagedResult);
-
+                .willReturn(inventoryPagedResult);
 
         this.mockMvc
                 .perform(get("/api/inventory"))

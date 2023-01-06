@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2023 */
-package com.example.inventoryservice.model.response;
+package com.example.orderservice.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
