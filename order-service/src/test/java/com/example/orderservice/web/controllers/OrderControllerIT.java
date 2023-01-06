@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.orderservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -70,7 +70,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(orderList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(orderList.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

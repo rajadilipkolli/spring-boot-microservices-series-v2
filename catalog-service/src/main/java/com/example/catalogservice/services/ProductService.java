@@ -3,6 +3,7 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
@@ -10,6 +11,10 @@ import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +31,18 @@ public class ProductService {
     private final KafkaTemplate<String, ProductDto> kafkaTemplate;
 
     @Transactional(readOnly = true)
-    public List<Product> findAllProducts() {
-        return productRepository.findAll();
+    public PagedResult<Product> findAllProducts(
+            int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+
+        // create Pageable instance
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Page<Product> productPage = productRepository.findAll(pageable);
+
+        return new PagedResult<>(productPage);
     }
 
     @Transactional(readOnly = true)

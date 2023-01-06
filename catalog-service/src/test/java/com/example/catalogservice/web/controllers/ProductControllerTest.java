@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -52,12 +55,22 @@ class ProductControllerTest {
 
     @Test
     void shouldFetchAllProducts() throws Exception {
-        given(productService.findAllProducts()).willReturn(this.productList);
+        Page<Product> page = new PageImpl<>(productList);
+        PagedResult<Product> productPagedResult = new PagedResult<>(page);
+        given(productService.findAllProducts(0, 10, "id", "asc")).willReturn(productPagedResult);
 
         this.mockMvc
                 .perform(get("/api/catalog"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(productList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(productList.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

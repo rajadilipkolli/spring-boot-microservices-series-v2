@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -76,12 +79,22 @@ class CustomerControllerTest {
 
     @Test
     void shouldFetchAllCustomers() throws Exception {
-        given(customerService.findAllCustomers()).willReturn(this.customerList);
+        Page<Customer> page = new PageImpl<>(customerList);
+        PagedResult<Customer> postPagedResult = new PagedResult<>(page);
+        given(customerService.findAllCustomers(0, 10, "id", "asc")).willReturn(postPagedResult);
 
         this.mockMvc
                 .perform(get("/api/customers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(customerList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(customerList.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

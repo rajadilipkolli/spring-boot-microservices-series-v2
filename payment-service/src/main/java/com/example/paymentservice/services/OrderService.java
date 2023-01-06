@@ -4,15 +4,21 @@ package com.example.paymentservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.mapper.OrderMapper;
+import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.OrderRepository;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class OrderService {
@@ -21,16 +27,40 @@ public class OrderService {
     private final OrderMapper orderMapper;
 
     @Transactional(readOnly = true)
-    public List<OrderDto> findAllOrders() {
+    public PagedResult<OrderDto> findAllOrders(
+            int pageNo, int pageSize, String sortBy, String sortDir) {
 
+        log.info(
+                "Fetching findAllOrders for pageNo {} with pageSize {}, sorting BY {} {}",
+                pageNo,
+                pageSize,
+                sortBy,
+                sortDir);
+
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Page<Order> page = orderRepository.findAll(pageable);
         var completableFutureList =
-                orderRepository.findAll().stream()
+                page.getContent().stream()
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(
                                                 () -> this.orderMapper.toDto(order)))
                         .toList();
-        return completableFutureList.stream().map(CompletableFuture::join).toList();
+        var orderDtoList = completableFutureList.stream().map(CompletableFuture::join).toList();
+
+        return new PagedResult<>(
+                orderDtoList,
+                page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious());
     }
 
     @Transactional(readOnly = true)
