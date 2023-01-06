@@ -1,5 +1,55 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)
 
+
+## Problem Statement:
+
+The Retail Business management system is a comprehensive platform for managing the sales and inventory of a retails business. It includes several different components that work together to provide a seamless experience for both the business and the customer.It includes four main components:
+
+  1. `Catalog`: The catalog component allows the business to create and maintain a list of products that are available for sale on their website. This includes details such as product descriptions, images, and pricing.
+
+  2. `Inventory`: The inventory component is responsible for tracking the availability of products and ensuring that orders can be fulfilled. It includes features such as inventory tracking and restocking alerts.
+
+  3. `Order`: The order component allows customers to place orders for products, and includes features such as order tracking and confirmation emails.
+
+  4. `Payment`: The payment service component handles the processing of payments and maintains customer information. This includes the ability to store payment details for future purchases and to handle transactions securely.
+
+The process flow begins with an admin creating a catalog of products to sell on the website. This catalog is managed by an operator, who is responsible for updating the inventory levels of the products.
+
+The end user, or customer, is then able to register their profile and payment details with a payment service. Once the customer places an order, the system checks to see if the customer has the necessary funds and is able to make the purchase. If the purchase is approved, the system reserves the amount of the purchase and checks to see if the product is available in the inventory. If the product is available, it is reserved for the customer.
+
+Once both the payment and product availability checks have been successful, the order processing begins. The status of the order is changed and events are sent to both the payment and inventory systems to deduct the amount from the customer's account and reduce the inventory levels.
+
+Overall, the Retail Business management system project provides a comprehensive solution for managing the sales and inventory of a business, with a focus on ensuring a smooth and seamless experience for both the business and the customer.
+
+
+## Technical Concepts and requirement :
+
+`API Gateway`: An API Gateway is a microservice that sits between external clients and the various microservices that make up an application. It acts as a reverse proxy, routing requests from clients to the appropriate microservice and returning the response back to the client. This allows for a single point of entry into the application, making it easier to manage and scale.
+
+`Service Registry`: A Service Registry is a microservice that maintains a list of all the other microservices in an application. It allows for service discovery, allowing microservices to find and communicate with each other without needing to know their specific locations. This is particularly useful in environments where microservices are frequently scaled up or down, as the Service Registry ensures that all microservices are aware of the current state of the system.
+
+`Config Server`: A Config Server is a microservice that stores configuration information for an application. It allows for centralized management of configuration data, which can be accessed by other microservices as needed. This helps to ensure that all microservices are using the same configuration data, and makes it easier to update configuration information as needed.
+
+`Observability` in a microservices architecture involves the ability to understand the current state and behavior of the system, including any issues or errors that may occur. This can be achieved through the use of tools such as distributed tracing, which allows for the tracking of requests and responses as they pass through the system.
+
+Microservices `centralized logging` refers to the practice of collecting and storing log data from all microservices in a single location, typically a centralized log management system. This allows for easier tracking and analysis of log data, as it is all stored in a single location rather than spread across multiple microservices.
+
+`Monitoring` in a microservices architecture involves tracking the performance and health of individual microservices and their interactions with other microservices. This can be done using tools such as application performance monitoring (APM) or infrastructure monitoring tools.
+
+To implement centralized logging, monitoring, and observability in a microservices architecture, there are several technical requirements that must be met. These include:
+
+  1. Integration with log management and monitoring tools: The microservices must be able to send log data and performance metrics to the centralized log management system and monitoring tools.
+
+  2. Support for distributed tracing: The microservices must support distributed tracing to allow for the tracking of requests and responses as they pass through the system.
+
+  3. Security and privacy considerations: The centralized logging, monitoring, and observability systems must be secure and protect sensitive data.
+
+  4. Scalability: The centralized logging, monitoring, and observability systems must be able to handle the large volume of data generated by a microservices architecture.
+
+  5. Integration with existing systems: The centralized logging, monitoring, and observability systems must be able to integrate with existing systems and tools, such as monitoring and alerting systems.
+
+
+
 Initial Code generated using [springboot generator](https://github.com/sivaprasadreddy/generator-springboot) where I have recently joined as co-commiter to the project
 
 ### Local SetUp and running using docker
