@@ -7,12 +7,17 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.servers.Server;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springdoc.core.properties.AbstractSwaggerUiConfigProperties;
 import org.springdoc.core.properties.SwaggerUiConfigProperties;
+import org.springdoc.webflux.core.configuration.MultipleOpenApiSupportConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 @Configuration(proxyBeanMethods = false)
 @OpenAPIDefinition(
@@ -26,21 +31,24 @@ import org.springframework.context.annotation.Configuration;
                                         name = "Raja Kolli",
                                         url = "https://github.com/rajadilipkolli")),
         servers = @Server(url = "/"))
+@AutoConfigureBefore(MultipleOpenApiSupportConfiguration.class)
 public class SwaggerConfig {
 
     @Bean
-    public List<GroupedOpenApi> apis(
+    @Lazy(value = false)
+    public List<GroupedOpenApi> groupedOpenApis(
             RouteDefinitionLocator locator, SwaggerUiConfigProperties swaggerUiConfigProperties) {
-        Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> finalUrls =
+        Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> swaggerUrls =
                 swaggerUiConfigProperties.getUrls();
         return locator.getRouteDefinitions()
-                .filter(routeDefinition -> routeDefinition.getId().matches(".*-service"))
+                .toStream()
+                .map(RouteDefinition::getId)
+                .filter(id -> id.endsWith("-service"))
                 .map(
-                        routeDefinition -> {
-                            String routeDefinitionId = routeDefinition.getId();
-                            String name = routeDefinitionId.replaceAll("-service", "");
+                        routeDefinitionId -> {
+                            String name = extractNameFromRouteDefinitionId(routeDefinitionId);
 
-                            finalUrls.add(
+                            swaggerUrls.add(
                                     new AbstractSwaggerUiConfigProperties.SwaggerUrl(
                                             name,
                                             "/" + routeDefinitionId + "/v3/api-docs",
@@ -50,7 +58,10 @@ public class SwaggerConfig {
                                     .group(name)
                                     .build();
                         })
-                .toStream()
-                .toList();
+                .collect(Collectors.toList());
+    }
+
+    private String extractNameFromRouteDefinitionId(String routeDefinitionId) {
+        return routeDefinitionId.replaceAll("-service", "");
     }
 }
