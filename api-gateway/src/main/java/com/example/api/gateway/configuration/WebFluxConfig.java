@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021 */
+/* Licensed under Apache-2.0 2023 */
 package com.example.api.gateway.configuration;
 
 import org.springframework.context.annotation.Configuration;

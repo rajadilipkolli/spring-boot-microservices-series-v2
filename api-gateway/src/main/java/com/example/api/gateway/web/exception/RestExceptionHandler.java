@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021 */
+/* Licensed under Apache-2.0 2021-2022 */
 package com.example.api.gateway.web.exception;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

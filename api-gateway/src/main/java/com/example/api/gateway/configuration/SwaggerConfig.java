@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2022 */
+/* Licensed under Apache-2.0 2022-2023 */
 package com.example.api.gateway.configuration;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
