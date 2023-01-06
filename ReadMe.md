@@ -100,7 +100,9 @@ docker compose up zipkin-server postgresql pgadmin4 kafka config-server naming-s
 | order service     | http://localhost:18282/order-service/swagger-ui.html     | ~~http://localhost:8765/order-service/swagger-ui.html~~     |
 | payment service   | http://localhost:18085/payment-service/swagger-ui.html   | ~~http://localhost:8765/payment-service/swagger-ui.html~~   |
 
-Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) is an aggregate one and we can traverse to other services from the top dropdown
+Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) is an aggregate one and we can traverse to other services from the top dropdown menu as below
+
+ ![](/images/swagger.jpg) 
 
 #### References
 - https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/

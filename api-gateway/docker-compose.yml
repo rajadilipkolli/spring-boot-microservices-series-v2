@@ -1,26 +1,26 @@
 version: "3.8"
 
 services:
-  rabbitmq:
-    container_name: rabbitmq
-    image: rabbitmq:3.11.5-management
-    expose:
-      - "5672"
-      - "15672"
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    deploy:
-      resources:
-        limits:
-          memory: 350m
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - microservice-network
+#  rabbitmq:
+#    container_name: rabbitmq
+#    image: rabbitmq:3.11.5-management
+#    expose:
+#      - "5672"
+#      - "15672"
+#    ports:
+#      - "5672:5672"
+#      - "15672:15672"
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 350m
+#    healthcheck:
+#      test: ["CMD", "rabbitmqctl", "status"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 10
+#    networks:
+#      - microservice-network
 
   zipkin-server:
     image: openzipkin/zipkin
@@ -36,15 +36,15 @@ services:
     networks:
       - microservice-network
 
-  mongodb:
-    container_name: mongodb
-    image: mongo:6.0.3
-    volumes:
-      - mongo-data:/data/db/mongo
-    ports:
-      - "27017:27017"
-    networks:
-      - microservice-network
+#  mongodb:
+#    container_name: mongodb
+#    image: mongo:6.0.3
+#    volumes:
+#      - mongo-data:/data/db/mongo
+#    ports:
+#      - "27017:27017"
+#    networks:
+#      - microservice-network
 
   naming-server:
     container_name: naming-server
@@ -61,8 +61,11 @@ services:
       - config-server
     environment:
       # SPRING_PROFILES_ACTIVE: docker
-      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://localhost:8761/eureka
-      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://localhost:8761/eureka
+      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+    restart: unless-stopped
 
   config-server:
     container_name: config-server
@@ -82,5 +85,5 @@ services:
 networks:
   microservice-network:
 
-volumes:
-  mongo-data:
+#volumes:
+#  mongo-data:
