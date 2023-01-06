@@ -19,6 +19,7 @@
 		<module>inventory-service</module>
 		<module>order-service</module>
 		<module>payment-service</module>
+		<module>gatling-tests</module>
 	</modules>
 
 </project>

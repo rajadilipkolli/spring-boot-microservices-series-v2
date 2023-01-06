@@ -1,0 +1,45 @@
+name: gatling-tests
+
+on:
+  push:
+    paths:
+      - "gatling-tests/**"
+    branches: [master]
+  pull_request:
+    paths:
+      - "gatling-tests/**"
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build:
+    name: Run Unit & Integration Tests with jdk  ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "gatling-tests"
+    strategy:
+      matrix:
+        java: ["17"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3.9.0
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "zulu"
+          cache: "maven"
+      
+      - name: Start up softwares via Docker Compose
+        run: |
+          docker compose up -d
+          sleep 240
+          docker ps -a
+
+      - name: Build and analyze
+        run: ./mvnw clean gatling:test
