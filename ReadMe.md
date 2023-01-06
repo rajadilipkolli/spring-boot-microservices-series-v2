@@ -1,7 +1,7 @@
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)
 
 
-## Problem Statement:
+## Problem Statement
 
 The `Retail Business management system` is a comprehensive platform for managing the sales and inventory of a retails business. It includes several different components that work together to provide a seamless experience for both the business and the customer.It includes four main components:
 
@@ -22,7 +22,7 @@ Once both the payment and product availability checks have been successful, the 
 Overall, the `Retail Business management system` project provides a comprehensive solution for managing the sales and inventory of a business, with a focus on ensuring a smooth and seamless experience for both the business and the customer.
 
 
-## Technical Concepts and requirement :
+## Technical Concepts and requirement
 
 `API Gateway`: An API Gateway is a microservice that sits between external clients and the various microservices that make up an application. It acts as a reverse proxy, routing requests from clients to the appropriate microservice and returning the response back to the client. This allows for a single point of entry into the application, making it easier to manage and scale.
 
