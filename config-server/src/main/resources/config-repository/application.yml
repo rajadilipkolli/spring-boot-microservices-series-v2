@@ -92,6 +92,13 @@ spring:
     problemdetails:
       enabled: true
 
+#SpringDoc Properties
+springdoc:
+  swagger-ui:
+    #For sorting endpoints alphabetically
+    operationsSorter: alpha
+    #For sorting tags alphabetically
+    tagsSorter: alpha
 ---
 spring:
   config:

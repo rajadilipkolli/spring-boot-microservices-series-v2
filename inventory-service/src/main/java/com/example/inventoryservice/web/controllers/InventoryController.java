@@ -3,9 +3,9 @@ package com.example.inventoryservice.web.controllers;
 
 import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +29,7 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     @GetMapping
-    public List<Inventory> getAllInventories(
+    public PagedResult<Inventory> getAllInventories(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,

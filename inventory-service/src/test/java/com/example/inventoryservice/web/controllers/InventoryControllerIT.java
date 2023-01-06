@@ -43,7 +43,15 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/inventory"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(inventoryList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

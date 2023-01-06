@@ -1,7 +1,9 @@
 package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
+import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.net.URI;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,8 +30,28 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productService.findAllProducts();
+    public PagedResult<Product> getAllPosts(
+            @RequestParam(
+                            value = "pageNo",
+                            defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
+                            required = false)
+                    int pageNo,
+            @RequestParam(
+                            value = "pageSize",
+                            defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
+                            required = false)
+                    int pageSize,
+            @RequestParam(
+                            value = "sortBy",
+                            defaultValue = AppConstants.DEFAULT_SORT_BY,
+                            required = false)
+                    String sortBy,
+            @RequestParam(
+                            value = "sortDir",
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
+                    String sortDir) {
+        return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
 
     @GetMapping("/id/{id}")

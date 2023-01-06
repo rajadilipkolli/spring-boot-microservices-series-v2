@@ -16,16 +16,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import org.apache.commons.math.stat.descriptive.summary.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -52,13 +57,24 @@ class InventoryControllerTest {
 
     @Test
     void shouldFetchAllInventorys() throws Exception {
+        Page<Inventory> page = new PageImpl<>(inventoryList);
+        PagedResult<Inventory> inventoryPagedResult = new PagedResult<>(page);
         given(inventoryService.findAllInventories(0, 10, "id", "asc"))
-                .willReturn(this.inventoryList);
+        .willReturn(inventoryPagedResult);
+
 
         this.mockMvc
                 .perform(get("/api/inventory"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(inventoryList.size())));
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(true)))
+                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
     @Test

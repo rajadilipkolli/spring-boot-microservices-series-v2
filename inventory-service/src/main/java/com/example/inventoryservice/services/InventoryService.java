@@ -4,8 +4,8 @@ package com.example.inventoryservice.services;
 import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.mapper.InventoryMapper;
+import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.repositories.InventoryRepository;
-import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ public class InventoryService {
     private final InventoryMapper inventoryMapper;
 
     @Transactional(readOnly = true)
-    public List<Inventory> findAllInventories(
+    public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         log.info(
                 "Fetching findAllInventories for pageNo {} with pageSize {}, sorting BY {} {}",
@@ -40,7 +40,7 @@ public class InventoryService {
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return inventoryRepository.findAll(pageable).getContent();
+        return new PagedResult<>(inventoryRepository.findAll(pageable));
     }
 
     @Transactional(readOnly = true)
