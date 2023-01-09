@@ -3,6 +3,10 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
+   
+    <property  name="string.type"  value="varchar(255)"  dbms="oracle,h2,mysql"/>
+    <property  name="string.type"  value="text"  dbms="postgresql"/>
+    
     <changeSet author="rajakolli" id="createTable-orders">
         <preConditions onFail="MARK_RAN">
             <not>
@@ -23,18 +27,18 @@
             <column name="id" type="BIGINT" defaultValueSequenceNext="orders_seq">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_orders" />
             </column>
-            <column name="customer_email" type="VARCHAR(255)" />
-            <column name="customer_address" type="VARCHAR(255)" />
+            <column name="customer_email" type="${string.type}" />
+            <column name="customer_address" type="${string.type}" />
             <column name="customer_id" type="BIGINT" />
-            <column name="source" type="VARCHAR(255)" />
-            <column name="status" type="VARCHAR(255)" />
+            <column name="source" type="${string.type}" />
+            <column name="status" type="${string.type}" />
         </createTable>
 
         <createTable tableName="order_items">
             <column name="id" type="BIGINT" defaultValueSequenceNext="order_items_seq">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_items" />
             </column>
-            <column name="product_id" type="VARCHAR(255)">
+            <column name="product_id" type="${string.type}">
                 <constraints nullable="false" />
             </column>
             <column name="quantity" type="INT">
