@@ -4,7 +4,11 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
-    <changeSet author="sivalabs" id="createTable-customers">
+    
+    <property  name="string.type"  value="varchar(255)"  dbms="oracle,h2,mysql"/>
+    <property  name="string.type"  value="text"  dbms="postgresql"/>
+
+    <changeSet author="rajakolli" id="createTable-customers">
         <createSequence
                         sequenceName="customers_seq"
                         incrementBy="50"
@@ -14,10 +18,10 @@
             <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="name" type="varchar(255)">
+            <column name="name" type="${string.type}">
                 <constraints nullable="false"/>
             </column>
-            <column name="email" type="varchar(255)">
+            <column name="email" type="${string.type}">
                 <constraints nullable="false" />
             </column>
             <column name="address" type="varchar(1024)" />

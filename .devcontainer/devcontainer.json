@@ -21,7 +21,8 @@
 				"vscjava.vscode-java-pack",
 				"Pivotal.vscode-boot-dev-pack",
 				"ms-azuretools.vscode-docker",
-				"DavidAnson.vscode-markdownlint"
+				"DavidAnson.vscode-markdownlint",
+				"redhat.java"
 			]
 		}
 	}

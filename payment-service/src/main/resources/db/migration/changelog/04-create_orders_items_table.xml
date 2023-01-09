@@ -3,7 +3,11 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
-    <changeSet author="sivalabs" id="createTable-order-items">
+    
+    <property  name="string.type"  value="varchar(255)"  dbms="oracle,h2,mysql"/>
+    <property  name="string.type"  value="text"  dbms="postgresql"/>
+
+    <changeSet author="rajakolli" id="createTable-order-items">
         <preConditions onFail="MARK_RAN">
             <not>
                 <sequenceExists sequenceName="order_items_seq" />
@@ -22,7 +26,7 @@
             <column name="order_id" type="bigint">
                 <constraints nullable="false" />
             </column>
-            <column name="product_id" type="VARCHAR(255)">
+            <column name="product_id" type="${string.type}">
                 <constraints nullable="false" />
             </column>
             <column name="quantity" type="int">
