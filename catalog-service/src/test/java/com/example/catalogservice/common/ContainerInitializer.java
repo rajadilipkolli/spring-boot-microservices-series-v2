@@ -11,7 +11,6 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class ContainerInitializer {
 
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
-    private static final int SERVICE_REGISTRY_INTERNAL_PORT = 8761;
     private static final int ZIPKIN_INTERNAL_PORT = 9411;
 
     protected static final KafkaContainer KAFKA_CONTAINER =
@@ -29,12 +28,6 @@ public abstract class ContainerInitializer {
                     .withEnv("SPRING_PROFILES_ACTIVE", "native")
                     .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
 
-    public static final ServiceRegistryContainer SERVICE_REGISTRY_CONTAINER =
-            new ServiceRegistryContainer(
-                            DockerImageName.parse(
-                                    "dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT"))
-                    .withExposedPorts(SERVICE_REGISTRY_INTERNAL_PORT);
-
     public static final ZipkinContainer ZIPKIN_CONTAINER =
             new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
                     .withExposedPorts(ZIPKIN_INTERNAL_PORT);
@@ -44,7 +37,6 @@ public abstract class ContainerInitializer {
                         KAFKA_CONTAINER,
                         CONFIG_SERVER_CONTAINER,
                         POSTGRE_SQL_CONTAINER,
-                        SERVICE_REGISTRY_CONTAINER,
                         ZIPKIN_CONTAINER)
                 .join();
     }
@@ -67,14 +59,6 @@ public abstract class ContainerInitializer {
                                 CONFIG_SERVER_CONTAINER.getHost(),
                                 CONFIG_SERVER_CONTAINER.getMappedPort(
                                         CONFIG_SERVER_INTERNAL_PORT)));
-        dynamicPropertyRegistry.add(
-                "eureka.client.serviceUrl.defaultZone",
-                () ->
-                        String.format(
-                                "http://%s:%d/eureka",
-                                SERVICE_REGISTRY_CONTAINER.getHost(),
-                                SERVICE_REGISTRY_CONTAINER.getMappedPort(
-                                        SERVICE_REGISTRY_INTERNAL_PORT)));
         dynamicPropertyRegistry.add(
                 "spring.zipkin.baseurl",
                 () ->
