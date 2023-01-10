@@ -17,7 +17,6 @@ import org.testcontainers.utility.DockerImageName;
 
 public class ContainerInitializer {
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
-    private static final int NAMING_SERVER_INTERNAL_PORT = 8761;
     private static final int ZIPKIN_INTERNAL_PORT = 9411;
 
     protected static final KafkaContainer KAFKA_CONTAINER =
@@ -33,16 +32,11 @@ public class ContainerInitializer {
             new MockServerContainer(
                     DockerImageName.parse("mockserver/mockserver:mockserver-5.14.0"));
 
-    static final NamingServerContainer NAMING_SERVER_CONTAINER =
-            new NamingServerContainer(
-                            DockerImageName.parse(
-                                    "dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT"))
-                    .withExposedPorts(NAMING_SERVER_INTERNAL_PORT);
-
     static final ConfigServerContainer CONFIG_SERVER_CONTAINER =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
                     .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
+
     static final ZipkinContainer ZIPKIN_CONTAINER =
             new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
                     .withExposedPorts(ZIPKIN_INTERNAL_PORT);
@@ -52,19 +46,11 @@ public class ContainerInitializer {
     static {
         Startables.deepStart(
                         CONFIG_SERVER_CONTAINER,
-                        NAMING_SERVER_CONTAINER,
                         POSTGRE_SQL_CONTAINER,
                         ZIPKIN_CONTAINER,
                         KAFKA_CONTAINER,
                         MOCK_SERVER_CONTAINER)
                 .join();
-    }
-
-    private static class NamingServerContainer extends GenericContainer<NamingServerContainer> {
-
-        public NamingServerContainer(final DockerImageName dockerImageName) {
-            super(dockerImageName);
-        }
     }
 
     private static class ConfigServerContainer extends GenericContainer<ConfigServerContainer> {
@@ -95,14 +81,6 @@ public class ContainerInitializer {
                                 CONFIG_SERVER_CONTAINER.getHost(),
                                 CONFIG_SERVER_CONTAINER.getMappedPort(
                                         CONFIG_SERVER_INTERNAL_PORT)));
-        propertyRegistry.add(
-                "eureka.client.serviceUrl.defaultZone",
-                () ->
-                        String.format(
-                                "http://%s:%d/eureka/",
-                                NAMING_SERVER_CONTAINER.getHost(),
-                                NAMING_SERVER_CONTAINER.getMappedPort(
-                                        NAMING_SERVER_INTERNAL_PORT)));
         propertyRegistry.add(
                 "spring.zipkin.baseurl",
                 () ->
