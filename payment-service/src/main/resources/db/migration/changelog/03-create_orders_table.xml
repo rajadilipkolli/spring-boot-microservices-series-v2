@@ -3,7 +3,7 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
-    
+
     <property  name="string.type"  value="varchar(1024)"  dbms="oracle,h2,mysql"/>
     <property  name="string.type"  value="text"  dbms="postgresql"/>
 
@@ -27,8 +27,14 @@
             <column name="source" type="${string.type}" />
             <column name="status" type="${string.type}" />
         </createTable>
+    </changeSet>
+    
+    <changeSet id="create-foreign-keys" author="rajakolli">
+        <preConditions onFail="CONTINUE">
+            <tableExists tableName="customers" />
+        </preConditions>
         <addForeignKeyConstraint baseTableName="orders" baseColumnNames="customer_id"
-            constraintName="FK_customer_id" referencedTableName="customers"
-            referencedColumnNames="id" />
+                                 constraintName="FK_customer_id" referencedTableName="customers"
+                                 referencedColumnNames="id" />
     </changeSet>
 </databaseChangeLog>
