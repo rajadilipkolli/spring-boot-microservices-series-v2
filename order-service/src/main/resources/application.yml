@@ -6,7 +6,7 @@ server:
 
 logging:
   level:
-    org.apache.kafka.clients.Metadata: WARN
+    '[org.apache.kafka.clients.Metadata]': WARN
 
 KAFKA_BROKER: localhost:9092
 
@@ -16,20 +16,21 @@ spring:
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   kafka:
-    bootstrap-servers: ${KAFKA_BROKER}
+    bootstrap-servers:
+    - ${KAFKA_BROKER}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
-        spring.json.add.type.headers: true
+        '[spring.json.add.type.headers]': true
     streams:
       properties:
-        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
-        spring.json.trusted.packages: "*"
+        '[default.key.serde]': org.apache.kafka.common.serialization.Serdes$StringSerde
+        '[default.value.serde]': org.springframework.kafka.support.serializer.JsonSerde
+        '[spring.json.trusted.packages]': '*'
+      bootstrap-servers:
+      - ${KAFKA_BROKER}
       # state-dir: /tmp/kafka-streams/
-  liquibase:
-    change-log: classpath:/db/migration/liquibase-changelog.xml
   mvc:
     problemdetails:
       enabled: true
