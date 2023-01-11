@@ -6,8 +6,8 @@ import com.example.paymentservice.entities.Order;
 import com.example.paymentservice.mapper.OrderMapper;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.OrderRepository;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -43,14 +43,8 @@ public class OrderService {
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
         Page<Order> page = orderRepository.findAll(pageable);
-        var completableFutureList =
-                page.getContent().stream()
-                        .map(
-                                order ->
-                                        CompletableFuture.supplyAsync(
-                                                () -> this.orderMapper.toDto(order)))
-                        .toList();
-        var orderDtoList = completableFutureList.stream().map(CompletableFuture::join).toList();
+        List<OrderDto> orderDtoList =
+                page.getContent().stream().map(this.orderMapper::toDto).toList();
 
         return new PagedResult<>(
                 orderDtoList,
