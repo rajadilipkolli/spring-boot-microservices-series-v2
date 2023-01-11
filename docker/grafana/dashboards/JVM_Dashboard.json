@@ -3518,8 +3518,8 @@
         "allFormat": "glob",
         "current": {
           "selected": false,
-          "text": "host.docker.internal:8765",
-          "value": "host.docker.internal:8765"
+          "text": "api-gateway:8765",
+          "value": "api-gateway:8765"
         },
         "datasource": {
           "type": "prometheus",

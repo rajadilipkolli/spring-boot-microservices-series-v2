@@ -40,7 +40,17 @@ spring:
         - Path=/order-service/**
         uri: lb://order-service
         filters:
-        - CircuitBreaker=myCircuitBreaker
+          - name: CircuitBreaker
+            args:
+              name: catalogService
+              fallbackUri: forward:/catalog-fallback
+          - name: Retry
+            args:
+              retries: 3
+              method: GET
+              backoff:
+                firstBackoff: 50ms
+                maxBackoff: 500ms
       - id: inventory-service
         predicates:
         - Path=/inventory-service/**
@@ -59,6 +69,20 @@ spring:
     problemdetails:
       enabled: true
 #    base-path: /${spring.application.name}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalogService:
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        registerHealthIndicator: true
+  timelimiter:
+    instances:
+      catalogService:
+        timeoutDuration: 3s
 
 springdoc:
   cache:

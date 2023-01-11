@@ -55,19 +55,6 @@ management:
   tracing:
     sampling:
       probability: 1.0
-resilience4j:
-  circuitbreaker:
-    instances:
-      catalogService:
-        slidingWindowSize: 10
-        permittedNumberOfCallsInHalfOpenState: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10000
-        registerHealthIndicator: true
-  timelimiter:
-    instances:
-      catalogService:
-        timeoutDuration: 3s
 server:
   shutdown: graceful
 spring:
