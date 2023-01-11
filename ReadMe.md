@@ -82,13 +82,13 @@ docker compose up zipkin-server postgresql pgadmin4 kafka config-server naming-s
 
 ### URLs to access pieces of software
 
-- Zipkin (Centralized logs tracing) : http://localhost:9411/zipkin/
 - Service Registry : http://localhost:8761
 - PgAdmin (UI for Postgres Database) : http://localhost:5050
 - kafdrop (UI for kafka Messages) : http://localhost:9000
 - Grafana : http://localhost:3000 (user/password)
 - Prometheus : http://localhost:9090
-
+- Zipkin (Centralized logs tracing) : http://localhost:9411/zipkin/
+![](images/zipkin.jpg)
 
 ### Swagger URLs for accessing Services
 
