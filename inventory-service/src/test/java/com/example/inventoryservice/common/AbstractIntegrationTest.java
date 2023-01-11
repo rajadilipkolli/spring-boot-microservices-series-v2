@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2021-2022 */
 package com.example.inventoryservice.common;
 
-import static com.example.inventoryservice.utils.AppConstants.PROFILE_IT;
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
@@ -13,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-@ActiveProfiles({PROFILE_TEST, PROFILE_IT})
+@ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ContextConfiguration(initializers = {DBContainerInitializer.class})
 @AutoConfigureMockMvc
