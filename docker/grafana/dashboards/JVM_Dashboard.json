@@ -3488,8 +3488,8 @@
         "current": {
           "isNone": true,
           "selected": false,
-          "text": "None",
-          "value": ""
+          "text": "api-gateway",
+          "value": "api-gateway"
         },
         "datasource": {
           "type": "prometheus",
