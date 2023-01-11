@@ -36,11 +36,6 @@ jobs:
           java --version
           gu --version
           native-image --version
-      - name: Start up softwares via Docker Compose
-        run: |
-          docker compose up zipkin-server naming-server -d
-          sleep 10
-          docker ps -a
       - if: ${{ github.ref == 'refs/heads/master' }}
         name: SonarQube Scan
         run: ./mvnw clean verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}

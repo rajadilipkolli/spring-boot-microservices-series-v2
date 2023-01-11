@@ -16,12 +16,18 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+            "spring.cloud.discovery.reactive.enabled=false",
+            "spring.cloud.discovery.enabled=false"
+        })
 @AutoConfigureWebClient
 @ActiveProfiles("test")
 class APIGatewayApplicationTest {
 
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
+    private static final Integer ZIPKIN_INTERNAL_PORT = 9411;
 
     static final MongoDBContainer MONGO_DB_CONTAINER =
             new MongoDBContainer(DockerImageName.parse("mongo:6.0.3"));
@@ -31,8 +37,12 @@ class APIGatewayApplicationTest {
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
                     .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
 
+    static final ZipkinContainer ZIPKIN_CONTAINER =
+            new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
+                    .withExposedPorts(ZIPKIN_INTERNAL_PORT);
+
     static {
-        Startables.deepStart(MONGO_DB_CONTAINER, CONFIG_SERVER_CONTAINER).join();
+        Startables.deepStart(MONGO_DB_CONTAINER, CONFIG_SERVER_CONTAINER, ZIPKIN_CONTAINER).join();
     }
 
     @DynamicPropertySource
@@ -61,17 +71,18 @@ class APIGatewayApplicationTest {
                 .isOk()
                 .expectBody(String.class)
                 .consumeWith(
-                        res ->
-                                assertThat(res.getResponseBody())
-                                        .contains(
-                                                "{\"status\":\"UP\"",
-                                                "\"components\"",
-                                                "\"refreshScope\":{\"status\":\"UP\"}"));
+                        res -> assertThat(res.getResponseBody()).isEqualTo("{\"status\":\"UP\"}"));
     }
 
     private static class ConfigServerContainer extends GenericContainer<ConfigServerContainer> {
 
         public ConfigServerContainer(final DockerImageName dockerImageName) {
+            super(dockerImageName);
+        }
+    }
+
+    private static class ZipkinContainer extends GenericContainer<ZipkinContainer> {
+        public ZipkinContainer(DockerImageName dockerImageName) {
             super(dockerImageName);
         }
     }

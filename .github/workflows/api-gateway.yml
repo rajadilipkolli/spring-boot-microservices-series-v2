@@ -27,12 +27,5 @@ jobs:
           java-version: 17
           distribution: "zulu"
           cache: "maven"
-
-      - name: Start up softwares via Docker Compose
-        run: |
-          docker compose up rabbitmq zipkin-server naming-server -d
-          sleep 10
-          docker ps -a
-
       - name: Build and analyze
         run: ./mvnw clean verify
