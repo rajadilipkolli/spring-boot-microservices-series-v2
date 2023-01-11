@@ -43,7 +43,6 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 4701,
   "graphTooltip": 1,
-  "id": 3,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -126,7 +125,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -197,7 +196,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -273,7 +272,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -428,7 +427,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -519,7 +518,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -607,7 +606,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -710,7 +709,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -891,7 +890,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1018,7 +1017,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1147,7 +1146,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1275,7 +1274,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1439,7 +1438,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1570,7 +1569,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1686,7 +1685,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1831,7 +1830,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1935,7 +1934,7 @@
         "alertThreshold": true
       },
       "percentage": true,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2049,7 +2048,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2198,7 +2197,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2363,7 +2362,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2467,7 +2466,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 58
       },
       "id": 131,
       "panels": [],
@@ -2498,7 +2497,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 98,
@@ -2519,7 +2518,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2588,7 +2587,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 101,
@@ -2609,7 +2608,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2692,7 +2691,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 52
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 99,
@@ -2713,7 +2712,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2788,7 +2787,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 66
       },
       "id": 132,
       "panels": [],
@@ -2825,7 +2824,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 60
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 37,
@@ -2846,7 +2845,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2928,7 +2927,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 60
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 38,
@@ -2949,7 +2948,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3022,7 +3021,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 74
       },
       "id": 133,
       "panels": [],
@@ -3059,7 +3058,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 68
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 33,
@@ -3080,7 +3079,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3175,7 +3174,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 68
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 83,
@@ -3196,7 +3195,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3279,7 +3278,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 68
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 85,
@@ -3300,7 +3299,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3395,7 +3394,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 68
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 84,
@@ -3416,7 +3415,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.2.3",
+      "pluginVersion": "9.3.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3487,9 +3486,10 @@
     "list": [
       {
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "api-gateway",
-          "value": "api-gateway"
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "prometheus",
@@ -3518,10 +3518,9 @@
       {
         "allFormat": "glob",
         "current": {
-          "isNone": true,
           "selected": false,
-          "text": "None",
-          "value": ""
+          "text": "api-gateway:8765",
+          "value": "api-gateway:8765"
         },
         "datasource": {
           "type": "prometheus",
