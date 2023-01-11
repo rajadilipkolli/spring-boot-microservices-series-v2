@@ -26,7 +26,7 @@ jdbc:
   includes: connection,fetch,query
 logging:
   pattern:
-    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
   level:
     sql: INFO
     web: INFO
@@ -40,6 +40,8 @@ management:
         http:
           server:
             requests: true
+    tags:
+      application: ${spring.application.name}
   endpoint:
     health:
       show-details: always
@@ -53,6 +55,19 @@ management:
   tracing:
     sampling:
       probability: 1.0
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalogService:
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        registerHealthIndicator: true
+  timelimiter:
+    instances:
+      catalogService:
+        timeoutDuration: 3s
 server:
   shutdown: graceful
 spring:
