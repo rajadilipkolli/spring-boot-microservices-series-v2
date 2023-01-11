@@ -5,7 +5,6 @@ import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
-import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
@@ -58,7 +57,7 @@ public class ProductController {
     //  @Retry(name = "product-api", fallbackMethod = "hardcodedResponse")
     //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     //  @RateLimiter(name="default")
-    @Bulkhead(name = "product-api")
+    //  @Bulkhead(name = "product-api")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.findProductById(id));
     }
