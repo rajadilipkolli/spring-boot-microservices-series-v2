@@ -20,7 +20,7 @@ datasources:
       httpMethod: POST
       exemplarTraceIdDestinations:
         - name: trace_id
-          datasourceUid: tempo
+          datasourceUid: tempo-micro-service
   - name: Tempo
     type: tempo
     uid: tempo-micro-service

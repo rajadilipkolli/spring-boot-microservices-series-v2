@@ -32,7 +32,7 @@
         {
             "datasource": {
                 "type": "loki",
-                "uid": "loki"
+                "uid": "loki-micro-service"
             },
             "description": "",
             "gridPos": {
@@ -56,7 +56,7 @@
                 {
                     "datasource": {
                         "type": "loki",
-                        "uid": "loki"
+                        "uid": "loki-micro-service"
                     },
                     "editorMode": "builder",
                     "expr": "{traceID=\"$traceID\"}",
@@ -225,7 +225,7 @@
                 },
                 "datasource": {
                     "type": "loki",
-                    "uid": "loki"
+                    "uid": "loki-micro-service"
                 },
                 "definition": "label_values(traceID)",
                 "hide": 0,
