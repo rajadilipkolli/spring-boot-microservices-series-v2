@@ -111,7 +111,8 @@ spring:
     url: jdbc:postgresql://postgresql:5432/appdb
     username: appuser
   kafka:
-    bootstrap-servers=kafka:29092
+    bootstrap-servers:
+    - kafka:29092
   zipkin:
     base-url: http://zipkin-server:9411/
 eureka:
