@@ -30,7 +30,7 @@ public class ContainerInitializer {
 
     protected static final MockServerContainer MOCK_SERVER_CONTAINER =
             new MockServerContainer(
-                    DockerImageName.parse("mockserver/mockserver:mockserver-5.14.0"));
+                    DockerImageName.parse("mockserver/mockserver:mockserver-5.15.0"));
 
     static final ConfigServerContainer CONFIG_SERVER_CONTAINER =
             new ConfigServerContainer(
