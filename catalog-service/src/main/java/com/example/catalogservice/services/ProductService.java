@@ -46,6 +46,7 @@ public class ProductService {
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
         Page<Product> productPage = productRepository.findAll(pageable);
+
         var productCodeList = productPage.getContent().stream().map(Product::getCode).toList();
         if (!productCodeList.isEmpty()) {
             Map<String, Integer> inventoriesMap =
@@ -54,6 +55,7 @@ public class ProductService {
                                     Collectors.toMap(
                                             InventoryDto::productCode,
                                             InventoryDto::availableQuantity));
+
             productPage
                     .getContent()
                     .forEach(
@@ -61,13 +63,13 @@ public class ProductService {
                                     product.setInStock(
                                             inventoriesMap.getOrDefault(product.getCode(), 0) > 0));
         }
+
         return new PagedResult<>(productPage);
     }
 
     @Transactional(readOnly = true)
     public Product findProductById(Long id) {
-        return productRepository
-                .findById(id)
+        return findProductByProductId(id)
                 .map(
                         product -> {
                             var inventoryDto =
@@ -105,5 +107,10 @@ public class ProductService {
     public boolean existsProductByProductCode(List<String> productIds) {
         long count = productRepository.countDistinctByCodeAllIgnoreCaseIn(productIds);
         return count == productIds.size();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Product> findProductByProductId(Long id) {
+        return productRepository.findById(id);
     }
 }

@@ -2,6 +2,7 @@ package com.example.catalogservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,18 +13,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.catalogservice.common.AbstractIntegrationTest;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 
     @Autowired private ProductRepository productRepository;
+
+    @MockBean private InventoryServiceProxy inventoryServiceProxy;
 
     private List<Product> productList = null;
 
@@ -32,14 +38,17 @@ class ProductControllerIT extends AbstractIntegrationTest {
         productRepository.deleteAllInBatch();
 
         this.productList = new ArrayList<>();
-        this.productList.add(new Product(null, "code 1", "name 1", "description 1", 9.0, true));
-        this.productList.add(new Product(null, "code 2", "name 2", "description 2", 10.0, true));
-        this.productList.add(new Product(null, "code 3", "name 3", "description 3", 11.0, true));
+        this.productList.add(new Product(null, "P001", "name 1", "description 1", 9.0, true));
+        this.productList.add(new Product(null, "P002", "name 2", "description 2", 10.0, true));
+        this.productList.add(new Product(null, "P003", "name 3", "description 3", 11.0, true));
         productList = productRepository.saveAll(productList);
     }
 
     @Test
     void shouldFetchAllProducts() throws Exception {
+
+        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
+                .willReturn(List.of(new InventoryDto("P001", 100)));
         this.mockMvc
                 .perform(get("/api/catalog"))
                 .andExpect(status().isOk())
@@ -56,8 +65,12 @@ class ProductControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindProductById() throws Exception {
+
         Product product = productList.get(0);
         Long productId = product.getId();
+
+        given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
+                .willReturn(new InventoryDto(product.getCode(), 100));
 
         this.mockMvc
                 .perform(get("/api/catalog/id/{id}", productId))

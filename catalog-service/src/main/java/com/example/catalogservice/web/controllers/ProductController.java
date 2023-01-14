@@ -7,7 +7,6 @@ import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -86,23 +85,27 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(
             @PathVariable Long id, @RequestBody Product product) {
-        return Optional.of(productService.findProductById(id))
+        return productService
+                .findProductByProductId(id)
                 .map(
                         catalogObj -> {
                             product.setId(id);
-                            return ResponseEntity.ok(productService.updateProduct(product));
+                            return productService.updateProduct(product);
                         })
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Product> deleteProduct(@PathVariable Long id) {
-        return Optional.of(productService.findProductById(id))
+        return productService
+                .findProductByProductId(id)
                 .map(
                         catalog -> {
                             productService.deleteProductById(id);
-                            return ResponseEntity.ok(catalog);
+                            return catalog;
                         })
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
