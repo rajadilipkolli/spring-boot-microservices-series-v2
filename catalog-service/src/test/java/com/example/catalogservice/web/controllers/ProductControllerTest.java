@@ -22,6 +22,7 @@ import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +139,7 @@ class ProductControllerTest {
     void shouldUpdateProduct() throws Exception {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(product);
+        given(productService.findProductByProductId(productId)).willReturn(Optional.of(product));
         given(productService.updateProduct(any(Product.class)))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
@@ -171,7 +172,7 @@ class ProductControllerTest {
     void shouldDeleteProduct() throws Exception {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(product);
+        given(productService.findProductByProductId(productId)).willReturn(Optional.of(product));
         doNothing().when(productService).deleteProductById(product.getId());
 
         this.mockMvc

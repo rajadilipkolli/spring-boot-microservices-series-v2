@@ -6,6 +6,7 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,5 +66,10 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
         return this.inventoryRepository.findByProductCode(productCode);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
+        return this.inventoryRepository.findByProductCodeIn(productCodes);
     }
 }
