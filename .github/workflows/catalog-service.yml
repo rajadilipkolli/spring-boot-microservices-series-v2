@@ -1,4 +1,4 @@
-name: catalog-service-master
+name: catalog-service
 
 on:
   push:

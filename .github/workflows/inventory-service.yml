@@ -1,6 +1,10 @@
 name: inventory-service
 
 on:
+  push:
+    paths:
+      - "inventory-service/**"
+    branches: [master]
   pull_request:
     paths:
       - "inventory-service/**"
@@ -11,22 +15,48 @@ on:
 
 jobs:
   build:
-    name: Run Unit & Integration Tests
+    name: Run Unit & Integration Tests with jdk  ${{ matrix.java }}
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: inventory-service
+        working-directory: "inventory-service"
+    strategy:
+      matrix:
+        java: ["17"]
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
-      - name: Set up JDK 19
-        uses: actions/setup-java@v3.9.0
+      - uses: graalvm/setup-graalvm@v1
         with:
-          java-version: 19
-          distribution: 'zulu'
-          cache: 'maven'
+          version: "latest"
+          java-version: ${{ matrix.java }}
+          components: "native-image"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: "maven"
+
+      - name: Printing versions
+        run: |
+          echo "GRAALVM_HOME: $GRAALVM_HOME"
+          echo "JAVA_HOME: $JAVA_HOME"
+          java --version
+          gu --version
+          native-image --version
 
       - name: Build and analyze
         run: ./mvnw clean verify
+
+      - if: ${{ github.ref == 'refs/heads/master' }}
+        name: SonarQube Scan
+        run: ./mvnw sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: ${{ github.ref == 'refs/heads/master' }}
+        name: Build Image and push to docker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
+        run: ./mvnw spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true
