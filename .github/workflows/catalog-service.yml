@@ -44,14 +44,15 @@ jobs:
           gu --version
           native-image --version
 
-      - name: Build and analyze
-        run: ./mvnw clean verify
-
-      - if: ${{ github.ref == 'refs/heads/master' }}
-        name: SonarQube Scan
-        run: ./mvnw sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: Build, analyze & Sonar Scan
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: ./mvnw clean verify sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and analyze non master
+        if: ${{ github.ref != 'refs/heads/master' }}
+        run: ./mvnw clean verify
 
       - if: ${{ github.ref == 'refs/heads/master' }}
         name: Build Image and push to docker
