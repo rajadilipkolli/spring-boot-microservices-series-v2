@@ -138,10 +138,8 @@ services:
       - microservice-network
     environment:
       SPRING_PROFILES_ACTIVE: native
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   naming-server:
     container_name: naming-server
@@ -163,10 +161,8 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   api-gateway:
     container_name: api-gateway
@@ -192,10 +188,8 @@ services:
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
     restart: unless-stopped
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   catalog-service:
     container_name: catalog-service
@@ -223,10 +217,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   inventory-service:
     container_name: inventory-service
@@ -254,10 +246,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   order-service:
     container_name: order-service
@@ -285,10 +275,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
 
   payment-service:
     container_name: payment-service
@@ -315,10 +303,8 @@ services:
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
-    logging:
-      driver: fluentd
-      options:
-        fluentd-address: 127.0.0.1:24224
+    labels:
+      logging: "promtail"
     restart: unless-stopped
 
   # Observability
@@ -344,23 +330,22 @@ services:
   loki:
     image: grafana/loki:2.7.1
     container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
     depends_on:
-      - fluent-bit
+      - promtail
     ports:
       - "3100:3100"
     networks:
       - microservice-network
 
-  fluent-bit:
-    image: grafana/fluent-bit-plugin-loki:latest
-    container_name: fluent-bit
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
-    environment:
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+  promtail:
+    image: grafana/promtail:2.7.1
+    container_name: promtail
     volumes:
-      - ./docker/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./docker/promtail/promtail.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
     networks:
       - microservice-network
 
