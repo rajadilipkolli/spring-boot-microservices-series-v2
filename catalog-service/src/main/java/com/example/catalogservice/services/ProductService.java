@@ -8,12 +8,15 @@ import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.micrometer.observation.annotation.Observed;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @Transactional
 @RequiredArgsConstructor
 public class ProductService {
@@ -50,7 +54,7 @@ public class ProductService {
         var productCodeList = productPage.getContent().stream().map(Product::getCode).toList();
         if (!productCodeList.isEmpty()) {
             Map<String, Integer> inventoriesMap =
-                    inventoryServiceProxy.getInventoryByProductCodes(productCodeList).stream()
+                    getInventoryByProductCodes(productCodeList).stream()
                             .collect(
                                     Collectors.toMap(
                                             InventoryDto::productCode,
@@ -67,18 +71,37 @@ public class ProductService {
         return new PagedResult<>(productPage);
     }
 
+    @CircuitBreaker(name = "getInventoryByProductCodes")
+    private List<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
+        return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
+    }
+
+    private List<InventoryDto> getInventoryByProductCodes(
+            List<String> productCodeList, Exception e) {
+        log.error("Exception occurred while fetching product details", e);
+        return new ArrayList<>();
+    }
+
     @Transactional(readOnly = true)
     public Product findProductById(Long id) {
         return findProductByProductId(id)
                 .map(
                         product -> {
-                            var inventoryDto =
-                                    inventoryServiceProxy.getInventoryByProductCode(
-                                            product.getCode());
+                            var inventoryDto = getInventoryByProductCode(product.getCode());
                             product.setInStock(inventoryDto.availableQuantity() > 0);
                             return product;
                         })
                 .orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    @CircuitBreaker(name = "getInventoryByProductCode")
+    private InventoryDto getInventoryByProductCode(String code) {
+        return inventoryServiceProxy.getInventoryByProductCode(code);
+    }
+
+    private InventoryDto getInventoryByProductCode(String code, Exception e) {
+        log.error("Exception occurred while fetching product details", e);
+        return new InventoryDto(code, 0);
     }
 
     @Transactional(readOnly = true)
