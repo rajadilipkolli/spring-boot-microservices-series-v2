@@ -71,12 +71,14 @@ public class ProductService {
         return new PagedResult<>(productPage);
     }
 
-    @CircuitBreaker(name = "getInventoryByProductCodes")
+    @CircuitBreaker(
+            name = "getInventoryByProductCodes",
+            fallbackMethod = "getInventoryByProductCodesFallBack")
     private List<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
-    private List<InventoryDto> getInventoryByProductCodes(
+    private List<InventoryDto> getInventoryByProductCodesFallBack(
             List<String> productCodeList, Exception e) {
         log.error("Exception occurred while fetching product details", e);
         return new ArrayList<>();
@@ -94,12 +96,14 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
-    @CircuitBreaker(name = "getInventoryByProductCode")
+    @CircuitBreaker(
+            name = "getInventoryByProductCode",
+            fallbackMethod = "getInventoryByProductCodeFallBack")
     private InventoryDto getInventoryByProductCode(String code) {
         return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
-    private InventoryDto getInventoryByProductCode(String code, Exception e) {
+    private InventoryDto getInventoryByProductCodeFallBack(String code, Throwable e) {
         log.error("Exception occurred while fetching product details", e);
         return new InventoryDto(code, 0);
     }
