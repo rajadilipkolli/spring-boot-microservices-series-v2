@@ -1,69 +1,73 @@
 {
-    "databaseChangeLog": {
-        "property": [
-            {
-                "name": "string.type",
-                "value": "varchar(255)",
-                "dbms": "!postgresql"
-            },
-            {
-                "name": "string.type",
-                "value": "text",
-                "dbms": "postgresql"
-            }
-        ],
-        "changeSet": {
-            "id": "createTable-inventorys",
-            "author": "rajakolli",
-            "changes": [
-                {
-                    "createSequence": {
-                        "sequenceName": "inventorys_seq",
-                        "incrementBy": 50,
-                        "startValue": 1
-                    }
-                },
-                {
-                    "createTable": {
-                        "tableName": "inventorys",
-                        "columns": [
-                            {
-                                "column": {
-                                    "name": "id",
-                                    "type": "bigint",
-                                    "defaultValueSequenceNext": "inventorys_seq",
-                                    "constraints": {
-                                        "primaryKey": true,
-                                        "nullable": false
-                                    }
-                                }
-                            },
-                            {
-                                "column": {
-                                    "name": "product_code",
-                                    "type": "${string.type}",
-                                    "constraints": {
-                                        "unique": true,
-                                        "nullable": false
-                                    }
-                                }
-                            },
-                            {
-                                "column": {
-                                    "name": "quantity",
-                                    "type": "int"
-                                }
-                            },
-                            {
-                                "column": {
-                                    "name": "reserved_items",
-                                    "type": "int"
-                                }
-                            }
-                        ]
-                    }
-                }
-            ]
-        }
-    }
+	"databaseChangeLog": [
+		{
+			"property": [
+				{
+					"name": "string.type",
+					"value": "varchar(255)",
+					"dbms": "!postgresql"
+				},
+				{
+					"name": "string.type",
+					"value": "text",
+					"dbms": "postgresql"
+				}
+			]
+		},
+		{
+			"changeSet": {
+				"id": "createTable-inventorys",
+				"author": "rajakolli",
+				"changes": [
+					{
+						"createSequence": {
+							"sequenceName": "inventorys_seq",
+							"incrementBy": 50,
+							"startValue": 1
+						}
+					},
+					{
+						"createTable": {
+							"tableName": "inventorys",
+							"columns": [
+								{
+									"column": {
+										"name": "id",
+										"type": "bigint",
+										"defaultValueSequenceNext": "inventorys_seq",
+										"constraints": {
+											"primaryKey": true,
+											"nullable": false
+										}
+									}
+								},
+								{
+									"column": {
+										"name": "product_code",
+										"type": "${string.type}",
+										"constraints": {
+											"unique": true,
+											"nullable": false
+										}
+									}
+								},
+								{
+									"column": {
+										"name": "quantity",
+										"type": "int"
+									}
+								},
+								{
+									"column": {
+										"name": "reserved_items",
+										"type": "int"
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		}
+	]
 }
