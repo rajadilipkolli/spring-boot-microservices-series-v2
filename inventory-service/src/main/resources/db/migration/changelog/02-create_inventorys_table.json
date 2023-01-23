@@ -1,20 +1,6 @@
 {
 	"databaseChangeLog": [
 		{
-			"property": [
-				{
-					"name": "string.type",
-					"value": "varchar(255)",
-					"dbms": "!postgresql"
-				},
-				{
-					"name": "string.type",
-					"value": "text",
-					"dbms": "postgresql"
-				}
-			]
-		},
-		{
 			"changeSet": {
 				"id": "createTable-inventorys",
 				"author": "rajakolli",
@@ -44,7 +30,7 @@
 								{
 									"column": {
 										"name": "product_code",
-										"type": "${string.type}",
+										"type": "varchar2(255)",
 										"constraints": {
 											"unique": true,
 											"nullable": false
