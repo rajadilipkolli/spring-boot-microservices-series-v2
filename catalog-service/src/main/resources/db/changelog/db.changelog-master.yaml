@@ -5,7 +5,7 @@ databaseChangeLog:
        name:  string.type
        value:  text
   -  property:
-       dbms:  h2
+       dbms:  !postgresql
        name:  string.type
        value:  varchar(255)
   - changeSet:

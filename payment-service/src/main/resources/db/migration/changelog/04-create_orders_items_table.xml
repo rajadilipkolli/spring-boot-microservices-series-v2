@@ -4,7 +4,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
     
-    <property  name="string.type"  value="varchar(255)"  dbms="oracle,h2,mysql"/>
+    <property  name="string.type"  value="varchar(255)"  dbms="!postgresql"/>
     <property  name="string.type"  value="text"  dbms="postgresql"/>
 
     <changeSet author="rajakolli" id="createTable-order-items">
