@@ -34,34 +34,46 @@ public class KafkaConfig {
 
     @Bean
     public NewTopic ordersTopic() {
-        return TopicBuilder.name(AppConstants.ORDERS_TOPIC).partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.ORDERS_TOPIC)
+            .partitions(2)
+            .replicas(6)
+            .compact()
+            .build();
     }
 
     @Bean
     public NewTopic paymentTopic() {
-        return TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC).partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC)
+            .partitions(2)
+            .replicas(6)
+            .compact()
+            .build();
     }
 
     @Bean
     public NewTopic stockTopic() {
-        return TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC).partitions(3).compact().build();
+        return TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC)
+            .partitions(2)
+            .replicas(6)
+            .compact()
+            .build();
     }
 
     @Bean
     public KStream<String, OrderDto> stream(StreamsBuilder builder) {
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<String, OrderDto> stream =
-                builder.stream(
-                        AppConstants.PAYMENT_ORDERS_TOPIC,
-                        Consumed.with(Serdes.String(), orderSerde));
+            builder.stream(
+                AppConstants.PAYMENT_ORDERS_TOPIC,
+                Consumed.with(Serdes.String(), orderSerde));
 
         stream.join(
-                        builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
-                        orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                        StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
-                .to(AppConstants.ORDERS_TOPIC);
+                builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
+                orderManageService::confirm,
+                JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+            .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
+            .to(AppConstants.ORDERS_TOPIC);
 
         return stream;
     }
@@ -69,14 +81,14 @@ public class KafkaConfig {
     @Bean
     public KTable<String, OrderDto> table(StreamsBuilder builder) {
         KeyValueBytesStoreSupplier store =
-                Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
+            Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<String, OrderDto> stream =
-                builder.stream(
-                        AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+            builder.stream(
+                AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
         return stream.toTable(
-                Materialized.<String, OrderDto>as(store)
-                        .withKeySerde(Serdes.String())
-                        .withValueSerde(orderSerde));
+            Materialized.<String, OrderDto>as(store)
+                .withKeySerde(Serdes.String())
+                .withValueSerde(orderSerde));
     }
 }
