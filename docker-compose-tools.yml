@@ -310,7 +310,7 @@ services:
   # Observability
 
   grafana:
-    image: grafana/grafana:9.3.2
+    image: grafana/grafana:9.3.4
     container_name: grafana
     depends_on:
       - loki
