@@ -7,7 +7,6 @@ import com.example.orderservice.utils.AppConstants;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
@@ -22,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 @Configuration(proxyBeanMethods = false)
@@ -33,18 +33,23 @@ public class KafkaConfig {
     private final OrderManageService orderManageService;
 
     @Bean
-    public NewTopic ordersTopic() {
-        return TopicBuilder.name(AppConstants.ORDERS_TOPIC).partitions(3).compact().build();
-    }
-
-    @Bean
-    public NewTopic paymentTopic() {
-        return TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC).partitions(3).compact().build();
-    }
-
-    @Bean
-    public NewTopic stockTopic() {
-        return TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC).partitions(3).compact().build();
+    public KafkaAdmin.NewTopics topics() {
+        return new KafkaAdmin.NewTopics(
+                TopicBuilder.name(AppConstants.ORDERS_TOPIC)
+                        .partitions(3)
+                        .replicas(1)
+                        .compact()
+                        .build(),
+                TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC)
+                        .partitions(3)
+                        .replicas(1)
+                        .compact()
+                        .build(),
+                TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC)
+                        .partitions(3)
+                        .replicas(1)
+                        .compact()
+                        .build());
     }
 
     @Bean

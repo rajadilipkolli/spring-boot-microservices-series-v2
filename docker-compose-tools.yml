@@ -310,7 +310,7 @@ services:
   # Observability
 
   grafana:
-    image: grafana/grafana:9.3.2
+    image: grafana/grafana:9.3.6
     container_name: grafana
     depends_on:
       - loki
@@ -328,7 +328,7 @@ services:
     networks:
       - microservice-network
   loki:
-    image: grafana/loki:2.7.1
+    image: grafana/loki:2.7.2
     container_name: loki
     command: -config.file=/etc/loki/local-config.yaml
     depends_on:
