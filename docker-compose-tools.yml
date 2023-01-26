@@ -328,7 +328,7 @@ services:
     networks:
       - microservice-network
   loki:
-    image: grafana/loki:2.7.1
+    image: grafana/loki:2.7.2
     container_name: loki
     command: -config.file=/etc/loki/local-config.yaml
     depends_on:
