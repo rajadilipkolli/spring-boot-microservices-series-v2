@@ -2,14 +2,14 @@
 	{
 	  "changeSet": {
 		"id": "createTable-inventory",
-		"author": "rajakolli (generated)",
+		"author": "rajakolli",
 		"changes": [
 		  {
 			"createTable": {
 			  "columns": [
 				{
 				  "column": {
-					"autoIncrement": true,
+					"defaultValueSequenceNext": "inventories_seq",
 					"constraints": {
 					  "nullable": false,
 					  "primaryKey": true,
@@ -47,11 +47,10 @@
 		
 	  }
 	},
-	
 	{
 	  "changeSet": {
 		"id": "createSequence-inventory",
-		"author": "rajakolli (generated)",
+		"author": "rajakolli",
 		"changes": [
 		  {
 			"createSequence": {
@@ -68,11 +67,10 @@
 		
 	  }
 	},
-	
 	{
 	  "changeSet": {
 		"id": "addConstraint-inventory",
-		"author": "rajakolli (generated)",
+		"author": "rajakolli",
 		"changes": [
 		  {
 			"addUniqueConstraint": {
@@ -84,5 +82,4 @@
 		
 	  }
 	}
-	
   ]}
