@@ -1,0 +1,84 @@
+
+{ "databaseChangeLog": [
+  {
+    "changeSet": {
+    "id": "1674823959477-1",
+    "author": "rajakolli",
+    "changes": [
+    {
+    "createSequence": {
+      "cacheSize": 1,
+      "cycle": false,
+      "dataType": "bigint",
+      "incrementBy": 50,
+      "maxValue": 9223372036854775807,
+      "minValue": 1,
+      "sequenceName": "inventories_seq",
+      "startValue": 1
+    }
+    }]
+    }
+  },
+  {
+    "changeSet": {
+    "id": "1674823959477-2",
+    "author": "rajakolli",
+    "changes": [
+    {
+    "createTable": {
+      "columns": [
+      {
+      "column": {
+      "defaultValueSequenceNext": "inventories_seq",
+      "constraints": {
+        "nullable": false,
+        "primaryKey": true,
+        "primaryKeyName": "inventories_pkey"
+      },
+      "name": "id",
+      "type": "BIGINT"
+      }
+      },
+      {
+      "column": {
+      "constraints": {
+        "nullable": false
+      },
+      "name": "product_code",
+      "type": "VARCHAR(255)"
+      }
+      },
+      {
+      "column": {
+      "name": "quantity",
+      "type": "INTEGER"
+      }
+      },
+      {
+      "column": {
+      "name": "reserved_items",
+      "type": "INTEGER"
+      }
+      }]
+      ,
+      "tableName": "inventories"
+    }
+    }]
+    }
+  },
+  {
+    "changeSet": {
+    "id": "1674823959477-3",
+    "author": "rajakolli",
+    "changes": [
+    {
+    "addUniqueConstraint": {
+      "columnNames": "product_code",
+      "constraintName": "inventories_product_code_key",
+      "tableName": "inventories"
+    }
+    }]
+    
+    }
+  }
+  ]}
