@@ -1,59 +1,59 @@
 {
 	"databaseChangeLog": [
-		{
-			"changeSet": {
-				"id": "createTable-inventories",
-				"author": "rajakolli",
-				"changes": [
-					{
-						"createSequence": {
-							"sequenceName": "inventories_seq",
-							"incrementBy": 50,
-							"startValue": 1
-						}
-					},
-					{
-						"createTable": {
-							"tableName": "inventories",
-							"columns": [
-								{
-									"column": {
-										"name": "id",
-										"type": "bigint",
-										"defaultValueSequenceNext": "inventories_seq",
-										"constraints": {
-											"primaryKey": true,
-											"nullable": false
-										}
-									}
-								},
-								{
-									"column": {
-										"name": "product_code",
-										"type": "varchar(255)",
-										"constraints": {
-											"unique": true,
-											"nullable": false
-										}
-									}
-								},
-								{
-									"column": {
-										"name": "quantity",
-										"type": "int"
-									}
-								},
-								{
-									"column": {
-										"name": "reserved_items",
-										"type": "int"
-									}
-								}
-							]
-						}
+	  {
+		"changeSet": {
+		  "id": "createTable-inventories",
+		  "author": "rajakolli",
+		  "changes": [
+			{
+			  "createSequence": {
+				"sequenceName": "inventories_seq",
+				"incrementBy": 50,
+				"startValue": 1
+			  }
+			},
+			{
+			  "createTable": {
+				"tableName": "inventories",
+				"columns": [
+				  {
+					"column": {
+					  "name": "id",
+					  "type": "bigint",
+					  "defaultValueSequenceNext": "inventories_seq",
+					  "constraints": {
+						"primaryKey": true,
+						"nullable": false
+					  }
 					}
+				  },
+				  {
+					"column": {
+					  "name": "product_code",
+					  "type": "varchar(255)",
+					  "constraints": {
+						"unique": true,
+						"nullable": false
+					  }
+					}
+				  },
+				  {
+					"column": {
+					  "name": "quantity",
+					  "type": "int"
+					}
+				  },
+				  {
+					"column": {
+					  "name": "reserved_items",
+					  "type": "int"
+					}
+				  }
 				]
+			  }
 			}
+		  ]
 		}
+	  }
 	]
 }
