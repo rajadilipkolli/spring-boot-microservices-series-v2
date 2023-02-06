@@ -22,7 +22,6 @@
         <spring-cloud.version>2022.0.1</spring-cloud.version>
         <springdoc-openapi.version>2.0.2</springdoc-openapi.version>
         <commons-io.version>2.11.0</commons-io.version>
-        <org-mapstruct.version>1.5.3.Final</org-mapstruct.version>
 
         <testcontainers.version>1.17.6</testcontainers.version>
 
@@ -149,11 +148,6 @@
             <version>${commons-io.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-            <version>${org-mapstruct.version}</version>
-        </dependency>
-        <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
             <version>1.7.0</version>
@@ -238,45 +232,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>${java.version}</source> <!-- depending on your project -->
-                    <target>${java.version}</target> <!-- depending on your project -->
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${org-mapstruct.version}</version>
-                        </path>
-                        <!-- other annotation processors -->
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                        <!-- This is needed when using Lombok 1.18.16 and above -->
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version>
-                        </path>
-                    </annotationProcessorPaths>
-                    <showWarnings>true</showWarnings>
-                    <compilerArgs>
-                        <arg>
-                            -Amapstruct.suppressGeneratorTimestamp=true
-                        </arg>
-                        <arg>
-                            -Amapstruct.suppressGeneratorVersionInfoComment=true
-                        </arg>
-                        <arg>
-                            -Amapstruct.verbose=true
-                        </arg>
-                    </compilerArgs>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
