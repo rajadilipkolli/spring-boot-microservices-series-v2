@@ -41,8 +41,7 @@ class OrderControllerTest {
     @BeforeEach
     void setUp() {
         this.orderList = new ArrayList<>();
-        customer =
-                new Customer(1L, "custName", "custEmail", "custAddress", 1, 1, new ArrayList<>());
+        customer = new Customer(1L, "custName", "custEmail", "custAddress", 1, 1);
         this.orderList.add(new Order(1L, null, null, customer, new ArrayList<>()));
         this.orderList.add(new Order(2L, null, null, customer, new ArrayList<>()));
         this.orderList.add(new Order(3L, null, null, customer, new ArrayList<>()));
