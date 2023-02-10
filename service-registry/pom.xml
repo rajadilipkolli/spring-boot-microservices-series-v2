@@ -23,7 +23,7 @@
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
 		<testcontainers.version>1.17.6</testcontainers.version>
 		<sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
-		<spotless.version>2.32.0</spotless.version>
+		<spotless.version>2.33.0</spotless.version>
 		<CI_DOCKER_PASSWORD />
 		<CI_DOCKER_USERNAME />
 	</properties>
