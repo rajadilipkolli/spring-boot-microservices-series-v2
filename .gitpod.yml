@@ -46,5 +46,7 @@ ports:
     visibility: public
   - port: 9090
     visibility: public
+  - port: 9092
+    visibility: public
   - port: 9411
     visibility: public
