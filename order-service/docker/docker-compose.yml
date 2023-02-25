@@ -30,7 +30,7 @@ services:
       - order-network
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.1
+    image: confluentinc/cp-zookeeper:7.3.2
     container_name: zookeeper
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
