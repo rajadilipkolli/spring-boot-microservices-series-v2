@@ -152,7 +152,7 @@ services:
       - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
-      # - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   catalog-service:

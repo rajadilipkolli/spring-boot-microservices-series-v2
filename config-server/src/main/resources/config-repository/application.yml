@@ -113,8 +113,6 @@ spring:
   kafka:
     bootstrap-servers:
     - kafka:29092
-  zipkin:
-    base-url: http://zipkin-server:9411/
 eureka:
   client:
     service-url:
@@ -123,7 +121,6 @@ management:
   zipkin:
     tracing:
       endpoint: http://zipkin-server:9411/api/v2/spans
-
 ---
 spring:
   config:
