@@ -339,7 +339,7 @@ services:
       - microservice-network
 
   promtail:
-    image: grafana/promtail:2.7.4
+    image: grafana/promtail:2.7.5
     container_name: promtail
     volumes:
       - ./docker/promtail/promtail.yml:/etc/promtail/config.yml
