@@ -1,6 +1,7 @@
 package com.example.catalogservice;
 
 import com.example.catalogservice.config.ApplicationProperties;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

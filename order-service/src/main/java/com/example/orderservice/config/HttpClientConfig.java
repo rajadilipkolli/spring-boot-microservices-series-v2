@@ -2,7 +2,9 @@
 package com.example.orderservice.config;
 
 import com.example.orderservice.services.CatalogServiceProxy;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
