@@ -1,12 +1,13 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.exception;
 
-import java.net.URI;
-import java.time.Instant;
-import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.ErrorResponseException;
+
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
 
 public class ProductNotFoundException extends ErrorResponseException {
 

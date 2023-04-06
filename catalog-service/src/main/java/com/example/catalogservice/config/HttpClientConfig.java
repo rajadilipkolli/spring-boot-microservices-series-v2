@@ -2,7 +2,9 @@
 package com.example.catalogservice.config;
 
 import com.example.catalogservice.services.InventoryServiceProxy;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;

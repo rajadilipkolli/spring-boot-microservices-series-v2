@@ -3,6 +3,7 @@ package com.example.inventoryservice.dtos;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
+
 import java.io.Serializable;
 
 public record InventoryDto(

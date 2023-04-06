@@ -18,10 +18,7 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +29,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @WebMvcTest(controllers = OrderController.class)
 @ActiveProfiles(AppConstants.PROFILE_TEST)
