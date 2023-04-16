@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "inventory-service")
+@FeignClient(name = "inventory-service", url = "${application.inventory-service-url}")
 public interface InventoryServiceProxy {
 
     @GetMapping("/api/inventory/{productCode}")
