@@ -14,7 +14,7 @@ public abstract class ContainerInitializer {
     private static final int ZIPKIN_INTERNAL_PORT = 9411;
 
     protected static final KafkaContainer KAFKA_CONTAINER =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.1"));
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.3")).withKraft();
 
     public static final PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
             new PostgreSQLContainer<>("postgres:15-alpine")
