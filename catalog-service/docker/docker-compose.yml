@@ -1,7 +1,7 @@
 version: '3.8'
 services:
 
-  postgresqldb:
+  postgresql:
     image: postgres:15-alpine
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:
@@ -32,7 +32,7 @@ services:
     container_name: kafka
     image: confluentinc/cp-kafka:7.3.3
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    hostname: kafka
+    hostname: broker
     ports:
       - "9092:9092"
       - "9101:9101"
@@ -96,6 +96,32 @@ services:
     environment:
       - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+    restart: unless-stopped
+  
+  inventory-service:
+    container_name: inventory-service
+    image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    ports:
+      - "18081:18081"
+    networks:
+      - catalog-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      postgresql:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=broker:29092
     restart: unless-stopped
 
 networks:

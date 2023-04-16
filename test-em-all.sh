@@ -223,9 +223,9 @@ if [[ $@ == *"start"* ]]
 then
     echo "Restarting the test environment..."
     echo "$ docker-compose down --remove-orphans"
-    docker-compose -f docker-compose-tools.yml down --remove-orphans
+    docker-compose -f docker-compose.yml down --remove-orphans
     echo "$ docker-compose up -d"
-    docker-compose -f docker-compose-tools.yml up -d
+    docker-compose -f docker-compose.yml up -d
 fi
 
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
@@ -252,5 +252,5 @@ if [[ $@ == *"stop"* ]]
 then
     echo "We are done, stopping the test environment..."
     echo "$ docker-compose down --remove-orphans"
-    docker-compose -f docker-compose-tools.yml down --remove-orphans
+    docker-compose -f docker-compose.yml down --remove-orphans
 fi

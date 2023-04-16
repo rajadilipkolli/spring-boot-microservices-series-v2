@@ -2,19 +2,19 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.model.response.InventoryDto;
 
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.HttpExchange;
 
 import java.util.List;
 
-@HttpExchange("/api/inventory")
+@FeignClient(name = "inventory-service")
 public interface InventoryServiceProxy {
 
-    @GetExchange("/{productCode}")
+    @GetMapping("/api/inventory/{productCode}")
     InventoryDto getInventoryByProductCode(@PathVariable String productCode);
 
-    @GetExchange("/product")
+    @GetMapping("/api/inventory/product")
     List<InventoryDto> getInventoryByProductCodes(@RequestParam List<String> codes);
 }
