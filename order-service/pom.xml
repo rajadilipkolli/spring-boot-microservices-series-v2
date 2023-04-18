@@ -6,7 +6,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.0.5</version>
-        <relativePath /> <!-- lookup parent from repository -->
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.orderservice</groupId>
     <artifactId>order-service</artifactId>
@@ -44,8 +44,8 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME />
-        <CI_DOCKER_PASSWORD />
+        <CI_DOCKER_USERNAME/>
+        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -103,7 +103,7 @@
         <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
-            <version>1.8.1</version>
+            <version>1.9.0</version>
         </dependency>
 
         <dependency>
