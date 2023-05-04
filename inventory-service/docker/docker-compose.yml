@@ -28,7 +28,7 @@ services:
 
   zookeeper:
     container_name: zookeeper
-    image: confluentinc/cp-zookeeper:7.3.3
+    image: confluentinc/cp-zookeeper:7.4.0
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     healthcheck:
       test: [ "CMD-SHELL", "echo ruok | nc localhost 2181" ]
