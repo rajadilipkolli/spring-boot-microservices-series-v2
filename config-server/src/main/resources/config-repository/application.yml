@@ -125,8 +125,6 @@ spring:
   kafka:
     bootstrap-servers:
     - kafka:29092
-loki:
-  uri: http://loki:3100/loki/api/v1/push
 eureka:
   client:
     service-url:
