@@ -2,7 +2,7 @@ version: '3.8'
 services:
 
   postgresql:
-    image: postgres:15-alpine
+    image: postgres:15.2-alpine
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       - POSTGRES_USER=appuser
@@ -30,7 +30,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-kafka:7.3.3
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: broker
     ports:
