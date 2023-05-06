@@ -37,14 +37,16 @@ management:
   metrics:
     distribution:
       percentiles-histogram:
-        http:
-          server:
-            requests: true
+        all: true
+        http.server.requests: true
     tags:
       application: ${spring.application.name}
   endpoint:
     health:
+      probes:
+        enabled: true
       show-details: always
+      show-components: always
   endpoints:
     web:
       exposure:
@@ -52,9 +54,19 @@ management:
   info:
     git:
       mode: full
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
   tracing:
     sampling:
       probability: 1.0
+  prometheus:
+    metrics:
+      export:
+        step: 10s
 server:
   shutdown: graceful
 spring:
@@ -113,6 +125,8 @@ spring:
   kafka:
     bootstrap-servers:
     - kafka:29092
+loki:
+  uri: http://loki:3100/loki/api/v1/push
 eureka:
   client:
     service-url:

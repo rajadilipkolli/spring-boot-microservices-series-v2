@@ -215,6 +215,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+      - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -244,6 +245,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+      - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
