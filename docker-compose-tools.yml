@@ -134,6 +134,12 @@ services:
       - "8888:8888"
     depends_on:
       - tempo
+    healthcheck:
+      test: curl -m 5 --silent --fail --request GET http://localhost:8888/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
+      retries: 10
+      interval: 20s
+      timeout: 5s
+      start_period: 40s
     networks:
       - microservice-network
     environment:
@@ -151,6 +157,12 @@ services:
           memory: 700m
     ports:
       - "8761:8761"
+    healthcheck:
+      test: curl -m 5 --silent --fail --request GET http://localhost:8761/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
+      retries: 10
+      interval: 20s
+      timeout: 5s
+      start_period: 40s
     networks:
       - microservice-network
     depends_on:
@@ -174,6 +186,12 @@ services:
           memory: 700m
     ports:
       - "8765:8765"
+    healthcheck:
+      test: curl -m 5 --silent --fail --request GET http://localhost:8765/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
+      retries: 10
+      interval: 20s
+      timeout: 5s
+      start_period: 40s
     networks:
       - microservice-network
     depends_on:
