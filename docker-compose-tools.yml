@@ -3,7 +3,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:15-alpine
+    image: postgres:15.2-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -330,6 +330,7 @@ services:
   loki:
     image: grafana/loki:2.8.2
     container_name: loki
+    hostname: loki
     command: -config.file=/etc/loki/local-config.yaml
     depends_on:
       - promtail
@@ -364,7 +365,7 @@ services:
     container_name: tempo
     command: -config.file /etc/tempo-config.yml
     ports:
-      - "3110:3100" # Tempo
+      - "3100:3100" # Tempo
       - "4317:4317" # OTLP
       - "9411:9411" # Zipkin
     volumes:

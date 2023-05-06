@@ -27,6 +27,12 @@ function start_infra() {
     docker-compose -f ${dc_main} logs -f
 }
 
+function start_infra_full() {
+    echo "Starting grafana promtail postgresql kafka  config-server ...."
+    docker-compose -f docker-compose-tools.yml up -d grafana promtail postgresql kafka config-server
+    docker-compose -f docker-compose-tools.yml logs -f
+}
+
 function start_services() {
     echo "Starting naming-server api-gateway catalog-service inventory-service order-service payment-service ...."
     docker-compose -f ${dc_main} up -d naming-server api-gateway catalog-service inventory-service order-service payment-service

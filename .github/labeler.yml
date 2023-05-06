@@ -12,6 +12,8 @@
  - payment-service/**/*
 "component : service-registry":
  - service-registry/**/*
+"component : gatling-tests":
+ - gatling-tests/**/*
 "status: waiting-for-triage":
   - ./*
   - ./**/*
@@ -24,3 +26,4 @@
   - order-service/pom.xml
   - payment-service/pom.xml
   - service-registry/pom.xml
+  - gatling-tests/pom.xml
