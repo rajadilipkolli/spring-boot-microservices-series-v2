@@ -21,7 +21,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<springdoc-openapi.version>2.1.0</springdoc-openapi.version>
-		<testcontainers.version>1.18.0</testcontainers.version>
+		<testcontainers.version>1.18.1</testcontainers.version>
 		<spotless.version>2.36.0</spotless.version>
 		<properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
 		<CI_DOCKER_USERNAME />
