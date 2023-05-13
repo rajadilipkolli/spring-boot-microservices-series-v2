@@ -6,7 +6,6 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -37,11 +36,5 @@ public class MyContainersConfiguration {
     @ServiceConnection(name = "openzipkin/zipkin")
     public GenericContainer zipkinContainer() {
         return new GenericContainer(DockerImageName.parse("openzipkin/zipkin"));
-    }
-
-    @Bean
-    @ServiceConnection
-    public KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.3")).withKraft();
     }
 }
