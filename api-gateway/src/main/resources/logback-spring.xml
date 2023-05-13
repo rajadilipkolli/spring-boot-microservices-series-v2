@@ -15,9 +15,10 @@
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="LOKI"/>
+            <appender-ref ref="CONSOLE" />
         </root>
     </springProfile>
-        <springProfile name="!default">
+        <springProfile name="!default,!docker-full">
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />
