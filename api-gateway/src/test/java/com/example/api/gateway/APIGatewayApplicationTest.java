@@ -12,7 +12,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
@@ -29,9 +28,6 @@ class APIGatewayApplicationTest {
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
     private static final Integer ZIPKIN_INTERNAL_PORT = 9411;
 
-    static final MongoDBContainer MONGO_DB_CONTAINER =
-            new MongoDBContainer(DockerImageName.parse("mongo:6.0.3"));
-
     static final ConfigServerContainer CONFIG_SERVER_CONTAINER =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
@@ -42,12 +38,11 @@ class APIGatewayApplicationTest {
                     .withExposedPorts(ZIPKIN_INTERNAL_PORT);
 
     static {
-        Startables.deepStart(MONGO_DB_CONTAINER, CONFIG_SERVER_CONTAINER, ZIPKIN_CONTAINER).join();
+        Startables.deepStart(CONFIG_SERVER_CONTAINER, ZIPKIN_CONTAINER).join();
     }
 
     @DynamicPropertySource
     static void registerApplicationProperties(DynamicPropertyRegistry propertyRegistry) {
-        propertyRegistry.add("spring.data.mongodb.uri", MONGO_DB_CONTAINER::getReplicaSetUrl);
         propertyRegistry.add(
                 "spring.config.import",
                 () ->
@@ -62,7 +57,6 @@ class APIGatewayApplicationTest {
 
     @Test
     void contextLoads() {
-        assertThat(MONGO_DB_CONTAINER.isRunning()).isTrue();
         webTestClient
                 .get()
                 .uri("/actuator/health")
