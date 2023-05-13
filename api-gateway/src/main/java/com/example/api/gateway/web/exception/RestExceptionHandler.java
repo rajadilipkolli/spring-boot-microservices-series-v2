@@ -34,8 +34,7 @@ public class RestExceptionHandler implements WebExceptionHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
-        if (ex instanceof WebExchangeBindException) {
-            var webExchangeBindException = (WebExchangeBindException) ex;
+        if (ex instanceof WebExchangeBindException webExchangeBindException) {
 
             log.debug("errors:" + webExchangeBindException.getFieldErrors());
             var errors = new ApplicationErrors("validation_failure", "Validation failed.");

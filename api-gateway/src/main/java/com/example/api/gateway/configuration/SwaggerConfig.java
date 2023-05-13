@@ -19,7 +19,6 @@ import org.springframework.context.annotation.Lazy;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Configuration(proxyBeanMethods = false)
 @OpenAPIDefinition(
@@ -60,7 +59,7 @@ public class SwaggerConfig {
                                     .group(name)
                                     .build();
                         })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private String extractNameFromRouteDefinitionId(String routeDefinitionId) {

@@ -56,7 +56,7 @@ public class InventoryOrderManageService {
                     orderDto.setStatus("ACCEPT");
                     log.info(
                             "Setting status as ACCEPT for inventoryIds : {}",
-                            persistInventoryList.stream().map(inv -> inv.getId()).toList());
+                            persistInventoryList.stream().map(Inventory::getId).toList());
                     inventoryRepository.saveAll(persistInventoryList);
                 } else {
                     log.info(
@@ -104,6 +104,6 @@ public class InventoryOrderManageService {
         inventoryRepository.saveAll(inventoryList);
         log.info(
                 "Saving inventoryIds : {} After Confirmation",
-                inventoryList.stream().map(inv -> inv.getId()).toList());
+                inventoryList.stream().map(Inventory::getId).toList());
     }
 }
