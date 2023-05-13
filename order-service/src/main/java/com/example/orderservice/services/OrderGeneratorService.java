@@ -14,16 +14,16 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class OrderGeneratorService {
 
-    private static final Random RAND = new Random();
+    private static final SecureRandom RAND = new SecureRandom();
     private final AtomicLong id = new AtomicLong();
 
     private final OrderService orderService;
