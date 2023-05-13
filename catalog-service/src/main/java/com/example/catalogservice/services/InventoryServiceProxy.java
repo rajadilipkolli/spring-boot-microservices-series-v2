@@ -1,3 +1,4 @@
+/*** Licensed under Apache-2.0 2023 ***/
 package com.example.catalogservice.services;
 
 import com.example.catalogservice.model.response.InventoryDto;

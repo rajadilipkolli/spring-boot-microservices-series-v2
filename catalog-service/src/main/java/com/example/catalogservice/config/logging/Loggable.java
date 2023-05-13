@@ -1,3 +1,4 @@
+/*** Licensed under Apache-2.0 2021 ***/
 package com.example.catalogservice.config.logging;
 
 import static java.lang.annotation.ElementType.METHOD;

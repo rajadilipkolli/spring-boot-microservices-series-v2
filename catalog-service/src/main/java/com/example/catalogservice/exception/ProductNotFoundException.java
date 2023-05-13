@@ -1,3 +1,4 @@
+/*** Licensed under Apache-2.0 2022-2023 ***/
 package com.example.catalogservice.exception;
 
 import org.springframework.http.HttpStatus;

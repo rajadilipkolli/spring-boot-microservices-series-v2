@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "TestCatalogServiceApplication",
+            "request": "launch",
+            "mainClass": "com.example.catalogservice.TestCatalogServiceApplication",
+            "projectName": "catalog-service"
+        },
+        {
+            "type": "java",
             "name": "TestNamingServerApplication",
             "request": "launch",
             "mainClass": "org.service.registry.TestNamingServerApplication",
