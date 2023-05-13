@@ -129,7 +129,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 700m
     ports:
       - "8888:8888"
     depends_on:
@@ -154,7 +154,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 700m
     ports:
       - "8761:8761"
     healthcheck:
@@ -232,7 +232,7 @@ services:
       loki :
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE= dockerLoki
+      - SPRING_PROFILES_ACTIVE=dockerLoki
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
