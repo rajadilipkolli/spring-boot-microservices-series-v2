@@ -200,7 +200,7 @@ services:
       - tempo
       # - mongodb
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=docker-full
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - LOKI_URI=http://loki:3100/loki/api/v1/push
@@ -229,7 +229,7 @@ services:
       postgresql:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE= docker-full
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
