@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
     <springProperty scope="context" name="appName" source="spring.application.name"/>
@@ -11,13 +11,13 @@
             <appender-ref ref="CONSOLE" />
         </root>
     </springProfile>
-    <springProfile name="docker-full">
+    <springProfile name="dockerLoki">
         <root level="INFO">
             <appender-ref ref="LOKI"/>
             <appender-ref ref="CONSOLE" />
         </root>
     </springProfile>
-        <springProfile name="!default,!docker-full">
+        <springProfile name="!default,!dockerLoki">
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />

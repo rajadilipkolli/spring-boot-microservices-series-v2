@@ -129,7 +129,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8888:8888"
     depends_on:
@@ -154,7 +154,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8761:8761"
     healthcheck:
@@ -183,7 +183,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8765:8765"
     healthcheck:
@@ -198,9 +198,10 @@ services:
       - config-server
       - naming-server
       - tempo
+      - loki
       # - mongodb
     environment:
-      - SPRING_PROFILES_ACTIVE=docker-full
+      - SPRING_PROFILES_ACTIVE=dockerLoki
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - LOKI_URI=http://loki:3100/loki/api/v1/push
@@ -216,7 +217,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18080:18080"
     networks:
@@ -228,8 +229,10 @@ services:
         condition: service_started
       postgresql:
         condition: service_started
+      loki :
+        condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE= docker-full
+      - SPRING_PROFILES_ACTIVE= dockerLoki
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
@@ -246,7 +249,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18081:18081"
     networks:
@@ -276,7 +279,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18282:18282"
     networks:
@@ -305,7 +308,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18085:18085"
     networks:
@@ -350,7 +353,6 @@ services:
   loki:
     image: grafana/loki:2.8.2
     container_name: loki
-    hostname: loki
     command: -config.file=/etc/loki/local-config.yaml
     depends_on:
       - promtail

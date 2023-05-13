@@ -137,5 +137,21 @@ management:
 spring:
   config:
     activate:
+      on-profile: "dockerLoki"
+  datasource:
+    password: secret
+    url: jdbc:postgresql://postgresql:5432/appdb
+    username: appuser
+  kafka:
+    bootstrap-servers:
+    - kafka:29092
+eureka:
+  client:
+    service-url:
+      defaultZone: http://naming-server:8761/eureka/
+---
+spring:
+  config:
+    activate:
       on-profile: "native"
     import: optional:configserver:http://localhost:8888/
