@@ -7,11 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.AutoConfigureWebClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
@@ -19,26 +21,27 @@ import org.testcontainers.utility.DockerImageName;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "spring.cloud.discovery.reactive.enabled=false",
-            "spring.cloud.discovery.enabled=false"
+            "spring.cloud.discovery.enabled=false",
+            "logging.file.name=logs/api-gateway.log"
         })
 @AutoConfigureWebClient
 @ActiveProfiles("test")
 class APIGatewayApplicationTest {
 
     private static final int CONFIG_SERVER_INTERNAL_PORT = 8888;
-    private static final Integer ZIPKIN_INTERNAL_PORT = 9411;
 
     static final ConfigServerContainer CONFIG_SERVER_CONTAINER =
             new ConfigServerContainer(
                             DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
                     .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
 
+    @Container
+    @ServiceConnection(name = "openzipkin/zipkin")
     static final ZipkinContainer ZIPKIN_CONTAINER =
-            new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin-slim"))
-                    .withExposedPorts(ZIPKIN_INTERNAL_PORT);
+            new ZipkinContainer(DockerImageName.parse("openzipkin/zipkin"));
 
     static {
-        Startables.deepStart(CONFIG_SERVER_CONTAINER, ZIPKIN_CONTAINER).join();
+        Startables.deepStart(CONFIG_SERVER_CONTAINER).join();
     }
 
     @DynamicPropertySource
