@@ -62,7 +62,7 @@
 			<groupId>com.github.loki4j</groupId>
 			<artifactId>loki-logback-appender</artifactId>
 			<scope>runtime</scope>
-			<version>1.4.0</version>
+			<version>1.4.1</version>
 		</dependency>
 		<!-- Tracing -->
 		<dependency>
