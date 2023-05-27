@@ -28,6 +28,10 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
+      - name: Setup Testcontainers Cloud
+        uses: atomicjar/testcontainers-cloud-setup-action@main
+        env:
+            TC_CLOUD_TOKEN: ${{ secrets.TC_CLOUD_TOKEN }}
       - uses: graalvm/setup-graalvm@v1
         with:
           version: "latest"
@@ -52,4 +56,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-        run: ./mvnw spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=dockertmt -Dspring-boot.build-image.publish=true
+          DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
+        run: ./mvnw spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=${DOCKER_USERNAME} -Dspring-boot.build-image.publish=true
