@@ -18,6 +18,10 @@ jobs:
         with:
           java-version: 17
           distribution: 'zulu' # Alternative distribution options are available.
+      - name: Setup Testcontainers Cloud
+        uses: atomicjar/testcontainers-cloud-setup-action@main
+        env:
+            TC_CLOUD_TOKEN: ${{ secrets.TC_CLOUD_TOKEN }}
       - name: Cache SonarCloud packages
         uses: actions/cache@v3
         with:
