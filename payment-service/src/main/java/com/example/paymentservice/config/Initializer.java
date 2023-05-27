@@ -4,6 +4,8 @@ package com.example.paymentservice.config;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.datafaker.Faker;
@@ -15,16 +17,17 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Initializer implements CommandLineRunner {
 
-    private final CustomerRepository repository;
+    private final CustomerRepository customerRepository;
 
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
-        SecureRandom r = new SecureRandom();
+        SecureRandom secureRandom = new SecureRandom();
         Faker faker = new Faker();
+        List<Customer> customerList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
-            int count = r.nextInt(1000);
-            Customer c =
+            int count = secureRandom.nextInt(1000);
+            Customer customer =
                     new Customer(
                             null,
                             faker.name().fullName(),
@@ -32,7 +35,9 @@ public class Initializer implements CommandLineRunner {
                             faker.address().fullAddress(),
                             count,
                             0);
-            repository.save(c);
+            customerList.add(customer);
         }
+        // Using BatchMode to save Entities
+        this.customerRepository.saveAll(customerList);
     }
 }

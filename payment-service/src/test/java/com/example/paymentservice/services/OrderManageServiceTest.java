@@ -114,6 +114,7 @@ class OrderManageServiceTest {
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(200);
         assertThat(customer.getAmountAvailable()).isEqualTo(900);
+        assertThat(orderDto.getSource()).isEqualTo("payment");
         assertThat(orderDto.getStatus()).isEqualTo("ACCEPT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
@@ -140,6 +141,7 @@ class OrderManageServiceTest {
         assertThat(customer.getAmountReserved()).isEqualTo(100);
         assertThat(customer.getAmountAvailable()).isEqualTo(1000);
         assertThat(orderDto.getStatus()).isEqualTo("REJECT");
+        assertThat(orderDto.getSource()).isEqualTo("payment");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 }
