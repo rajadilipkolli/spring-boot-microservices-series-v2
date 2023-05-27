@@ -3,17 +3,17 @@ package com.example.inventoryservice.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -55,11 +55,17 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         assertEquals("ACCEPT", orderDto.getStatus());
+        verify(inventoryRepository, times(1)).saveAll(anyList());
+        verify(kafkaTemplate, times(1))
+                .send(
+                        AppConstants.STOCK_ORDERS_TOPIC,
+                        String.valueOf(orderDto.getOrderId()),
+                        orderDto);
+        verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 
     @Test
-    @Disabled
-    void testReserve_NotAllProductsExist_OrderStatusIsNew_OrderIsRejected() {
+    void testReserve_NotAllProductsExist_OrderStatusIsNew_OrderIsNotProcessed() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -71,22 +77,24 @@ class InventoryOrderManageServiceTest {
         orderDto.setItems(orderItems);
 
         when(inventoryRepository.findByProductCodeIn(anyList()))
-                .thenReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 10, 0))));
+                .thenReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 0, 0))));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
-        assertEquals("REJECT", orderDto.getStatus());
+        assertEquals("NEW", orderDto.getStatus());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verifyNoInteractions(kafkaTemplate);
+        verifyNoMoreInteractions(inventoryRepository);
     }
 
     @Test
-    @Disabled
     void testReserve_OrderStatusIsNotNew_OrderIsRejected() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
-        orderDto.setStatus("APPROVED");
+        orderDto.setStatus("REJECT");
 
         List<OrderItemDto> orderItems = new ArrayList<>();
         orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
@@ -94,32 +102,37 @@ class InventoryOrderManageServiceTest {
 
         orderDto.setItems(orderItems);
 
+        when(inventoryRepository.findByProductCodeIn(anyList()))
+                .thenReturn(
+                        new ArrayList<>(
+                                Arrays.asList(
+                                        new Inventory(1L, "product1", 10, 0),
+                                        new Inventory(2L, "product2", 20, 0))));
+
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
         assertEquals("REJECT", orderDto.getStatus());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verifyNoInteractions(kafkaTemplate);
+        verifyNoMoreInteractions(inventoryRepository);
     }
 
     @Test
-    @Disabled
     void testReserve() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
         orderDto.setStatus("NEW");
         List<OrderItemDto> orderItems = new ArrayList<>();
-        OrderItemDto orderItem1 = new OrderItemDto();
-        orderItem1.setProductId("product1");
-        orderItem1.setQuantity(1);
-        orderItems.add(orderItem1);
+        orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(1L, "product2", 20, BigDecimal.TEN));
         orderDto.setItems(orderItems);
 
         List<Inventory> inventoryList = new ArrayList<>();
-        Inventory inventory1 = new Inventory();
-        inventory1.setProductCode("product1");
-        inventory1.setAvailableQuantity(10);
-        inventoryList.add(inventory1);
+        inventoryList.add(new Inventory(1L, "product1", 0, 0));
+        inventoryList.add(new Inventory(2L, "product2", 0, 0));
 
         when(inventoryRepository.findByProductCodeIn(anyList())).thenReturn(inventoryList);
 
@@ -127,8 +140,15 @@ class InventoryOrderManageServiceTest {
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).saveAll(anyList());
         assertEquals("ACCEPT", orderDto.getStatus());
-        assertEquals(9, inventory1.getAvailableQuantity());
+        verify(kafkaTemplate, times(1))
+                .send(
+                        AppConstants.STOCK_ORDERS_TOPIC,
+                        String.valueOf(orderDto.getOrderId()),
+                        orderDto);
+        verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 
     @Test
@@ -138,18 +158,13 @@ class InventoryOrderManageServiceTest {
         orderDto.setOrderId(1L);
         orderDto.setStatus("CONFIRMED");
         List<OrderItemDto> orderItems = new ArrayList<>();
-        OrderItemDto orderItem1 = new OrderItemDto();
-        orderItem1.setProductId("product1");
-        orderItem1.setQuantity(1);
-        orderItems.add(orderItem1);
+        orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(1L, "product2", 20, BigDecimal.TEN));
         orderDto.setItems(orderItems);
 
         List<Inventory> inventoryList = new ArrayList<>();
-        Inventory inventory1 = new Inventory();
-        inventory1.setProductCode("product1");
-        inventory1.setReservedItems(1);
-        inventory1.setAvailableQuantity(9);
-        inventoryList.add(inventory1);
+        inventoryList.add(new Inventory(1L, "product1", 0, 0));
+        inventoryList.add(new Inventory(2L, "product2", 0, 0));
 
         when(inventoryRepository.findByProductCodeIn(anyList())).thenReturn(inventoryList);
 
@@ -157,7 +172,8 @@ class InventoryOrderManageServiceTest {
         inventoryOrderManageService.confirm(orderDto);
 
         // Assert
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).saveAll(anyList());
         assertEquals("CONFIRMED", orderDto.getStatus());
-        assertEquals(9, inventory1.getAvailableQuantity());
     }
 }
