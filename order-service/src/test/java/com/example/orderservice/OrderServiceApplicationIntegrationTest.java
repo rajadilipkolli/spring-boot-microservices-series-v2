@@ -1,16 +1,24 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.orderservice;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
-    void contextLoads() {
-        assertThat(POSTGRE_SQL_CONTAINER.isRunning()).isTrue();
-        assertThat(KAFKA_CONTAINER.isRunning()).isTrue();
+    void shouldFetchAllOrdersFromStream() throws Exception {
+        // waiting till is kafka stream is changed from PARTITIONS_ASSIGNED to RUNNING
+        TimeUnit.SECONDS.sleep(5);
+        this.mockMvc
+                .perform(get("/api/orders/all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()", is(0)));
     }
 }

@@ -1,7 +1,6 @@
 /* Licensed under Apache-2.0 2023 */
 package com.example.inventoryservice.repositories;
 
-import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.inventoryservice.entities.Inventory;
