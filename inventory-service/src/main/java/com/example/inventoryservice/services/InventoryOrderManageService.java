@@ -25,6 +25,11 @@ public class InventoryOrderManageService {
 
     public void reserve(OrderDto orderDto) {
         log.info("Reserving Order in Inventory Service {}", orderDto);
+        // Check if order status is not NEW
+        if (!"NEW".equals(orderDto.getStatus())) {
+            log.error("Order status is not NEW, Hence Ignoring OrderID :{}", orderDto.getOrderId());
+            return;
+        }
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
         List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
@@ -36,13 +41,6 @@ public class InventoryOrderManageService {
         }
 
         log.info("All Products Exists");
-
-        // Check if order status is NEW
-        if (!"NEW".equals(orderDto.getStatus())) {
-            log.error("Order status is not NEW, Hence Ignoring OrderID :{}", orderDto.getOrderId());
-            return;
-        }
-
         Map<String, Inventory> inventoryMap =
                 inventoryList.stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

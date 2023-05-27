@@ -102,21 +102,12 @@ class InventoryOrderManageServiceTest {
 
         orderDto.setItems(orderItems);
 
-        when(inventoryRepository.findByProductCodeIn(anyList()))
-                .thenReturn(
-                        new ArrayList<>(
-                                Arrays.asList(
-                                        new Inventory(1L, "product1", 10, 0),
-                                        new Inventory(2L, "product2", 20, 0))));
-
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
         assertEquals("REJECT", orderDto.getStatus());
-        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
-        verifyNoInteractions(kafkaTemplate);
-        verifyNoMoreInteractions(inventoryRepository);
+        verifyNoInteractions(kafkaTemplate, inventoryRepository);
     }
 
     @Test
