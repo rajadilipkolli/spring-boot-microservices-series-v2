@@ -30,7 +30,7 @@ class InventoryOrderManageServiceTest {
 
     @Mock private InventoryRepository inventoryRepository;
 
-    @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
+    @Mock private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @InjectMocks private InventoryOrderManageService inventoryOrderManageService;
 
@@ -61,10 +61,7 @@ class InventoryOrderManageServiceTest {
         assertEquals("ACCEPT", orderDto.getStatus());
         verify(inventoryRepository, times(1)).saveAll(anyList());
         verify(kafkaTemplate, times(1))
-                .send(
-                        AppConstants.STOCK_ORDERS_TOPIC,
-                        String.valueOf(orderDto.getOrderId()),
-                        orderDto);
+                .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 
@@ -90,10 +87,7 @@ class InventoryOrderManageServiceTest {
         assertEquals("REJECT", orderDto.getStatus());
         verify(inventoryRepository, times(1)).findByProductCodeInAndQuantityAvailable(anyList());
         verify(kafkaTemplate, times(1))
-                .send(
-                        AppConstants.STOCK_ORDERS_TOPIC,
-                        String.valueOf(orderDto.getOrderId()),
-                        orderDto);
+                .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         verifyNoMoreInteractions(inventoryRepository);
     }
 
@@ -144,10 +138,7 @@ class InventoryOrderManageServiceTest {
         verify(inventoryRepository, times(1)).saveAll(anyList());
         assertEquals("ACCEPT", orderDto.getStatus());
         verify(kafkaTemplate, times(1))
-                .send(
-                        AppConstants.STOCK_ORDERS_TOPIC,
-                        String.valueOf(orderDto.getOrderId()),
-                        orderDto);
+                .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 

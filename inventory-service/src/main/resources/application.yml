@@ -14,17 +14,15 @@ spring:
       enabled: true
 
 ######## Kafka Configuration  #########
-KAFKA_BROKER: localhost:9092
 spring.kafka:
-  bootstrap-servers: ${KAFKA_BROKER}
+# bootstrap-servers: 127.0.0.1:9092
   consumer:
-    auto-offset-reset: earliest
-    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
     value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
     properties:
-      spring.json.trusted.packages: "*"
+      spring.json.trusted.packages: "com.example.common.dtos"
   producer:
-    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    key-serializer: org.apache.kafka.common.serialization.LongSerializer
     value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     properties:
       spring.json.add.type.headers: true

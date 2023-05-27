@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 public class InventoryOrderManageService {
 
     private final InventoryRepository inventoryRepository;
-    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
         log.info("Reserving Order in Inventory Service {}", orderDto);
@@ -70,8 +70,7 @@ public class InventoryOrderManageService {
             inventoryRepository.saveAll(persistInventoryList);
         }
         // Send order to Kafka
-        kafkaTemplate.send(
-                AppConstants.STOCK_ORDERS_TOPIC, String.valueOf(orderDto.getOrderId()), orderDto);
+        kafkaTemplate.send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         log.info(
                 "Sent Order after reserving : {} from inventory service to topic {}",
                 orderDto,
