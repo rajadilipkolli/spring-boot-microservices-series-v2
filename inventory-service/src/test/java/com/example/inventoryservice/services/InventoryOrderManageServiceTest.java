@@ -3,7 +3,11 @@ package com.example.inventoryservice.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
@@ -39,12 +43,12 @@ class InventoryOrderManageServiceTest {
 
         List<OrderItemDto> orderItems = new ArrayList<>();
         orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
-        orderItems.add(new OrderItemDto(1L, "product2", 20, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
 
         orderDto.setItems(orderItems);
 
-        when(inventoryRepository.findByProductCodeIn(anyList()))
-                .thenReturn(
+        given(inventoryRepository.findByProductCodeInAndQuantityAvailable(anyList()))
+                .willReturn(
                         new ArrayList<>(
                                 Arrays.asList(
                                         new Inventory(1L, "product1", 10, 0),
@@ -73,19 +77,23 @@ class InventoryOrderManageServiceTest {
 
         List<OrderItemDto> orderItems = new ArrayList<>();
         orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
-        orderItems.add(new OrderItemDto(1L, "product2", 20, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         orderDto.setItems(orderItems);
 
-        when(inventoryRepository.findByProductCodeIn(anyList()))
-                .thenReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 0, 0))));
+        given(inventoryRepository.findByProductCodeInAndQuantityAvailable(anyList()))
+                .willReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 0, 0))));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
-        assertEquals("NEW", orderDto.getStatus());
-        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
-        verifyNoInteractions(kafkaTemplate);
+        assertEquals("REJECT", orderDto.getStatus());
+        verify(inventoryRepository, times(1)).findByProductCodeInAndQuantityAvailable(anyList());
+        verify(kafkaTemplate, times(1))
+                .send(
+                        AppConstants.STOCK_ORDERS_TOPIC,
+                        String.valueOf(orderDto.getOrderId()),
+                        orderDto);
         verifyNoMoreInteractions(inventoryRepository);
     }
 
@@ -98,7 +106,7 @@ class InventoryOrderManageServiceTest {
 
         List<OrderItemDto> orderItems = new ArrayList<>();
         orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
-        orderItems.add(new OrderItemDto(1L, "product2", 20, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
 
         orderDto.setItems(orderItems);
 
@@ -125,13 +133,14 @@ class InventoryOrderManageServiceTest {
         inventoryList.add(new Inventory(1L, "product1", 0, 0));
         inventoryList.add(new Inventory(2L, "product2", 0, 0));
 
-        when(inventoryRepository.findByProductCodeIn(anyList())).thenReturn(inventoryList);
+        given(inventoryRepository.findByProductCodeInAndQuantityAvailable(anyList()))
+                .willReturn(inventoryList);
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
-        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).findByProductCodeInAndQuantityAvailable(anyList());
         verify(inventoryRepository, times(1)).saveAll(anyList());
         assertEquals("ACCEPT", orderDto.getStatus());
         verify(kafkaTemplate, times(1))
@@ -157,7 +166,7 @@ class InventoryOrderManageServiceTest {
         inventoryList.add(new Inventory(1L, "product1", 0, 0));
         inventoryList.add(new Inventory(2L, "product2", 0, 0));
 
-        when(inventoryRepository.findByProductCodeIn(anyList())).thenReturn(inventoryList);
+        given(inventoryRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
 
         // Act
         inventoryOrderManageService.confirm(orderDto);

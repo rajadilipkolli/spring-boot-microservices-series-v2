@@ -32,49 +32,42 @@ public class InventoryOrderManageService {
         }
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
-        List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
+        List<Inventory> inventoryList =
+                inventoryRepository.findByProductCodeInAndQuantityAvailable(productCodeList);
         if (inventoryList.size() != productCodeList.size()) {
             log.error(
-                    "Not all products requested exists, Hence Ignoring OrderID :{}",
+                    "Not all products requested exists, Hence Rejecting OrderID :{}",
                     orderDto.getOrderId());
-            return;
-        }
+            orderDto.setStatus("REJECT");
+        } else {
+            log.info("All Products Exists");
+            Map<String, Inventory> inventoryMap =
+                    inventoryList.stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            Inventory::getProductCode, Function.identity()));
 
-        log.info("All Products Exists");
-        Map<String, Inventory> inventoryMap =
-                inventoryList.stream()
-                        .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
+            List<Inventory> persistInventoryList =
+                    orderDto.getItems().stream()
+                            .map(
+                                    orderItemDto -> {
+                                        Inventory inventory =
+                                                inventoryMap.get(orderItemDto.getProductId());
+                                        int productCount = orderItemDto.getQuantity();
+                                        inventory.setReservedItems(
+                                                inventory.getReservedItems() + productCount);
+                                        inventory.setAvailableQuantity(
+                                                inventory.getAvailableQuantity() - productCount);
+                                        return inventory;
+                                    })
+                            .collect(Collectors.toList());
 
-        List<Inventory> persistInventoryList =
-                orderDto.getItems().stream()
-                        .filter(
-                                orderItemDto ->
-                                        inventoryMap.containsKey(orderItemDto.getProductId()))
-                        .map(
-                                orderItemDto -> {
-                                    Inventory inventory =
-                                            inventoryMap.get(orderItemDto.getProductId());
-                                    int productCount = orderItemDto.getQuantity();
-                                    inventory.setReservedItems(
-                                            inventory.getReservedItems() + productCount);
-                                    inventory.setAvailableQuantity(
-                                            inventory.getAvailableQuantity() - productCount);
-                                    return inventory;
-                                })
-                        .collect(Collectors.toList());
-
-        // Update order status
-        if (inventoryList.size() == persistInventoryList.size()) {
+            // Update order status
             orderDto.setStatus("ACCEPT");
             log.info(
                     "Setting status as ACCEPT for inventoryIds : {}",
                     persistInventoryList.stream().map(Inventory::getId).toList());
             inventoryRepository.saveAll(persistInventoryList);
-        } else {
-            log.info(
-                    "Setting status as REJECT for OrderId in Inventory Service : {}",
-                    orderDto.getOrderId());
-            orderDto.setStatus("REJECT");
         }
         // Send order to Kafka
         kafkaTemplate.send(
