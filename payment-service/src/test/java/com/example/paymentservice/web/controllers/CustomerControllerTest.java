@@ -2,7 +2,6 @@
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,7 +19,9 @@ import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +32,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @WebMvcTest(controllers = CustomerController.class)
 @ActiveProfiles(PROFILE_TEST)
