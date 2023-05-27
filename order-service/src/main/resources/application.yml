@@ -8,8 +8,6 @@ logging:
   level:
     '[org.apache.kafka.clients.Metadata]': WARN
 
-KAFKA_BROKER: localhost:9092
-
 spring:
   application:
     name: order-service
@@ -17,17 +15,17 @@ spring:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   kafka:
     bootstrap-servers:
-    - ${KAFKA_BROKER}
+    - localhost:9092
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      key-serializer: org.apache.kafka.common.serialization.LongSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         '[spring.json.add.type.headers]': true
     streams:
       properties:
-        '[default.key.serde]': org.apache.kafka.common.serialization.Serdes$StringSerde
+        '[default.key.serde]': org.apache.kafka.common.serialization.Serdes$LongSerde
         '[default.value.serde]': org.springframework.kafka.support.serializer.JsonSerde
-        '[spring.json.trusted.packages]': '*'
+        '[spring.json.trusted.packages]': 'com.example.common.dtos'
       # state-dir: /tmp/kafka-streams/
   mvc:
     problemdetails:

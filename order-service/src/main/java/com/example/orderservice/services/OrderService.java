@@ -32,7 +32,7 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final CatalogServiceProxy catalogServiceProxy;
 
-    private final KafkaTemplate<String, OrderDto> template;
+    private final KafkaTemplate<Long, OrderDto> template;
 
     @Transactional(readOnly = true)
     public PagedResult<OrderDto> findAllOrders(
@@ -82,9 +82,7 @@ public class OrderService {
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             this.template.send(
-                    AppConstants.ORDERS_TOPIC,
-                    String.valueOf(persistedOrderDto.getOrderId()),
-                    persistedOrderDto);
+                    AppConstants.ORDERS_TOPIC, persistedOrderDto.getOrderId(), persistedOrderDto);
             log.info(
                     "Sent Order : {} from order service to topic {}",
                     persistedOrderDto,

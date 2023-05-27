@@ -24,8 +24,6 @@
         <org-mapstruct.version>1.5.5.Final</org-mapstruct.version>
         <springdoc-openapi.version>2.1.0</springdoc-openapi.version>
 
-        <testcontainers.version>1.18.1</testcontainers.version>
-
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.37.0</spotless.version>
         <mockserver-netty.version>5.15.0</mockserver-netty.version>
@@ -187,6 +185,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
@@ -210,6 +213,7 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>kafka</artifactId>
             <scope>test</scope>
+            <version>1.18.1</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>

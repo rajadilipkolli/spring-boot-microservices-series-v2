@@ -53,18 +53,18 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KStream<String, OrderDto> stream(StreamsBuilder builder) {
+    public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<String, OrderDto> stream =
+        KStream<Long, OrderDto> stream =
                 builder.stream(
                         AppConstants.PAYMENT_ORDERS_TOPIC,
-                        Consumed.with(Serdes.String(), orderSerde));
+                        Consumed.with(Serdes.Long(), orderSerde));
 
         stream.join(
                         builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                        StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
                 .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
                 .to(AppConstants.ORDERS_TOPIC);
 
@@ -72,16 +72,15 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KTable<String, OrderDto> table(StreamsBuilder builder) {
+    public KTable<Long, OrderDto> table(StreamsBuilder builder) {
         KeyValueBytesStoreSupplier store =
                 Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<String, OrderDto> stream =
-                builder.stream(
-                        AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+        KStream<Long, OrderDto> stream =
+                builder.stream(AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(
-                Materialized.<String, OrderDto>as(store)
-                        .withKeySerde(Serdes.String())
+                Materialized.<Long, OrderDto>as(store)
+                        .withKeySerde(Serdes.Long())
                         .withValueSerde(orderSerde));
     }
 }
