@@ -2,9 +2,8 @@
 package org.service.registry;
 
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -12,21 +11,19 @@ public class MyContainersConfiguration {
 
     private static final Integer CONFIG_SERVER_INTERNAL_PORT = 8888;
 
-    @Bean
-    public GenericContainer genericContainer(DynamicPropertyRegistry properties) {
-        GenericContainer container =
-                new GenericContainer(
-                                DockerImageName.parse(
-                                        "dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
-                        .withEnv("SPRING_PROFILES_ACTIVE", "native")
-                        .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
-        properties.add(
+    static final GenericContainer<?> CONFIG_SERVER_CONTAINER =
+            new GenericContainer<>(
+                            DockerImageName.parse("dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT"))
+                    .withEnv("SPRING_PROFILES_ACTIVE", "native")
+                    .withExposedPorts(CONFIG_SERVER_INTERNAL_PORT);
+
+    static {
+        Startables.deepStart(CONFIG_SERVER_CONTAINER).join();
+        System.setProperty(
                 "spring.config.import",
-                () ->
-                        String.format(
-                                "optional:configserver:http://%s:%d/",
-                                container.getHost(),
-                                container.getMappedPort(CONFIG_SERVER_INTERNAL_PORT)));
-        return container;
+                String.format(
+                        "optional:configserver:http://%s:%d/",
+                        CONFIG_SERVER_CONTAINER.getHost(),
+                        CONFIG_SERVER_CONTAINER.getMappedPort(CONFIG_SERVER_INTERNAL_PORT)));
     }
 }
