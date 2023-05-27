@@ -4,9 +4,7 @@ package com.example.inventoryservice.services;
 import com.example.common.dtos.ProductDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 @Service

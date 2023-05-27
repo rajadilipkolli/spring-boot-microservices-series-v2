@@ -11,14 +11,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class OrderManageServiceTest {
+class OrderManageServiceTest {
 
     @Mock private OrderRepository orderRepository;
 
     @InjectMocks private OrderManageService orderManageService;
 
     @Test
-    public void testConfirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
+    void testConfirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -38,7 +38,7 @@ public class OrderManageServiceTest {
     }
 
     @Test
-    public void testConfirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
+    void testConfirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -58,8 +58,7 @@ public class OrderManageServiceTest {
     }
 
     @Test
-    public void
-            testConfirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
+    void testConfirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -80,8 +79,7 @@ public class OrderManageServiceTest {
     }
 
     @Test
-    public void
-            testConfirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
+    void testConfirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
