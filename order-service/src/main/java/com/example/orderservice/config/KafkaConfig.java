@@ -4,10 +4,9 @@ package com.example.orderservice.config;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import com.example.orderservice.utils.AppConstants;
-
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
@@ -24,8 +23,6 @@ import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.support.serializer.JsonSerde;
-
-import java.time.Duration;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafkaStreams

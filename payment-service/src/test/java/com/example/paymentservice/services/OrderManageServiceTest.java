@@ -54,7 +54,7 @@ class OrderManageServiceTest {
         orderManageService.confirm(orderDto);
 
         // Assert
-        assertThat(customer.getAmountReserved()).isEqualTo(0);
+        assertThat(customer.getAmountReserved()).isZero();
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 

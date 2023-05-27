@@ -4,7 +4,6 @@ package com.example.orderservice;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
-
 import org.junit.jupiter.api.Test;
 
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
