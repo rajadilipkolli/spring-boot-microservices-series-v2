@@ -16,11 +16,11 @@ public interface MyTestContainers {
 
     @Container
     @ServiceConnection(name = "openzipkin/zipkin")
-    GenericContainer ZIPKIN_CONTAINER =
-            new GenericContainer(DockerImageName.parse("openzipkin/zipkin"));
+    GenericContainer<?> ZIPKIN_CONTAINER =
+            new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"));
 
     @Container @ServiceConnection
     KafkaContainer kafkaContainer =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-zookeeper").withTag("7.4.0"))
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.4.0"))
                     .withKraft();
 }
