@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -56,12 +58,14 @@ class OrderManageServiceTest {
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
-    @Test
-    void testConfirmWithRejectedOrder() {
+    @ParameterizedTest
+    @CsvSource({"inventory,1100, 0", "payment,1000, 100"})
+    void testConfirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);
         orderDto.setStatus("ROLLBACK");
+        orderDto.setSource(source);
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductPrice(BigDecimal.TEN);
         orderItemDto.setQuantity(10);
@@ -76,8 +80,8 @@ class OrderManageServiceTest {
         orderManageService.confirm(orderDto);
 
         // Assert
-        assertThat(customer.getAmountReserved()).isEqualTo(0);
-        assertThat(customer.getAmountAvailable()).isEqualTo(1100);
+        assertThat(customer.getAmountReserved()).isEqualTo(amountReserved);
+        assertThat(customer.getAmountAvailable()).isEqualTo(amountAvailable);
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
