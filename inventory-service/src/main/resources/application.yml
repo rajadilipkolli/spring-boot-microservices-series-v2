@@ -7,8 +7,6 @@ spring:
     name: inventory-service
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
-  liquibase:
-    change-log: classpath:/db/migration/liquibase-changelog.xml
   mvc:
     problemdetails:
       enabled: true

@@ -4,18 +4,13 @@ package com.example.inventoryservice.repositories;
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.config.MyPostGreSQLContainer;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.testcontainers.context.ImportTestcontainers;
-import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ImportTestcontainers(MyPostGreSQLContainer.class)
-@ActiveProfiles({PROFILE_TEST})
 class InventoryRepositoryTest {
 
     @Autowired private InventoryRepository inventoryRepository;

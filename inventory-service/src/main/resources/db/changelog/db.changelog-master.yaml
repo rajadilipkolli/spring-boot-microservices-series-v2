@@ -1,0 +1,4 @@
+databaseChangeLog:
+    - include:
+          file: 01-create_inventories_table.json
+          relativeToChangelogFile: true
