@@ -2,7 +2,6 @@
 package com.example.paymentservice;
 
 import com.example.paymentservice.config.ApplicationProperties;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

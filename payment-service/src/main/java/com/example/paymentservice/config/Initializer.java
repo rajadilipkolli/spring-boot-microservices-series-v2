@@ -3,16 +3,12 @@ package com.example.paymentservice.config;
 
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.repositories.CustomerRepository;
-
+import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import net.datafaker.Faker;
-
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-
-import java.security.SecureRandom;
 
 @Component
 @RequiredArgsConstructor
