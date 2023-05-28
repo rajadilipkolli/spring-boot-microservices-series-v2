@@ -44,15 +44,23 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        // Fetches only ParentEntities
         Page<Order> page = orderRepository.findAll(pageable);
+        // Get orderIds matching pagination
+        List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
+        // fetching parentAlongWithChildEnties
+        List<Order> ordersWithOrderItems = orderRepository.findByIdIn(orderIds);
+        // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderDto>> completableFutureList =
-                page.getContent().stream()
+                ordersWithOrderItems.stream()
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(
                                                 () -> this.orderMapper.toDto(order)))
                         .toList();
-        var orderListDto = completableFutureList.stream().map(CompletableFuture::join).toList();
+        // Joining all completeable future to get DTOs
+        List<OrderDto> orderListDto =
+                completableFutureList.stream().map(CompletableFuture::join).toList();
         return new PagedResult<>(
                 orderListDto,
                 page.getTotalElements(),

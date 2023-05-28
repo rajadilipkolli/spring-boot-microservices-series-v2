@@ -1,10 +1,9 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.orderservice.repositories;
 
 import com.example.orderservice.entities.Order;
+import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -14,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // @Query("select o from Order o join fetch o.items oi ")
+    // @Query("select o from Order o join fetch o.items where where o.id in :orderIds ")
     @EntityGraph(attributePaths = {"items"})
-    Page<Order> findAll(Pageable pageable);
+    List<Order> findByIdIn(List<Long> ids);
 
     @Query("select o from Order o join fetch o.items oi where o.id = :id")
     Optional<Order> findOrderById(@Param("id") Long id);
