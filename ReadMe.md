@@ -1,4 +1,9 @@
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)     [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rajadilipkolli_spring-boot-microservices-series-v2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rajadilipkolli_spring-boot-microservices-series-v2)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2) 
+
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-black.svg)](https://sonarcloud.io/summary/new_code?id=rajadilipkolli_spring-boot-microservices-series-v2)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=rajadilipkolli_spring-boot-microservices-series-v2&metric=bugs)](https://sonarcloud.io/summary/new_code?id=rajadilipkolli_spring-boot-microservices-series-v2)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=rajadilipkolli_spring-boot-microservices-series-v2&metric=coverage)](https://sonarcloud.io/summary/new_code?id=rajadilipkolli_spring-boot-microservices-series-v2)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=rajadilipkolli_spring-boot-microservices-series-v2&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=rajadilipkolli_spring-boot-microservices-series-v2)
 
 
 ## Problem Statement

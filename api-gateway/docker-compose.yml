@@ -62,7 +62,6 @@ services:
     environment:
       # SPRING_PROFILES_ACTIVE: docker
       - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://localhost:8761/eureka
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
