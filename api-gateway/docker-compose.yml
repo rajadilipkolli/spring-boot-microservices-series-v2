@@ -1,26 +1,6 @@
-version: "3.8"
+version: "3.9"
 
 services:
-#  rabbitmq:
-#    container_name: rabbitmq
-#    image: rabbitmq:3.11.5-management
-#    expose:
-#      - "5672"
-#      - "15672"
-#    ports:
-#      - "5672:5672"
-#      - "15672:15672"
-#    deploy:
-#      resources:
-#        limits:
-#          memory: 350m
-#    healthcheck:
-#      test: ["CMD", "rabbitmqctl", "status"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 10
-#    networks:
-#      - microservice-network
 
   zipkin-server:
     image: openzipkin/zipkin
@@ -33,56 +13,36 @@ services:
       - "9411"
     ports:
       - "9411:9411"
-    networks:
-      - microservice-network
-
-#  mongodb:
-#    container_name: mongodb
-#    image: mongo:6.0.3
-#    volumes:
-#      - mongo-data:/data/db/mongo
-#    ports:
-#      - "27017:27017"
-#    networks:
-#      - microservice-network
 
   naming-server:
     container_name: naming-server
     image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
           memory: 700m
     ports:
       - "8761:8761"
-    networks:
-      - microservice-network
     depends_on:
-      - config-server
+      config-server:
+        condition: service_healthy
     environment:
       # SPRING_PROFILES_ACTIVE: docker
       - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://localhost:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      # - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
   config-server:
     container_name: config-server
     image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
           memory: 700m
     ports:
       - "8888:8888"
-    networks:
-      - microservice-network
     environment:
       SPRING_PROFILES_ACTIVE: native
-
-
-networks:
-  microservice-network:
-
-#volumes:
-#  mongo-data:

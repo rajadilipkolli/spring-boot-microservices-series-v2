@@ -82,7 +82,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 700m
     ports:
       - "8888:8888"
     depends_on:
@@ -99,7 +99,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 700m
     ports:
       - "8761:8761"
     networks:
@@ -108,8 +108,7 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      # - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
     restart: unless-stopped
 
@@ -132,7 +131,7 @@ services:
       # - mongodb
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATA_MONGODB_HOST=mongodb
+      # - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
