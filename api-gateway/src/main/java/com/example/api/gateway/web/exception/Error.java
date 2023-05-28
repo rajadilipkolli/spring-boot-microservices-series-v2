@@ -2,11 +2,9 @@
 package com.example.api.gateway.web.exception;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-
+import java.io.Serializable;
 import lombok.Getter;
 import lombok.ToString;
-
-import java.io.Serializable;
 
 @Getter
 @ToString

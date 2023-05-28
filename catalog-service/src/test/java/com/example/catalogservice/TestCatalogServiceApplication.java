@@ -2,7 +2,6 @@
 package com.example.catalogservice;
 
 import com.example.catalogservice.common.MyContainersConfiguration;
-
 import org.springframework.boot.SpringApplication;
 
 public class TestCatalogServiceApplication {

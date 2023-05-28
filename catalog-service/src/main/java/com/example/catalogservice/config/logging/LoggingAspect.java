@@ -2,7 +2,6 @@
 package com.example.catalogservice.config.logging;
 
 import com.example.catalogservice.utils.AppConstants;
-
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.AfterThrowing;

@@ -3,7 +3,6 @@ package com.example.catalogservice.mapper;
 
 import com.example.catalogservice.entities.Product;
 import com.example.common.dtos.ProductDto;
-
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

@@ -2,13 +2,11 @@
 package com.example.api.gateway.web.exception;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-
-import lombok.Getter;
-import lombok.ToString;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.ToString;
 
 @Getter
 @ToString

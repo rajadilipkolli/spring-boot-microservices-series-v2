@@ -18,15 +18,13 @@ import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-
-import java.util.ArrayList;
-import java.util.List;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 

@@ -3,10 +3,8 @@ package org.service.registry;
 
 import org.springframework.boot.SpringApplication;
 
-public class TestNamingServerApplication extends MyContainersConfiguration {
+public class TestNamingServerApplication {
     public static void main(String[] args) {
-        SpringApplication.from(NamingServerApplication::main)
-                .with(MyContainersConfiguration.class)
-                .run(args);
+        SpringApplication.from(NamingServerApplication::main).run(args);
     }
 }

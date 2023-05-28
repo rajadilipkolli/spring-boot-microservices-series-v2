@@ -14,7 +14,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ActiveProfiles({PROFILE_TEST})
-@SpringBootTest(webEnvironment = RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = RANDOM_PORT,
+        properties = {"spring.cloud.config.enabled=false"})
 @AutoConfigureMockMvc
 @Import(MyContainersConfiguration.class)
 public abstract class AbstractIntegrationTest {
