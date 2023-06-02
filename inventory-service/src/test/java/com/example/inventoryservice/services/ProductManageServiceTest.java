@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import com.example.common.dtos.ProductDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import org.instancio.Instancio;
+import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+@ExtendWith(InstancioExtension.class)
 class ProductManageServiceTest {
 
     @Captor private ArgumentCaptor<Inventory> argumentCaptor;
@@ -29,7 +32,8 @@ class ProductManageServiceTest {
     @Test
     void testManage() {
         // Arrange
-        ProductDto productDto = new ProductDto("ABC123", null, null, 10d);
+
+        ProductDto productDto = Instancio.create(ProductDto.class);
 
         given(inventoryRepository.save(argumentCaptor.capture()))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
@@ -43,7 +47,9 @@ class ProductManageServiceTest {
                 .isNotNull()
                 .satisfies(
                         inventory -> {
-                            assertThat(inventory.getProductCode()).isEqualTo("ABC123");
+                            assertThat(inventory.getProductCode()).isNotBlank();
+                            assertThat(inventory.getReservedItems()).isNull();
+                            assertThat(inventory.getId()).isNull();
                             assertThat(inventory.getAvailableQuantity()).isZero();
                         });
     }
