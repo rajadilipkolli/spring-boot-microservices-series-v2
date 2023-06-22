@@ -21,10 +21,8 @@
 
         <java.version>17</java.version>
         <spring-cloud.version>2022.0.3</spring-cloud.version>
-        <commons-io.version>2.13.0</commons-io.version>
         <springdoc-openapi.version>2.1.0</springdoc-openapi.version>
 
-        <testcontainers.version>1.18.1</testcontainers.version>
         <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -171,11 +169,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
         </dependency>
 
         <dependency>
