@@ -4,21 +4,20 @@ package com.example.paymentservice.common;
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.paymentservice.config.MyContainersConfiguration;
+import com.example.paymentservice.TestPaymentApplication;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"})
+        properties = {"spring.cloud.config.enabled=false"},
+        classes = TestPaymentApplication.class)
 @AutoConfigureMockMvc
-@Import(MyContainersConfiguration.class)
 public abstract class AbstractIntegrationTest {
 
     @Autowired protected MockMvc mockMvc;

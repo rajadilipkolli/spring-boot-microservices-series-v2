@@ -28,7 +28,7 @@ public class TestCatalogServiceApplication {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0")).withKraft();
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.1")).withKraft();
     }
 
     public static void main(String[] args) {
