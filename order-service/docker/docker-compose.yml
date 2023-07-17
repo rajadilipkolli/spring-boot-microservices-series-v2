@@ -47,7 +47,7 @@ services:
       - order-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-kafka:7.4.1
     container_name: kafka
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:

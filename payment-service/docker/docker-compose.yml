@@ -42,7 +42,7 @@ services:
       - payment-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-kafka:7.4.1
     depends_on:
       - zookeeper
     ports:

@@ -47,7 +47,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-kafka:7.4.1
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
       zookeeper:
