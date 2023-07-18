@@ -61,6 +61,6 @@ public class SwaggerConfig {
     }
 
     private String extractNameFromRouteDefinitionId(String routeDefinitionId) {
-        return routeDefinitionId.replaceAll("-service", "");
+        return routeDefinitionId.replace("-service", "");
     }
 }
