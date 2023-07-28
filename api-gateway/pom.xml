@@ -17,7 +17,7 @@
 
 	<properties>
 		<java.version>17</java.version>
-		<spring-cloud.version>2022.0.3</spring-cloud.version>
+		<spring-cloud.version>2022.0.4</spring-cloud.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<springdoc-openapi.version>2.1.0</springdoc-openapi.version>
