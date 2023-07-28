@@ -222,8 +222,8 @@ echo "PORT=${PORT}"
 if [[ $@ == *"start"* ]]
 then
     echo "Restarting the test environment..."
-    echo "$ docker-compose -f docker-compose.yml down --remove-orphans"
-    docker-compose -f docker-compose.yml down --remove-orphans
+    echo "$ docker-compose -f docker-compose.yml down --remove-orphans -v"
+    docker-compose -f docker-compose.yml down --remove-orphans -v
     echo "$ docker-compose up -d"
     docker-compose -f docker-compose.yml up -d
 fi
@@ -251,6 +251,6 @@ echo "End, all tests OK:" `date`
 if [[ $@ == *"stop"* ]]
 then
     echo "We are done, stopping the test environment..."
-    echo "$ docker-compose -f docker-compose.yml down --remove-orphans"
-    docker-compose -f docker-compose.yml down --remove-orphans
+    echo "$ docker-compose -f docker-compose.yml down --remove-orphans -v"
+    docker-compose -f docker-compose.yml down --remove-orphans -v
 fi
