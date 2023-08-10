@@ -8,13 +8,13 @@ image:
 
 tasks:
   - before: sdk install mvnd
-    init: mvnd verify -DskipTests=true
+    init: mvnd verify -DskipTests
 
 vscode:
   extensions:
-    - vscjava.vscode-java-pack
-    - Pivotal.vscode-boot-dev-pack
     - GabrielBB.vscode-lombok
+    - vscjava.vscode-java-pack
+    - vmware.vscode-boot-dev-pack
 
 ports:
   - port: 3000
