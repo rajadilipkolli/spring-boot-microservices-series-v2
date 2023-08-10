@@ -51,10 +51,10 @@ public class OrderGeneratorService {
             orderItem1.setProductPrice(new BigDecimal(100 * y));
             orderItem1.setQuantity(y);
             orderItem1.setProductId("Product" + RAND.nextInt(100) + 1);
-            List<OrderItemDto> oList = new ArrayList<>();
-            oList.add(orderItem);
-            oList.add(orderItem1);
-            o.setItems(oList);
+            List<OrderItemDto> orderItemDtoList = new ArrayList<>();
+            orderItemDtoList.add(orderItem);
+            orderItemDtoList.add(orderItem1);
+            o.setItems(orderItemDtoList);
             orderService.saveOrder(o);
         }
     }

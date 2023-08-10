@@ -3,6 +3,7 @@ package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
+import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Transactional
 @RequiredArgsConstructor
+@Loggable
 public class OrderService {
 
     private final OrderRepository orderRepository;
