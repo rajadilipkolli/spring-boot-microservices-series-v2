@@ -30,7 +30,7 @@
         <spotless.version>2.38.0</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
 
-        <dependency-check-maven.version>8.3.1</dependency-check-maven.version>
+        <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
 
         <properties-maven-plugin.version>1.2.0</properties-maven-plugin.version>
         <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
