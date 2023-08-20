@@ -1,10 +1,15 @@
 # catalogservice
 
 ### Run tests
-`$ ./mvnw clean verify`
+```shell
+./mvnw clean verify
+```
 
 ### Run locally
-`$ ./mvnw docker:start spring-boot:run`
+```shell
+./mvnw docker:start spring-boot:run
+```
+
 
 
 ### Useful Links
