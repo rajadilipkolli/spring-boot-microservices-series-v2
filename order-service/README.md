@@ -4,7 +4,9 @@
 `$ ./mvnw clean verify`
 
 ### Run locally
-`$ ./mvnw docker:start spring-boot:run`
+```shell
+./mvnw docker:start spring-boot:run
+```
 
 
 ### Useful Links
@@ -12,3 +14,5 @@
 * Actuator Endpoint: http://localhost:18282/order-service/actuator
 * Catalog Service : http://localhost:18080/catalog-service/swagger-ui.html
 
+### Notes
+* KafkaStream DeadLetter is configured in `KafkaStreamsConfig.java`

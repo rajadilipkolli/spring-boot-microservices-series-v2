@@ -11,27 +11,29 @@ logging:
 spring:
   application:
     name: order-service
+  mvc.problemdetails.enabled: true
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   kafka:
-    bootstrap-servers:
-    - localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
-        '[spring.json.add.type.headers]': true
+        spring.json.add.type.headers: true
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
+      producer.acks: all
+      applicationId: ${spring.application.name}
       properties:
         default:
           key:
             serde: org.apache.kafka.common.serialization.Serdes$LongSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
-        spring.json.trusted.packages: 'com.example.common.dtos'
-#        state-dir: /tmp/kafka-streams/
-  mvc:
-    problemdetails:
-      enabled: true
+          spring.json.trusted.packages: 'com.example.common.dtos'
+#      state-dir: /tmp/kafka-streams/
+
+spring.output.ansi.enabled: ALWAYS
+
+logging.pattern.console: "%clr(%d{HH:mm:ss.SSS}){blue} %clr(---){faint} %clr([%15.15t]){yellow} %clr(:){red} %clr(%m){faint}%n"

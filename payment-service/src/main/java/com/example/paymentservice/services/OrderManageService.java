@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class OrderManageService {
 
     private final CustomerRepository customerRepository;
-    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
         log.debug("Reserving Order in payment Service {}", orderDto);
@@ -43,8 +43,7 @@ public class OrderManageService {
         orderDto.setSource(AppConstants.SOURCE);
         log.info("Saving customer after reserving:{}", customer.getId());
         customerRepository.save(customer);
-        kafkaTemplate.send(
-                AppConstants.PAYMENT_ORDERS_TOPIC, String.valueOf(orderDto.getOrderId()), orderDto);
+        kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         log.info("Sent Reserved Order: {}", orderDto);
     }
 
