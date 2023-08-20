@@ -13,11 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.mapper.OrderMapper;
+import com.example.orderservice.model.request.OrderItemRequest;
+import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.repositories.OrderRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -97,33 +98,33 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewOrder() throws Exception {
         mockProductExistsRequest(true);
-        OrderDto orderDto = new OrderDto(null, 1L, "NEW", "", new ArrayList<>());
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductId("Product1");
-        orderItemDto.setQuantity(10);
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderRequest orderRequest =
+                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class))
-                .andExpect(jsonPath("$.status", is(orderDto.getStatus())))
-                .andExpect(header().exists("Location"));
+                .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
+                .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.items.size()", is(1)))
+                .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
+                .andExpect(jsonPath("$.items[0].price", is(100)));
     }
 
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutItems() throws Exception {
-        OrderDto order = new OrderDto(null, 0L, null, null, new ArrayList<>());
+        OrderRequest orderRequest = new OrderRequest(-1L, new ArrayList<>());
 
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(order)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
                 .andExpect(jsonPath("$.type", is("about:blank")))
@@ -153,7 +154,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is(orderDto.getStatus())));
+                .andExpect(jsonPath("$.status", is("NEW")));
     }
 
     @Test

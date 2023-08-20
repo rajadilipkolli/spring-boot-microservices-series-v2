@@ -22,11 +22,16 @@ spring:
       properties:
         '[spring.json.add.type.headers]': true
     streams:
+      clientId: order-service-stream-client
+      replicationFactor: 1
       properties:
-        '[default.key.serde]': org.apache.kafka.common.serialization.Serdes$LongSerde
-        '[default.value.serde]': org.springframework.kafka.support.serializer.JsonSerde
-        '[spring.json.trusted.packages]': 'com.example.common.dtos'
-      # state-dir: /tmp/kafka-streams/
+        default:
+          key:
+            serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+          value:
+            serde: org.springframework.kafka.support.serializer.JsonSerde
+        spring.json.trusted.packages: 'com.example.common.dtos'
+#        state-dir: /tmp/kafka-streams/
   mvc:
     problemdetails:
       enabled: true

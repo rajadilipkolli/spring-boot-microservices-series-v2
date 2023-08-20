@@ -46,27 +46,33 @@ public class ProductService {
                 .collectList()
                 .flatMapMany(
                         products -> {
-                            List<String> productCodeList =
-                                    products.stream()
-                                            .map(Product::getCode)
-                                            .collect(Collectors.toList());
+                            if (products.isEmpty()) {
+                                log.info("No Products Exists");
+                                return Flux.empty();
+                            } else {
+                                List<String> productCodeList =
+                                        products.stream()
+                                                .map(Product::getCode)
+                                                .collect(Collectors.toList());
 
-                            return getInventoryByProductCodes(productCodeList)
-                                    .collectMap(
-                                            InventoryDto::productCode,
-                                            InventoryDto::availableQuantity)
-                                    .flatMapMany(
-                                            inventoriesMap -> {
-                                                products.forEach(
-                                                        product -> {
-                                                            int availableQuantity =
-                                                                    inventoriesMap.getOrDefault(
-                                                                            product.getCode(), 0);
-                                                            product.setInStock(
-                                                                    availableQuantity > 0);
-                                                        });
-                                                return Flux.fromIterable(products);
-                                            });
+                                return getInventoryByProductCodes(productCodeList)
+                                        .collectMap(
+                                                InventoryDto::productCode,
+                                                InventoryDto::availableQuantity)
+                                        .flatMapMany(
+                                                inventoriesMap -> {
+                                                    products.forEach(
+                                                            product -> {
+                                                                int availableQuantity =
+                                                                        inventoriesMap.getOrDefault(
+                                                                                product.getCode(),
+                                                                                0);
+                                                                product.setInStock(
+                                                                        availableQuantity > 0);
+                                                            });
+                                                    return Flux.fromIterable(products);
+                                                });
+                            }
                         });
     }
 
@@ -134,6 +140,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Mono<Boolean> existsProductByProductCode(List<String> productIds) {
+        log.info("checking is products Exists :{}", productIds);
         return productRepository
                 .countDistinctByCodeAllIgnoreCaseIn(productIds)
                 .map(count -> count == productIds.size());

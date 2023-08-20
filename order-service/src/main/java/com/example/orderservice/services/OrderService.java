@@ -2,11 +2,12 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
+import com.example.orderservice.model.request.OrderItemRequest;
+import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
@@ -80,15 +81,15 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderDto saveOrder(OrderDto orderDto) {
+    public OrderDto saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productIds =
-                orderDto.getItems().stream()
-                        .map(OrderItemDto::getProductId)
+                orderRequest.items().stream()
+                        .map(OrderItemRequest::productId)
                         .map(String::toUpperCase)
                         .toList();
         if (productsExistsAndInStock(productIds)) {
-            Order order = this.orderMapper.toEntity(orderDto);
+            Order order = this.orderMapper.orderRequestToEntity(orderRequest);
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             this.template.send(
@@ -110,5 +111,15 @@ public class OrderService {
 
     public void deleteOrderById(Long id) {
         orderRepository.deleteById(id);
+    }
+
+    public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
+        this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
+        Order persistedOrder = this.orderRepository.save(orderObj);
+        return this.orderMapper.toDto(persistedOrder);
+    }
+
+    public Optional<Order> findById(Long id) {
+        return orderRepository.findOrderById(id);
     }
 }

@@ -22,7 +22,7 @@ databaseChangeLog:
       createSequence:
         sequenceName: products_seq
         startValue: '1'
-        incrementBy: '50'
+        incrementBy: '1'
       createTable:
         columns:
           - column:

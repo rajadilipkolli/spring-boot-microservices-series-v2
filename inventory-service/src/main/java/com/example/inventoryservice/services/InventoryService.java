@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2021-2023 */
 package com.example.inventoryservice.services;
 
+import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.mapper.InventoryMapper;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional
+@Loggable
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;

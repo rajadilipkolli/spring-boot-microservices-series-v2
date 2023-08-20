@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.request.OrderRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +31,6 @@ class OrderGeneratorServiceTest {
         orderGeneratorService.generate();
 
         // Assert
-        verify(orderService, times(expectedOrderCount)).saveOrder(any(OrderDto.class));
+        verify(orderService, times(expectedOrderCount)).saveOrder(any(OrderRequest.class));
     }
 }

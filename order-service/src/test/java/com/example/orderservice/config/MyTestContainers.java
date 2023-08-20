@@ -17,7 +17,7 @@ public interface MyTestContainers {
 
     @ServiceConnection @Container
     PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.3-alpine"));
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"));
 
     @Container
     @ServiceConnection(name = "openzipkin/zipkin")

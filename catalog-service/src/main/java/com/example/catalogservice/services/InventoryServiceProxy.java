@@ -4,6 +4,7 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.model.response.InventoryDto;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -11,6 +12,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @Loggable
+@Slf4j
 public class InventoryServiceProxy {
 
     private final WebClient webClient;
@@ -20,6 +22,7 @@ public class InventoryServiceProxy {
     }
 
     public Mono<InventoryDto> getInventoryByProductCode(String productCode) {
+        log.info("Fetching inventory information for productCode {}", productCode);
         return webClient
                 .get()
                 .uri("/api/inventory/{productCode}", productCode)
@@ -28,6 +31,7 @@ public class InventoryServiceProxy {
     }
 
     public Flux<InventoryDto> getInventoryByProductCodes(List<String> codes) {
+        log.info("Fetching inventory information for productCodes : {}", codes);
         return webClient
                 .get()
                 .uri(

@@ -5,6 +5,8 @@ import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
+import com.example.orderservice.model.request.OrderItemRequest;
+import com.example.orderservice.model.request.OrderRequest;
 import java.util.function.Consumer;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
@@ -35,4 +37,24 @@ public interface OrderMapper {
                 orderItemDTO -> order.addOrderItem(orderItemDtoToOrderItem(orderItemDTO));
         orderDTO.getItems().forEach(addOrderItemToOrder);
     }
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "items", ignore = true)
+    Order orderRequestToEntity(OrderRequest orderRequest);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "order", ignore = true)
+    OrderItem orderItemRequestToOrderItem(OrderItemRequest orderItemRequest);
+
+    @AfterMapping
+    default void addOrderItemRequestToOrderEntity(
+            OrderRequest orderRequest, @MappingTarget Order order) {
+        orderRequest
+                .items()
+                .forEach(
+                        orderItemRequest ->
+                                order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
+    }
+
+    void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order orderObj);
 }

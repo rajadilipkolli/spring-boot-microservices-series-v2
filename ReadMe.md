@@ -121,3 +121,14 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
 - Spring Cloud Seluth is deprecated in favor of Micrometer
 - With New Observability we cant use Rabbit as sender type and use asynchronous communication
 - Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
+
+### Kill Application running on port
+
+- find process Id running on port
+```shell
+netstat -ano | findstr :18080
+```
+- Killing application using cmd
+```shell
+taskkill /PID <type PID here> /f
+```

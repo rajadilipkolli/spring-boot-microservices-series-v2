@@ -1,9 +1,10 @@
 /* Licensed under Apache-2.0 2022 */
 package com.example.orderservice.config;
 
+import static com.example.orderservice.utils.AppConstants.*;
+
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
-import com.example.orderservice.utils.AppConstants;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @EnableKafkaStreams
 @Slf4j
 @RequiredArgsConstructor
@@ -33,51 +34,44 @@ public class KafkaConfig {
     private final OrderManageService orderManageService;
 
     @Bean
-    public KafkaAdmin.NewTopics topics() {
+    KafkaAdmin.NewTopics topics() {
+        log.info(
+                "Inside creating topics :{}, {}, {}",
+                ORDERS_TOPIC,
+                PAYMENT_ORDERS_TOPIC,
+                STOCK_ORDERS_TOPIC);
         return new KafkaAdmin.NewTopics(
-                TopicBuilder.name(AppConstants.ORDERS_TOPIC)
-                        .partitions(3)
-                        .replicas(1)
-                        .compact()
-                        .build(),
-                TopicBuilder.name(AppConstants.PAYMENT_ORDERS_TOPIC)
-                        .partitions(3)
-                        .replicas(1)
-                        .compact()
-                        .build(),
-                TopicBuilder.name(AppConstants.STOCK_ORDERS_TOPIC)
-                        .partitions(3)
-                        .replicas(1)
-                        .compact()
-                        .build());
+                TopicBuilder.name(ORDERS_TOPIC).partitions(3).replicas(1).compact().build(),
+                TopicBuilder.name(PAYMENT_ORDERS_TOPIC).partitions(3).replicas(1).compact().build(),
+                TopicBuilder.name(STOCK_ORDERS_TOPIC).partitions(3).replicas(1).compact().build());
     }
 
     @Bean
-    public KStream<Long, OrderDto> stream(StreamsBuilder builder) {
+    KStream<Long, OrderDto> stream(StreamsBuilder kStreamBuilder) {
+        log.info("Inside stream Processing");
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream(
-                        AppConstants.PAYMENT_ORDERS_TOPIC,
-                        Consumed.with(Serdes.Long(), orderSerde));
+                kStreamBuilder.stream(
+                        PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
 
         stream.join(
-                        builder.stream(AppConstants.STOCK_ORDERS_TOPIC),
+                        kStreamBuilder.stream(STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
                 .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
-                .to(AppConstants.ORDERS_TOPIC);
+                .to(ORDERS_TOPIC);
 
         return stream;
     }
 
     @Bean
-    public KTable<Long, OrderDto> table(StreamsBuilder builder) {
-        KeyValueBytesStoreSupplier store =
-                Stores.persistentKeyValueStore(AppConstants.ORDERS_TOPIC);
+    KTable<Long, OrderDto> table(StreamsBuilder builder) {
+        log.info("Inside fetching KTable values");
+        KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream(AppConstants.ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+                builder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(
                 Materialized.<Long, OrderDto>as(store)
                         .withKeySerde(Serdes.Long())

@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -13,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.model.request.OrderItemRequest;
+import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
@@ -103,37 +106,39 @@ class OrderControllerTest {
 
     @Test
     void shouldCreateNewOrder() throws Exception {
-        given(orderService.saveOrder(any(OrderDto.class)))
-                .willAnswer((invocation) -> invocation.getArgument(0));
-
         OrderDto orderDto = new OrderDto(10L, 1L, "NEW", "", new ArrayList<>());
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductId("Product1");
         orderItemDto.setQuantity(10);
         orderItemDto.setProductPrice(BigDecimal.TEN);
         orderDto.setItems(List.of(orderItemDto));
+
+        OrderRequest orderRequest =
+                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+
+        given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderDto);
+
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class));
+                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class))
+                .andExpect(jsonPath("$.items.size()", is(1)));
     }
 
     @Test
     void shouldFailCreatingNewOrder() throws Exception {
-        given(orderService.saveOrder(any(OrderDto.class)))
-                .willAnswer((invocation) -> invocation.getArgument(0));
 
-        OrderDto orderDto = new OrderDto(10L, 1L, "NEW", "", new ArrayList<>());
+        OrderRequest orderRequest = new OrderRequest(1L, new ArrayList<>());
 
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
                 .andExpect(jsonPath("$.type", is("about:blank")))
@@ -176,15 +181,17 @@ class OrderControllerTest {
     void shouldUpdateOrder() throws Exception {
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", "", new ArrayList<>());
 
-        given(orderService.findOrderById(orderDto.getOrderId())).willReturn(Optional.of(orderDto));
-        given(orderService.saveOrder(any(OrderDto.class)))
-                .willAnswer((invocation) -> invocation.getArgument(0));
+        OrderRequest orderRequest =
+                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+
+        given(orderService.findById(orderDto.getOrderId())).willReturn(Optional.of(new Order()));
+        given(orderService.updateOrder(eq(orderRequest), any(Order.class))).willReturn(orderDto);
 
         this.mockMvc
                 .perform(
                         put("/api/orders/{id}", orderDto.getOrderId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class));
     }

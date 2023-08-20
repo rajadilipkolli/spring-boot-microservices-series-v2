@@ -2,6 +2,7 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
@@ -75,22 +76,20 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderDto> createOrder(@RequestBody @Valid OrderDto orderDto) {
-        OrderDto response = orderService.saveOrder(orderDto);
+    public ResponseEntity<OrderDto> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
+        OrderDto response = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + response.getOrderId()))
                 .body(response);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<OrderDto> updateOrder(
-            @PathVariable Long id, @RequestBody OrderDto orderDto) {
+            @PathVariable Long id, @RequestBody OrderRequest orderRequest) {
         return orderService
-                .findOrderById(id)
+                .findById(id)
                 .map(
-                        orderObj -> {
-                            orderDto.setOrderId(id);
-                            return ResponseEntity.ok(orderService.saveOrder(orderDto));
-                        })
+                        orderObj ->
+                                ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
