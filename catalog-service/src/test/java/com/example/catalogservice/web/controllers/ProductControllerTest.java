@@ -3,47 +3,33 @@ package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dtos.ProductDto;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-@WebMvcTest(controllers = ProductController.class)
+@WebFluxTest(controllers = ProductController.class)
 @ActiveProfiles({PROFILE_TEST})
 class ProductControllerTest {
 
-    @Autowired private MockMvc mockMvc;
+    @Autowired private WebTestClient webTestClient;
 
     @MockBean private ProductService productService;
-
-    @Autowired private ObjectMapper objectMapper;
 
     private List<Product> productList;
 
@@ -56,140 +42,200 @@ class ProductControllerTest {
     }
 
     @Test
-    void shouldFetchAllProducts() throws Exception {
-        Page<Product> page = new PageImpl<>(productList);
-        PagedResult<Product> productPagedResult = new PagedResult<>(page);
-        given(productService.findAllProducts(0, 10, "id", "asc")).willReturn(productPagedResult);
+    void shouldFetchAllProducts() {
+        given(productService.findAllProducts("id", "asc"))
+                .willReturn(Flux.fromIterable(productList));
 
-        this.mockMvc
-                .perform(get("/api/catalog"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(8)))
-                .andExpect(jsonPath("$.data.size()", is(productList.size())))
-                .andExpect(jsonPath("$.totalElements", is(3)))
-                .andExpect(jsonPath("$.pageNumber", is(1)))
-                .andExpect(jsonPath("$.totalPages", is(1)))
-                .andExpect(jsonPath("$.isFirst", is(true)))
-                .andExpect(jsonPath("$.isLast", is(true)))
-                .andExpect(jsonPath("$.hasNext", is(false)))
-                .andExpect(jsonPath("$.hasPrevious", is(false)));
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBodyList(Product.class)
+                .hasSize(productList.size())
+                .isEqualTo(productList); // Ensure fetched posts match the expected posts
     }
 
     @Test
-    void shouldFindProductById() throws Exception {
+    void shouldFindProductById() {
         Long productId = 1L;
         Product product = new Product(productId, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(product);
+        given(productService.findProductById(productId)).willReturn(Mono.just(product));
 
-        this.mockMvc
-                .perform(get("/api/catalog/id/{id}", productId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.productName", is(product.getProductName())))
-                .andExpect(jsonPath("$.description", is(product.getDescription())))
-                .andExpect(jsonPath("$.price", is(product.getPrice())));
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 
     @Test
-    void shouldReturn404WhenFetchingNonExistingProduct() throws Exception {
+    void shouldReturn404WhenFetchingNonExistingProduct() {
         Long productId = 1L;
         given(productService.findProductById(productId))
                 .willThrow(new ProductNotFoundException(productId));
 
-        this.mockMvc
-                .perform(get("/api/catalog/id/{id}", productId))
-                .andExpect(status().isNotFound());
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isNotFound();
     }
 
     @Test
-    void shouldCreateProduct() throws Exception {
+    void shouldCreateProduct() {
         Product product = new Product(1L, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.saveProduct(any(ProductDto.class))).willReturn(product);
+        given(productService.saveProduct(any(ProductDto.class))).willReturn(Mono.just(product));
 
         ProductDto productDto = new ProductDto("code 1", "name 1", "description 1", 9.0);
-        this.mockMvc
-                .perform(
-                        post("/api/catalog")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(productDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.code", is(productDto.code())));
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productDto), ProductDto.class)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectHeader()
+                .exists("Location")
+                .expectBody()
+                .jsonPath("$.id")
+                .isNotEmpty()
+                .jsonPath("$.code")
+                .isEqualTo(productDto.code())
+                .jsonPath("$.productName")
+                .isEqualTo(productDto.productName())
+                .jsonPath("$.description")
+                .isEqualTo(productDto.description())
+                .jsonPath("$.price")
+                .isEqualTo(productDto.price());
     }
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
         ProductDto productDto = new ProductDto(null, null, null, 9.0);
 
-        this.mockMvc
-                .perform(
-                        post("/api/catalog")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(productDto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Bad Request")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/catalog")))
-                .andReturn();
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(productDto)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("about:blank")
+                .jsonPath("$.title")
+                .isEqualTo("Bad Request")
+                .jsonPath("$.status")
+                .isEqualTo(400)
+                .jsonPath("$.detail")
+                .isEqualTo("Invalid request content.")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/catalog");
     }
 
     @Test
-    void shouldUpdateProduct() throws Exception {
+    void shouldUpdateProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductByProductId(productId)).willReturn(Optional.of(product));
+        given(productService.findProductByProductId(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(Product.class)))
-                .willAnswer((invocation) -> invocation.getArgument(0));
+                .willAnswer((invocation) -> Mono.just(invocation.getArgument(0)));
 
-        this.mockMvc
-                .perform(
-                        put("/api/catalog/{id}", product.getId())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(product)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productName", is(product.getProductName())));
+        webTestClient
+                .put()
+                .uri("/api/catalog/{id}", product.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(product), Product.class)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .value(is(1))
+                .jsonPath("$.code")
+                .value(is(product.getCode()))
+                .jsonPath("$.productName")
+                .value(is(product.getProductName()))
+                .jsonPath("$.description")
+                .value(is(product.getDescription()))
+                .jsonPath("$.price")
+                .value(is(product.getPrice()));
     }
 
     @Test
-    void shouldReturn404WhenUpdatingNonExistingProduct() throws Exception {
+    void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findProductById(productId))
-                .willThrow(new ProductNotFoundException(productId));
+        given(productService.findProductByProductId(productId)).willReturn(Mono.empty());
         Product product =
                 new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
 
-        this.mockMvc
-                .perform(
-                        put("/api/catalog/{id}", productId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(product)))
-                .andExpect(status().isNotFound());
+        webTestClient
+                .put()
+                .uri("/api/catalog/{id}", product.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(product), Product.class)
+                .exchange()
+                .expectStatus()
+                .isNotFound();
     }
 
     @Test
-    void shouldDeleteProduct() throws Exception {
+    void shouldDeleteProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductByProductId(productId)).willReturn(Optional.of(product));
-        doNothing().when(productService).deleteProductById(product.getId());
+        given(productService.findProductByProductId(productId)).willReturn(Mono.just(product));
+        given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
-        this.mockMvc
-                .perform(delete("/api/catalog/{id}", product.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code", is(product.getCode())));
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 
     @Test
-    void shouldReturn404WhenDeletingNonExistingProduct() throws Exception {
+    void shouldReturn404WhenDeletingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findProductById(productId))
-                .willThrow(new ProductNotFoundException(productId));
+        given(productService.findProductByProductId(productId)).willReturn(Mono.empty());
 
-        this.mockMvc
-                .perform(delete("/api/catalog/{id}", productId))
-                .andExpect(status().isNotFound());
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isNotFound();
     }
 }

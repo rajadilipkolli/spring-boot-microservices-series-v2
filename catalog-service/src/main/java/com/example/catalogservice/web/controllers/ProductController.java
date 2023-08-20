@@ -2,7 +2,6 @@
 package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
@@ -20,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/catalog")
@@ -29,17 +30,7 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public PagedResult<Product> getAllPosts(
-            @RequestParam(
-                            value = "pageNo",
-                            defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
-                            required = false)
-                    int pageNo,
-            @RequestParam(
-                            value = "pageSize",
-                            defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
-                            required = false)
-                    int pageSize,
+    public Flux<Product> getAllPosts(
             @RequestParam(
                             value = "sortBy",
                             defaultValue = AppConstants.DEFAULT_SORT_BY,
@@ -50,7 +41,7 @@ public class ProductController {
                             defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
                             required = false)
                     String sortDir) {
-        return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
+        return productService.findAllProducts(sortBy, sortDir);
     }
 
     @GetMapping("/id/{id}")
@@ -58,55 +49,58 @@ public class ProductController {
     //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     //  @RateLimiter(name="default")
     //  @Bulkhead(name = "product-api")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.findProductById(id));
+    public Mono<ResponseEntity<Product>> getProductById(@PathVariable Long id) {
+        return productService.findProductById(id).map(ResponseEntity::ok);
     }
 
     @GetMapping("/productCode/{productCode}")
-    public ResponseEntity<Product> getProductByProductCode(@PathVariable String productCode) {
+    public Mono<ResponseEntity<Product>> getProductByProductCode(@PathVariable String productCode) {
         return productService
                 .findProductByProductCode(productCode)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
     @GetMapping("/exists/{productIds}")
-    public ResponseEntity<Boolean> existsProductByProductCode(
+    public Mono<ResponseEntity<Boolean>> existsProductByProductCode(
             @PathVariable List<String> productIds) {
-        return ResponseEntity.ok(productService.existsProductByProductCode(productIds));
+        return productService.existsProductByProductCode(productIds).map(ResponseEntity::ok);
     }
 
     @PostMapping
-    public ResponseEntity<Product> createProduct(@RequestBody @Validated ProductDto productDto) {
-        Product product = productService.saveProduct(productDto);
-        return ResponseEntity.created(URI.create("/api/catalog/id/" + product.getId()))
-                .body(product);
+    public Mono<ResponseEntity<Product>> createProduct(
+            @RequestBody @Validated ProductDto productDto) {
+        return productService
+                .saveProduct(productDto)
+                .map(
+                        product ->
+                                ResponseEntity.created(
+                                                URI.create("/api/catalog/id/" + product.getId()))
+                                        .body(product));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(
+    public Mono<ResponseEntity<Product>> updateProduct(
             @PathVariable Long id, @RequestBody Product product) {
         return productService
                 .findProductByProductId(id)
-                .map(
+                .flatMap(
                         catalogObj -> {
                             product.setId(id);
-                            return productService.updateProduct(product);
+                            return productService.updateProduct(product).map(ResponseEntity::ok);
                         })
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Product> deleteProduct(@PathVariable Long id) {
+    public Mono<ResponseEntity<Product>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findProductByProductId(id)
-                .map(
-                        catalog -> {
-                            productService.deleteProductById(id);
-                            return catalog;
-                        })
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .flatMap(
+                        product ->
+                                productService
+                                        .deleteProductById(id)
+                                        .then(Mono.just(ResponseEntity.ok(product))))
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 }

@@ -3,11 +3,14 @@ package com.example.catalogservice.repositories;
 
 import com.example.catalogservice.entities.Product;
 import java.util.List;
-import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.data.repository.reactive.ReactiveSortingRepository;
+import reactor.core.publisher.Mono;
 
-public interface ProductRepository extends JpaRepository<Product, Long> {
-    long countDistinctByCodeAllIgnoreCaseIn(List<String> code);
+public interface ProductRepository
+        extends ReactiveCrudRepository<Product, Long>, ReactiveSortingRepository<Product, Long> {
 
-    Optional<Product> findByCodeAllIgnoreCase(String code);
+    Mono<Long> countDistinctByCodeAllIgnoreCaseIn(List<String> code);
+
+    Mono<Product> findByCodeAllIgnoreCase(String code);
 }

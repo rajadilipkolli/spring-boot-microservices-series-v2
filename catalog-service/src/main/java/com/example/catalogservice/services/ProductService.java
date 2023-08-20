@@ -5,26 +5,21 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.response.InventoryDto;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.micrometer.observation.annotation.Observed;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
@@ -41,66 +36,72 @@ public class ProductService {
     private final KafkaTemplate<String, ProductDto> kafkaTemplate;
 
     @Transactional(readOnly = true)
-    public PagedResult<Product> findAllProducts(
-            int pageNo, int pageSize, String sortBy, String sortDir) {
+    public Flux<Product> findAllProducts(String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
+        return this.productRepository
+                .findAll(sort)
+                .collectList()
+                .flatMapMany(
+                        products -> {
+                            List<String> productCodeList =
+                                    products.stream()
+                                            .map(Product::getCode)
+                                            .collect(Collectors.toList());
 
-        // create Pageable instance
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        Page<Product> productPage = productRepository.findAll(pageable);
-
-        var productCodeList = productPage.getContent().stream().map(Product::getCode).toList();
-        if (!productCodeList.isEmpty()) {
-            Map<String, Integer> inventoriesMap =
-                    getInventoryByProductCodes(productCodeList).stream()
-                            .collect(
-                                    Collectors.toMap(
+                            return getInventoryByProductCodes(productCodeList)
+                                    .collectMap(
                                             InventoryDto::productCode,
-                                            InventoryDto::availableQuantity));
-
-            productPage
-                    .getContent()
-                    .forEach(
-                            product ->
-                                    product.setInStock(
-                                            inventoriesMap.getOrDefault(product.getCode(), 0) > 0));
-        }
-
-        return new PagedResult<>(productPage);
+                                            InventoryDto::availableQuantity)
+                                    .flatMapMany(
+                                            inventoriesMap -> {
+                                                products.forEach(
+                                                        product -> {
+                                                            int availableQuantity =
+                                                                    inventoriesMap.getOrDefault(
+                                                                            product.getCode(), 0);
+                                                            product.setInStock(
+                                                                    availableQuantity > 0);
+                                                        });
+                                                return Flux.fromIterable(products);
+                                            });
+                        });
     }
 
     @CircuitBreaker(
             name = "getInventoryByProductCodes",
             fallbackMethod = "getInventoryByProductCodesFallBack")
-    private List<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
+    private Flux<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
-    private List<InventoryDto> getInventoryByProductCodesFallBack(
+    private Flux<InventoryDto> getInventoryByProductCodesFallBack(
             List<String> productCodeList, Exception e) {
         log.error("Exception occurred while fetching product details", e);
-        return new ArrayList<>();
+        return Flux.empty();
     }
 
     @Transactional(readOnly = true)
-    public Product findProductById(Long id) {
+    public Mono<Product> findProductById(Long id) {
         return findProductByProductId(id)
-                .map(
-                        product -> {
-                            var inventoryDto = getInventoryByProductCode(product.getCode());
-                            product.setInStock(inventoryDto.availableQuantity() > 0);
-                            return product;
-                        })
-                .orElseThrow(() -> new ProductNotFoundException(id));
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
+                .flatMap(
+                        product ->
+                                getInventoryByProductCode(product.getCode())
+                                        .map(
+                                                inventoryDto -> {
+                                                    product.setInStock(
+                                                            inventoryDto.availableQuantity() > 0);
+                                                    return product;
+                                                }));
     }
 
     @CircuitBreaker(
             name = "getInventoryByProductCode",
             fallbackMethod = "getInventoryByProductCodeFallBack")
-    private InventoryDto getInventoryByProductCode(String code) {
+    private Mono<InventoryDto> getInventoryByProductCode(String code) {
         return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
@@ -110,35 +111,36 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> findProductByProductCode(String productCode) {
+    public Mono<Product> findProductByProductCode(String productCode) {
         return productRepository.findByCodeAllIgnoreCase(productCode);
     }
 
     // saves product to db and sends message that new product is available for inventory
     @Observed(name = "product.save", contextualName = "saving-prouduct")
-    public Product saveProduct(ProductDto productDto) {
+    public Mono<Product> saveProduct(ProductDto productDto) {
         Product product = this.productMapper.toEntity(productDto);
-        Product persistedProduct = productRepository.save(product);
+        Mono<Product> persistedProduct = productRepository.save(product);
         this.kafkaTemplate.send(AppConstants.KAFKA_TOPIC, productDto);
         return persistedProduct;
     }
 
-    public Product updateProduct(Product product) {
+    public Mono<Product> updateProduct(Product product) {
         return productRepository.save(product);
     }
 
-    public void deleteProductById(Long id) {
-        productRepository.deleteById(id);
+    public Mono<Void> deleteProductById(Long id) {
+        return productRepository.deleteById(id);
     }
 
     @Transactional(readOnly = true)
-    public boolean existsProductByProductCode(List<String> productIds) {
-        long count = productRepository.countDistinctByCodeAllIgnoreCaseIn(productIds);
-        return count == productIds.size();
+    public Mono<Boolean> existsProductByProductCode(List<String> productIds) {
+        return productRepository
+                .countDistinctByCodeAllIgnoreCaseIn(productIds)
+                .map(count -> count == productIds.size());
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> findProductByProductId(Long id) {
+    public Mono<Product> findProductByProductId(Long id) {
         return productRepository.findById(id);
     }
 }

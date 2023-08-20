@@ -2,15 +2,7 @@
 package com.example.catalogservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.catalogservice.common.AbstractIntegrationTest;
 import com.example.catalogservice.entities.Product;
@@ -18,13 +10,14 @@ import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
-import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 
@@ -32,154 +25,223 @@ class ProductControllerIT extends AbstractIntegrationTest {
 
     @MockBean private InventoryServiceProxy inventoryServiceProxy;
 
-    private List<Product> productList = null;
+    private Flux<Product> productFlux = null;
 
     @BeforeEach
     void setUp() {
-        productRepository.deleteAllInBatch();
 
-        this.productList = new ArrayList<>();
-        this.productList.add(new Product(null, "P001", "name 1", "description 1", 9.0, true));
-        this.productList.add(new Product(null, "P002", "name 2", "description 2", 10.0, true));
-        this.productList.add(new Product(null, "P003", "name 3", "description 3", 11.0, true));
-        productList = productRepository.saveAll(productList);
+        List<Product> productList =
+                List.of(
+                        new Product(null, "P001", "name 1", "description 1", 9.0, false),
+                        new Product(null, "P002", "name 2", "description 2", 10.0, false),
+                        new Product(null, "P003", "name 3", "description 3", 11.0, false));
+        productFlux =
+                productRepository
+                        .deleteAll()
+                        .thenMany(productRepository.saveAll(productList))
+                        .thenMany(productRepository.findAll());
     }
 
     @Test
-    void shouldFetchAllProducts() throws Exception {
+    void shouldFetchAllProducts() {
 
         given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
-                .willReturn(List.of(new InventoryDto("P001", 100)));
-        this.mockMvc
-                .perform(get("/api/catalog"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(8)))
-                .andExpect(jsonPath("$.data.size()", is(productList.size())))
-                .andExpect(jsonPath("$.totalElements", is(3)))
-                .andExpect(jsonPath("$.pageNumber", is(1)))
-                .andExpect(jsonPath("$.totalPages", is(1)))
-                .andExpect(jsonPath("$.isFirst", is(true)))
-                .andExpect(jsonPath("$.isLast", is(true)))
-                .andExpect(jsonPath("$.hasNext", is(false)))
-                .andExpect(jsonPath("$.hasPrevious", is(false)));
+                .willReturn(Flux.just(new InventoryDto("P001", 0)));
+        List<Product> productList = productFlux.collectList().block();
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBodyList(Product.class)
+                .hasSize(productList.size())
+                .isEqualTo(productList); // Ensure fetched posts match the expected posts
     }
 
     @Test
-    void shouldFindProductById() throws Exception {
+    void shouldFindProductById() {
 
-        Product product = productList.get(0);
+        Product product = productFlux.next().block();
         Long productId = product.getId();
 
         given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
-                .willReturn(new InventoryDto(product.getCode(), 100));
+                .willReturn(Mono.just(new InventoryDto(product.getCode(), 100)));
 
-        this.mockMvc
-                .perform(get("/api/catalog/id/{id}", productId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
-                .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.productName", is(product.getProductName())))
-                .andExpect(jsonPath("$.description", is(product.getDescription())))
-                .andExpect(jsonPath("$.price", is(product.getPrice())));
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 
     @Test
-    void shouldNotFindProductById() throws Exception {
+    void shouldNotFindProductById() {
         Long productId = 100L;
 
-        this.mockMvc
-                .perform(get("/api/catalog/id/{id}", productId))
-                .andExpect(status().isNotFound())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Product Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(jsonPath("$.detail", is("Product with id 100 not found")))
-                .andExpect(jsonPath("$.instance", is("/api/catalog/id/100")))
-                .andExpect(jsonPath("$.timestamp", notNullValue()))
-                .andExpect(jsonPath("$.errorCategory", is("Generic")))
-                .andReturn();
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectHeader()
+                .contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/not-found")
+                .jsonPath("$.title")
+                .isEqualTo("Product Not Found")
+                .jsonPath("$.status")
+                .isEqualTo(404)
+                .jsonPath("$.detail")
+                .isEqualTo("Product with id 100 not found")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/catalog/id/100")
+                .jsonPath("$.timestamp")
+                .isNotEmpty()
+                .jsonPath("$.errorCategory")
+                .isEqualTo("Generic");
     }
 
     @Test
-    void shouldFindProductByProductCode() throws Exception {
-        Product product = productList.get(0);
+    void shouldFindProductByProductCode() {
+        Product product = productFlux.next().block();
 
-        this.mockMvc
-                .perform(get("/api/catalog/productCode/{productCode}", product.getCode()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
-                .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.productName", is(product.getProductName())))
-                .andExpect(jsonPath("$.description", is(product.getDescription())))
-                .andExpect(jsonPath("$.price", is(product.getPrice())));
+        webTestClient
+                .get()
+                .uri("/api/catalog/productCode/{productCode}", product.getCode())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 
     @Test
-    void shouldCreateNewProduct() throws Exception {
+    void shouldCreateNewProduct() {
         ProductDto productDto = new ProductDto("code 4", "name 4", "description 4", 19.0);
-        this.mockMvc
-                .perform(
-                        post("/api/catalog")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(productDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.code", is(productDto.code())))
-                .andExpect(jsonPath("$.productName", is(productDto.productName())))
-                .andExpect(jsonPath("$.description", is(productDto.description())))
-                .andExpect(jsonPath("$.price", is(productDto.price())))
-                .andExpect(header().exists("Location"));
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productDto), ProductDto.class)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectHeader()
+                .exists("Location")
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id")
+                .isNotEmpty()
+                .jsonPath("$.code")
+                .isEqualTo(productDto.code())
+                .jsonPath("$.productName")
+                .isEqualTo(productDto.productName())
+                .jsonPath("$.description")
+                .isEqualTo(productDto.description())
+                .jsonPath("$.price")
+                .isEqualTo(productDto.price());
     }
 
     @Test
-    void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
+    void shouldReturn400WhenCreateNewProductWithoutCode() {
         ProductDto productDto = new ProductDto(null, null, null, null);
 
-        this.mockMvc
-                .perform(
-                        post("/api/catalog")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(productDto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Bad Request")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/catalog")))
-                .andReturn();
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(productDto)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("about:blank")
+                .jsonPath("$.title")
+                .isEqualTo("Bad Request")
+                .jsonPath("$.status")
+                .isEqualTo(400)
+                .jsonPath("$.detail")
+                .isEqualTo("Invalid request content.")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/catalog");
     }
 
     @Test
-    void shouldUpdateProduct() throws Exception {
-        Product product = productList.get(0);
+    void shouldUpdateProduct() {
+        Product product = productFlux.next().block();
         product.setDescription("Updated Catalog");
 
-        this.mockMvc
-                .perform(
-                        put("/api/catalog/{id}", product.getId())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(product)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
-                .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.productName", is(product.getProductName())))
-                .andExpect(jsonPath("$.description", is(product.getDescription())))
-                .andExpect(jsonPath("$.price", is(product.getPrice())));
+        webTestClient
+                .put()
+                .uri("/api/catalog/{id}", product.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(product), Product.class)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .value(is(product.getId().intValue()))
+                .jsonPath("$.code")
+                .value(is(product.getCode()))
+                .jsonPath("$.productName")
+                .value(is(product.getProductName()))
+                .jsonPath("$.description")
+                .value(is(product.getDescription()))
+                .jsonPath("$.price")
+                .value(is(product.getPrice()));
     }
 
     @Test
-    void shouldDeleteProduct() throws Exception {
-        Product product = productList.get(0);
+    void shouldDeleteProduct() {
+        Product product = productFlux.next().block();
 
-        this.mockMvc
-                .perform(delete("/api/catalog/{id}", product.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(product.getId()), Long.class))
-                .andExpect(jsonPath("$.code", is(product.getCode())))
-                .andExpect(jsonPath("$.productName", is(product.getProductName())))
-                .andExpect(jsonPath("$.description", is(product.getDescription())))
-                .andExpect(jsonPath("$.price", is(product.getPrice())));
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 }

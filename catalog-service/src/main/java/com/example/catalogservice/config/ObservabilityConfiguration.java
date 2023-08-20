@@ -3,21 +3,27 @@ package com.example.catalogservice.config;
 
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration(proxyBeanMethods = false)
 public class ObservabilityConfiguration {
+
+    private final ApplicationProperties applicationProperties;
+
+    public ObservabilityConfiguration(ApplicationProperties applicationProperties) {
+        this.applicationProperties = applicationProperties;
+    }
+
     // To have the @Observed support we need to register this aspect
     @Bean
-    public ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
+    ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
         return new ObservedAspect(observationRegistry);
     }
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder restTemplateBuilder) {
-        return restTemplateBuilder.build();
+    WebClient webClient() {
+        return WebClient.builder().baseUrl(applicationProperties.getInventoryServiceUrl()).build();
     }
 }

@@ -19,3 +19,5 @@ resilience4j:
         enableExponentialBackoff: true
         maxRetryAttempts: 5
         waitDuration: 1s
+
+spring.webflux.problemdetails.enabled: true

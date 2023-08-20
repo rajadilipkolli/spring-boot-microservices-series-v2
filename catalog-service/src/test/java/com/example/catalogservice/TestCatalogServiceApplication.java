@@ -22,7 +22,7 @@ public class TestCatalogServiceApplication {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSqlContainer() {
-        return new PostgreSQLContainer<>("postgres:15.3-alpine");
+        return new PostgreSQLContainer<>("postgres:15.4-alpine");
     }
 
     @Bean
