@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 declare project_dir=$(dirname $0)
 declare dc_main=${project_dir}/docker-compose.yml

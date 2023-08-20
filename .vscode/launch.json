@@ -2,27 +2,6 @@
     "configurations": [
         {
             "type": "java",
-            "name": "TestPaymentApplication",
-            "request": "launch",
-            "mainClass": "com.example.paymentservice.TestPaymentApplication",
-            "projectName": "payment-service"
-        },
-        {
-            "type": "java",
-            "name": "TestCatalogServiceApplication",
-            "request": "launch",
-            "mainClass": "com.example.catalogservice.TestCatalogServiceApplication",
-            "projectName": "catalog-service"
-        },
-        {
-            "type": "java",
-            "name": "TestNamingServerApplication",
-            "request": "launch",
-            "mainClass": "org.service.registry.TestNamingServerApplication",
-            "projectName": "service-registry"
-        },
-        {
-            "type": "java",
             "name": "Spring Boot-ConfigServerApplication<config-server>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -90,6 +69,16 @@
             "mainClass": "com.example.paymentservice.PaymentApplication",
             "projectName": "payment-service",
             "args": "--spring.profiles.active=local",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-TestPaymentApplication<payment-service>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.paymentservice.TestPaymentApplication",
+            "projectName": "payment-service",
+            "args": "",
             "envFile": "${workspaceFolder}/.env"
         }
     ]
