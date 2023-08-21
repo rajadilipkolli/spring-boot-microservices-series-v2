@@ -204,7 +204,7 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>kafka</artifactId>
             <scope>test</scope>
-            <version>1.18.3</version>
+            <version>1.19.0</version>
         </dependency>
         <dependency>
             <groupId>org.instancio</groupId>
