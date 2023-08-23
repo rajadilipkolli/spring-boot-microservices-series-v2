@@ -8,14 +8,12 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -27,24 +25,24 @@ import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
-import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.springframework.boot.autoconfigure.kafka.KafkaConnectionDetails;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.context.properties.source.InvalidConfigurationPropertyValueException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaOperations;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
 import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.util.CollectionUtils;
 
 @Configuration
 @EnableKafkaStreams
@@ -53,10 +51,9 @@ import org.springframework.util.CollectionUtils;
 public class KafkaStreamsConfig {
 
     private final OrderManageService orderManageService;
-    private final KafkaProperties kafkaProperties;
 
     @Bean
-    public StreamsBuilderFactoryBeanConfigurer configurer() {
+    StreamsBuilderFactoryBeanConfigurer configurer() {
         return factoryBean -> {
             factoryBean.setStateListener(
                     (newState, oldState) ->
@@ -64,46 +61,41 @@ public class KafkaStreamsConfig {
         };
     }
 
-    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
-    public KafkaStreamsConfiguration kStreamsConfigs() {
-
-        Map<String, Object> streamProperties = kafkaProperties.getStreams().buildProperties();
-        Map<String, Object> props = new HashMap<>(streamProperties);
-        props.putIfAbsent(
-                StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
-                CollectionUtils.isEmpty(kafkaProperties.getStreams().getBootstrapServers())
-                        ? kafkaProperties.getBootstrapServers()
-                        : kafkaProperties.getStreams().getBootstrapServers());
-        props.put(
-                StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
-                WallclockTimestampExtractor.class.getName());
-        props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "100");
-        props.put(
+    @Bean(KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+    KafkaStreamsConfiguration defaultKafkaStreamsConfig(
+            Environment environment,
+            KafkaConnectionDetails connectionDetails,
+            KafkaProperties kafkaProperties,
+            DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
+        Map<String, Object> properties = kafkaProperties.buildStreamsProperties();
+        properties.put(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                connectionDetails.getStreamsBootstrapServers());
+        if (kafkaProperties.getStreams().getApplicationId() == null) {
+            String applicationName = environment.getProperty("spring.application.name");
+            if (applicationName == null) {
+                throw new InvalidConfigurationPropertyValueException(
+                        "spring.kafka.streams.application-id",
+                        null,
+                        "This property is mandatory and fallback 'spring.application.name' is not set either.");
+            }
+            properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName);
+        }
+        properties.put(
                 StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                 RecoveringDeserializationExceptionHandler.class);
-        props.put(
+        properties.put(
                 RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
-                deadLetterPublishingRecoverer());
-        return new KafkaStreamsConfiguration(props);
+                deadLetterPublishingRecoverer);
+        return new KafkaStreamsConfiguration(properties);
     }
 
     @Bean
-    public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer() {
+    DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(
+            ProducerFactory<byte[], byte[]> producerFactory) {
         return new DeadLetterPublishingRecoverer(
-                byteKafkaTemplate(), (record, ex) -> new TopicPartition("recovererDLQ", -1));
-    }
-
-    @Bean
-    public KafkaOperations<byte[], byte[]> byteKafkaTemplate() {
-        Map<String, Object> senderProps = new HashMap<>(3);
-        senderProps.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                CollectionUtils.isEmpty(kafkaProperties.getProducer().getBootstrapServers())
-                        ? kafkaProperties.getBootstrapServers()
-                        : kafkaProperties.getProducer().getBootstrapServers());
-        senderProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
-        senderProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
-        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(senderProps), true);
+                new KafkaTemplate<>(producerFactory),
+                (record, ex) -> new TopicPartition("recovererDLQ", -1));
     }
 
     @Bean

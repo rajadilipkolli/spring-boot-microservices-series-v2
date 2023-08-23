@@ -24,9 +24,14 @@ spring:
       clientId: order-service-stream-client
       replicationFactor: 1
       producer.acks: all
-      applicationId: ${spring.application.name}
+      application-id: ${spring.application.name}
       properties:
+        commit:
+          interval:
+            ms: 100
         default:
+          timestamp:
+            extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
           key:
             serde: org.apache.kafka.common.serialization.Serdes$LongSerde
           value:
