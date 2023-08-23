@@ -3,17 +3,11 @@ package com.example.orderservice.config;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
 public interface MyTestContainers {
-
-    @ServiceConnection @Container
-    KafkaContainer KAFKA_CONTAINER =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.4.1"))
-                    .withKraft();
 
     @ServiceConnection @Container
     PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
