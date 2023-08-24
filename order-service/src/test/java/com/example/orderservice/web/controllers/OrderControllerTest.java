@@ -18,6 +18,7 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
+import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,7 +26,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -46,17 +46,9 @@ class OrderControllerTest {
 
     @MockBean private OrderGeneratorService orderGeneratorService;
 
+    @MockBean private OrderKafkaStreamService orderKafkaStreamService;
+
     @Autowired private ObjectMapper objectMapper;
-
-    private List<Order> orderList;
-
-    @BeforeEach
-    void setUp() {
-        this.orderList = new ArrayList<>();
-        this.orderList.add(new Order(1L, 1L, "NEW", null, new ArrayList<>()));
-        this.orderList.add(new Order(2L, 2L, "NEW", null, new ArrayList<>()));
-        this.orderList.add(new Order(3L, 3L, "NEW", null, new ArrayList<>()));
-    }
 
     @Test
     void shouldFetchAllOrders() throws Exception {
@@ -87,7 +79,7 @@ class OrderControllerTest {
     @Test
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
-        OrderDto order = new OrderDto(null, 1L, "NEW", "", new ArrayList<>());
+        OrderDto order = new OrderDto(1L, 1L, "NEW", "", new ArrayList<>());
         given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
 
         this.mockMvc

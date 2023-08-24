@@ -34,7 +34,8 @@ public class OrderManageService {
             orderDto.setStatus("ROLLBACK");
             orderDto.setSource(source);
         }
-        orderDto.setItems(orderPayment.getItems());
+        // setting from inventory as it has latest
+        orderDto.setItems(orderStock.getItems());
         this.orderRepository.updateOrderStatusAndSourceById(
                 orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
         log.info(

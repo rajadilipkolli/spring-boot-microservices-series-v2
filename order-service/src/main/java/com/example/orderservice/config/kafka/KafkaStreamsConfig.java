@@ -29,10 +29,8 @@ import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.springframework.boot.autoconfigure.kafka.KafkaConnectionDetails;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
-import org.springframework.boot.context.properties.source.InvalidConfigurationPropertyValueException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
@@ -63,7 +61,6 @@ public class KafkaStreamsConfig {
 
     @Bean(KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
     KafkaStreamsConfiguration defaultKafkaStreamsConfig(
-            Environment environment,
             KafkaConnectionDetails connectionDetails,
             KafkaProperties kafkaProperties,
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
@@ -71,16 +68,6 @@ public class KafkaStreamsConfig {
         properties.put(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 connectionDetails.getStreamsBootstrapServers());
-        if (kafkaProperties.getStreams().getApplicationId() == null) {
-            String applicationName = environment.getProperty("spring.application.name");
-            if (applicationName == null) {
-                throw new InvalidConfigurationPropertyValueException(
-                        "spring.kafka.streams.application-id",
-                        null,
-                        "This property is mandatory and fallback 'spring.application.name' is not set either.");
-            }
-            properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName);
-        }
         properties.put(
                 StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                 RecoveringDeserializationExceptionHandler.class);

@@ -5,6 +5,7 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
+import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -31,8 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderController {
 
     private final OrderService orderService;
-
     private final OrderGeneratorService orderGeneratorService;
+    private final OrderKafkaStreamService orderKafkaStreamService;
 
     @GetMapping
     public PagedResult<OrderDto> getAllOrders(
@@ -123,6 +124,6 @@ public class OrderController {
                             defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
                             required = false)
                     int pageSize) {
-        return orderGeneratorService.getAllOrders(pageNo, pageSize);
+        return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
     }
 }
