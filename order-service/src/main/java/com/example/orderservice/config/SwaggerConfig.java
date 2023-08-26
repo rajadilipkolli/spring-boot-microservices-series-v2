@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2022 */
+/* Licensed under Apache-2.0 2022-2023 */
 package com.example.orderservice.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -15,7 +15,7 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
                         title = "order-service",
                         version = "v1",
                         description = "APIs related to Orders"),
-        servers = @Server(url = "/${spring.application.name}"))
+        servers = @Server(url = "${server.servlet.contextPath}"))
 public class SwaggerConfig {
 
     @Bean
