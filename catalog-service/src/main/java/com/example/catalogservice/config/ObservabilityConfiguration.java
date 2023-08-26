@@ -3,18 +3,16 @@ package com.example.catalogservice.config;
 
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration(proxyBeanMethods = false)
+@RequiredArgsConstructor
 public class ObservabilityConfiguration {
 
     private final ApplicationProperties applicationProperties;
-
-    public ObservabilityConfiguration(ApplicationProperties applicationProperties) {
-        this.applicationProperties = applicationProperties;
-    }
 
     // To have the @Observed support we need to register this aspect
     @Bean

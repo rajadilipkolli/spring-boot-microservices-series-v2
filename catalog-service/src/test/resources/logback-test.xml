@@ -11,4 +11,5 @@
 
     <logger name="org.testcontainers" level="INFO"/>
     <logger name="com.github.dockerjava" level="WARN"/>
+    <logger name="com.example.catalogservice" level="DEBUG"/>
 </configuration>

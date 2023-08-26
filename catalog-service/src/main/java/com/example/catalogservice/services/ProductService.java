@@ -11,7 +11,6 @@ import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.micrometer.observation.annotation.Observed;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -36,6 +35,7 @@ public class ProductService {
     private final KafkaTemplate<String, ProductDto> kafkaTemplate;
 
     @Transactional(readOnly = true)
+    @Observed(name = "product.findAll", contextualName = "find-all-products")
     public Flux<Product> findAllProducts(String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
@@ -51,9 +51,7 @@ public class ProductService {
                                 return Flux.empty();
                             } else {
                                 List<String> productCodeList =
-                                        products.stream()
-                                                .map(Product::getCode)
-                                                .collect(Collectors.toList());
+                                        products.stream().map(Product::getCode).toList();
 
                                 return getInventoryByProductCodes(productCodeList)
                                         .collectMap(
@@ -122,7 +120,7 @@ public class ProductService {
     }
 
     // saves product to db and sends message that new product is available for inventory
-    @Observed(name = "product.save", contextualName = "saving-prouduct")
+    @Observed(name = "product.save", contextualName = "saving-product")
     public Mono<Product> saveProduct(ProductDto productDto) {
         Product product = this.productMapper.toEntity(productDto);
         Mono<Product> persistedProduct = productRepository.save(product);

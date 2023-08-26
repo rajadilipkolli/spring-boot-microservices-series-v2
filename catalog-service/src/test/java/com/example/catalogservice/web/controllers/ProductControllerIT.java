@@ -15,7 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpServerErrorException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -57,6 +59,36 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 .expectBodyList(Product.class)
                 .hasSize(productList.size())
                 .isEqualTo(productList); // Ensure fetched posts match the expected posts
+    }
+
+    @Test
+    void shouldFetchAllProductsAsEmpty() {
+
+        productRepository.deleteAll().block();
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBodyList(Product.class)
+                .hasSize(0);
+    }
+
+    @Test
+    void shouldFetchAllProductsWithCircuitBreaker() {
+
+        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
+                .willThrow(new HttpServerErrorException(HttpStatusCode.valueOf(500)));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBodyList(Product.class)
+                .hasSize(0);
     }
 
     @Test

@@ -6,18 +6,44 @@ resilience4j:
     instances:
       default:
         maxConcurrentCalls: 10
+        maxWaitDuration: 10ms
       product-api:
         maxConcurrentCalls: 10
+  circuitbreaker.instances:
+    default:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      permittedNumberOfCallsInHalfOpenState: 3
+      slidingWindowType: TIME_BASED
+      minimumNumberOfCalls: 20
+      waitDurationInOpenState: 50s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+    getInventoryByProductCodes:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      permittedNumberOfCallsInHalfOpenState: 3
   ratelimiter:
     instances:
       default:
-        limitForPeriod: 2
-        limitRefreshPeriod: 10s
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+        registerHealthIndicator: true
+        eventConsumerBufferSize: 100
   retry:
     instances:
       product-api:
+        maxAttempts: 3
+        waitDuration: 10s
         enableExponentialBackoff: true
-        maxRetryAttempts: 5
-        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+        ignoreExceptions:
+          - com.example.catalogservice.exception.ProductNotFoundException
+  timelimiter:
+    instances:
+        default:
+            timeoutDuration: 2s
+            cancelRunningFuture: true
 
 spring.webflux.problemdetails.enabled: true
