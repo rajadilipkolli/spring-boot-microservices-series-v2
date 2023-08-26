@@ -8,7 +8,6 @@ import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +26,8 @@ import reactor.core.publisher.Mono;
 public class ProductService {
 
     private final ProductRepository productRepository;
-
     private final ProductMapper productMapper;
-
     private final InventoryServiceProxy inventoryServiceProxy;
-
     private final KafkaTemplate<String, ProductDto> kafkaTemplate;
 
     @Transactional(readOnly = true)
@@ -74,16 +70,13 @@ public class ProductService {
                         });
     }
 
-    @CircuitBreaker(
-            name = "getInventoryByProductCodes",
-            fallbackMethod = "getInventoryByProductCodesFallBack")
     private Flux<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
     private Flux<InventoryDto> getInventoryByProductCodesFallBack(
-            List<String> productCodeList, Exception e) {
-        log.error("Exception occurred while fetching product details", e);
+            List<String> productCodeList, Throwable e) {
+        log.error("Exception occurred while fetching product details for :{}", productCodeList, e);
         return Flux.empty();
     }
 
@@ -102,16 +95,8 @@ public class ProductService {
                                                 }));
     }
 
-    @CircuitBreaker(
-            name = "getInventoryByProductCode",
-            fallbackMethod = "getInventoryByProductCodeFallBack")
     private Mono<InventoryDto> getInventoryByProductCode(String code) {
         return inventoryServiceProxy.getInventoryByProductCode(code);
-    }
-
-    private InventoryDto getInventoryByProductCodeFallBack(String code, Throwable e) {
-        log.error("Exception occurred while fetching product details", e);
-        return new InventoryDto(code, 0);
     }
 
     @Transactional(readOnly = true)
@@ -122,10 +107,13 @@ public class ProductService {
     // saves product to db and sends message that new product is available for inventory
     @Observed(name = "product.save", contextualName = "saving-product")
     public Mono<Product> saveProduct(ProductDto productDto) {
-        Product product = this.productMapper.toEntity(productDto);
-        Mono<Product> persistedProduct = productRepository.save(product);
-        this.kafkaTemplate.send(AppConstants.KAFKA_TOPIC, productDto);
-        return persistedProduct;
+        return Mono.just(this.productMapper.toEntity(productDto))
+                .flatMap(productRepository::save)
+                .map(
+                        savedProduct -> {
+                            kafkaTemplate.send(AppConstants.KAFKA_TOPIC, productDto);
+                            return savedProduct;
+                        });
     }
 
     public Mono<Product> updateProduct(Product product) {

@@ -4,13 +4,15 @@ package com.example.catalogservice.web.controllers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.BDDMockito.given;
 
-import com.example.catalogservice.common.AbstractIntegrationTest;
+import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -22,7 +24,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-class ProductControllerIT extends AbstractIntegrationTest {
+class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Autowired private ProductRepository productRepository;
 
@@ -80,9 +82,15 @@ class ProductControllerIT extends AbstractIntegrationTest {
     @Disabled(value = "Until Circuit Breaker issue is fixed")
     void shouldFetchAllProductsWithCircuitBreaker() {
 
-        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
-                .willThrow(new HttpServerErrorException(HttpStatusCode.valueOf(500)));
+        transitionToOpenState("getInventoryByProductCodes");
+        circuitBreakerRegistry
+                .circuitBreaker("getInventoryByProductCodes")
+                .transitionToHalfOpenState();
 
+        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
+                .willReturn(
+                        Flux.error(
+                                () -> new HttpServerErrorException(HttpStatusCode.valueOf(500))));
         webTestClient
                 .get()
                 .uri("/api/catalog")
@@ -91,6 +99,9 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 .isOk()
                 .expectBodyList(Product.class)
                 .hasSize(0);
+
+        // Then
+        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.OPEN);
     }
 
     @Test
@@ -102,23 +113,32 @@ class ProductControllerIT extends AbstractIntegrationTest {
         given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
                 .willReturn(Mono.just(new InventoryDto(product.getCode(), 100)));
 
-        webTestClient
-                .get()
-                .uri("/api/catalog/id/{id}", productId)
-                .exchange()
-                .expectStatus()
-                .isOk()
-                .expectBody()
-                .jsonPath("$.id")
-                .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
-                .jsonPath("$.productName")
-                .isEqualTo(product.getProductName())
-                .jsonPath("$.description")
-                .isEqualTo(product.getDescription())
-                .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+        transitionToClosedState("default");
+
+        IntStream.rangeClosed(1, 5)
+                .forEach(
+                        (count) -> {
+                            webTestClient
+                                    .get()
+                                    .uri("/api/catalog/id/{id}", productId)
+                                    .exchange()
+                                    .expectStatus()
+                                    .isOk()
+                                    .expectBody()
+                                    .jsonPath("$.id")
+                                    .isEqualTo(product.getId())
+                                    .jsonPath("$.code")
+                                    .isEqualTo(product.getCode())
+                                    .jsonPath("$.productName")
+                                    .isEqualTo(product.getProductName())
+                                    .jsonPath("$.description")
+                                    .isEqualTo(product.getDescription())
+                                    .jsonPath("$.price")
+                                    .isEqualTo(product.getPrice());
+                        });
+
+        // Then
+        checkHealthStatus("default", CircuitBreaker.State.HALF_OPEN);
     }
 
     @Test
