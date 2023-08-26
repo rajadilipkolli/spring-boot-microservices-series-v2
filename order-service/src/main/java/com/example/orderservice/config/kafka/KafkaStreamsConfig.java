@@ -9,7 +9,6 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -40,7 +39,6 @@ import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
 import org.springframework.kafka.support.serializer.JsonSerde;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 @EnableKafkaStreams
@@ -103,25 +101,15 @@ public class KafkaStreamsConfig {
     }
 
     @Bean
-    KTable<Long, OrderDto> table(StreamsBuilder builder) {
+    KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
         KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
         JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                builder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+                streamsBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(
                 Materialized.<Long, OrderDto>as(store)
                         .withKeySerde(Serdes.Long())
                         .withValueSerde(orderSerde));
-    }
-
-    @Bean
-    Executor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(5);
-        executor.setThreadNamePrefix("kafkaSender-");
-        executor.initialize();
-        return executor;
     }
 }

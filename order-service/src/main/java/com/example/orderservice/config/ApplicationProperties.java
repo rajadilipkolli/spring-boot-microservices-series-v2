@@ -11,7 +11,13 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record ApplicationProperties(
         @NotBlank(message = "CatalogServiceUrl Cant be Blank") String catalogServiceUrl,
-        @NestedConfigurationProperty Cors cors) {}
+        @NestedConfigurationProperty Cors cors) {
+
+    public ApplicationProperties(String catalogServiceUrl, Cors cors) {
+        this.catalogServiceUrl = catalogServiceUrl;
+        this.cors = new Cors();
+    }
+}
 
 @Data
 class Cors {

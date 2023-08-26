@@ -34,10 +34,12 @@ public class OrderKafkaStreamService {
                                 StoreQueryParameters.fromNameAndType(
                                         AppConstants.ORDERS_TOPIC,
                                         QueryableStoreTypes.keyValueStore()));
-        int from = pageNo * pageSize;
-        int to = from + pageSize;
-        KeyValueIterator<Long, OrderDto> it = store.range((long) (from + 1), (long) to);
-        it.forEachRemaining(kv -> orders.add(kv.value));
+        long from = (long) pageNo * pageSize;
+        long to = from + pageSize;
+        try (KeyValueIterator<Long, OrderDto> it = store.range(from + 1, to)) {
+            it.forEachRemaining(kv -> orders.add(kv.value));
+        }
+
         return orders;
     }
 }
