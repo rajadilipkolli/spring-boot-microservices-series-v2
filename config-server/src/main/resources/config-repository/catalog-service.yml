@@ -9,20 +9,6 @@ resilience4j:
         maxWaitDuration: 10ms
       product-api:
         maxConcurrentCalls: 10
-  circuitbreaker.instances:
-    default:
-      registerHealthIndicator: true
-      slidingWindowSize: 10
-      permittedNumberOfCallsInHalfOpenState: 3
-      slidingWindowType: TIME_BASED
-      minimumNumberOfCalls: 20
-      waitDurationInOpenState: 50s
-      failureRateThreshold: 50
-      eventConsumerBufferSize: 10
-    getInventoryByProductCodes:
-      registerHealthIndicator: true
-      slidingWindowSize: 10
-      permittedNumberOfCallsInHalfOpenState: 3
   ratelimiter:
     instances:
       default:
@@ -47,3 +33,30 @@ resilience4j:
             cancelRunningFuture: true
 
 spring.webflux.problemdetails.enabled: true
+
+management.health.circuitbreakers.enabled: true
+management.health.ratelimiters.enabled: true
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      registerHealthIndicator: true
+      slidingWindowSize: 100
+      permittedNumberOfCallsInHalfOpenState: 10
+      waitDurationInOpenState: 10000
+      failureRateThreshold: 60
+      eventConsumerBufferSize: 10
+    shared:
+      slidingWindowSize: 50
+      permittedNumberOfCallsInHalfOpenState: 2
+  instances:
+    default:
+      baseConfig: default
+      waitDurationInOpenState: 5000
+    getInventoryByProductCodes:
+      baseConfig: shared
+
+resilience4j.ratelimiter:
+  configs:
+    instances:
+      registerHealthIndicator: true
