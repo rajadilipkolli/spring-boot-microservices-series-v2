@@ -12,7 +12,6 @@ import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.util.List;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -106,36 +105,34 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldFindProductById() {
-
-        Product product = productFlux.next().block();
-        Long productId = product.getId();
-
-        given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
-                .willReturn(Mono.just(new InventoryDto(product.getCode(), 100)));
-
         transitionToClosedState("default");
+        transitionToHalfOpenState("default");
 
-        IntStream.rangeClosed(1, 5)
-                .forEach(
-                        (count) -> {
-                            webTestClient
-                                    .get()
-                                    .uri("/api/catalog/id/{id}", productId)
-                                    .exchange()
-                                    .expectStatus()
-                                    .isOk()
-                                    .expectBody()
-                                    .jsonPath("$.id")
-                                    .isEqualTo(product.getId())
-                                    .jsonPath("$.code")
-                                    .isEqualTo(product.getCode())
-                                    .jsonPath("$.productName")
-                                    .isEqualTo(product.getProductName())
-                                    .jsonPath("$.description")
-                                    .isEqualTo(product.getDescription())
-                                    .jsonPath("$.price")
-                                    .isEqualTo(product.getPrice());
-                        });
+        List<Product> productList = productFlux.collectList().block();
+
+        productList.forEach(
+                product -> {
+                    Long productId = product.getId();
+                    given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
+                            .willReturn(Mono.just(new InventoryDto(product.getCode(), 100)));
+                    webTestClient
+                            .get()
+                            .uri("/api/catalog/id/{id}", productId)
+                            .exchange()
+                            .expectStatus()
+                            .isOk()
+                            .expectBody()
+                            .jsonPath("$.id")
+                            .isEqualTo(product.getId())
+                            .jsonPath("$.code")
+                            .isEqualTo(product.getCode())
+                            .jsonPath("$.productName")
+                            .isEqualTo(product.getProductName())
+                            .jsonPath("$.description")
+                            .isEqualTo(product.getDescription())
+                            .jsonPath("$.price")
+                            .isEqualTo(product.getPrice());
+                });
 
         // Then
         checkHealthStatus("default", CircuitBreaker.State.HALF_OPEN);

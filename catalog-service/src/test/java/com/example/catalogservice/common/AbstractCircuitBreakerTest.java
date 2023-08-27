@@ -21,4 +21,9 @@ public abstract class AbstractCircuitBreakerTest extends AbstractIntegrationTest
         CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(circuitBreakerName);
         circuitBreaker.transitionToClosedState();
     }
+
+    protected void transitionToHalfOpenState(String circuitBreakerName) {
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(circuitBreakerName);
+        circuitBreaker.transitionToHalfOpenState();
+    }
 }
