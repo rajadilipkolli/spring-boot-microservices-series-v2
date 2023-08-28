@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2021-2022 */
-package com.example.api.gateway.configuration;
+package com.example.api.gateway.config;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
@@ -13,7 +13,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration(proxyBeanMethods = false)
-public class AppConfig {
+public class CircuitBreakerConfiguration {
 
     @Bean
     public PasswordEncoder passwordEncoder() {

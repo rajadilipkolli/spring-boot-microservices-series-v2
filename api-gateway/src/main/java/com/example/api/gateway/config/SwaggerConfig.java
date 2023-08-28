@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2022-2023 */
-package com.example.api.gateway.configuration;
+package com.example.api.gateway.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Contact;

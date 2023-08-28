@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2021-2022 */
-package com.example.api.gateway.configuration;
+package com.example.api.gateway.config;
 
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;

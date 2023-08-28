@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2023 */
-package com.example.api.gateway.configuration;
+package com.example.api.gateway.config;
 
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;

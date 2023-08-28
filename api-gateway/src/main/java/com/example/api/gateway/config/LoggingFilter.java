@@ -1,5 +1,5 @@
 /* Licensed under Apache-2.0 2021-2022 */
-package com.example.api.gateway.configuration;
+package com.example.api.gateway.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
