@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "inventory-service/**"
-    branches: [master]
+    branches: [main]
   pull_request:
     paths:
       - "inventory-service/**"
@@ -47,7 +47,7 @@ jobs:
       - name: Build and analyze
         run: ./mvnw clean verify
 
-      - if: ${{ github.ref == 'refs/heads/master' }}
+      - if: ${{ github.ref == 'refs/heads/main' }}
         name: Build Image and push to docker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any

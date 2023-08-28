@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "gatling-tests/**"
-    branches: [master]
+    branches: [main]
   pull_request:
     paths:
       - "gatling-tests/**"
