@@ -17,7 +17,8 @@ public interface MyTestContainers {
     @Container
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> ZIPKIN_CONTAINER =
-            new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"));
+            new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"))
+                    .withExposedPorts(9411);
 
     @Container @ServiceConnection
     KafkaContainer kafkaContainer =

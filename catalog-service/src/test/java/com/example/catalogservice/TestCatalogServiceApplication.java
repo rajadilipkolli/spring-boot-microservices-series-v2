@@ -16,7 +16,8 @@ public class TestCatalogServiceApplication {
     @Bean
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> zipkinContainer() {
-        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"));
+        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
+                .withExposedPorts(9411);
     }
 
     @Bean

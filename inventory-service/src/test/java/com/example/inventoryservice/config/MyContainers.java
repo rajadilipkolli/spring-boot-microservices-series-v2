@@ -17,5 +17,6 @@ public interface MyContainers {
     @Container
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> zipkinContainer =
-            new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"));
+            new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"))
+                    .withExposedPorts(9411);
 }
