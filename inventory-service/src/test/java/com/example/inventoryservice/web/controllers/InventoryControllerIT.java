@@ -39,7 +39,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void shouldFetchAllInventorys() throws Exception {
+    void shouldFetchAllInventories() throws Exception {
         this.mockMvc
                 .perform(get("/api/inventory"))
                 .andExpect(status().isOk())
@@ -63,6 +63,26 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(get("/api/inventory/{productCode}", productCode))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
+    }
+
+    @Test
+    void shouldFindInventoriesByProductCodes() throws Exception {
+        String[] productCodeList =
+                inventoryList.stream().map(Inventory::getProductCode).toArray(String[]::new);
+
+        this.mockMvc
+                .perform(get("/api/inventory/product").param("codes", productCodeList))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()", is(inventoryList.size())))
+                .andExpect(jsonPath("$[0].productCode").value("First Inventory"))
+                .andExpect(jsonPath("$[0].availableQuantity").value(5))
+                .andExpect(jsonPath("$[0].reservedItems").value(0))
+                .andExpect(jsonPath("$[1].productCode").value("Second Inventory"))
+                .andExpect(jsonPath("$[1].availableQuantity").value(6))
+                .andExpect(jsonPath("$[1].reservedItems").value(0))
+                .andExpect(jsonPath("$[2].productCode").value("Third Inventory"))
+                .andExpect(jsonPath("$[2].availableQuantity").value(7))
+                .andExpect(jsonPath("$[2].reservedItems").value(0));
     }
 
     @Test
