@@ -21,7 +21,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
         classes = TestAPIGatewayApplication.class)
 @AutoConfigureWebClient
 @ActiveProfiles("test")
-class APIGatewayApplicationTest {
+class APIGatewayApplicationIntegrationTest {
 
     @Autowired private WebTestClient webTestClient;
 
