@@ -13,10 +13,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping(properties.getCors().getPathPattern())
-                .allowedMethods(properties.getCors().getAllowedMethods())
-                .allowedHeaders(properties.getCors().getAllowedHeaders())
-                .allowedOriginPatterns(properties.getCors().getAllowedOriginPatterns())
-                .allowCredentials(properties.getCors().isAllowCredentials());
+        ApplicationProperties.Cors cors = properties.getCors();
+        registry.addMapping(cors.getPathPattern())
+                .allowedMethods(cors.getAllowedMethods())
+                .allowedHeaders(cors.getAllowedHeaders())
+                .allowedOriginPatterns(cors.getAllowedOriginPatterns())
+                .allowCredentials(cors.isAllowCredentials());
     }
 }

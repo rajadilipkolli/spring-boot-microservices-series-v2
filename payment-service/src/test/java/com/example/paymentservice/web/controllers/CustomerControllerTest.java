@@ -1,9 +1,10 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/* Licensed under Apache-2.0 2021-2023 */
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
@@ -32,6 +33,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.zalando.problem.jackson.ProblemModule;
+import org.zalando.problem.violations.ConstraintViolationProblemModule;
 
 @WebMvcTest(controllers = CustomerController.class)
 @ActiveProfiles(PROFILE_TEST)
@@ -54,6 +57,9 @@ class CustomerControllerTest {
                 new Customer(2L, "text 2", "second@customer.email", "Second Address", 0, 0));
         this.customerList.add(
                 new Customer(3L, "text 3", "third@customer.email", "Third Address", 0, 0));
+
+        objectMapper.registerModule(new ProblemModule());
+        objectMapper.registerModule(new ConstraintViolationProblemModule());
     }
 
     @Test
@@ -117,7 +123,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenCreateNewCustomerWithoutEmail() throws Exception {
+    void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
         Customer customer = new Customer(null, null, null, null, 0, 0);
 
         this.mockMvc
@@ -127,11 +133,17 @@ class CustomerControllerTest {
                                 .content(objectMapper.writeValueAsString(customer)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Bad Request")))
+                .andExpect(
+                        jsonPath(
+                                "$.type",
+                                is("https://zalando.github.io/problem/constraint-violation")))
+                .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/customers")))
+                .andExpect(jsonPath("$.violations", hasSize(2)))
+                .andExpect(jsonPath("$.violations[0].field", is("email")))
+                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be empty")))
+                .andExpect(jsonPath("$.violations[1].field", is("name")))
+                .andExpect(jsonPath("$.violations[1].message", is("Name cannot be empty")))
                 .andReturn();
     }
 

@@ -21,6 +21,6 @@ public interface MyTestContainers {
 
     @Container @ServiceConnection
     KafkaContainer kafkaContainer =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.4.1"))
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.0"))
                     .withKraft();
 }

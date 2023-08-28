@@ -22,6 +22,7 @@
         <spring-cloud.version>2022.0.4</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
         <commons-io.version>2.13.0</commons-io.version>
+        <problem-spring-web.version>0.29.1</problem-spring-web.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.38.0</spotless.version>
@@ -53,6 +54,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.zalando</groupId>
+            <artifactId>problem-spring-web-starter</artifactId>
+            <version>${problem-spring-web.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.kafka</groupId>
