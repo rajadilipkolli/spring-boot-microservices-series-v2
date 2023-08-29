@@ -29,6 +29,8 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class InventoryServiceProxy {
 
+    private static final String DEFAULT = "default";
+
     private final WebClient webClient;
     private final CircuitBreaker circuitBreaker;
     private final Retry retry;
@@ -42,10 +44,10 @@ public class InventoryServiceProxy {
             RateLimiterRegistry rateLimiterRegistry,
             TimeLimiterRegistry timeLimiterRegistry) {
         this.webClient = webClient;
-        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("default");
-        this.retry = retryRegistry.retry("default");
-        this.rateLimiter = rateLimiterRegistry.rateLimiter("default");
-        this.timeLimiter = timeLimiterRegistry.timeLimiter("default");
+        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT);
+        this.retry = retryRegistry.retry(DEFAULT);
+        this.rateLimiter = rateLimiterRegistry.rateLimiter(DEFAULT);
+        this.timeLimiter = timeLimiterRegistry.timeLimiter(DEFAULT);
     }
 
     public Mono<InventoryDto> getInventoryByProductCode(String productCode) {
