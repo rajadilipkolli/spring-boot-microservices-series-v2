@@ -7,6 +7,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import io.github.resilience4j.reactor.ratelimiter.operator.RateLimiterOperator;
 import io.github.resilience4j.reactor.retry.RetryOperator;
@@ -93,9 +94,10 @@ public class InventoryServiceProxy {
         return publisher
                 .transform(RetryOperator.of(retry))
                 .transform(TimeLimiterOperator.of(timeLimiter))
-                .transform(RateLimiterOperator.of(rateLimiter, 5))
+                .transform(RateLimiterOperator.of(rateLimiter))
                 .transform(CircuitBreakerOperator.of(circuitBreaker))
                 .onErrorResume(TimeoutException.class, fallback)
+                .onErrorResume(RequestNotPermitted.class, fallback)
                 .onErrorResume(Exception.class, fallback);
     }
 }

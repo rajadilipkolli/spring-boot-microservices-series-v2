@@ -5,6 +5,7 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.catalogservice.TestCatalogServiceApplication;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
@@ -25,4 +26,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected WebTestClient webTestClient;
 
     @Autowired protected CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Autowired protected ObjectMapper objectMapper;
 }

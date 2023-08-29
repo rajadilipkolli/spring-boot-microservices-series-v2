@@ -2,34 +2,53 @@
 package com.example.catalogservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
-import com.example.catalogservice.services.InventoryServiceProxy;
 import com.example.common.dtos.ProductDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import java.io.IOException;
 import java.util.List;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.HttpServerErrorException;
-import reactor.core.publisher.Flux;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import reactor.core.publisher.Mono;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Autowired private ProductRepository productRepository;
 
-    @MockBean private InventoryServiceProxy inventoryServiceProxy;
+    public static MockWebServer mockWebServer;
 
-    private Flux<Product> productFlux = null;
+    private List<Product> savedProductList = null;
+
+    @BeforeAll
+    static void setUpServer() throws IOException {
+        mockWebServer = new MockWebServer();
+        mockWebServer.start();
+    }
+
+    @AfterAll
+    static void tearDown() throws IOException {
+        mockWebServer.shutdown();
+    }
+
+    @DynamicPropertySource
+    static void backendProperties(DynamicPropertyRegistry registry) {
+        registry.add(
+                "application.inventory-service-url", () -> mockWebServer.url("/").url().toString());
+    }
 
     @BeforeEach
     void setUp() {
@@ -39,19 +58,26 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         new Product(null, "P001", "name 1", "description 1", 9.0, false),
                         new Product(null, "P002", "name 2", "description 2", 10.0, false),
                         new Product(null, "P003", "name 3", "description 3", 11.0, false));
-        productFlux =
+        savedProductList =
                 productRepository
                         .deleteAll()
                         .thenMany(productRepository.saveAll(productList))
-                        .thenMany(productRepository.findAll());
+                        .thenMany(productRepository.findAll())
+                        .collectList()
+                        .block();
     }
 
     @Test
-    void shouldFetchAllProducts() {
+    void shouldFetchAllProducts() throws JsonProcessingException {
 
-        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
-                .willReturn(Flux.just(new InventoryDto("P001", 0)));
-        List<Product> productList = productFlux.collectList().block();
+        mockBackendEndpoint(
+                200,
+                objectMapper.writeValueAsString(
+                        List.of(
+                                new InventoryDto("P001", 0),
+                                new InventoryDto("P002", 0),
+                                new InventoryDto("P003", 0))));
+
         webTestClient
                 .get()
                 .uri("/api/catalog")
@@ -59,8 +85,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectStatus()
                 .isOk()
                 .expectBodyList(Product.class)
-                .hasSize(productList.size())
-                .isEqualTo(productList); // Ensure fetched posts match the expected posts
+                .hasSize(savedProductList.size())
+                .isEqualTo(savedProductList); // Ensure fetched posts match the expected posts
     }
 
     @Test
@@ -78,7 +104,6 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    @Disabled(value = "Until Circuit Breaker issue is fixed")
     void shouldFetchAllProductsWithCircuitBreaker() {
 
         transitionToOpenState("getInventoryByProductCodes");
@@ -86,10 +111,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .circuitBreaker("getInventoryByProductCodes")
                 .transitionToHalfOpenState();
 
-        given(inventoryServiceProxy.getInventoryByProductCodes(List.of("P001", "P002", "P003")))
-                .willReturn(
-                        Flux.error(
-                                () -> new HttpServerErrorException(HttpStatusCode.valueOf(500))));
+        mockBackendEndpoint(500, "Product with id 100 not found");
+
         webTestClient
                 .get()
                 .uri("/api/catalog")
@@ -97,45 +120,36 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectStatus()
                 .isOk()
                 .expectBodyList(Product.class)
-                .hasSize(0);
+                .hasSize(3);
 
-        // Then
-        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.OPEN);
+        // Then, As it is still failing state should not change
+        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
     }
 
     @Test
-    void shouldFindProductById() {
-        // transitionToClosedState("default");
-        // transitionToHalfOpenState("default");
+    void shouldFindProductById() throws JsonProcessingException {
 
-        List<Product> productList = productFlux.collectList().block();
-
-        productList.forEach(
-                product -> {
-                    Long productId = product.getId();
-                    given(inventoryServiceProxy.getInventoryByProductCode(product.getCode()))
-                            .willReturn(Mono.just(new InventoryDto(product.getCode(), 100)));
-                    webTestClient
-                            .get()
-                            .uri("/api/catalog/id/{id}", productId)
-                            .exchange()
-                            .expectStatus()
-                            .isOk()
-                            .expectBody()
-                            .jsonPath("$.id")
-                            .isEqualTo(product.getId())
-                            .jsonPath("$.code")
-                            .isEqualTo(product.getCode())
-                            .jsonPath("$.productName")
-                            .isEqualTo(product.getProductName())
-                            .jsonPath("$.description")
-                            .isEqualTo(product.getDescription())
-                            .jsonPath("$.price")
-                            .isEqualTo(product.getPrice());
-                });
-
-        // Then
-        // checkHealthStatus("default", CircuitBreaker.State.HALF_OPEN);
+        Product product = savedProductList.get(0);
+        Long productId = product.getId();
+        mockBackendEndpoint(
+                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 0)));
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice());
     }
 
     @Test
@@ -169,7 +183,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldFindProductByProductCode() {
-        Product product = productFlux.next().block();
+        Product product = savedProductList.get(0);
 
         webTestClient
                 .get()
@@ -249,7 +263,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldUpdateProduct() {
-        Product product = productFlux.next().block();
+        Product product = savedProductList.get(0);
         product.setDescription("Updated Catalog");
 
         webTestClient
@@ -275,7 +289,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldDeleteProduct() {
-        Product product = productFlux.next().block();
+        Product product = savedProductList.get(0);
 
         webTestClient
                 .delete()
@@ -294,5 +308,14 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice());
+    }
+
+    private void mockBackendEndpoint(int responseCode, String body) {
+        MockResponse mockResponse =
+                new MockResponse()
+                        .setResponseCode(responseCode)
+                        .setBody(body)
+                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        mockWebServer.enqueue(mockResponse);
     }
 }
