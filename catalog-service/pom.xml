@@ -29,6 +29,7 @@
         <maven-checkstyle-plugin.version>3.3.0</maven-checkstyle-plugin.version>
         <spotless.version>2.38.0</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
+        <okhttp3.version>4.11.0</okhttp3.version>
 
         <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
 
@@ -234,13 +235,13 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.0.1</version>
+            <version>${okhttp3.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>mockwebserver</artifactId>
-            <version>4.0.1</version>
+            <version>${okhttp3.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
