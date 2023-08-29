@@ -11,6 +11,7 @@ import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -31,7 +32,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     public static MockWebServer mockWebServer;
 
-    private List<Product> savedProductList = null;
+    private List<Product> savedProductList = new ArrayList<>();
 
     @BeforeAll
     static void setUpServer() throws IOException {
@@ -115,7 +116,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog")
+                .uri(
+                        uriBuilder -> {
+                            uriBuilder.queryParam("sortDir", "desc");
+                            uriBuilder.path("/api/catalog");
+                            return uriBuilder.build();
+                        })
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -204,6 +210,27 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice());
+    }
+
+    @Test
+    void productsShouldExistsByProductCodes() {
+        List<String> productCodeList = savedProductList.stream().map(Product::getCode).toList();
+
+        webTestClient
+                .get()
+                .uri(
+                        uriBuilder -> {
+                            uriBuilder.queryParam("productCodes", productCodeList);
+                            uriBuilder.path("/api/catalog/exists");
+                            return uriBuilder.build();
+                        })
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Boolean.class)
+                .isEqualTo(Boolean.TRUE);
     }
 
     @Test

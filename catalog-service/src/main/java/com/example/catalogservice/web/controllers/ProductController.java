@@ -61,10 +61,10 @@ public class ProductController {
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
-    @GetMapping("/exists/{productIds}")
-    public Mono<ResponseEntity<Boolean>> existsProductByProductCode(
-            @PathVariable List<String> productIds) {
-        return productService.existsProductByProductCode(productIds).map(ResponseEntity::ok);
+    @GetMapping("/exists")
+    public Mono<ResponseEntity<Boolean>> productExistsByProductCodes(
+            @RequestParam(name = "productCodes") List<String> productCodes) {
+        return productService.productExistsByProductCodes(productCodes).map(ResponseEntity::ok);
     }
 
     @PostMapping

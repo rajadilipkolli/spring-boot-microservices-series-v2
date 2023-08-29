@@ -74,12 +74,6 @@ public class ProductService {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
-    private Flux<InventoryDto> getInventoryByProductCodesFallBack(
-            List<String> productCodeList, Throwable e) {
-        log.error("Exception occurred while fetching product details for :{}", productCodeList, e);
-        return Flux.empty();
-    }
-
     @Transactional(readOnly = true)
     public Mono<Product> findProductById(Long id) {
         return findProductByProductId(id)
@@ -125,11 +119,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<Boolean> existsProductByProductCode(List<String> productIds) {
-        log.info("checking is products Exists :{}", productIds);
+    public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
+        log.info("checking if products Exists :{}", productCodes);
         return productRepository
-                .countDistinctByCodeAllIgnoreCaseIn(productIds)
-                .map(count -> count == productIds.size());
+                .countDistinctByCodeAllIgnoreCaseIn(productCodes)
+                .map(count -> count == productCodes.size());
     }
 
     @Transactional(readOnly = true)
