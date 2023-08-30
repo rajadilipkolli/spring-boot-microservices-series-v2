@@ -1,4 +1,8 @@
-/*** Licensed under Apache-2.0 2021-2023 ***/
+/*** 
+    Licensed under MIT License
+
+    Copyright (c) 2021-2023 Raja Kolli 
+***/
 package com.example.catalogservice.services;
 
 import com.example.catalogservice.entities.Product;

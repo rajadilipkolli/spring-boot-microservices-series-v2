@@ -525,7 +525,7 @@
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->
-                            <content>/*** Licensed under Apache-2.0 $YEAR ***/</content>  <!-- or <file>${project.basedir}/license-header</file> -->
+                            <file>${project.basedir}/license-header</file>
                         </licenseHeader>
                     </java>
                 </configuration>
