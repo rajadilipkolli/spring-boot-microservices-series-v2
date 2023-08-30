@@ -6,6 +6,8 @@ import static org.mockserver.model.HttpResponse.response;
 
 import org.mockserver.client.MockServerClient;
 import org.mockserver.model.Header;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MockServerContainer;
@@ -34,13 +36,17 @@ public class ContainerInitializer {
 
     protected static void mockProductExistsRequest(boolean status) {
         mockServerClient
-                .when(request().withMethod("GET").withPath("/api/catalog/exists/Product1"))
+                .when(
+                        request()
+                                .withMethod("GET")
+                                .withPath("/api/catalog/exists?productCodes=PRODUCT1"))
                 .respond(
                         response()
                                 .withStatusCode(200)
                                 .withHeaders(
                                         new Header(
-                                                "Content-Type", "application/json; charset=utf-8"))
+                                                HttpHeaders.CONTENT_TYPE,
+                                                MediaType.APPLICATION_JSON_VALUE))
                                 .withBody(String.valueOf(status)));
     }
 }

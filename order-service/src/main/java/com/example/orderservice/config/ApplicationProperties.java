@@ -13,9 +13,8 @@ public record ApplicationProperties(
         @NotBlank(message = "CatalogServiceUrl Cant be Blank") String catalogServiceUrl,
         @NestedConfigurationProperty Cors cors) {
 
-    public ApplicationProperties(String catalogServiceUrl, Cors cors) {
-        this.catalogServiceUrl = catalogServiceUrl;
-        this.cors = new Cors();
+    public ApplicationProperties {
+        cors = new Cors();
     }
 }
 

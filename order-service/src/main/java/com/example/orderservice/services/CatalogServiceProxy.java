@@ -1,8 +1,8 @@
-/* Licensed under Apache-2.0 2022 */
+/* Licensed under Apache-2.0 2022-2023 */
 package com.example.orderservice.services;
 
 import java.util.List;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.service.annotation.GetExchange;
 
 // @HttpExchange("lb://catalog-service/")
@@ -10,6 +10,6 @@ import org.springframework.web.service.annotation.GetExchange;
 // @HttpExchange(url = "${application.catalog-service-url}")
 public interface CatalogServiceProxy {
 
-    @GetExchange("/api/catalog/exists/{productIds}")
-    Boolean productsExists(@PathVariable List<String> productIds);
+    @GetExchange("/api/catalog/exists")
+    Boolean productsExistsByCodes(@RequestParam(name = "productCodes") List<String> productCodes);
 }

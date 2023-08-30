@@ -106,7 +106,7 @@ public class OrderService {
     }
 
     private boolean productsExistsAndInStock(List<String> productIds) {
-        return catalogServiceProxy.productsExists(productIds);
+        return catalogServiceProxy.productsExistsByCodes(productIds);
     }
 
     public void deleteOrderById(Long id) {
