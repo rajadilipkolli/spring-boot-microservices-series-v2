@@ -1,4 +1,8 @@
-/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+</p>
+***/
 
 package com.example.catalogservice.common;
 
