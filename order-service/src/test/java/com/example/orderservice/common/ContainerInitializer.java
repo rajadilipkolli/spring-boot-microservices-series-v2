@@ -39,7 +39,8 @@ public class ContainerInitializer {
                 .when(
                         request()
                                 .withMethod("GET")
-                                .withPath("/api/catalog/exists?productCodes=PRODUCT1"))
+                                .withPath("/api/catalog/exists")
+                                .withQueryStringParameter("productCodes", "PRODUCT1"))
                 .respond(
                         response()
                                 .withStatusCode(200)
