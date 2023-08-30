@@ -383,7 +383,7 @@ services:
       - microservice-network
 
   tempo:
-    image: grafana/tempo:2.2.1
+    image: grafana/tempo:2.2.2
     container_name: tempo
     command: -config.file /etc/tempo-config.yml
     ports:
