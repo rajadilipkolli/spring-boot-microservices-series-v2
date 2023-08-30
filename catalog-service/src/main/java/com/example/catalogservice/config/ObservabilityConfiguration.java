@@ -8,15 +8,12 @@ package com.example.catalogservice.config;
 
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
 
 @Configuration(proxyBeanMethods = false)
 @RequiredArgsConstructor
@@ -32,13 +29,10 @@ public class ObservabilityConfiguration {
 
     @Bean
     WebClient webClient() {
-        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(10));
         return WebClient.builder()
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .baseUrl(applicationProperties.getInventoryServiceUrl())
-                .clientConnector(
-                        new ReactorClientHttpConnector(httpClient)) // Set the default timeout
                 .build();
     }
 }
