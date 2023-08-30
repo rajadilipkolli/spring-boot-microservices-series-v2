@@ -1,8 +1,5 @@
-/*** 
-    Licensed under MIT License
+/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
 
-    Copyright (c) 2023 Raja Kolli 
-***/
 package com.example.catalogservice.config;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;

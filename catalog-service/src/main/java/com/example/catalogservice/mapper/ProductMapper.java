@@ -1,8 +1,5 @@
-/*** 
-    Licensed under MIT License
+/*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
 
-    Copyright (c) 2021-2023 Raja Kolli 
-***/
 package com.example.catalogservice.mapper;
 
 import com.example.catalogservice.entities.Product;

@@ -1,8 +1,5 @@
-/*** 
-    Licensed under MIT License
+/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
 
-    Copyright (c) 2023 Raja Kolli 
-***/
 package com.example.catalogservice.services;
 
 import com.example.catalogservice.config.logging.Loggable;

@@ -1,8 +1,5 @@
-/*** 
-    Licensed under MIT License
+/*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
 
-    Copyright (c) 2021-2023 Raja Kolli 
-***/
 package com.example.catalogservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -160,6 +157,33 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice());
+    }
+
+    @Test
+    void shouldFindProductWhenInventoryIsDown() throws JsonProcessingException {
+
+        Product product = savedProductList.get(0);
+        Long productId = product.getId();
+        mockBackendEndpoint(500, "Product with id 100 not found");
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice())
+                .jsonPath("$.inStock")
+                .isEqualTo(false);
     }
 
     @Test
