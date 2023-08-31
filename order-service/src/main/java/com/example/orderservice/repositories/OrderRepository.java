@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2021-2023 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+</p>
+***/
+
 package com.example.orderservice.repositories;
 
 import com.example.orderservice.entities.Order;

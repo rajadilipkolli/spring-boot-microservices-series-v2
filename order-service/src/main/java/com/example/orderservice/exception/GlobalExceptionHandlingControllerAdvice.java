@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2022 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
+</p>
+***/
+
 package com.example.orderservice.exception;
 
 import java.util.Comparator;
@@ -14,7 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ControllerAdvice
-public class ErrorDetailProblemHandlingControllerAdvice {
+public class GlobalExceptionHandlingControllerAdvice {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

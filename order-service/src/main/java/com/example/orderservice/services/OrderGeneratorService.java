@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2022 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
+</p>
+***/
+
 package com.example.orderservice.services;
 
 import com.example.orderservice.model.request.OrderItemRequest;

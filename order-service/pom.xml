@@ -507,8 +507,8 @@
                             <version>1.15.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
-                        <licenseHeader>
-                            <content>/* Licensed under Apache-2.0 $YEAR */</content>
+                        <licenseHeader> <!-- specify either content or file, but not both -->
+                            <file>${project.basedir}/license-header</file>
                         </licenseHeader>
                     </java>
                 </configuration>

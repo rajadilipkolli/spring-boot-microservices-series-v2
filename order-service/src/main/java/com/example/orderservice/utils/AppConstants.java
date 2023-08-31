@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+</p>
+***/
+
 package com.example.orderservice.utils;
 
 public final class AppConstants {
