@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2023 */
+/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
 package com.example.paymentservice.exception;
 
 import java.net.URI;

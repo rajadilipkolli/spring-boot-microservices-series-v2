@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021-2022 */
+/*** Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli. ***/
 package com.example.paymentservice.config.logging;
 
 import static java.lang.annotation.ElementType.METHOD;

@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2022 */
+/*** Licensed under MIT License Copyright (c) 2022 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
 import org.springframework.boot.web.client.RestTemplateBuilder;

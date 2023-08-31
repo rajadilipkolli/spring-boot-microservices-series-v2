@@ -326,7 +326,7 @@
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
-                            <content>/* Licensed under Apache-2.0 $YEAR */</content>
+                            <content>/*** Licensed under MIT License Copyright (c) $YEAR Raja Kolli. ***/</content>
                         </licenseHeader>
                     </java>
                 </configuration>
