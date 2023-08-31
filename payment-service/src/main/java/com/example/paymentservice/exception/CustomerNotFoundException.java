@@ -1,17 +1,19 @@
 /* Licensed under Apache-2.0 2023 */
 package com.example.paymentservice.exception;
 
-import org.springframework.http.HttpStatus;
+import java.net.URI;
+import org.zalando.problem.AbstractThrowableProblem;
+import org.zalando.problem.Status;
 
-public class CustomerNotFoundException extends RuntimeException {
+public class CustomerNotFoundException extends AbstractThrowableProblem {
 
-    private static final HttpStatus httpStatus = HttpStatus.NOT_FOUND;
+    private static final URI TYPE = URI.create("https://api.customers.com/errors/not-found");
 
     public CustomerNotFoundException(Long customerId) {
-        super("Customer with Id " + customerId + "Not Found");
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
+        super(
+                TYPE,
+                "Customer Not Found",
+                Status.NOT_FOUND,
+                "Customer with Id '%d' not found".formatted(customerId));
     }
 }

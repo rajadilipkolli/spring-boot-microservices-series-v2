@@ -2,6 +2,7 @@
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
@@ -62,7 +63,7 @@ public class CustomerController {
         return customerService
                 .findCustomerById(id)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 
     @GetMapping("/name/{name}")
@@ -100,6 +101,6 @@ public class CustomerController {
                             customerService.deleteCustomerById(id);
                             return ResponseEntity.ok(customer);
                         })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 }
