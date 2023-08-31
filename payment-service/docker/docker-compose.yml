@@ -26,27 +26,10 @@ services:
     networks:
       - payment-network
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: [ "CMD-SHELL", "echo ruok | nc localhost 2181" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    ports:
-      - "22181:2181"
-    networks:
-      - payment-network
-
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
     ports:
-      - "29092:29092"
+      - "9092:9092"
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 9092" ]
       interval: 30s
@@ -54,11 +37,21 @@ services:
       retries: 3
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_MODE: 'kraft'
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
     networks:
       - payment-network
 
@@ -73,7 +66,7 @@ services:
       - "8888:8888"
     depends_on:
       zipkin-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - payment-network
     environment:
@@ -104,7 +97,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18081:18081"
     networks:
@@ -129,7 +122,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "18282:18282"
     networks:

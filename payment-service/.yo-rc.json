@@ -7,6 +7,6 @@
     "features": [],
     "buildTool": "maven",
     "packageFolder": "com/example/paymentservice",
-    "liquibaseMigrationCounter": 3
+    "liquibaseMigrationCounter": 1
   }
 }
