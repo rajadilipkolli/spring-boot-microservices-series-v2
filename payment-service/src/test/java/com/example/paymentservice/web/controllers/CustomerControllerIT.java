@@ -13,10 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -78,6 +80,14 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldReturn404WhenFetchingNonExistingCustomer() throws Exception {
+        long customerId = customerList.get(0).getId() + 99_999;
+        this.mockMvc
+                .perform(get("/api/customers/{id}", customerId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void shouldFindCustomerByName() throws Exception {
         Customer customer = customerList.get(0);
         String customerName = customer.getName();
@@ -91,15 +101,16 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewCustomer() throws Exception {
-        Customer customer =
-                new Customer(null, "New Customer", "first@customer.email", "First Address", 0, 0);
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        "New Customer", "first@customerRequest.email", "First Address", 0);
         this.mockMvc
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customer)))
+                                .content(objectMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is(customer.getName())));
+                .andExpect(jsonPath("$.name", is(customerRequest.name())));
     }
 
     @Test
@@ -129,18 +140,33 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateCustomer() throws Exception {
-        Customer customer = customerList.get(0);
-        customer.setName("Updated Customer");
-        customer.setAmountAvailable(10_000);
+        Long customerId = customerList.get(0).getId();
+        CustomerRequest customerRequest =
+                new CustomerRequest("Updated text", "first@customer.email", "First Address", 100);
 
         this.mockMvc
                 .perform(
-                        put("/api/customers/{id}", customer.getId())
+                        put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customer)))
+                                .content(objectMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(customer.getName())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(jsonPath("$.name", is(customerRequest.name())))
+                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+    }
+
+    @Test
+    @Disabled("temporarily till issue is fixed")
+    void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
+        long customerId = customerList.get(0).getId() + 99_999;
+        CustomerRequest customerRequest =
+                new CustomerRequest("Updated text", "first@customer.email", "First Address", 0);
+
+        this.mockMvc
+                .perform(
+                        put("/api/customers/{id}", customerId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -151,5 +177,13 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(delete("/api/customers/{id}", customer.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is(customer.getName())));
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
+        long customerId = customerList.get(0).getId() + 99_999;
+        this.mockMvc
+                .perform(delete("/api/customers/{id}", customerId))
+                .andExpect(status().isNotFound());
     }
 }

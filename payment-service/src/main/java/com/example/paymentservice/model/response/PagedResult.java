@@ -18,7 +18,7 @@ public record PagedResult<T>(
         this(
                 page.getContent(),
                 page.getTotalElements(),
-                page.getNumber() + 1,
+                page.getNumber() + 1, // for user page number starts from 1
                 page.getTotalPages(),
                 page.isFirst(),
                 page.isLast(),

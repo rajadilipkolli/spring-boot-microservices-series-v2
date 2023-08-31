@@ -2,11 +2,14 @@
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.query.FindCustomersQuery;
+import com.example.paymentservice.model.request.CustomerRequest;
+import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.utils.AppConstants;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,8 +20,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RequiredArgsConstructor
 @RestController
@@ -49,7 +52,9 @@ public class CustomerController {
                             defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
                             required = false)
                     String sortDir) {
-        return customerService.findAllCustomers(pageNo, pageSize, sortBy, sortDir);
+        FindCustomersQuery findCustomersQuery =
+                new FindCustomersQuery(pageNo, pageSize, sortBy, sortDir);
+        return customerService.findAllCustomers(findCustomersQuery);
     }
 
     @GetMapping("/{id}")
@@ -61,7 +66,7 @@ public class CustomerController {
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<Customer> getCustomerByName(@PathVariable String name) {
+    public ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name) {
         return customerService
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
@@ -69,22 +74,21 @@ public class CustomerController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Customer createCustomer(@RequestBody @Validated Customer customer) {
-        return customerService.saveCustomer(customer);
+    public ResponseEntity<CustomerResponse> createCustomer(
+            @RequestBody @Validated CustomerRequest customerRequest) {
+        CustomerResponse response = customerService.saveCustomer(customerRequest);
+        URI location =
+                ServletUriComponentsBuilder.fromCurrentRequest()
+                        .path("/api/customers/{id}")
+                        .buildAndExpand(response.id())
+                        .toUri();
+        return ResponseEntity.created(location).body(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> updateCustomer(
-            @PathVariable Long id, @RequestBody Customer customer) {
-        return customerService
-                .findCustomerById(id)
-                .map(
-                        customerObj -> {
-                            customer.setId(id);
-                            return ResponseEntity.ok(customerService.saveCustomer(customer));
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<CustomerResponse> updateCustomer(
+            @PathVariable Long id, @RequestBody CustomerRequest customerRequest) {
+        return ResponseEntity.ok(customerService.updateCustomer(id, customerRequest));
     }
 
     @DeleteMapping("/{id}")

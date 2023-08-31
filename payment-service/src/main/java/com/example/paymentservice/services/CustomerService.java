@@ -2,6 +2,11 @@
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.mapper.CustomerMapper;
+import com.example.paymentservice.model.query.FindCustomersQuery;
+import com.example.paymentservice.model.request.CustomerRequest;
+import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.Optional;
@@ -21,23 +26,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerMapper customerMapper;
 
     @Transactional(readOnly = true)
-    public PagedResult<Customer> findAllCustomers(
-            int pageNo, int pageSize, String sortBy, String sortDir) {
-
+    public PagedResult<Customer> findAllCustomers(FindCustomersQuery findCustomersQuery) {
         log.info(
-                "Fetching findAllCustomers for pageNo {} with pageSize {}, sorting BY {} {}",
-                pageNo,
-                pageSize,
-                sortBy,
-                sortDir);
+                "Fetching findAllCustomers for pageNo {} with pageSize {}, sorting By {} {}",
+                findCustomersQuery.pageNo() - 1,
+                findCustomersQuery.pageSize(),
+                findCustomersQuery.sortBy(),
+                findCustomersQuery.sortDir());
 
         Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+                findCustomersQuery.sortDir().equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(findCustomersQuery.sortBy()).ascending()
+                        : Sort.by(findCustomersQuery.sortBy()).descending();
+        int pageNo = findCustomersQuery.pageNo() > 0 ? findCustomersQuery.pageNo() - 1 : 0;
+        Pageable pageable = PageRequest.of(pageNo, findCustomersQuery.pageSize(), sort);
         Page<Customer> page = customerRepository.findAll(pageable);
         return new PagedResult<>(page);
     }
@@ -48,15 +53,32 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Customer> findCustomerByName(String name) {
+    public Optional<CustomerResponse> findCustomerByName(String name) {
         return customerRepository.findByName(name);
     }
 
-    public Customer saveCustomer(Customer customer) {
-        return customerRepository.save(customer);
+    public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
+        Customer customer = customerMapper.toEntity(customerRequest);
+        return customerMapper.toResponse(customerRepository.save(customer));
     }
 
     public void deleteCustomerById(Long id) {
         customerRepository.deleteById(id);
+    }
+
+    public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
+        Customer customer =
+                customerRepository
+                        .findById(id)
+                        .orElseThrow(() -> new CustomerNotFoundException(id));
+
+        // Update the customer object with data from customerRequest
+        customerMapper.mapCustomerWithRequest(customer, customerRequest);
+
+        // Save the updated customer object
+        Customer updatedCustomer = customerRepository.save(customer);
+
+        // Map the updated customer to a response object and return it
+        return customerMapper.toResponse(updatedCustomer);
     }
 }
