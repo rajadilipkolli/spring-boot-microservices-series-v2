@@ -1,5 +1,5 @@
 /*** Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli. ***/
-package com.example.paymentservice.config;
+package com.example.paymentservice.services.listener;
 
 import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.services.OrderManageService;

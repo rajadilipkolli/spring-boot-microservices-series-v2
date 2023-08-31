@@ -41,10 +41,13 @@ public class OrderManageService {
             orderDto.setStatus("REJECT");
         }
         orderDto.setSource(AppConstants.SOURCE);
-        log.info("Saving customer after reserving:{}", customer.getId());
+        log.info("Saving customer after reserving : {}", customer.getId());
         customerRepository.save(customer);
         kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
-        log.info("Sent Reserved Order: {}", orderDto);
+        log.info(
+                "Sent Reserved Order: {} to topic :{}",
+                orderDto,
+                AppConstants.PAYMENT_ORDERS_TOPIC);
     }
 
     public void confirm(OrderDto orderDto) {
