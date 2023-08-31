@@ -37,23 +37,55 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                                 "first@customer.email",
                                 "First Address",
                                 100,
-                                0));
+                                10));
     }
 
     @Test
     void onEventReserveOrder() {
-        Faker faker = new Faker();
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(faker.number().randomNumber());
-        orderDto.setStatus("NEW");
-        orderDto.setCustomerId(customer.getId());
+        OrderDto orderDto = getOrderDto("NEW");
 
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderItemDto.setProductId("P0001");
-        orderItemDto.setItemId(1L);
-        orderDto.setItems(List.of(orderItemDto));
+        // When
+        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+
+        // Then
+        await().pollDelay(3, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofSeconds(1))
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(
+                        () -> {
+                            Customer persistedCustomer =
+                                    customerRepository.findById(customer.getId()).get();
+                            assertThat(persistedCustomer.getAmountReserved()).isEqualTo(20);
+                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(90);
+                        });
+    }
+
+    @Test
+    void onEventConfirmOrder() {
+
+        OrderDto orderDto = getOrderDto("ROLLBACK");
+
+        // When
+        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+
+        // Then
+        await().pollDelay(3, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofSeconds(1))
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(
+                        () -> {
+                            Customer persistedCustomer =
+                                    customerRepository.findById(customer.getId()).get();
+                            assertThat(persistedCustomer.getAmountReserved()).isZero();
+                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(110);
+                        });
+    }
+
+    @Test
+    void onEventConfirmOrderNoRollBack() {
+
+        OrderDto orderDto = getOrderDto("ROLLBACK");
+        orderDto.setSource("payment");
 
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -67,7 +99,24 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved()).isEqualTo(10);
-                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(90);
+                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(100);
                         });
+    }
+
+    private OrderDto getOrderDto(String status) {
+        Faker faker = new Faker();
+        OrderDto orderDto = new OrderDto();
+        orderDto.setOrderId(faker.number().randomNumber());
+        orderDto.setStatus(status);
+        orderDto.setSource("inventory");
+        orderDto.setCustomerId(customer.getId());
+
+        OrderItemDto orderItemDto = new OrderItemDto();
+        orderItemDto.setProductPrice(BigDecimal.TEN);
+        orderItemDto.setQuantity(1);
+        orderItemDto.setProductId("P0001");
+        orderItemDto.setItemId(1L);
+        orderDto.setItems(List.of(orderItemDto));
+        return orderDto;
     }
 }

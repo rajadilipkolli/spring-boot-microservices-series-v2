@@ -21,9 +21,10 @@ public class KafkaListenerConfig {
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(OrderDto orderDto) {
         log.info(
-                "Received Order in payment service: {} from topic: {}",
+                "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,
-                AppConstants.ORDERS_TOPIC);
+                AppConstants.ORDERS_TOPIC,
+                orderDto.getSource());
         if ("NEW".equals(orderDto.getStatus())) {
             orderManageService.reserve(orderDto);
         } else {

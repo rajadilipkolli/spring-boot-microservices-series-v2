@@ -22,7 +22,10 @@ public class OrderManageService {
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
-        log.debug("Reserving Order in payment Service {}", orderDto);
+        log.debug(
+                "Reserving Order with Id :{} in payment service with payload {}",
+                orderDto.getOrderId(),
+                orderDto);
         Customer customer =
                 customerRepository
                         .findById(orderDto.getCustomerId())
@@ -51,7 +54,10 @@ public class OrderManageService {
     }
 
     public void confirm(OrderDto orderDto) {
-        log.debug("Confirming Order in payment service {}", orderDto);
+        log.debug(
+                "Confirming Order with Id :{} in payment service with payload {}",
+                orderDto.getOrderId(),
+                orderDto);
         Customer customer =
                 customerRepository
                         .findById(orderDto.getCustomerId())
