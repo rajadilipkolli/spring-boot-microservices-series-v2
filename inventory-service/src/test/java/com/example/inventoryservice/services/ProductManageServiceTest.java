@@ -19,8 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
-@ExtendWith(InstancioExtension.class)
+@ExtendWith({MockitoExtension.class, InstancioExtension.class})
 class ProductManageServiceTest {
 
     @Captor private ArgumentCaptor<Inventory> argumentCaptor;
