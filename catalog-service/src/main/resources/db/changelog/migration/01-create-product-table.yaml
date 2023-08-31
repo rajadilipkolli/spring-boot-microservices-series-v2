@@ -1,0 +1,56 @@
+# https://docs.liquibase.com/concepts/changelogs/yaml-format.html
+databaseChangeLog:
+  -  property:
+       dbms:  postgresql
+       name:  string.type
+       value:  text
+  -  property:
+       dbms:  "!postgresql"
+       name:  string.type
+       value:  varchar(255)
+  - changeSet:
+      author: rajakolli
+      id: createTable-products
+      context: Creates DDL Script for product
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - sequenceExists:
+                sequenceName: products_seq
+            - tableExists:
+                tableName: products
+      createSequence:
+        sequenceName: products_seq
+        startValue: '1'
+        incrementBy: '1'
+      createTable:
+        columns:
+          - column:
+              constraints:
+                nullable: 'false'
+                primaryKey: 'true'
+                primaryKeyName: pk_products
+              name: id
+              type: BIGINT
+              defaultValueSequenceNext: 'products_seq'
+          - column:
+              constraints:
+                nullable: 'false'
+              name: code
+              type: ${string.type}
+          - column:
+              constraints:
+                nullable: 'false'
+              name: product_name
+              type: ${string.type}
+          - column:
+              name: description
+              type: ${string.type}
+          - column:
+              name: price
+              type: 'NUMERIC(19,2)'
+        tableName: products
+      addUniqueConstraint:
+        columnNames: code
+        constraintName: uc_products_code
+        tableName: products
