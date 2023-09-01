@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2023 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+</p>
+***/
+
 package com.example.inventoryservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
