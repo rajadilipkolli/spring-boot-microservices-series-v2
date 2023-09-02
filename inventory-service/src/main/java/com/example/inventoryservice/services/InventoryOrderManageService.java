@@ -11,6 +11,8 @@ import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -37,43 +39,51 @@ public class InventoryOrderManageService {
         }
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
-        List<Inventory> inventoryList =
-                inventoryRepository.findByProductCodeInAndQuantityAvailable(productCodeList);
-        if (inventoryList.size() != productCodeList.size()) {
+
+        List<Inventory> inventoryListFromDB =
+                inventoryRepository.findByProductCodeIn(productCodeList);
+
+        if (inventoryListFromDB.size() != productCodeList.size()) {
             log.error(
-                    "Not all products requested exists, Hence Rejecting OrderID :{}",
+                    "Not all products requested exist, Hence Ignoring OrderID : {}",
                     orderDto.getOrderId());
-            orderDto.setStatus("REJECT");
-        } else {
-            log.info("All Products Exists");
-            Map<String, Inventory> inventoryMap =
-                    inventoryList.stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            Inventory::getProductCode, Function.identity()));
+            return;
+        }
 
-            List<Inventory> persistInventoryList =
-                    orderDto.getItems().stream()
-                            .map(
-                                    orderItemDto -> {
-                                        Inventory inventory =
-                                                inventoryMap.get(orderItemDto.getProductId());
-                                        int productCount = orderItemDto.getQuantity();
-                                        inventory.setReservedItems(
-                                                inventory.getReservedItems() + productCount);
-                                        inventory.setAvailableQuantity(
-                                                inventory.getAvailableQuantity() - productCount);
-                                        return inventory;
-                                    })
-                            .collect(Collectors.toList());
+        Map<String, Inventory> inventoryMap = new HashMap<>();
+        inventoryListFromDB.forEach(
+                inventory -> inventoryMap.put(inventory.getProductCode(), inventory));
 
-            // Update order status
+        List<Inventory> updatedInventoryList = new ArrayList<>();
+
+        for (OrderItemDto orderItemDto : orderDto.getItems()) {
+            String productCode = orderItemDto.getProductId();
+            Inventory inventoryFromDB = inventoryMap.get(productCode);
+
+            int productCount = orderItemDto.getQuantity();
+            if (productCount <= inventoryFromDB.getAvailableQuantity()) {
+                inventoryFromDB.setReservedItems(inventoryFromDB.getReservedItems() + productCount);
+                inventoryFromDB.setAvailableQuantity(
+                        inventoryFromDB.getAvailableQuantity() - productCount);
+                updatedInventoryList.add(inventoryFromDB);
+            } else {
+                log.info(
+                        "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
+                        orderDto.getOrderId());
+                orderDto.setStatus("REJECT");
+                break;
+            }
+        }
+
+        if (updatedInventoryList.size() == inventoryListFromDB.size()) {
             orderDto.setStatus("ACCEPT");
             log.info(
                     "Setting status as ACCEPT for inventoryIds : {}",
-                    persistInventoryList.stream().map(Inventory::getId).toList());
-            inventoryRepository.saveAll(persistInventoryList);
+                    updatedInventoryList.stream().map(Inventory::getId).toList());
+            inventoryRepository.saveAll(updatedInventoryList);
         }
+
+        orderDto.setSource("INVENTORY");
         // Send order to Kafka
         kafkaTemplate.send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         log.info(

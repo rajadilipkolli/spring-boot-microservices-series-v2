@@ -21,7 +21,6 @@ import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,21 +55,20 @@ class InventoryOrderManageServiceTest {
 
         orderDto.setItems(orderItems);
 
-        given(inventoryRepository.findByProductCodeInAndQuantityAvailable(anyList()))
+        given(inventoryRepository.findByProductCodeIn(anyList()))
                 .willReturn(
-                        new ArrayList<>(
-                                Arrays.asList(
-                                        new Inventory(1L, "product1", 10, 0),
-                                        new Inventory(2L, "product2", 10, 0))));
+                        List.of(
+                                new Inventory(1L, "product1", 10, 0),
+                                new Inventory(2L, "product2", 30, 0)));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
         assertThat(orderDto.getStatus()).isEqualTo("ACCEPT");
-        verify(inventoryRepository, times(1)).saveAll(anyList());
         verify(kafkaTemplate, times(1))
                 .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+        verify(inventoryRepository, times(1)).saveAll(anyList());
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 
@@ -86,17 +84,16 @@ class InventoryOrderManageServiceTest {
         orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         orderDto.setItems(orderItems);
 
-        given(inventoryRepository.findByProductCodeInAndQuantityAvailable(anyList()))
+        given(inventoryRepository.findByProductCodeIn(anyList()))
                 .willReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 0, 0))));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
 
         // Assert
-        assertThat(orderDto.getStatus()).isEqualTo("REJECT");
-        verify(inventoryRepository, times(1)).findByProductCodeInAndQuantityAvailable(anyList());
-        verify(kafkaTemplate, times(1))
-                .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+        assertThat(orderDto.getStatus()).isEqualTo("NEW");
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verifyNoInteractions(kafkaTemplate);
         verifyNoMoreInteractions(inventoryRepository);
     }
 

@@ -119,7 +119,7 @@ function setupTestData() {
 
     body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
-'","email": "docker@email.com","address": "docker Address","amountAvailable":1000,"amountReserved":0}'
+'","email": "docker@email.com","address": "docker Address","amountAvailable":1000}'
 
     # Creating Customer
     recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"
@@ -173,12 +173,12 @@ function verifyAPIs() {
     echo "Sleeping for 5 sec for order processing"
     sleep 5
 
-    # Verify that order processing is completed and status is ROLLBACK
+    # Verify that order processing is completed and status is REJECTED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
-    assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
-    assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source)
+    assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
