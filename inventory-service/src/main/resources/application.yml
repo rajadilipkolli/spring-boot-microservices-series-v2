@@ -19,6 +19,8 @@ spring.kafka:
     value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
     properties:
       spring.json.trusted.packages: "com.example.common.dtos"
+      isolation.level: read_committed
+
   producer:
     key-serializer: org.apache.kafka.common.serialization.LongSerializer
     value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

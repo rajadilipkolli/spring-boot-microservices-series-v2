@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
 </p>
 ***/
 
@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.transaction.annotation.Transactional;
 
 @EnableKafka
 @Slf4j
@@ -26,7 +27,12 @@ public class KafkaListenerConfig {
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
 
-    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
+    @KafkaListener(
+            id = "orders",
+            topics = AppConstants.ORDERS_TOPIC,
+            groupId = "stock",
+            concurrency = "3")
+    @Transactional("kafkaTransactionManager")
     public void onEvent(OrderDto orderDto) {
         log.info("Received Order: {}", orderDto);
         if ("NEW".equals(orderDto.getStatus())) {

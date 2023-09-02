@@ -18,8 +18,10 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      transaction-id-prefix: tx-
       properties:
         spring.json.add.type.headers: true
+
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1

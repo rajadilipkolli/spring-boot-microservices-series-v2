@@ -85,7 +85,7 @@ public class OrderService {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
 
-    @Transactional
+    @Transactional("kafkaTransactionManager")
     public OrderDto saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productIds =
