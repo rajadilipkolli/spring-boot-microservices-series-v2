@@ -15,7 +15,6 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
-import com.example.orderservice.utils.AppConstants;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -25,7 +24,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +38,7 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final CatalogServiceProxy catalogServiceProxy;
 
-    private final KafkaTemplate<Long, OrderDto> template;
+    private final KafkaOrderProducer kafkaOrderProducer;
 
     @Transactional(readOnly = true)
     public PagedResult<OrderDto> findAllOrders(
@@ -97,13 +95,7 @@ public class OrderService {
             Order order = this.orderMapper.orderRequestToEntity(orderRequest);
             OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            this.template.send(
-                    AppConstants.ORDERS_TOPIC, persistedOrderDto.getOrderId(), persistedOrderDto);
-            log.info(
-                    "Sent Order : {} from order service to topic {}",
-                    persistedOrderDto,
-                    AppConstants.ORDERS_TOPIC);
-
+            kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
         } else {
             throw new ProductNotFoundException(productIds);
