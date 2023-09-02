@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Slf4j
@@ -19,12 +18,7 @@ public class KafkaListenerConfig {
 
     private final PaymentOrderManageService paymentOrderManageService;
 
-    @KafkaListener(
-            id = "orders",
-            topics = AppConstants.ORDERS_TOPIC,
-            groupId = "payment",
-            concurrency = "3")
-    @Transactional("kafkaTransactionManager")
+    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(OrderDto orderDto) {
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
