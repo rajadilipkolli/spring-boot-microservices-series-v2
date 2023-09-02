@@ -57,9 +57,13 @@ public class OrderItem {
 
     @Override
     public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass =
+        if (this == o) {
+            return true;
+        }
+        if (o == null) {
+            return false;
+        }
+        Class<?> objectEffectiveClass =
                 o instanceof HibernateProxy
                         ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
                         : o.getClass();
@@ -67,7 +71,9 @@ public class OrderItem {
                 this instanceof HibernateProxy
                         ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
                         : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
+        if (thisEffectiveClass != objectEffectiveClass) {
+            return false;
+        }
         OrderItem orderItem = (OrderItem) o;
         return Objects.equals(getProductCode(), orderItem.getProductCode());
     }

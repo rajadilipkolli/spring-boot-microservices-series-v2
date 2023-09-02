@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 @RequiredArgsConstructor
 @Loggable
 public class OrderService {
@@ -37,6 +37,7 @@ public class OrderService {
     private final CatalogServiceProxy catalogServiceProxy;
     private final KafkaOrderProducer kafkaOrderProducer;
 
+    @Transactional(readOnly = true)
     public PagedResult<OrderDto> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -50,7 +51,7 @@ public class OrderService {
         Page<Order> page = orderRepository.findAll(pageable);
         // Get orderIds matching pagination
         List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
-        // fetching parentAlongWithChildEnties
+        // fetching parentAlongWithChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(orderIds);
         // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderDto>> completableFutureList =
@@ -74,11 +75,11 @@ public class OrderService {
                 page.hasPrevious());
     }
 
+    @Transactional(readOnly = true)
     public Optional<Order> findOrderById(Long id) {
         return orderRepository.findOrderById(id);
     }
 
-    @Transactional
     public OrderDto saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
@@ -102,12 +103,10 @@ public class OrderService {
         return catalogServiceProxy.productsExistsByCodes(productIds);
     }
 
-    @Transactional
     public void deleteOrderById(Long id) {
         orderRepository.deleteById(id);
     }
 
-    @Transactional
     public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = getPersistedOrder(orderObj);
@@ -118,10 +117,12 @@ public class OrderService {
         return this.orderRepository.save(orderObj);
     }
 
+    @Transactional(readOnly = true)
     public Optional<Order> findById(Long id) {
         return orderRepository.findById(id);
     }
 
+    @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderByIdAsDto(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }

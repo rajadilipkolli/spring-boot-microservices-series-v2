@@ -91,7 +91,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.isFirst", is(true)))
                 .andExpect(jsonPath("$.isLast", is(true)))
                 .andExpect(jsonPath("$.hasNext", is(false)))
-                .andExpect(jsonPath("$.hasPrevious", is(false)));
+                .andExpect(jsonPath("$.hasPrevious", is(false)))
+                .andExpect(
+                        jsonPath("$.data[0].items.size()", is(orderList.get(0).getItems().size())));
     }
 
     @Test
