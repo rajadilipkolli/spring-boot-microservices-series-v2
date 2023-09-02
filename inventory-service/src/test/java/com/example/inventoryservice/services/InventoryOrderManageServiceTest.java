@@ -73,6 +73,36 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
+    void testReserve_AllProductsExistWithLessQuantity_OrderStatusIsNew_OrderIsRejected() {
+        // Arrange
+        OrderDto orderDto = new OrderDto();
+        orderDto.setOrderId(1L);
+        orderDto.setStatus("NEW");
+
+        List<OrderItemDto> orderItems = new ArrayList<>();
+        orderItems.add(new OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
+        orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
+
+        orderDto.setItems(orderItems);
+
+        given(inventoryRepository.findByProductCodeIn(anyList()))
+                .willReturn(
+                        List.of(
+                                new Inventory(1L, "product1", 10, 0),
+                                new Inventory(2L, "product2", 10, 0)));
+
+        // Act
+        inventoryOrderManageService.reserve(orderDto);
+
+        // Assert
+        assertThat(orderDto.getStatus()).isEqualTo("REJECT");
+        verify(kafkaTemplate, times(1))
+                .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
+    }
+
+    @Test
     void testReserve_NotAllProductsExist_OrderStatusIsNew_OrderIsNotProcessed() {
         // Arrange
         OrderDto orderDto = new OrderDto();
