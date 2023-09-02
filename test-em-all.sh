@@ -101,11 +101,11 @@ function setupTestData() {
 '","productName":"product name A","price":100, "description": "A Beautiful Product"}'
 
 #    Creating Product
-    echo "creating product"
+    echo "creating product with code - " $PROD_CODE
     recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
     # waiting for kafka to process the catalog creation request, as it is first time kafka initialization takes time
-    sleep 10
+    sleep 5
     # Verify that a normal request works, expect record exists with product code
     assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
@@ -143,8 +143,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 5 sec for order processing. as it is first time"
-    sleep 5
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -170,8 +170,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 5 sec for order processing"
-    sleep 5
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -198,8 +198,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 8 sec for order processing of" $ORDER_ID
-    sleep 8
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
