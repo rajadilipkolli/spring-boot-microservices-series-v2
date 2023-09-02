@@ -78,14 +78,15 @@ public class OrderService {
         return orderRepository.findOrderById(id);
     }
 
+    @Transactional
     public OrderDto saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
-        List<String> productIds =
+        List<String> productCodes =
                 orderRequest.items().stream()
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        if (productsExistsAndInStock(productIds)) {
+        if (productsExistsAndInStock(productCodes)) {
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = getPersistedOrder(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
@@ -93,7 +94,7 @@ public class OrderService {
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
         } else {
-            throw new ProductNotFoundException(productIds);
+            throw new ProductNotFoundException(productCodes);
         }
     }
 
@@ -106,13 +107,13 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
+    @Transactional
     public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = getPersistedOrder(orderObj);
         return this.orderMapper.toDto(persistedOrder);
     }
 
-    @Transactional
     public Order getPersistedOrder(Order orderObj) {
         return this.orderRepository.save(orderObj);
     }

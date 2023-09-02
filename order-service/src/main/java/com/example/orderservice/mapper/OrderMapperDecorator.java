@@ -1,0 +1,69 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+</p>
+***/
+
+package com.example.orderservice.mapper;
+
+import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderItem;
+import com.example.orderservice.model.request.OrderRequest;
+import java.util.List;
+import java.util.Objects;
+
+public abstract class OrderMapperDecorator implements OrderMapper {
+
+    @Override
+    public void updateOrderFromOrderRequest(OrderRequest orderRequest, Order order) {
+        if (order == null) {
+            return;
+        }
+        order.setCustomerId(orderRequest.customerId());
+
+        // Convert request to OrderItems
+        List<OrderItem> detachedOrderItems =
+                orderRequest.items().stream().map(this::orderItemRequestToOrderItem).toList();
+
+        // Remove the existing database rows that are no
+        // longer found in the incoming collection (detachedOrderItems)
+        List<OrderItem> orderItemsToRemove =
+                order.getItems().stream()
+                        .filter(orderItem -> !detachedOrderItems.contains(orderItem))
+                        .toList();
+        orderItemsToRemove.forEach(order::removeOrderItem);
+
+        // Update the existing database rows which can be found
+        // in the incoming collection (detachedOrderItems)
+        List<OrderItem> newOrderItems =
+                detachedOrderItems.stream()
+                        .filter(orderItem -> !order.getItems().contains(orderItem))
+                        .toList();
+
+        detachedOrderItems.stream()
+                .filter(orderItem -> !newOrderItems.contains(orderItem))
+                .forEach(
+                        (orderItem) -> {
+                            orderItem.setOrder(order);
+                            orderItem.setId(getOrderItemId(order.getItems(), orderItem));
+                            //                            OrderItem mergedBook =
+                            // orderItemRepository.save(orderItem);
+                            order.getItems().set(order.getItems().indexOf(orderItem), orderItem);
+                        });
+
+        // Add the rows found in the incoming collection,
+        // which cannot be found in the current database snapshot
+        newOrderItems.forEach(order::addOrderItem);
+    }
+
+    private Long getOrderItemId(List<OrderItem> items, OrderItem orderItem) {
+        Long orderItemId = null;
+        for (OrderItem item : items) {
+            if (Objects.equals(item.getProductCode(), orderItem.getProductCode())) {
+                orderItemId = item.getId();
+                break;
+            }
+        }
+        return orderItemId;
+    }
+}

@@ -185,6 +185,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                         new OrderItemRequest(
                                 orderItem1.getProductCode(),
                                 orderItem1.getQuantity(),
+                                orderItem1.getProductPrice()),
+                        new OrderItemRequest(
+                                "product4",
+                                orderItem1.getQuantity(),
                                 orderItem1.getProductPrice())));
     }
 

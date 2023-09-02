@@ -14,17 +14,20 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.util.function.Consumer;
 import org.mapstruct.AfterMapping;
+import org.mapstruct.DecoratedWith;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValueCheckStrategy;
 
 @Mapper(componentModel = "spring", nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS)
+@DecoratedWith(OrderMapperDecorator.class)
 public interface OrderMapper {
 
     @Mapping(source = "id", target = "orderId")
     OrderDto toDto(Order order);
 
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "items", ignore = true)
     Order toEntity(OrderDto orderDto);
@@ -45,8 +48,8 @@ public interface OrderMapper {
         orderDTO.getItems().forEach(addOrderItemToOrder);
     }
 
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "items", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     Order orderRequestToEntity(OrderRequest orderRequest);
@@ -55,18 +58,10 @@ public interface OrderMapper {
     @Mapping(target = "order", ignore = true)
     OrderItem orderItemRequestToOrderItem(OrderItemRequest orderItemRequest);
 
-    @AfterMapping
-    default void addOrderItemRequestToOrderEntity(
-            OrderRequest orderRequest, @MappingTarget Order order) {
-        orderRequest
-                .items()
-                .forEach(
-                        orderItemRequest ->
-                                order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
-    }
-
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "items", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
 }

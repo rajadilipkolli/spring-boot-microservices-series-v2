@@ -24,20 +24,23 @@ public class TestOrderServiceApplication {
     @RestartScope
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.0"))
-                .withKraft();
+                .withKraft()
+                .withReuse(true);
     }
 
     @ServiceConnection
     @Bean
     PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"));
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"))
+                .withReuse(true);
     }
 
     @Bean
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> zipkinContainer() {
         return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411);
+                .withExposedPorts(9411)
+                .withReuse(true);
     }
 
     public static void main(String[] args) {
