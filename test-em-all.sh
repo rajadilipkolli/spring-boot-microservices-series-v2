@@ -163,7 +163,7 @@ function verifyAPIs() {
 ',"items":[{"productId": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 100,"productPrice": 5}]}'
+'","quantity": 1000,"productPrice": 5}]}'
 
     # Creating 2nd Order, this should ROLLBACK as Inventory is not available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
@@ -173,12 +173,12 @@ function verifyAPIs() {
     echo "Sleeping for 5 sec for order processing"
     sleep 5
 
-    # Verify that order processing is completed and status is CONFIRMED
+    # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
-    assertEqual \"STOCK\" $(echo ${RESPONSE} | jq .source)
+    assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
