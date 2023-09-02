@@ -33,6 +33,7 @@
             </column>
             <column name="source" type="${string.type}" />
             <column name="status" type="${string.type}" />
+            <column name="version" type="bigint" />
         </createTable>
 
         <createTable tableName="order_items">

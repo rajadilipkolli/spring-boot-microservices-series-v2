@@ -197,7 +197,7 @@ class OrderControllerTest {
     void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
         Long orderId = 1L;
         given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
-        Order order = new Order(1L, 1L, "CONFIRMED", null, new ArrayList<>());
+        OrderRequest order = new OrderRequest(1L, new ArrayList<>());
 
         this.mockMvc
                 .perform(
