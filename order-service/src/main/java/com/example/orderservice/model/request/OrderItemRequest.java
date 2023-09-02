@@ -8,4 +8,4 @@ package com.example.orderservice.model.request;
 
 import java.math.BigDecimal;
 
-public record OrderItemRequest(String productId, int quantity, BigDecimal productPrice) {}
+public record OrderItemRequest(String productCode, int quantity, BigDecimal productPrice) {}

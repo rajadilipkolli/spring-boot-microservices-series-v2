@@ -6,14 +6,7 @@
 
 package com.example.orderservice.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,7 +14,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "order_items")
+@Table(
+        name = "order_items",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "UC_ORDER_ITEMS_PRODUCT_ORDER",
+                        columnNames = {"product_code", "order_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,8 +30,8 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    @Column(nullable = false)
-    private String productId;
+    @Column(nullable = false, name = "product_code")
+    private String productCode;
 
     @Column(nullable = false)
     private int quantity;

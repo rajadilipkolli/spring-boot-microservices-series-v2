@@ -82,7 +82,7 @@ public class OrderService {
         // Verify if items exists
         List<String> productIds =
                 orderRequest.items().stream()
-                        .map(OrderItemRequest::productId)
+                        .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
         if (productsExistsAndInStock(productIds)) {

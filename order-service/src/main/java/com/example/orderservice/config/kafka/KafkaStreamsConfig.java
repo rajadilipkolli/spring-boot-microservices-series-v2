@@ -89,13 +89,13 @@ public class KafkaStreamsConfig {
     }
 
     @Bean
-    KStream<Long, OrderDto> stream(StreamsBuilder kStreamBuilder) {
+    KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
-                kStreamBuilder.stream(
+                kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         stream.join(
-                        kStreamBuilder.stream(STOCK_ORDERS_TOPIC),
+                        kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))

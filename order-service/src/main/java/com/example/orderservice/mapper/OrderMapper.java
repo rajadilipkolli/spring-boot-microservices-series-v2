@@ -30,10 +30,12 @@ public interface OrderMapper {
     Order toEntity(OrderDto orderDto);
 
     @Mapping(target = "itemId", source = "id")
+    @Mapping(target = "productId", source = "productCode")
     OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "order", ignore = true)
+    @Mapping(target = "productCode", source = "productId")
     OrderItem orderItemDtoToOrderItem(OrderItemDto orderItemDto);
 
     @AfterMapping
