@@ -58,6 +58,16 @@ public interface OrderMapper {
     @Mapping(target = "order", ignore = true)
     OrderItem orderItemRequestToOrderItem(OrderItemRequest orderItemRequest);
 
+    @AfterMapping
+    default void addOrderItemRequestToOrderEntity(
+            OrderRequest orderRequest, @MappingTarget Order order) {
+        orderRequest
+                .items()
+                .forEach(
+                        orderItemRequest ->
+                                order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
+    }
+
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "id", ignore = true)
