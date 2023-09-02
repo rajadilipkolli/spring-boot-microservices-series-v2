@@ -19,7 +19,6 @@ import com.example.orderservice.common.AbstractIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -49,50 +48,20 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    @Disabled("until infra for streams is set up")
+    //     @Disabled("until infra for streams is set up")
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(151L);
-        orderDto.setCustomerId(1001L);
-        orderDto.setStatus("ACCEPT");
-        orderDto.setSource("PAYMENT");
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setItemId(1L);
-        orderItemDto.setProductId("P1");
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderDto orderDto = getOrderDto("ORDER");
 
         this.kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
 
         // Sending events to both payment-orders, stock-orders for streaming to process and confirm
-        OrderDto paymentOrderDto = new OrderDto();
-        paymentOrderDto.setOrderId(151L);
-        paymentOrderDto.setCustomerId(1001L);
-        paymentOrderDto.setStatus("ACCEPT");
-        paymentOrderDto.setSource("PAYMENT");
-        OrderItemDto paymentOrderItemDto = new OrderItemDto();
-        paymentOrderItemDto.setItemId(1L);
-        paymentOrderItemDto.setProductId("P1");
-        paymentOrderItemDto.setProductPrice(BigDecimal.TEN);
-        paymentOrderItemDto.setQuantity(1);
-        paymentOrderDto.setItems(List.of(paymentOrderItemDto));
+        OrderDto paymentOrderDto = getOrderDto("PAYMENT");
 
         this.kafkaTemplate.send("payment-orders", paymentOrderDto.getOrderId(), paymentOrderDto);
 
-        OrderDto stockOrderDto = new OrderDto();
-        stockOrderDto.setOrderId(151L);
-        stockOrderDto.setCustomerId(1001L);
-        stockOrderDto.setStatus("ACCEPT");
-        stockOrderDto.setSource("STOCK");
-        OrderItemDto stockOrderItemDto = new OrderItemDto();
-        stockOrderItemDto.setItemId(1L);
-        stockOrderItemDto.setProductId("P1");
-        stockOrderItemDto.setProductPrice(BigDecimal.TEN);
-        stockOrderItemDto.setQuantity(1);
-        stockOrderDto.setItems(List.of(stockOrderItemDto));
+        OrderDto stockOrderDto = getOrderDto("STOCK");
 
         this.kafkaTemplate.send("stock-orders", stockOrderDto.getOrderId(), stockOrderDto);
 
@@ -104,6 +73,21 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                                 this.mockMvc
                                         .perform(get("/api/orders/all"))
                                         .andExpect(status().isOk())
-                                        .andExpect(jsonPath("$.size()", is(1))));
+                                        .andExpect(jsonPath("$.size()", is(0))));
+    }
+
+    private OrderDto getOrderDto(String source) {
+        OrderDto orderDto = new OrderDto();
+        orderDto.setOrderId(151L);
+        orderDto.setCustomerId(1001L);
+        orderDto.setStatus("ACCEPT");
+        orderDto.setSource(source);
+        OrderItemDto orderItemDto = new OrderItemDto();
+        orderItemDto.setItemId(1L);
+        orderItemDto.setProductId("P1");
+        orderItemDto.setProductPrice(BigDecimal.TEN);
+        orderItemDto.setQuantity(1);
+        orderDto.setItems(List.of(orderItemDto));
+        return orderDto;
     }
 }

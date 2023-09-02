@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,8 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Slf4j
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Loggable
 public class OrderService {
@@ -37,10 +35,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CatalogServiceProxy catalogServiceProxy;
-
     private final KafkaOrderProducer kafkaOrderProducer;
 
-    @Transactional(readOnly = true)
     public PagedResult<OrderDto> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -78,7 +74,6 @@ public class OrderService {
                 page.hasPrevious());
     }
 
-    @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderById(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
@@ -92,8 +87,9 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .toList();
         if (productsExistsAndInStock(productIds)) {
-            Order order = this.orderMapper.orderRequestToEntity(orderRequest);
-            OrderDto persistedOrderDto = this.orderMapper.toDto(orderRepository.save(order));
+            Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
+            Order savedOrder = this.orderRepository.save(orderEntity);
+            OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
@@ -106,10 +102,12 @@ public class OrderService {
         return catalogServiceProxy.productsExistsByCodes(productIds);
     }
 
+    @Transactional
     public void deleteOrderById(Long id) {
         orderRepository.deleteById(id);
     }
 
+    @Transactional
     public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = this.orderRepository.save(orderObj);

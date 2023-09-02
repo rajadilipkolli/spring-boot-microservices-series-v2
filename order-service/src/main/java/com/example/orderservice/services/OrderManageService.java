@@ -41,12 +41,14 @@ public class OrderManageService {
         }
         // setting from inventory as it has latest
         orderDto.setItems(orderStock.getItems());
-        this.orderRepository.updateOrderStatusAndSourceById(
-                orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
+        int rows =
+                this.orderRepository.updateOrderStatusAndSourceById(
+                        orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
         log.info(
-                "Updated Status as {} for orderId :{}",
+                "Updated Status as {} for orderId :{} in {} rows",
                 orderDto.getStatus(),
-                orderDto.getOrderId());
+                orderDto.getOrderId(),
+                rows);
         return orderDto;
     }
 }
