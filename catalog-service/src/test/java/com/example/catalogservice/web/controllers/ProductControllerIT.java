@@ -268,6 +268,27 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
+    void productsShouldNotExistsByProductCodes() {
+        List<String> productCodeList = List.of("P1", "P2", "P3", "P4", "P5");
+
+        webTestClient
+                .get()
+                .uri(
+                        uriBuilder -> {
+                            uriBuilder.queryParam("productCodes", productCodeList);
+                            uriBuilder.path("/api/catalog/exists");
+                            return uriBuilder.build();
+                        })
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Boolean.class)
+                .isEqualTo(Boolean.FALSE);
+    }
+
+    @Test
     void shouldCreateNewProduct() {
         ProductDto productDto = new ProductDto("code 4", "name 4", "description 4", 19.0);
         webTestClient
