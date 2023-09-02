@@ -102,8 +102,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
                 .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
                 .andExpect(jsonPath("$.status", is(order.getStatus())))
+                .andExpect(jsonPath("$.source", is(order.getSource())))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
     }
 
@@ -166,6 +168,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.items.size()", is(3)))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
                 .andExpect(jsonPath("$.items[0].price", is(1100)))
                 .andExpect(jsonPath("$.items[1].quantity", is(100)))

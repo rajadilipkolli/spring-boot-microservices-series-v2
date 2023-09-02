@@ -123,6 +123,6 @@ public class OrderService {
     }
 
     public Optional<OrderDto> findOrderByIdAsDto(Long id) {
-        return findOrderById(id).map(this.orderMapper::toDto);
+        return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
 }
