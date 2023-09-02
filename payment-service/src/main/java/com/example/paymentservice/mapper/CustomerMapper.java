@@ -28,7 +28,7 @@ public class CustomerMapper {
     }
 
     public void mapCustomerWithRequest(Customer customer, CustomerRequest customerRequest) {
-        customer.setAmountAvailable(customer.getAmountAvailable());
+        customer.setAmountAvailable(customerRequest.amountAvailable());
         customer.setName(customerRequest.name());
         customer.setAddress(customerRequest.address());
         customer.setEmail(customerRequest.email());

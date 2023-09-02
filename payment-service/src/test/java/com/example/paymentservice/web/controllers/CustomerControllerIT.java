@@ -168,7 +168,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.get(0).getId();
         CustomerRequest customerRequest =
-                new CustomerRequest("Updated text", "first@customer.email", "First Address", 100);
+                new CustomerRequest("Updated text", "first@customer.email", "First Address", 500);
 
         this.mockMvc
                 .perform(

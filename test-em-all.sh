@@ -163,7 +163,7 @@ function verifyAPIs() {
 ',"items":[{"productId": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 1000,"productPrice": 5}]}'
+'","quantity": 100,"productPrice": 5}]}'
 
     # Creating 2nd Order, this should ROLLBACK as Inventory is not available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
