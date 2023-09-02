@@ -1,6 +1,8 @@
 package simulation;
 
-import static io.gatling.javaapi.core.CoreDsl.*;
+import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.StringBody;
+import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -12,7 +14,9 @@ import io.gatling.javaapi.core.Simulation;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
@@ -33,7 +37,7 @@ public class CreateProductSimulation extends Simulation {
             Stream.generate(
                             () -> {
                                 Map<String, Object> objectMap = new HashMap<>();
-                                objectMap.put("code", UUID.randomUUID().toString());
+                                objectMap.put("code", "Product"+new SecureRandom().nextInt(101, 200));
                                 objectMap.put(
                                         "productName",
                                         "Product Name " + new SecureRandom().nextInt());
@@ -52,7 +56,7 @@ public class CreateProductSimulation extends Simulation {
                                     .header("Content-Type", "application/json")
                                     .body(
                                             StringBody(
-                                                    "{ \"code\": \"${code}\",\"productName\":\"${productName}\",\"price\":${price}, \"description\": \"A Beautiful Product\" }"))
+                                                    "{ \"code\": \"#{code}\",\"productName\":\"#{productName}\",\"price\":#{price}, \"description\": \"A Beautiful Product\" }"))
                                     .check(status().is(201))
                                     .check(header("location").saveAs("location")))
                     .exec(
@@ -73,8 +77,8 @@ public class CreateProductSimulation extends Simulation {
                                             session ->
                                                     "/inventory-service/api/inventory/"
                                                             + getInventoryId(
-                                                                    session.get(
-                                                                            "inventoryResponseBody")))
+                                                            session.get(
+                                                                    "inventoryResponseBody")))
                                     .header("Content-Type", "application/json")
                                     .body(
                                             StringBody(
@@ -94,7 +98,7 @@ public class CreateProductSimulation extends Simulation {
                                                       "customerId": #{customerId},
                                                       "items": [
                                                         {
-                                                          "productId": "${code}",
+                                                          "productId": "#{code}",
                                                           "quantity": 10,
                                                           "productPrice": 5
                                                         }
