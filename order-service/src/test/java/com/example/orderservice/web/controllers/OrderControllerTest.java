@@ -85,7 +85,7 @@ class OrderControllerTest {
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
         OrderDto order = new OrderDto(1L, 1L, "NEW", "", new ArrayList<>());
-        given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
+        given(orderService.findOrderByIdAsDto(orderId)).willReturn(Optional.of(order));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
@@ -181,7 +181,8 @@ class OrderControllerTest {
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
 
-        given(orderService.findById(orderDto.getOrderId())).willReturn(Optional.of(new Order()));
+        given(orderService.findOrderById(orderDto.getOrderId()))
+                .willReturn(Optional.of(new Order()));
         given(orderService.updateOrder(eq(orderRequest), any(Order.class))).willReturn(orderDto);
 
         this.mockMvc
@@ -210,14 +211,11 @@ class OrderControllerTest {
     @Test
     void shouldDeleteOrder() throws Exception {
         Long orderId = 1L;
-        OrderDto order = new OrderDto(null, 1L, "NEW", "", new ArrayList<>());
-        given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
+        Order order = new Order(orderId, 1L, "NEW", "", 1L, new ArrayList<>());
+        given(orderService.findById(orderId)).willReturn(Optional.of(order));
         doNothing().when(orderService).deleteOrderById(orderId);
 
-        this.mockMvc
-                .perform(delete("/api/orders/{id}", orderId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
+        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
     }
 
     @Test

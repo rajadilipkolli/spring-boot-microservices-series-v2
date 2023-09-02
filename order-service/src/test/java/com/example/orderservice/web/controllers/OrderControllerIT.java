@@ -17,11 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
-import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.repositories.OrderRepository;
@@ -36,8 +34,6 @@ import org.springframework.http.MediaType;
 class OrderControllerIT extends AbstractIntegrationTest {
 
     @Autowired private OrderRepository orderRepository;
-
-    @Autowired private OrderMapper orderMapper;
 
     private List<Order> orderList = null;
 
@@ -156,8 +152,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockProductExistsRequest(true);
         Order order = orderList.get(0);
 
-        OrderDto orderDto = this.orderMapper.toDto(order);
-        orderDto.setStatus("Completed");
+        OrderItem orderItem = order.getItems().get(0);
+        OrderRequest orderDto =
+                new OrderRequest(
+                        order.getCustomerId(),
+                        List.of(
+                                new OrderItemRequest(
+                                        orderItem.getProductId(),
+                                        orderItem.getQuantity() + 100,
+                                        orderItem.getProductPrice())));
 
         this.mockMvc
                 .perform(
@@ -165,7 +168,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is("NEW")));
+                .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.items[0].quantity", is(110)))
+                .andExpect(jsonPath("$.items[0].price", is(1100)));
     }
 
     @Test
@@ -174,7 +179,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is(order.getStatus())));
+                .andExpect(status().isAccepted());
     }
 }

@@ -74,11 +74,10 @@ public class OrderService {
                 page.hasPrevious());
     }
 
-    public Optional<OrderDto> findOrderById(Long id) {
-        return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
+    public Optional<Order> findOrderById(Long id) {
+        return orderRepository.findOrderById(id);
     }
 
-    @Transactional
     public OrderDto saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productIds =
@@ -88,7 +87,7 @@ public class OrderService {
                         .toList();
         if (productsExistsAndInStock(productIds)) {
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
-            Order savedOrder = this.orderRepository.save(orderEntity);
+            Order savedOrder = getPersistedOrder(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
@@ -107,14 +106,22 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
-    @Transactional
     public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
-        Order persistedOrder = this.orderRepository.save(orderObj);
+        Order persistedOrder = getPersistedOrder(orderObj);
         return this.orderMapper.toDto(persistedOrder);
     }
 
+    @Transactional
+    public Order getPersistedOrder(Order orderObj) {
+        return this.orderRepository.save(orderObj);
+    }
+
     public Optional<Order> findById(Long id) {
-        return orderRepository.findOrderById(id);
+        return orderRepository.findById(id);
+    }
+
+    public Optional<OrderDto> findOrderByIdAsDto(Long id) {
+        return findOrderById(id).map(this.orderMapper::toDto);
     }
 }

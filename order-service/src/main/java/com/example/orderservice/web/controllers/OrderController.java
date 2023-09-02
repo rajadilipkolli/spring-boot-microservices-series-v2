@@ -72,7 +72,7 @@ public class OrderController {
     // @Bulkhead(name = "order-api")
     public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
         return orderService
-                .findOrderById(id)
+                .findOrderByIdAsDto(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -92,7 +92,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> updateOrder(
             @PathVariable Long id, @RequestBody OrderRequest orderRequest) {
         return orderService
-                .findById(id)
+                .findOrderById(id)
                 .map(
                         orderObj ->
                                 ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
@@ -100,13 +100,13 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<OrderDto> deleteOrder(@PathVariable Long id) {
+    public ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
         return orderService
-                .findOrderById(id)
+                .findById(id)
                 .map(
                         order -> {
                             orderService.deleteOrderById(id);
-                            return ResponseEntity.ok(order);
+                            return ResponseEntity.accepted().build();
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
