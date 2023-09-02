@@ -27,7 +27,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -43,9 +42,29 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderRepository.deleteAll();
 
         orderList = new ArrayList<>();
-        Order order1 = new Order();
-        order1.setCustomerId(1L);
-        order1.setStatus("NEW");
+        Order order1 = getOrder();
+        this.orderList.add(order1);
+        Order order2 = new Order();
+        order2.setCustomerId(1L);
+        order2.setStatus("NEW");
+        this.orderList.add(order2);
+        Order order3 = new Order();
+        order3.setCustomerId(1L);
+        order3.setStatus("NEW");
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setProductCode("Product3");
+        orderItem2.setQuantity(100);
+        orderItem2.setProductPrice(BigDecimal.ONE);
+        order3.addOrderItem(orderItem2);
+        this.orderList.add(order3);
+
+        orderList = orderRepository.saveAll(orderList);
+    }
+
+    private Order getOrder() {
+        Order order = new Order();
+        order.setCustomerId(1L);
+        order.setStatus("NEW");
         OrderItem orderItem = new OrderItem();
         orderItem.setProductCode("Product1");
         orderItem.setQuantity(10);
@@ -54,25 +73,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderItem1.setProductCode("Product2");
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
-        order1.addOrderItem(orderItem);
-        order1.addOrderItem(orderItem1);
-        this.orderList.add(order1);
-        Order order2 = new Order();
-        order2.setCustomerId(1L);
-        order2.setStatus("NEW");
-        order2.addOrderItem(orderItem1);
-        this.orderList.add(order2);
-        Order order3 = new Order();
-        order3.setCustomerId(1L);
-        order3.setStatus("NEW");
-        OrderItem orderItem2 = new OrderItem();
-        orderItem2.setProductCode("Product2");
-        orderItem2.setQuantity(100);
-        orderItem2.setProductPrice(BigDecimal.ONE);
-        order3.addOrderItem(orderItem2);
-        this.orderList.add(order3);
-
-        orderList = orderRepository.saveAll(orderList);
+        order.addOrderItem(orderItem);
+        order.addOrderItem(orderItem1);
+        return order;
     }
 
     @Test
@@ -92,7 +95,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled("till fetching is fixed")
     void shouldFindOrderById() throws Exception {
         Order order = orderList.get(0);
         Long orderId = order.getId();

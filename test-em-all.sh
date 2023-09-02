@@ -88,7 +88,7 @@ function recreateComposite() {
     local baseURL=$3
     local methodType=$4
 
-    echo "calling URL" http://${HOST}:${PORT}/${baseURL}
+    echo "calling URL" http://${HOST}:${PORT}/${baseURL} " with body -" $composite
 #    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
     COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")

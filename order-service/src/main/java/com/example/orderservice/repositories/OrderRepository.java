@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // @Query("select o from Order o join fetch o.items where where o.id in :orderIds ")
+    // @Query("select o from Order o join fetch o.items where o.id in :orderIds ")
     @EntityGraph(attributePaths = {"items"})
     List<Order> findByIdIn(List<Long> ids);
 
