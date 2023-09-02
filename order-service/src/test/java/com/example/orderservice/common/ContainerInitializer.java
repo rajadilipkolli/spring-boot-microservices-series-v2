@@ -55,4 +55,21 @@ public class ContainerInitializer {
                                                 MediaType.APPLICATION_JSON_VALUE))
                                 .withBody(String.valueOf(status)));
     }
+
+    protected static void mockProductsExistsRequest(boolean status) {
+        mockServerClient
+                .when(
+                        request()
+                                .withMethod("GET")
+                                .withPath("/api/catalog/exists")
+                                .withQueryStringParameter("productCodes", "PRODUCT1", "PRODUCT2"))
+                .respond(
+                        response()
+                                .withStatusCode(200)
+                                .withHeaders(
+                                        new Header(
+                                                HttpHeaders.CONTENT_TYPE,
+                                                MediaType.APPLICATION_JSON_VALUE))
+                                .withBody(String.valueOf(status)));
+    }
 }

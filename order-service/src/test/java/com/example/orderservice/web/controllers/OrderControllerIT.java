@@ -49,15 +49,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderItem.setProductId("Product1");
         orderItem.setQuantity(10);
         orderItem.setProductPrice(BigDecimal.TEN);
-        order1.addOrderItem(orderItem);
-        this.orderList.add(order1);
-        Order order2 = new Order();
-        order2.setCustomerId(1L);
-        order2.setStatus("NEW");
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductId("Product2");
         orderItem1.setQuantity(100);
         orderItem1.setProductPrice(BigDecimal.ONE);
+        order1.addOrderItem(orderItem);
+        order1.addOrderItem(orderItem1);
+        this.orderList.add(order1);
+        Order order2 = new Order();
+        order2.setCustomerId(1L);
+        order2.setStatus("NEW");
         order2.addOrderItem(orderItem1);
         this.orderList.add(order2);
         Order order3 = new Order();
@@ -149,18 +150,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateOrder() throws Exception {
-        mockProductExistsRequest(true);
+        mockProductsExistsRequest(true);
         Order order = orderList.get(0);
 
-        OrderItem orderItem = order.getItems().get(0);
-        OrderRequest orderDto =
-                new OrderRequest(
-                        order.getCustomerId(),
-                        List.of(
-                                new OrderItemRequest(
-                                        orderItem.getProductId(),
-                                        orderItem.getQuantity() + 100,
-                                        orderItem.getProductPrice())));
+        OrderRequest orderDto = getOrderRequest(order);
 
         this.mockMvc
                 .perform(
@@ -170,7 +163,25 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
-                .andExpect(jsonPath("$.items[0].price", is(1100)));
+                .andExpect(jsonPath("$.items[0].price", is(1100)))
+                .andExpect(jsonPath("$.items[1].quantity", is(100)))
+                .andExpect(jsonPath("$.items[1].price", is(100)));
+    }
+
+    private OrderRequest getOrderRequest(Order order) {
+        OrderItem orderItem = order.getItems().get(0);
+        OrderItem orderItem1 = order.getItems().get(1);
+        return new OrderRequest(
+                order.getCustomerId(),
+                List.of(
+                        new OrderItemRequest(
+                                orderItem.getProductId(),
+                                orderItem.getQuantity() + 100,
+                                orderItem.getProductPrice()),
+                        new OrderItemRequest(
+                                orderItem1.getProductId(),
+                                orderItem1.getQuantity(),
+                                orderItem1.getProductPrice())));
     }
 
     @Test

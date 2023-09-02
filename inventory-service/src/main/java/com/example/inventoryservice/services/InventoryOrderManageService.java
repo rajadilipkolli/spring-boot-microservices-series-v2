@@ -122,6 +122,6 @@ public class InventoryOrderManageService {
 
         log.info(
                 "Saving inventoryIds : {} After Confirmation",
-                inventoryMap.values().stream().map(Inventory::getId).collect(Collectors.toList()));
+                inventoryMap.values().stream().map(Inventory::getId).toList());
     }
 }

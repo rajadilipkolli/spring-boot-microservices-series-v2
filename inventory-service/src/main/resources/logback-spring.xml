@@ -17,5 +17,8 @@
     </springProfile>
 
     <logger name="com.example.inventoryservice" level="DEBUG"/>
+    <logger name="org.springframework.transaction" level="TRACE" />
+    <logger name="org.springframework.kafka.transaction" level="DEBUG" />
+
 
 </configuration>

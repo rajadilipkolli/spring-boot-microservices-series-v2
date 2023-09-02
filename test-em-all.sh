@@ -92,6 +92,8 @@ function recreateComposite() {
 #    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
     COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
+
+    echo "Response from recreateComposite - " ${COMPOSITE_RESPONSE}
 }
 
 function setupTestData() {
@@ -143,8 +145,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
-    sleep 3
+    echo "Sleeping for 10 sec as it is first order, letting kafka start in all services. Processing orderId -" $ORDER_ID
+    sleep 10
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
