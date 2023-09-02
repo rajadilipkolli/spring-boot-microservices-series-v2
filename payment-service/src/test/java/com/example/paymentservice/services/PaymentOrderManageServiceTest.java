@@ -27,13 +27,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 
 @ExtendWith(MockitoExtension.class)
-class OrderManageServiceTest {
+class PaymentOrderManageServiceTest {
 
     @Mock private CustomerRepository customerRepository;
 
     @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
 
-    @InjectMocks private OrderManageService orderManageService;
+    @InjectMocks private PaymentOrderManageService orderManageService;
 
     @Test
     void testConfirmWithValidOrder() {

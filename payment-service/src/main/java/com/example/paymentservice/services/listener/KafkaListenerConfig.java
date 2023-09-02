@@ -2,7 +2,7 @@
 package com.example.paymentservice.services.listener;
 
 import com.example.common.dtos.OrderDto;
-import com.example.paymentservice.services.OrderManageService;
+import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @EnableKafka
 public class KafkaListenerConfig {
 
-    private final OrderManageService orderManageService;
+    private final PaymentOrderManageService paymentOrderManageService;
 
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(OrderDto orderDto) {
@@ -26,9 +26,9 @@ public class KafkaListenerConfig {
                 AppConstants.ORDERS_TOPIC,
                 orderDto.getSource());
         if ("NEW".equals(orderDto.getStatus())) {
-            orderManageService.reserve(orderDto);
+            paymentOrderManageService.reserve(orderDto);
         } else {
-            orderManageService.confirm(orderDto);
+            paymentOrderManageService.confirm(orderDto);
         }
     }
 }

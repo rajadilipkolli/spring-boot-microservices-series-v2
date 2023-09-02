@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class OrderManageService {
+public class PaymentOrderManageService {
 
     private final CustomerRepository customerRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
