@@ -135,7 +135,7 @@ function verifyAPIs() {
 
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
-',"items":[{"productId": '
+',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
 '","quantity": 10,"productPrice": 5}]}'
@@ -162,7 +162,7 @@ function verifyAPIs() {
     # Step2, Order Should be rejected
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
-',"items":[{"productId": '
+',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
 '","quantity": 100,"productPrice": 5}]}'
@@ -190,7 +190,7 @@ function verifyAPIs() {
     # Step 3, Order Should be CONFIRMED 
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
-',"items":[{"productId": '
+',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
 '","quantity": 80,"productPrice": 5}]}'
