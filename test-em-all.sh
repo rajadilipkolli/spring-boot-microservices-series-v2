@@ -198,8 +198,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 5 sec for order processing"
-    sleep 5
+    echo "Sleeping for 8 sec for order processing of" $ORDER_ID
+    sleep 8
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
