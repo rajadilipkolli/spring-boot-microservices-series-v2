@@ -31,9 +31,11 @@ public class KafkaConfig {
                 ORDERS_TOPIC,
                 PAYMENT_ORDERS_TOPIC,
                 STOCK_ORDERS_TOPIC);
+        // streams needs topics to be created before hand, so instead of delegating to kafkaAdmin to
+        // create, manually creating
         return new KafkaAdmin.NewTopics(
-                TopicBuilder.name(ORDERS_TOPIC).partitions(3).replicas(1).build(),
-                TopicBuilder.name(PAYMENT_ORDERS_TOPIC).partitions(3).replicas(1).build(),
-                TopicBuilder.name(STOCK_ORDERS_TOPIC).partitions(3).replicas(1).build());
+                TopicBuilder.name(ORDERS_TOPIC).build(),
+                TopicBuilder.name(PAYMENT_ORDERS_TOPIC).build(),
+                TopicBuilder.name(STOCK_ORDERS_TOPIC).build());
     }
 }

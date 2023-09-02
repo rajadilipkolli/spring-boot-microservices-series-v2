@@ -45,6 +45,8 @@ public interface OrderMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "source", ignore = true)
     Order orderRequestToEntity(OrderRequest orderRequest);
 
     @Mapping(target = "id", ignore = true)
@@ -61,5 +63,8 @@ public interface OrderMapper {
                                 order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
     }
 
-    void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order orderObj);
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "source", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
 }
