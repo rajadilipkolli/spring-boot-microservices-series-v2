@@ -7,6 +7,7 @@
 package com.example.inventoryservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -21,6 +22,7 @@ import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +40,7 @@ class InventoryOrderManageServiceTest {
 
     @Mock private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
-    @Captor ArgumentCaptor<List<Inventory>> argumentCaptor;
+    @Captor ArgumentCaptor<Collection<Inventory>> argumentCaptor;
 
     @InjectMocks private InventoryOrderManageService inventoryOrderManageService;
 
@@ -169,8 +171,8 @@ class InventoryOrderManageServiceTest {
         inventoryOrderManageService.confirm(orderDto);
 
         // Assert
-        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
-        verify(inventoryRepository, times(1)).saveAll(anyList());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).saveAll(anyCollection());
         assertThat(orderDto.getStatus()).isEqualTo("CONFIRMED");
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
@@ -187,17 +189,18 @@ class InventoryOrderManageServiceTest {
         orderDto.setItems(orderItems);
 
         List<Inventory> inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "product1", 0, 0));
-        inventoryList.add(new Inventory(2L, "product2", 0, 0));
+        inventoryList.add(new Inventory(1L, "product1", 10, 0));
+        inventoryList.add(new Inventory(2L, "product2", 20, 0));
 
-        given(inventoryRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
+                .willReturn(inventoryList);
 
         // Act
         inventoryOrderManageService.confirm(orderDto);
 
         // Assert
         assertThat(orderDto.getStatus()).isEqualTo("ROLLBACK");
-        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(argumentCaptor.capture());
         assertThat(argumentCaptor.getValue())
                 .isNotNull()
@@ -205,10 +208,11 @@ class InventoryOrderManageServiceTest {
                 .hasSize(2)
                 .satisfies(
                         inventory -> {
-                            assertThat(inventory.get(0).getAvailableQuantity()).isIn(10, 20);
-                            assertThat(inventory.get(0).getReservedItems()).isIn(-10, -20);
-                            assertThat(inventory.get(1).getAvailableQuantity()).isIn(10, 20);
-                            assertThat(inventory.get(1).getReservedItems()).isIn(-10, -20);
+                            List<? extends Inventory> list = inventory.stream().toList();
+                            assertThat(list.get(0).getAvailableQuantity()).isIn(20, 40);
+                            assertThat(list.get(0).getReservedItems()).isIn(-10, -20);
+                            assertThat(list.get(1).getAvailableQuantity()).isIn(20, 40);
+                            assertThat(list.get(1).getReservedItems()).isIn(-10, -20);
                         });
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }

@@ -37,14 +37,20 @@ public class CustomerService {
                 findCustomersQuery.sortBy(),
                 findCustomersQuery.sortDir());
 
-        Sort sort =
-                findCustomersQuery.sortDir().equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(findCustomersQuery.sortBy()).ascending()
-                        : Sort.by(findCustomersQuery.sortBy()).descending();
-        int pageNo = findCustomersQuery.pageNo() > 0 ? findCustomersQuery.pageNo() - 1 : 0;
-        Pageable pageable = PageRequest.of(pageNo, findCustomersQuery.pageSize(), sort);
+        Pageable pageable = createPageable(findCustomersQuery);
         Page<Customer> page = customerRepository.findAll(pageable);
+
         return new PagedResult<>(page);
+    }
+
+    private Pageable createPageable(FindCustomersQuery findCustomersQuery) {
+        int pageNo = Math.max(findCustomersQuery.pageNo() - 1, 0);
+        Sort sort =
+                Sort.by(
+                        findCustomersQuery.sortDir().equalsIgnoreCase(Sort.Direction.ASC.name())
+                                ? Sort.Order.asc(findCustomersQuery.sortBy())
+                                : Sort.Order.desc(findCustomersQuery.sortBy()));
+        return PageRequest.of(pageNo, findCustomersQuery.pageSize(), sort);
     }
 
     @Transactional(readOnly = true)

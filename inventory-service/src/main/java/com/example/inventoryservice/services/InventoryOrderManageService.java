@@ -93,42 +93,35 @@ public class InventoryOrderManageService {
     }
 
     public void confirm(OrderDto orderDto) {
+        log.info("Confirming Order in Inventory Service {}", orderDto);
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
-        List<Inventory> inventoryList = inventoryRepository.findByProductCodeIn(productCodeList);
 
         Map<String, Inventory> inventoryMap =
-                inventoryList.stream()
+                inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
-        List<Inventory> updatedInventoryList =
-                orderDto.getItems().stream()
-                        .filter(
-                                orderItemDto ->
-                                        inventoryMap.containsKey(orderItemDto.getProductId()))
-                        .map(
-                                orderItemDto -> {
-                                    Inventory inventory =
-                                            inventoryMap.get(orderItemDto.getProductId());
-                                    Integer productCount = orderItemDto.getQuantity();
-                                    if ("CONFIRMED".equals(orderDto.getStatus())) {
-                                        inventory.setReservedItems(
-                                                inventory.getReservedItems() - productCount);
-                                    } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
-                                            && !(AppConstants.SOURCE.equalsIgnoreCase(
-                                                    orderDto.getSource()))) {
-                                        inventory.setReservedItems(
-                                                inventory.getReservedItems() - productCount);
-                                        inventory.setAvailableQuantity(
-                                                inventory.getAvailableQuantity() + productCount);
-                                    }
-                                    return inventory;
-                                })
-                        .collect(Collectors.toList());
+        for (OrderItemDto orderItemDto : orderDto.getItems()) {
+            String productId = orderItemDto.getProductId();
+            Inventory inventory = inventoryMap.get(productId);
 
-        inventoryRepository.saveAll(updatedInventoryList);
+            if (inventory != null) {
+                Integer productCount = orderItemDto.getQuantity();
+
+                if ("CONFIRMED".equals(orderDto.getStatus())) {
+                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
+                } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
+                        && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource())) {
+                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
+                    inventory.setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
+                }
+            }
+        }
+
+        inventoryRepository.saveAll(inventoryMap.values());
+
         log.info(
                 "Saving inventoryIds : {} After Confirmation",
-                updatedInventoryList.stream().map(Inventory::getId).toList());
+                inventoryMap.values().stream().map(Inventory::getId).collect(Collectors.toList()));
     }
 }
