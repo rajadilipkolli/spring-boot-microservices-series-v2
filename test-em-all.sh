@@ -173,12 +173,12 @@ function verifyAPIs() {
     echo "Sleeping for 5 sec for order processing"
     sleep 5
 
-    # Verify that order processing is completed and status is REJECTED
+    # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
-    assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
-    assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source)
+    assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
+    assertEqual \"STOCK\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
