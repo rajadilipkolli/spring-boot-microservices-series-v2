@@ -170,7 +170,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
-                .andExpect(jsonPath("$.items.size()", is(3)))
+                .andExpect(jsonPath("$.items.size()", is(2)))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
                 .andExpect(jsonPath("$.items[0].price", is(1100)))
                 .andExpect(jsonPath("$.items[1].quantity", is(100)))
@@ -187,10 +187,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 orderItem.getProductCode(),
                                 orderItem.getQuantity() + 100,
                                 orderItem.getProductPrice()),
-                        new OrderItemRequest(
-                                orderItem1.getProductCode(),
-                                orderItem1.getQuantity(),
-                                orderItem1.getProductPrice()),
                         new OrderItemRequest(
                                 "product4",
                                 orderItem1.getQuantity(),
