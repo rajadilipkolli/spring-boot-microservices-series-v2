@@ -193,15 +193,15 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 80,"productPrice": 5}]}'
+'","quantity": 80,"productPrice": 10}]}'
 
-    # Creating 3nd Order, this should CONFIRMED as Inventory is available
+    # Creating 3rd Order, this should CONFIRMED as Inventory is available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
-    sleep 3
+    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
+    sleep 2
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -211,7 +211,35 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
-    assertEqual 550 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+     # Step 4, Order Should be ROLLBACK 
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productCode": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 8,"productPrice": 20}]}'
+
+    # Creating 4th Order, this should Reject as amount is not available for customer
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
+    sleep 2
+
+    # Verify that order processing is completed and status is ROLLBACK
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
+    assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source)
+
+    # Verify that amountAvailable is not deducted as per order cant be processed
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 }
 
@@ -235,7 +263,7 @@ waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 120 sec for services to start"
-sleep 120
+sleep 1
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
