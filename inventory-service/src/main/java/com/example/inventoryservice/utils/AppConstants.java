@@ -13,7 +13,7 @@ public final class AppConstants {
     public static final String PROFILE_TEST = "test";
     public static final String ORDERS_TOPIC = "orders";
     public static final String STOCK_ORDERS_TOPIC = "stock-orders";
-    public static final String SOURCE = "stock";
+    public static final String SOURCE = "INVENTORY";
     public static final String ROLLBACK = "ROLLBACK";
     public static final String DEFAULT_PAGE_NUMBER = "0";
     public static final String DEFAULT_PAGE_SIZE = "10";

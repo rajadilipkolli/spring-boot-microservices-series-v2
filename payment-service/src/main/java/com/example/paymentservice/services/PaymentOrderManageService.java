@@ -70,7 +70,7 @@ public class PaymentOrderManageService {
                         .intValue();
         if (orderDto.getStatus().equals("CONFIRMED")) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-        } else if (orderDto.getStatus().equals("ROLLBACK")
+        } else if (orderDto.getStatus().equals(AppConstants.ROLLBACK)
                 && !AppConstants.SOURCE.equals(orderDto.getSource())) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);

@@ -8,6 +8,7 @@ package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,8 +36,8 @@ public class OrderManageService {
             orderDto.setStatus("REJECTED");
         } else if (REJECT.equals(orderPayment.getStatus())
                 || REJECT.equals(orderStock.getStatus())) {
-            String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "STOCK";
-            orderDto.setStatus("ROLLBACK");
+            String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "INVENTORY";
+            orderDto.setStatus(AppConstants.ROLLBACK);
             orderDto.setSource(source);
         }
         // setting from inventory as it has latest
