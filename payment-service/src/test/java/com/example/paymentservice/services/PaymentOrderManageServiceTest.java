@@ -59,7 +59,7 @@ class PaymentOrderManageServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"inventory,1100, 0", "payment,1000, 100"})
+    @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
     void testConfirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
         // Arrange
         OrderDto orderDto = new OrderDto();
@@ -118,7 +118,7 @@ class PaymentOrderManageServiceTest {
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(200);
         assertThat(customer.getAmountAvailable()).isEqualTo(900);
-        assertThat(orderDto.getSource()).isEqualTo("payment");
+        assertThat(orderDto.getSource()).isEqualTo("PAYMENT");
         assertThat(orderDto.getStatus()).isEqualTo("ACCEPT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
@@ -145,7 +145,7 @@ class PaymentOrderManageServiceTest {
         assertThat(customer.getAmountReserved()).isEqualTo(100);
         assertThat(customer.getAmountAvailable()).isEqualTo(1000);
         assertThat(orderDto.getStatus()).isEqualTo("REJECT");
-        assertThat(orderDto.getSource()).isEqualTo("payment");
+        assertThat(orderDto.getSource()).isEqualTo("PAYMENT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 }

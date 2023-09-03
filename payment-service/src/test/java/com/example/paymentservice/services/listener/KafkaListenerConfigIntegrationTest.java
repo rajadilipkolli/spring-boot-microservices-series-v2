@@ -85,7 +85,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     void onEventConfirmOrderNoRollBack() {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
-        orderDto.setSource("payment");
+        orderDto.setSource("PAYMENT");
 
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -108,7 +108,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(faker.number().randomNumber());
         orderDto.setStatus(status);
-        orderDto.setSource("inventory");
+        orderDto.setSource("INVENTORY");
         orderDto.setCustomerId(customer.getId());
 
         OrderItemDto orderItemDto = new OrderItemDto();

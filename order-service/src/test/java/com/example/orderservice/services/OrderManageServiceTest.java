@@ -101,6 +101,6 @@ class OrderManageServiceTest {
 
         // Assert
         Assertions.assertEquals("ROLLBACK", actual.getStatus());
-        Assertions.assertEquals("STOCK", actual.getSource());
+        Assertions.assertEquals("INVENTORY", actual.getSource());
     }
 }
