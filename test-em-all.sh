@@ -172,8 +172,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
-    sleep 2
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -200,8 +200,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
-    sleep 2
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -227,8 +227,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
-    sleep 2
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -255,8 +255,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
-    sleep 2
+    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
+    sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -290,8 +290,8 @@ fi
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
-echo "Sleeping for 120 sec for services to start"
-sleep 120
+echo "Sleeping for 90 sec for services to start"
+sleep 90
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
