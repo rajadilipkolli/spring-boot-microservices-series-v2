@@ -145,8 +145,8 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 10 sec as it is first order, letting kafka start in all services. Processing orderId -" $ORDER_ID
-    sleep 10
+    echo "Sleeping for 8 sec as it is first order, letting kafka start in all services. Processing orderId -" $ORDER_ID
+    sleep 8
 
     # Verify that order processing is completed and status is CONFIRMED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
@@ -172,15 +172,15 @@ function verifyAPIs() {
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
 
-    echo "Sleeping for 3 sec for processing of orderId -" $ORDER_ID
-    sleep 3
+    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
+    sleep 2
 
     # Verify that order processing is completed and status is ROLLBACK
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
-    assertEqual \"STOCK\" $(echo ${RESPONSE} | jq .source)
+    assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
@@ -214,7 +214,7 @@ function verifyAPIs() {
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
-     # Step 4, Order Should be ROLLBACK 
+    # Step 4, Order Should be ROLLBACK 
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
 ',"items":[{"productCode": '
@@ -222,7 +222,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 8,"productPrice": 20}]}'
 
-    # Creating 4th Order, this should Reject as amount is not available for customer
+    # Creating 4th Order, this should ROLLBACK as amount is not available for customer
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
     local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
@@ -236,6 +236,34 @@ function verifyAPIs() {
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
     assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source)
+
+    # Verify that amountAvailable is not deducted as per order cant be processed
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+    # Step 5, Order Should be REJECTED 
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productCode": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 20,"productPrice": 20}]}'
+
+    # Creating 5th Order, this should Reject as amount is not available for customer & inventory not available
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 2 sec for processing of orderId -" $ORDER_ID
+    sleep 2
+
+    # Verify that order processing is completed and status is ROLLBACK
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order cant be processed
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
@@ -263,7 +291,7 @@ waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 120 sec for services to start"
-sleep 1
+sleep 120
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
