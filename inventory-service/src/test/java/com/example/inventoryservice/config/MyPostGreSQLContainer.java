@@ -15,5 +15,6 @@ public interface MyPostGreSQLContainer {
 
     @Container @ServiceConnection
     PostgreSQLContainer<?> POSTGRE_SQL_CONTAINER =
-            new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"));
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"))
+                    .withReuse(true);
 }

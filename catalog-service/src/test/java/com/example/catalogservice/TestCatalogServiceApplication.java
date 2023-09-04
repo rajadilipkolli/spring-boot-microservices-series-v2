@@ -22,20 +22,22 @@ public class TestCatalogServiceApplication {
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> zipkinContainer() {
         return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411);
+                .withExposedPorts(9411)
+                .withReuse(true);
     }
 
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSqlContainer() {
-        return new PostgreSQLContainer<>("postgres:15.4-alpine");
+        return new PostgreSQLContainer<>("postgres:15.4-alpine").withReuse(true);
     }
 
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.0"))
-                .withKraft();
+                .withKraft()
+                .withReuse(true);
     }
 
     public static void main(String[] args) {
