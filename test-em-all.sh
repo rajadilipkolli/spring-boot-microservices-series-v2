@@ -93,7 +93,8 @@ function recreateComposite() {
     COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
 
-    echo "Response from recreateComposite - " ${COMPOSITE_RESPONSE}
+    echo "Response from caller - " ${COMPOSITE_RESPONSE}
+    echo " "
 }
 
 function setupTestData() {
@@ -140,6 +141,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 10,"productPrice": 5}]}'
 
+    echo " "
     # Creating Order
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
@@ -167,6 +169,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 100,"productPrice": 5}]}'
 
+    echo " "
     # Creating 2nd Order, this should ROLLBACK as Inventory is not available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
@@ -195,6 +198,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 80,"productPrice": 10}]}'
 
+    echo " "
     # Creating 3rd Order, this should CONFIRMED as Inventory is available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
@@ -222,6 +226,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 8,"productPrice": 20}]}'
 
+    echo " "
     # Creating 4th Order, this should ROLLBACK as amount is not available for customer
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 
@@ -250,6 +255,7 @@ function verifyAPIs() {
     body+=\
 '","quantity": 20,"productPrice": 20}]}'
 
+    echo " "
     # Creating 5th Order, this should Reject as amount is not available for customer & inventory not available
     recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
 

@@ -13,8 +13,10 @@ tasks:
 vscode:
   extensions:
     - GabrielBB.vscode-lombok
+    - redhat.java
+    - vmware.vscode-spring-boot
     - vscjava.vscode-java-pack
-    - vmware.vscode-boot-dev-pack
+    - vscjava.vscode-spring-initializr
 
 ports:
   - port: 3000
