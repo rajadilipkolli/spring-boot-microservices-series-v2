@@ -12,7 +12,6 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
-import java.util.function.Consumer;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.DecoratedWith;
 import org.mapstruct.Mapper;
@@ -27,32 +26,19 @@ public interface OrderMapper {
     @Mapping(source = "id", target = "orderId")
     OrderDto toDto(Order order);
 
-    @Mapping(target = "version", ignore = true)
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "items", ignore = true)
-    Order toEntity(OrderDto orderDto);
-
     @Mapping(target = "itemId", source = "id")
     @Mapping(target = "productId", source = "productCode")
     OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "order", ignore = true)
-    @Mapping(target = "productCode", source = "productId")
-    OrderItem orderItemDtoToOrderItem(OrderItemDto orderItemDto);
-
-    @AfterMapping
-    default void addOrderItemToOrderEntity(OrderDto orderDTO, @MappingTarget Order order) {
-        Consumer<OrderItemDto> addOrderItemToOrder =
-                orderItemDTO -> order.addOrderItem(orderItemDtoToOrderItem(orderItemDTO));
-        orderDTO.getItems().forEach(addOrderItemToOrder);
-    }
 
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "createdDate", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    @Mapping(target = "lastModifiedDate", ignore = true)
     Order orderRequestToEntity(OrderRequest orderRequest);
 
     @Mapping(target = "id", ignore = true)
@@ -74,5 +60,9 @@ public interface OrderMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "items", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "createdDate", ignore = true)
+    @Mapping(target = "lastModifiedBy", ignore = true)
+    @Mapping(target = "lastModifiedDate", ignore = true)
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
 }
