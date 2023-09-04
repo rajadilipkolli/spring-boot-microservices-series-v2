@@ -290,8 +290,8 @@ fi
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
-echo "Sleeping for 90 sec for services to start"
-sleep 90
+echo "Sleeping for 60 sec for services to start"
+sleep 60
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
