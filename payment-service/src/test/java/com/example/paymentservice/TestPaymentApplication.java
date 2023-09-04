@@ -32,8 +32,7 @@ public class TestPaymentApplication {
     @ServiceConnection
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.0"))
-                .withKraft()
-                .withReuse(true);
+                .withKraft();
     }
 
     public static void main(String[] args) {
