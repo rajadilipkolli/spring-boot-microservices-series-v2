@@ -139,9 +139,14 @@ services:
     networks:
       - microservice-network
     depends_on:
-      - config-server
-      - naming-server
-      - zipkin-server
+      config-server:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      zipkin-server:
+        condition: service_started
+      redis:
+        condition: service_started
       # - mongodb
     environment:
       - SPRING_PROFILES_ACTIVE=docker
