@@ -265,5 +265,6 @@ networks:
 
 volumes:
   # mongo-data:
+  redis_data:
   postgres_data:
     driver: local
