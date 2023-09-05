@@ -354,14 +354,14 @@ function verifyAPIs() {
     echo "Sleeping for 3 sec as it is, Processing orderId -" $ORDER_ID
     sleep 3
 
-    # Verify that order processing is completed and status is CONFIRMED
+    # Verify that order processing is completed and status is REJECTED
     assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
-    # Verify that amountAvailable is deducted as per order
+    # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
@@ -388,7 +388,7 @@ waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 60 sec for services to start"
-sleep 1
+sleep 60
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 

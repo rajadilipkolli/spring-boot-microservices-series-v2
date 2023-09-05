@@ -19,7 +19,7 @@ resilience4j:
         eventConsumerBufferSize: 100
   retry:
     instances:
-      product-api:
+      default:
         maxAttempts: 3
         waitDuration: 10s
         enableExponentialBackoff: true
