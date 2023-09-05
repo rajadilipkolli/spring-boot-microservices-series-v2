@@ -2,7 +2,7 @@
 package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
+import static org.awaitility.Awaitility.await;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
@@ -24,6 +24,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @Autowired private CustomerRepository customerRepository;
+
+    @Autowired private KafkaListenerConfig kafkaListenerConfig;
+
     private Customer customer;
 
     @BeforeEach
@@ -58,6 +61,26 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             assertThat(persistedCustomer.getAmountReserved()).isEqualTo(20);
                             assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(90);
                         });
+    }
+
+    @Test
+    void onEventReserveOrderDlt() {
+        OrderDto orderDto = getOrderDto("NEW");
+        long customerId = orderDto.getCustomerId() + 10_000;
+        orderDto.setCustomerId(customerId);
+
+        // When
+        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+
+        assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount()).isEqualTo(1);
+        // Then
+        await().pollDelay(3, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofSeconds(1))
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(
+                        () ->
+                                assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
+                                        .isZero());
     }
 
     @Test
