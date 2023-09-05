@@ -10,8 +10,9 @@ echo -e "Starting 'Store μServices' for [end-2-end] testing....\n"
 
 : ${HOST=localhost}
 : ${PORT=8765}
-: ${PROD_CODE=ProductCode83}
-: ${CUSTOMER_NAME=dockerCustomer83}
+: ${PROD_CODE=P001}
+: ${PROD_CODE_1=P002}
+: ${CUSTOMER_NAME=dockerCustomer01}
 
 function assertCurl() {
 
@@ -107,8 +108,16 @@ function setupTestData() {
     echo "creating product with code - " $PROD_CODE
     recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
+    body="{\"code\":\"$PROD_CODE_1"
+    body+=\
+'","productName":"product name B","price":9.99, "description": "Nice Product"}'
+
+    #    Creating Product
+    echo "creating product with code - " $PROD_CODE_1
+    recreateComposite "$PROD_CODE_1" "$body" "catalog-service/api/catalog" "POST"
+
     # waiting for kafka to process the catalog creation request, as it is first time kafka initialization takes time
-    sleep 5
+    sleep 3
     # Verify that a normal request works, expect record exists with product code
     assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
@@ -118,6 +127,17 @@ function setupTestData() {
 '","reservedItems":0,"availableQuantity":100}'
 
     # Update the product available Quantity
+    recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
+
+    # Verify that a normal request works, expect record exists with product code_1
+    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1"
+    assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode)
+
+    body="{\"productCode\":\"$PROD_CODE_1"
+    body+=\
+'","reservedItems":0,"availableQuantity":50}'
+
+    # Update the product_1 available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
     body="{\"name\": \"$CUSTOMER_NAME"
@@ -155,6 +175,7 @@ function verifyAPIs() {
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
@@ -212,6 +233,7 @@ function verifyAPIs() {
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
@@ -275,6 +297,75 @@ function verifyAPIs() {
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+    echo " "
+
+    # Step 6 Creating Order and it should be CONFIRMED
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productCode": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 1,"productPrice": 10},{"productCode": '
+      body+="\"$PROD_CODE_1"
+      body+=\
+'","quantity": 5,"productPrice": 10}]}'
+
+    echo " "
+    # Creating Order
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 3 sec as it is, Processing orderId -" $ORDER_ID
+    sleep 3
+
+    # Verify that order processing is completed and status is CONFIRMED
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual null $(echo ${RESPONSE} | jq .source)
+
+    # Verify that amountAvailable is deducted as per order
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
+    echo " "
+
+    # Step 7 Creating Order with one available and it should be ROLLBACK
+    body="{\"customerId\": $CUSTOMER_ID"
+    body+=\
+',"items":[{"productCode": '
+    body+="\"$PROD_CODE"
+    body+=\
+'","quantity": 1,"productPrice": 10},{"productCode": '
+      body+="\"$PROD_CODE_1"
+      body+=\
+'","quantity": 500,"productPrice": 9.99}]}'
+
+    echo " "
+    # Creating Order
+    recreateComposite "$CUSTOMER_NAME" "$body" "order-service/api/orders" "POST"
+
+    local ORDER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .orderId)
+
+    echo "Sleeping for 3 sec as it is, Processing orderId -" $ORDER_ID
+    sleep 3
+
+    # Verify that order processing is completed and status is CONFIRMED
+    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
+    assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
+    assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
+    assertEqual null $(echo ${RESPONSE} | jq .source)
+
+    # Verify that amountAvailable is deducted as per order
+    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
+    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
+
 }
 
 set -e
@@ -287,17 +378,17 @@ echo "PORT=${PORT}"
 if [[ $@ == *"start"* ]]
 then
     echo "Restarting the test environment..."
-    echo "$ docker-compose -f docker-compose.yml down --remove-orphans -v"
-    docker-compose -f docker-compose.yml down --remove-orphans -v
-    echo "$ docker-compose up -d"
-    docker-compose -f docker-compose.yml up -d
+    echo "$ docker compose -f docker-compose.yml down --remove-orphans -v"
+    docker compose -f docker-compose.yml down --remove-orphans -v
+    echo "$ docker compose up -d"
+    docker compose -f docker-compose.yml up -d
 fi
 
 waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 60 sec for services to start"
-sleep 60
+sleep 1
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
@@ -316,6 +407,6 @@ echo "End, all tests OK:" `date`
 if [[ $@ == *"stop"* ]]
 then
     echo "We are done, stopping the test environment..."
-    echo "$ docker-compose -f docker-compose.yml down --remove-orphans -v"
-    docker-compose -f docker-compose.yml down --remove-orphans -v
+    echo "$ docker compose -f docker-compose.yml down --remove-orphans -v"
+    docker compose -f docker-compose.yml down --remove-orphans -v
 fi

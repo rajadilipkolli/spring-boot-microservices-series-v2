@@ -109,6 +109,19 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
 
  ![](images/swagger.jpg) 
 
+
+### Liquibase Formats
+
+ - Liquibase will support various formats and these are implemented in below services
+
+| Liquibase Formats | Service                                  |
+|-------------------|------------------------------------------|
+| XML               | [order-service](./order-service), [payment-service](./payment-service)       |
+| YAML              | [catalog-service](./catalog-service)     |
+| JSON              | [inventory-service](./inventory-service) |
+| SQL               |                                          |
+
+
 #### References
 - https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
 
@@ -121,6 +134,21 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
 - Spring Cloud Seluth is deprecated in favor of Micrometer
 - With New Observability we cant use Rabbit as sender type and use asynchronous communication
 - Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
+
+### Useful Docker Commands
+
+>  Clean up everything using
+ ```shell
+ docker system prune -a -f --volumes
+ ```
+>  Claim unused volumes
+ ```shell
+ docker volume prune
+ ```
+> find Running container
+ ```shell
+ docker container ls
+ ```
 
 ### Kill Application running on port
 
