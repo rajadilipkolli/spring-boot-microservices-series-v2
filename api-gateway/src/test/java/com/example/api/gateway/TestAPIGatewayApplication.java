@@ -18,6 +18,13 @@ public class TestAPIGatewayApplication {
                 .withExposedPorts(9411);
     }
 
+    @Bean
+    @ServiceConnection(name = "redis")
+    GenericContainer<?> redisContainer() {
+        return new GenericContainer<>(DockerImageName.parse("redis:7.2.0-alpine"))
+                .withExposedPorts(6379);
+    }
+
     public static void main(String[] args) {
         SpringApplication.from(APIGatewayApplication::main)
                 .with(TestAPIGatewayApplication.class)

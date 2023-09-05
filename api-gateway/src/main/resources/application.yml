@@ -35,34 +35,40 @@ spring:
         response-timeout: 5s
         wiretap: false
       routes:
-      - id: order-service
-        predicates:
-        - Path=/order-service/**
-        uri: lb://order-service
-        filters:
-          - name: CircuitBreaker
-            args:
-              name: catalogService
-              fallbackUri: forward:/catalog-fallback
-          - name: Retry
-            args:
-              retries: 3
-              method: GET
-              backoff:
-                firstBackoff: 50ms
-                maxBackoff: 500ms
-      - id: inventory-service
-        predicates:
-        - Path=/inventory-service/**
-        uri: lb://inventory-service
-      - id: catalog-service
-        predicates:
-        - Path=/catalog-service/**
-        uri: lb://catalog-service
-      - id: payment-service
-        predicates:
-        - Path=/payment-service/**
-        uri: lb://payment-service
+        - id: order-service
+          predicates:
+            - Path=/order-service/**
+          uri: lb://order-service
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: exampleSlowCircuitBreaker
+                fallbackUri: forward:/order-fallback
+            - name: Retry
+              args:
+                retries: 3
+                method: GET
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter:
+                  burstCapacity: 20
+                  replenishRate: 10
+                  requestedTokens: 15
+        - id: inventory-service
+          predicates:
+            - Path=/inventory-service/**
+          uri: lb://inventory-service
+        - id: catalog-service
+          predicates:
+            - Path=/catalog-service/**
+          uri: lb://catalog-service
+        - id: payment-service
+          predicates:
+            - Path=/payment-service/**
+          uri: lb://payment-service
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   webflux:
@@ -92,8 +98,8 @@ springdoc:
     urls[0]:
       name: api-gateway
       url: /v3/api-docs
-# adding this so that 
+# adding this so that List<groupedopenapi> bean will trigger
   group-configs[0]:
-    group: api-service
+    group: api-gateway
     pathsToMatch: /**
 #  packagesToScan: com.example.api.gateway.web

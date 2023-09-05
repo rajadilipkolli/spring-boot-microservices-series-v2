@@ -14,6 +14,22 @@ services:
     ports:
       - "9411:9411"
 
+  redis:
+    image: 'redis:7.2.0-alpine'
+    ports:
+      - '127.0.0.1:6379:6379/tcp'
+    volumes:
+      - 'redis_data:/data:rw'
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+
   naming-server:
     container_name: naming-server
     image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
@@ -26,12 +42,11 @@ services:
       - "8761:8761"
     depends_on:
       config-server:
-        condition: service_healthy
+        condition: service_started
     environment:
-      # SPRING_PROFILES_ACTIVE: docker
+      - SPRING_PROFILES_ACTIVE= docker
       - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://localhost:8761/eureka
-      # - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411/api/v2/spans
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
     restart: unless-stopped
 
   config-server:
@@ -46,3 +61,6 @@ services:
       - "8888:8888"
     environment:
       SPRING_PROFILES_ACTIVE: native
+
+volumes:
+  redis_data:
