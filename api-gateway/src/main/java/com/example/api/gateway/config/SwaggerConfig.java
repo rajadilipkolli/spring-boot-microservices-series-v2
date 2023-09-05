@@ -2,8 +2,11 @@
 package com.example.api.gateway.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
 import java.util.List;
 import java.util.Set;
@@ -29,7 +32,9 @@ import org.springframework.context.annotation.Lazy;
                                 @Contact(
                                         name = "Raja Kolli",
                                         url = "https://github.com/rajadilipkolli")),
-        servers = @Server(url = "/"))
+        servers = @Server(url = "/"),
+        security = @SecurityRequirement(name = "Authorization"))
+@SecurityScheme(type = SecuritySchemeType.HTTP, scheme = "basic", name = "Authorization")
 @AutoConfigureBefore(MultipleOpenApiSupportConfiguration.class)
 public class SwaggerConfig {
 

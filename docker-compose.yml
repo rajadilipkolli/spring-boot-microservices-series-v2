@@ -152,6 +152,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       # - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_DATA_REDIS_HOST=redis
     restart: unless-stopped
 
   catalog-service:
