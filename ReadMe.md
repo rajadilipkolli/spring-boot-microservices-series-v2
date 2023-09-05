@@ -121,20 +121,6 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
 | JSON              | [inventory-service](./inventory-service) |
 | SQL               |                                          |
 
-
-#### References
-- https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
-
-#### Projects unable to convert to native Image OOTB
-- config-server (Due to presence of Netty)
-- api-gateway (Due to presence of Netty)
-
-#### Breaking Changes in 3.0
-- Migration to jakarta namespace from javax
-- Spring Cloud Seluth is deprecated in favor of Micrometer
-- With New Observability we cant use Rabbit as sender type and use asynchronous communication
-- Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
-
 ### Useful Docker Commands
 
 >  Clean up everything using
@@ -149,6 +135,10 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
  ```shell
  docker container ls
  ```
+ > find logs of running container
+ ```shell
+ docker compose logs -f
+ ```
 
 ### Kill Application running on port
 
@@ -160,3 +150,17 @@ netstat -ano | findstr :18080
 ```shell
 taskkill /PID <type PID here> /f
 ```
+
+
+#### References
+- https://piotrminkowski.com/2022/01/24/distributed-transactions-in-microservices-with-kafka-streams-and-spring-boot/
+
+#### Projects unable to convert to native Image OOTB
+- config-server (Due to presence of Netty)
+- api-gateway (Due to presence of Netty)
+
+#### Breaking Changes in 3.0
+- Migration to jakarta namespace from javax
+- Spring Cloud Seluth is deprecated in favor of Micrometer
+- With New Observability we cant use Rabbit as sender type and use asynchronous communication
+- Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
