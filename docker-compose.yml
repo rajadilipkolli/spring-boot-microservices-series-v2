@@ -25,6 +25,22 @@ services:
   #   networks:
   #     - microservice-network
 
+  redis:
+    container_name: redis
+    image: 'redis:7.2.0-alpine'
+    extra_hosts: ['host.docker.internal:host-gateway']
+    ports:
+      - '127.0.0.1:6379:6379/tcp'
+    volumes:
+      - 'redis_data:/data:rw'
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservice-network
+
   zipkin-server:
     image: openzipkin/zipkin
     container_name: zipkin-server
