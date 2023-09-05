@@ -36,7 +36,7 @@ spring:
             - name: CircuitBreaker
               args:
                 name: exampleSlowCircuitBreaker
-                fallbackUri: forward:/order-fallback
+                fallbackUri: forward:/fallback/api/order
             - name: Retry
               args:
                 retries: 3
@@ -62,6 +62,8 @@ spring:
           uri: lb://payment-service
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
+  mustache:
+    check-template-location: false
   webflux:
     problemdetails:
       enabled: true
