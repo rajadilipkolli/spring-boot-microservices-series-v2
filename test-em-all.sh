@@ -90,8 +90,8 @@ function recreateComposite() {
     local methodType=$4
 
     echo "calling URL" http://${HOST}:${PORT}/${baseURL} " with body -" $composite
-#    assertCurl 200 "curl -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
-    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+#    assertCurl 200 "curl --user user1:1234  -X DELETE -k http://${HOST}:${PORT}/${baseURL}/${identifier} -s"
+    COMPOSITE_RESPONSE=$(curl --user user1:1234 -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
 
     echo "Response from caller - " ${COMPOSITE_RESPONSE}
@@ -119,7 +119,7 @@ function setupTestData() {
     # waiting for kafka to process the catalog creation request, as it is first time kafka initialization takes time
     sleep 3
     # Verify that a normal request works, expect record exists with product code
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE"
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode)
 
     body="{\"productCode\":\"$PROD_CODE"
@@ -130,7 +130,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
     # Verify that a normal request works, expect record exists with product code_1
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1"
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode)
 
     body="{\"productCode\":\"$PROD_CODE_1"
@@ -171,14 +171,14 @@ function verifyAPIs() {
     sleep 8
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -200,14 +200,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -229,14 +229,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -258,14 +258,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status)
     assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -287,14 +287,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -321,14 +321,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
@@ -355,14 +355,14 @@ function verifyAPIs() {
     sleep 3
 
     # Verify that order processing is completed and status is REJECTED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID"
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId)
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId)
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status)
     assertEqual null $(echo ${RESPONSE} | jq .source)
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
+    assertCurl 200 "curl --user user1:1234  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
     assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 

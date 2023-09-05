@@ -1,6 +1,7 @@
 /* Licensed under Apache-2.0 2023 */
 package com.example.api.gateway.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 @EnableWebFluxSecurity
 @Configuration(proxyBeanMethods = false)
+@Slf4j
 public class SecurityConfig {
 
     @Bean
@@ -32,7 +34,12 @@ public class SecurityConfig {
     KeyResolver authUserKeyResolver() {
         return exchange ->
                 ReactiveSecurityContextHolder.getContext()
-                        .map(ctx -> ctx.getAuthentication().getPrincipal().toString());
+                        .map(
+                                ctx -> {
+                                    String user = ctx.getAuthentication().getPrincipal().toString();
+                                    log.debug("User from authUserKeyResolver :{}", user);
+                                    return user;
+                                });
     }
 
     @Bean
