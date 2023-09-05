@@ -12,6 +12,7 @@
     </springProfile>
 
     <springProfile name="!default">
+        <property name="LOG_FILE" value="logs/${appName}.log"/>
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />
@@ -20,5 +21,11 @@
     </springProfile>
 
     <logger name="com.example.api.gateway" level="DEBUG"/>
+    <logger name="org.springframework.security" level="TRACE"/>
+    <logger name="reactor.netty" level="INFO"/>
+    <logger name="org.springframework.boot.autoconfigure.web" level="INFO"/>
+    <logger name="org.springframework.web.reactive" level="INFO"/>
+    <logger name="org.springframework.http.server.reactive" level="INFO"/>
+    <logger name="org.springframework.cloud.gateway" level="INFO"/>
 
 </configuration>

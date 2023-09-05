@@ -13,13 +13,6 @@ management:
       mode: full
 server:
   port: 8765
-logging:
-  level:
-    org.springframework.cloud.gateway: INFO
-    org.springframework.http.server.reactive: INFO
-    org.springframework.web.reactive: INFO
-    org.springframework.boot.autoconfigure.web: INFO
-    reactor.netty: INFO
 spring:
   application:
     name: api-gateway
