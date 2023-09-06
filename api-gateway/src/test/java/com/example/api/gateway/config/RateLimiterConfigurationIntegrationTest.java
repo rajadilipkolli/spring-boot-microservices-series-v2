@@ -22,28 +22,13 @@ public class RateLimiterConfigurationIntegrationTest extends AbstractIntegration
             new MockServerContainer(DockerImageName.parse("mockserver/mockserver:5.15.0"));
 
     private MockServerClient mockServerClient;
+    private String uri;
 
     @BeforeAll
     void setUp() {
         mockServer.start();
-        System.setProperty("spring.cloud.gateway.routes[0].id", "order-service");
-        System.setProperty(
-                "spring.cloud.gateway.routes[0].uri",
-                "http://" + mockServer.getHost() + ":" + mockServer.getServerPort());
-        System.setProperty("spring.cloud.gateway.routes[0].predicates[0]", "Path=/order/**");
-        System.setProperty(
-                "spring.cloud.gateway.routes[0].filters[0]",
-                "RewritePath=/order/(?<path>.*), /$\\{path}");
-        System.setProperty("spring.cloud.gateway.routes[0].filters[1].name", "RequestRateLimiter");
-        System.setProperty(
-                "spring.cloud.gateway.routes[0].filters[1].args.redis-rate-limiter.replenishRate",
-                "10");
-        System.setProperty(
-                "spring.cloud.gateway.routes[0].filters[1].args.redis-rate-limiter.burstCapacity",
-                "20");
-        System.setProperty(
-                "spring.cloud.gateway.routes[0].filters[1].args.redis-rate-limiter.requestedTokens",
-                "15");
+        uri = "http://%s:%d".formatted(mockServer.getHost(), mockServer.getServerPort());
+        System.setProperty("spring.cloud.gateway.routes[0].uri", uri);
         mockServerClient = new MockServerClient(mockServer.getHost(), mockServer.getServerPort());
     }
 
@@ -51,7 +36,7 @@ public class RateLimiterConfigurationIntegrationTest extends AbstractIntegration
     @BenchmarkOptions(warmupRounds = 0, concurrency = 6, benchmarkRounds = 600)
     public void testorderService() {
         mockServerClient
-                .when(HttpRequest.request().withPath("/order/api/1"))
+                .when(HttpRequest.request().withPath("/order-service/api/1"))
                 .respond(
                         HttpResponse.response()
                                 .withBody("{\"id\":1}")
@@ -59,7 +44,7 @@ public class RateLimiterConfigurationIntegrationTest extends AbstractIntegration
         EntityExchangeResult<String> r =
                 webTestClient
                         .get()
-                        .uri("/api/{id}", 1)
+                        .uri("/order-service/api/{id}", 1)
                         .accept(MediaType.APPLICATION_JSON)
                         .exchange()
                         .expectBody(String.class)

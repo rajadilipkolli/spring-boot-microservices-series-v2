@@ -17,6 +17,7 @@ vscode:
     - vmware.vscode-spring-boot
     - vscjava.vscode-java-pack
     - vscjava.vscode-spring-initializr
+    - vscjava.vscode-java-test
 
 ports:
   - port: 3000
