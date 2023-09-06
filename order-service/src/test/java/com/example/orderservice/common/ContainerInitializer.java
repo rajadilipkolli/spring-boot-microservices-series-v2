@@ -22,8 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 public class ContainerInitializer {
 
     protected static final MockServerContainer MOCK_SERVER_CONTAINER =
-            new MockServerContainer(
-                    DockerImageName.parse("mockserver/mockserver:mockserver-5.15.0"));
+            new MockServerContainer(DockerImageName.parse("mockserver/mockserver:5.15.0"));
 
     protected static MockServerClient mockServerClient;
 
