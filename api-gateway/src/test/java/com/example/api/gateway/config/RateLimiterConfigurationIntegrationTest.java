@@ -17,7 +17,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
 @Slf4j
-public class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
+class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @Container
     static MockServerContainer mockServer =
@@ -34,7 +34,7 @@ public class RateLimiterConfigurationIntegrationTest extends AbstractIntegration
     }
 
     @RepeatedTest(value = 25)
-    public void testOrderService() {
+    void testOrderService() {
         mockServerClient
                 .when(HttpRequest.request().withPath("/order-service/api/1"))
                 .respond(
