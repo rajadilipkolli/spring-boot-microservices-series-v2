@@ -99,7 +99,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     void shouldCreateNewOrder() throws Exception {
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
-        mockProductExistsRequest(true, "Product1");
+        mockProductsExistsRequest(true, "Product1");
 
         this.mockMvc
                 .perform(
@@ -120,7 +120,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     void shouldCreateNewOrderFails() throws Exception {
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)));
-        mockProductExistsRequest(false, "Product2");
+        mockProductsExistsRequest(false, "Product2");
 
         this.mockMvc
                 .perform(
@@ -164,7 +164,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateOrder() throws Exception {
-        mockProductsExistsRequest(true);
+        mockProductsExistsRequest(true, "product1", "product4");
         Order order = orderList.get(0);
 
         OrderRequest orderDto = TestData.getOrderRequest(order);
