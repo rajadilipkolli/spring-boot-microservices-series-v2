@@ -56,10 +56,10 @@ class OrderRepositoryTest {
         assertThat(page.getTotalElements()).isEqualTo(16);
         assertThat(page.getTotalPages()).isEqualTo(4);
         assertThat(page.getNumber()).isEqualTo(1);
-        assertThat(page.isFirst()).isEqualTo(false);
-        assertThat(page.isLast()).isEqualTo(false);
-        assertThat(page.hasNext()).isEqualTo(true);
-        assertThat(page.hasPrevious()).isEqualTo(true);
+        assertThat(page.isFirst()).isFalse();
+        assertThat(page.isLast()).isFalse();
+        assertThat(page.hasNext()).isTrue();
+        assertThat(page.hasPrevious()).isTrue();
         assertThat(page.getNumberOfElements()).isEqualTo(5);
         assertThat(page.getContent()).isNotEmpty().hasSize(5);
     }

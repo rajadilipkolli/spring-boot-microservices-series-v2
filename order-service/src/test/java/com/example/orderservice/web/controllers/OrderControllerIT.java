@@ -97,9 +97,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewOrder() throws Exception {
-        mockProductExistsRequest(true);
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+        mockProductExistsRequest(true, "Product1");
 
         this.mockMvc
                 .perform(
@@ -114,6 +114,28 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.items.size()", is(1)))
                 .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
                 .andExpect(jsonPath("$.items[0].price", is(100)));
+    }
+
+    @Test
+    void shouldCreateNewOrderFails() throws Exception {
+        OrderRequest orderRequest =
+                new OrderRequest(1L, List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)));
+        mockProductExistsRequest(false, "Product2");
+
+        this.mockMvc
+                .perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(orderRequest)))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                .andExpect(jsonPath("$.title", is("Product Not Found")))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(
+                        jsonPath("$.detail", is("One or More products Not found from [PRODUCT2]")))
+                .andExpect(jsonPath("$.instance", is("/api/orders")))
+                .andExpect(jsonPath("$.errorCategory").value("Generic"));
     }
 
     @Test

@@ -38,13 +38,13 @@ public class ContainerInitializer {
                         MOCK_SERVER_CONTAINER.getHost(), MOCK_SERVER_CONTAINER.getServerPort());
     }
 
-    protected static void mockProductExistsRequest(boolean status) {
+    protected static void mockProductExistsRequest(boolean status, String productCode) {
         mockServerClient
                 .when(
                         request()
                                 .withMethod("GET")
                                 .withPath("/api/catalog/exists")
-                                .withQueryStringParameter("productCodes", "PRODUCT1"))
+                                .withQueryStringParameter("productCodes", productCode))
                 .respond(
                         response()
                                 .withStatusCode(200)
