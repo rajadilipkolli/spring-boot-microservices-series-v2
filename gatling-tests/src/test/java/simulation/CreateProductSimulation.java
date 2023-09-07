@@ -1,8 +1,8 @@
 package simulation;
 
-import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
+import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -37,7 +37,8 @@ public class CreateProductSimulation extends Simulation {
             Stream.generate(
                             () -> {
                                 Map<String, Object> objectMap = new HashMap<>();
-                                objectMap.put("code", "Product"+new SecureRandom().nextInt(101, 200));
+                                objectMap.put(
+                                        "code", "Product" + new SecureRandom().nextInt(101, 200));
                                 objectMap.put(
                                         "productName",
                                         "Product Name " + new SecureRandom().nextInt());
@@ -77,8 +78,8 @@ public class CreateProductSimulation extends Simulation {
                                             session ->
                                                     "/inventory-service/api/inventory/"
                                                             + getInventoryId(
-                                                            session.get(
-                                                                    "inventoryResponseBody")))
+                                                                    session.get(
+                                                                            "inventoryResponseBody")))
                                     .header("Content-Type", "application/json")
                                     .body(
                                             StringBody(

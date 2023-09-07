@@ -24,7 +24,6 @@
 		<module>config-server</module>
 		<module>service-registry</module>
 		<module>api-gateway</module>
-		<module>gatling-tests</module>
 	</modules>
 
 </project>
