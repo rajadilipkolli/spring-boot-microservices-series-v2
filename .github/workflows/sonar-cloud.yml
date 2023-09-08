@@ -5,6 +5,7 @@ on:
       - main
     paths-ignore:
       - ReadMe.md
+      - docker-compose-tools.yml
       - .github/**
   pull_request:
     types:
