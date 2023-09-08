@@ -199,7 +199,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
+      - SPRING_DATA_REDIS_HOST=redis
       - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
     restart: unless-stopped
@@ -323,6 +323,7 @@ services:
   grafana:
     image: grafana/grafana:10.1.1
     container_name: grafana
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
       - loki
       - prometheus
@@ -338,9 +339,11 @@ services:
       - ./docker/grafana/grafana.ini:/etc/grafana/grafana.ini
     networks:
       - microservice-network
+
   loki:
     image: grafana/loki:2.9.0
     container_name: loki
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
     depends_on:
       - promtail
@@ -352,6 +355,7 @@ services:
   promtail:
     image: grafana/promtail:2.9.0
     container_name: promtail
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
       - ./docker/promtail/promtail.yml:/etc/promtail/config.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
@@ -363,6 +367,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.47.0
     container_name: prometheus
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - "9090:9090"
     volumes:
@@ -373,6 +378,7 @@ services:
   tempo:
     image: grafana/tempo:2.2.2
     container_name: tempo
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
     ports:
       - "3110:3100" # Tempo
