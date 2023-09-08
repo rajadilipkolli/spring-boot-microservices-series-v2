@@ -4,10 +4,6 @@ server:
     contextPath: /${spring.application.name}
   forward-headers-strategy: framework
 
-logging:
-  level:
-    '[org.apache.kafka.clients.Metadata]': WARN
-
 spring:
   application:
     name: order-service
@@ -40,5 +36,3 @@ spring:
 #      state-dir: /tmp/kafka-streams/
 
 spring.output.ansi.enabled: ALWAYS
-
-logging.pattern.console: "%clr(%d{HH:mm:ss.SSS}){blue} %clr(---){faint} %clr([%15.15t]){yellow} %clr(:){red} %clr(%m){faint}%n"

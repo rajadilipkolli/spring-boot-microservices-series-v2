@@ -368,6 +368,9 @@ services:
     image: prom/prometheus:v2.47.0
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    command:
+      - --web.enable-remote-write-receiver
+      - --config.file=/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     volumes:

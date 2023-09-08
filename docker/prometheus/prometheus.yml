@@ -1,32 +1,47 @@
 global:
   scrape_interval: 2s
 
+remote_write:
+  - url: "http://host.docker.internal:9090/api/v1/write"
+
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['prometheus:9090']
+      - targets: ['host.docker.internal:9090']
+        labels:
+          application: 'prometheus'
   - job_name: 'api-gateway'
     scrape_interval: 2s
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: [ 'api-gateway:8765' ]
+        labels:
+          application: 'api-gateway'
   - job_name: 'catalog-service'
     scrape_interval: 2s
     metrics_path: '/catalog-service/actuator/prometheus'
     static_configs:
       - targets: [ 'api-gateway:8765' ]
+        labels:
+          application: 'catalog-service'
   - job_name: 'inventory-service'
     scrape_interval: 2s
     metrics_path: '/inventory-service/actuator/prometheus'
     static_configs:
       - targets: [ 'api-gateway:8765' ]
+        labels:
+          application: 'inventory-service'
   - job_name: 'order-service'
     scrape_interval: 2s
     metrics_path: '/order-service/actuator/prometheus'
     static_configs:
       - targets: [ 'api-gateway:8765' ]
+        labels:
+          application: 'order-service'
   - job_name: 'payment-service'
     scrape_interval: 2s
     metrics_path: '/payment-service/actuator/prometheus'
     static_configs:
       - targets: [ 'api-gateway:8765' ]
+        labels:
+          application: 'payment-service'
