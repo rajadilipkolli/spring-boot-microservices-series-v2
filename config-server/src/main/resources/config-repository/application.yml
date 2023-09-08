@@ -24,6 +24,7 @@ jdbc:
     json-format: false
   # Specify jdbc.includes property. By default, the property is set to include(observe) all(CONNECTION, QUERY, FETCH) types.
   includes: connection,fetch,query
+# traceID and spanId are predefined MDC keys - we want the logs to include them
 logging:
   pattern:
     level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
@@ -31,7 +32,6 @@ logging:
     sql: INFO
     web: INFO
     datasource-query-logger: INFO
-    '[org.apache.kafka.clients.Metadata]': WARN
 management:
   # For Exemplars to work we need histogram buckets
   metrics:
