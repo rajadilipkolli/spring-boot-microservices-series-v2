@@ -15,7 +15,7 @@ public class LoggingFilter implements GlobalFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         if (exchange.getRequest().getURI().getPath().contains("/actuator")) {
-            log.debug("Path of the request received -> {}", exchange.getRequest().getPath());
+            log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
         } else {
             log.info("Path of the request received -> {}", exchange.getRequest().getPath());
         }
