@@ -25,8 +25,7 @@ jdbc:
 # traceID and spanId are predefined MDC keys - we want the logs to include them
 logging:
   pattern:
-    correlation: [${spring.application.name:},%X{traceId:-},%X{spanId:-}]
-  include-application-name: false
+    correlation: "[%X{traceId:-},%X{spanId:-}]"
   level:
     datasource-query-logger: INFO
 management:
@@ -39,8 +38,6 @@ management:
       percentiles-histogram:
         all: true
         http.server.requests: true
-    tags:
-      application: ${spring.application.name}
   endpoint:
     health:
       probes:
