@@ -4,20 +4,15 @@
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
     <springProperty scope="context" name="appName" source="spring.application.name"/>
- 	<springProperty scope="context" name="lokiUri" source="loki.uri"/>
 
     <springProfile name="default">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
         </root>
     </springProfile>
-    <springProfile name="dockerLoki">
-        <root level="INFO">
-            <appender-ref ref="LOKI"/>
-            <appender-ref ref="CONSOLE" />
-        </root>
-    </springProfile>
-        <springProfile name="!default,!dockerLoki">
+
+    <springProfile name="!default">
+        <property name="LOG_FILE" value="logs/${appName}.log"/>
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />
@@ -25,23 +20,9 @@
         </root>
     </springProfile>
 
-    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
- 		<batchTimeoutMs>2000</batchTimeoutMs>
- 		<http>
- 			<url>${lokiUri:-http://localhost:3100/loki/api/v1/push}</url>
- 		</http>
- 		<format>
- 			<label>
- 				<pattern>application=${appName},hostname=${HOSTNAME},level=%level</pattern>
- 			</label>
- 			<message>
- 				<pattern>${FILE_LOG_PATTERN}</pattern>
- 			</message>
- 			<sortByTime>true</sortByTime>
- 		</format>
- 		<metricsEnabled>true</metricsEnabled>
- 	</appender>
-
     <logger name="com.example.catalogservice" level="DEBUG"/>
+    <logger name="org.springframework.transaction" level="DEBUG" />
+    <logger name="org.springframework.kafka.transaction" level="DEBUG" />
+    <logger name="org.apache.kafka.clients.Metadata" level="WARN" />
 
 </configuration>

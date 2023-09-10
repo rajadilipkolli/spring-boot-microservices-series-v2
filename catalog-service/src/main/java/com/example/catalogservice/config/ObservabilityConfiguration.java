@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
 </p>
 ***/
 
@@ -28,8 +28,8 @@ public class ObservabilityConfiguration {
     }
 
     @Bean
-    WebClient webClient() {
-        return WebClient.builder()
+    WebClient webClient(WebClient.Builder webClientBuilder) {
+        return webClientBuilder
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .baseUrl(applicationProperties.getInventoryServiceUrl())
