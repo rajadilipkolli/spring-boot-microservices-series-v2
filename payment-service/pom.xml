@@ -88,6 +88,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-otel</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.ttddyy.observation</groupId>
+            <artifactId>datasource-micrometer-spring-boot</artifactId>
+            <version>1.0.2</version>
+		</dependency>
         <!-- Latency Visualization -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
