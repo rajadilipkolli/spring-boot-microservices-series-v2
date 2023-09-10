@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Dashboard for Spring Boot2.1 Statistics(based on Spring Boot2 Statistic by micrometer-prometheus).",
+  "description": "Dashboard for Spring Boot3.1 Statistics(based on Spring Boot3 Statistic by micrometer-prometheus).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "gnetId": 10280,
@@ -2445,7 +2445,6 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "editorMode": "code",
           "expr": "irate(http_server_requests_seconds_sum{instance=\"$instance\", application=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m]) / irate(http_server_requests_seconds_count{instance=\"$instance\", application=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
