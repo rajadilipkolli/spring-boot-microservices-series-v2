@@ -30,7 +30,7 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: "latest"
+          distribution: 'graalvm'
           java-version: ${{ matrix.java }}
           components: "native-image"
           github-token: ${{ secrets.GITHUB_TOKEN }}
