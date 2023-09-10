@@ -10,7 +10,6 @@ datasources:
     type: prometheus
     uid: prometheus-micro-service
     access: proxy
-    orgId: 1
     url: http://host.docker.internal:9090
     basicAuth: false
     isDefault: false
@@ -25,7 +24,6 @@ datasources:
     type: tempo
     uid: tempo-micro-service
     access: proxy
-    orgId: 1
     url: http://tempo:3100
     basicAuth: false
     isDefault: false
@@ -33,6 +31,14 @@ datasources:
     editable: true
     jsonData:
       httpMethod: GET
+      tracesToMetrics:
+        datasourceUid: prometheus-micro-service
+        tags: [ { key: 'service.name', value: 'application' }, { key: 'org' }, { key: 'method' }, { key: 'uri' }, { key: 'outcome' }, { key: 'status' }, { key: 'exception' } ]
+        queries:
+          - name: 'Throughput'
+            query: 'sum(rate(http_server_requests_seconds_count{$$__tags}[$$__rate_interval]))'
+          - name: 'Latency'
+            query: 'histogram_quantile(1.00, sum(rate(http_server_requests_seconds_bucket{$$__tags}[$$__rate_interval])) by (le))'
       tracesToLogs:
         datasourceUid: 'loki-micro-service'
         tags: [ 'instance', 'pod', 'namespace', 'hostname' ]
@@ -43,8 +49,10 @@ datasources:
         filterByTraceID: true
         filterBySpanID: false
         lokiSearch: true
+      lokiSearch:
+        datasourceUid: loki-micro-service
       serviceMap:
-        datasourceUid: 'prometheus-micro-service'
+        datasourceUid: prometheus-micro-service
       search:
         hide: false
       nodeGraph:
@@ -53,7 +61,6 @@ datasources:
     type: loki
     uid: loki-micro-service
     access: proxy
-    orgId: 1
     url: http://loki:3100
     basicAuth: false
     isDefault: true
@@ -63,5 +70,5 @@ datasources:
       derivedFields:
         - datasourceUid: tempo-micro-service
           matcherRegex: \[.+,(.+?),
-          name: TraceID
+          name: traceId
           url: $${__value.raw}
