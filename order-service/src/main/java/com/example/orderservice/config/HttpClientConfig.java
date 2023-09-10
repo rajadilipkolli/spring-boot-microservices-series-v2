@@ -10,8 +10,10 @@ import com.example.orderservice.services.CatalogServiceProxy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.support.WebClientAdapter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 @Configuration(proxyBeanMethods = false)
@@ -21,9 +23,13 @@ public class HttpClientConfig {
     private final ApplicationProperties applicationProperties;
 
     @Bean
-    public HttpServiceProxyFactory httpServiceProxyFactory(WebClient.Builder builder) {
-        WebClient webClient = builder.baseUrl(applicationProperties.catalogServiceUrl()).build();
-        return HttpServiceProxyFactory.builder(WebClientAdapter.forClient(webClient)).build();
+    public HttpServiceProxyFactory httpServiceProxyFactory(RestClient.Builder builder) {
+        RestClient restClient =
+                builder.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .baseUrl(applicationProperties.catalogServiceUrl())
+                        .build();
+        return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
     }
 
     @Bean
