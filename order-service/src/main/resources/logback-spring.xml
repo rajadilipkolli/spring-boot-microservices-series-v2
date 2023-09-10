@@ -21,7 +21,7 @@
     </springProfile>
 
     <logger name="com.example.orderservice" level="DEBUG"/>
-    <logger name="org.springframework.transaction" level="TRACE" />
+    <logger name="org.springframework.transaction" level="DEBUG" />
     <logger name="org.springframework.kafka.transaction" level="DEBUG" />
     <logger name="org.apache.kafka.clients.Metadata" level="WARN" />
 

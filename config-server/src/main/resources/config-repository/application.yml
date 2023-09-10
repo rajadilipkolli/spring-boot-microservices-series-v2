@@ -2,8 +2,6 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
 jdbc:
   datasource-proxy:
     # enable and configure query logging
@@ -84,11 +82,6 @@ spring:
         connection:
           provider_disables_autocommit: true
         generate_statistics: false
-        id:
-          new_generator_mappings: true
-          optimizer:
-            pooled:
-              preferred: pooled-lo
         jdbc:
           batch_size: 25
           lob:
@@ -99,12 +92,14 @@ spring:
         query:
           fail_on_pagination_over_collection_fetch: true
           in_clause_parameter_padding: true
+          plan_cache_max_size: 4096
     # show-sql: true
   main:
     allow-bean-definition-overriding: true
   mvc:
     problemdetails:
       enabled: true
+  output.ansi.enabled: ALWAYS
 
 #SpringDoc Properties
 springdoc:

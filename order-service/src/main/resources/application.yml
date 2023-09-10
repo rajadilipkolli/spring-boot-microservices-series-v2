@@ -7,9 +7,6 @@ server:
 spring:
   application:
     name: order-service
-  mvc.problemdetails.enabled: true
-  config:
-    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
@@ -34,5 +31,3 @@ spring:
             serde: org.springframework.kafka.support.serializer.JsonSerde
         spring.json.trusted.packages: 'com.example.common.dtos'
 #      state-dir: /tmp/kafka-streams/
-
-spring.output.ansi.enabled: ALWAYS
