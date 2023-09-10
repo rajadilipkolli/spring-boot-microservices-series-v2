@@ -40,21 +40,6 @@ services:
   #   networks:
   #     - microservice-network
 
-  # zipkin-server:
-  #   image: openzipkin/zipkin
-  #   container_name: zipkin-server
-  #   extra_hosts: [ 'host.docker.internal:host-gateway' ]
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 512m
-  #   expose:
-  #     - "9411"
-  #   ports:
-  #     - "9411:9411"
-  #   networks:
-  #     - microservice-network
-
   redis:
     container_name: redis
     image: 'redis:7.2.1-alpine'
@@ -131,12 +116,6 @@ services:
       - "8888:8888"
     depends_on:
       - tempo
-    healthcheck:
-      test: curl -m 5 --silent --fail --request GET http://localhost:8888/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
-      retries: 10
-      interval: 20s
-      timeout: 5s
-      start_period: 40s
     networks:
       - microservice-network
     environment:
@@ -155,12 +134,6 @@ services:
           memory: 700m
     ports:
       - "8761:8761"
-    healthcheck:
-      test: curl -m 5 --silent --fail --request GET http://localhost:8761/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
-      retries: 10
-      interval: 20s
-      timeout: 5s
-      start_period: 40s
     networks:
       - microservice-network
     depends_on:
@@ -202,7 +175,6 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
-      - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
     restart: unless-stopped
     labels:
@@ -233,7 +205,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -262,7 +233,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - LOKI_URI=http://loki:3100/loki/api/v1/push
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -325,8 +295,7 @@ services:
       logging_jobname: "containerlogs"
     restart: unless-stopped
 
-  # Observability
-
+  ## Observability
   grafana:
     image: grafana/grafana:10.1.1
     container_name: grafana
