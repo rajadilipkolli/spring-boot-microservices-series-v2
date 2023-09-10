@@ -36,7 +36,7 @@ datasources:
       tracesToLogs:
         datasourceUid: 'loki-micro-service'
         tags: [ 'instance', 'pod', 'namespace', 'hostname' ]
-        mappedTags: [ { key: 'service.name', value: 'application' }  ]
+        mappedTags: [ { key: 'org' }, { key: 'service.name', value: 'application' }  ]
         mapTagNamesEnabled: true
         spanStartTimeShift: '1h'
         spanEndTimeShift: '1h'
