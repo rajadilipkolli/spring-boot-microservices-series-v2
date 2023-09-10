@@ -7,6 +7,7 @@ on:
       - ReadMe.md
       - docker-compose-tools.yml
       - .github/**
+      - config/**
   pull_request:
     types:
       - opened

@@ -310,9 +310,9 @@ services:
       - GF_SECURITY_ADMIN_USER=user
       - GF_SECURITY_ADMIN_PASSWORD=password
     volumes:
-      - ./docker/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./docker/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
     networks:
       - microservice-network
 
