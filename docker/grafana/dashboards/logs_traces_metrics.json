@@ -38,13 +38,13 @@
         "x": 0,
         "y": 0
       },
-      "id": 7,
+      "id": 11,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
         "prettifyLogMessage": true,
         "showCommonLabels": true,
-        "showLabels": true,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
@@ -56,12 +56,12 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"api-gateway\"} |= ``",
+          "expr": "{container=\"payment-service\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "API-GATEWAY-LOGS",
+      "title": "PAYMENT-SERVICE-LOGS",
       "transparent": true,
       "type": "logs"
     },
@@ -100,6 +100,157 @@
         }
       ],
       "title": "CATALOG-SERVICE-LOGS",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-micro-service"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 10,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": true,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-micro-service"
+          },
+          "editorMode": "builder",
+          "expr": "{container=\"order-service\"} |= ``",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "ORDER-SERVICE-LOGS",
+      "transparent": true,
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-micro-service"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-micro-service"
+          },
+          "editorMode": "builder",
+          "expr": "{container=\"api-gateway\"} |= ``",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "API-GATEWAY-LOGS",
+      "transparent": true,
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-micro-service"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 9,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": true,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-micro-service"
+          },
+          "editorMode": "builder",
+          "expr": "{container=\"inventory-service\"} |= ``",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "INVENTORY-SERVICE-LOGS",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-micro-service"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 12,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": true,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-micro-service"
+          },
+          "editorMode": "builder",
+          "expr": "{container=\"config-server\"} |= ``",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "CONFIG-SERVER-LOGS",
+      "transparent": true,
       "type": "logs"
     },
     {
@@ -165,7 +316,7 @@
         "h": 10,
         "w": 23,
         "x": 0,
-        "y": 8
+        "y": 24
       },
       "id": 4,
       "options": {
@@ -224,7 +375,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "auto",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],

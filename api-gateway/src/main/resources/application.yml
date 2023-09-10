@@ -46,8 +46,8 @@ spring:
                   maxBackoff: 500ms
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.replenishRate: 60
+                redis-rate-limiter.burstCapacity: 10
         - id: inventory-service
           predicates:
             - Path=/inventory-service/**
