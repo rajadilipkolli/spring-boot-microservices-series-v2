@@ -6,6 +6,7 @@
 
 package com.example.orderservice.repositories;
 
+import static com.example.orderservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.orderservice.common.PostGreSQLContainer;
@@ -23,9 +24,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.test.context.ActiveProfiles;
 
+@ActiveProfiles({PROFILE_TEST})
 @ImportTestcontainers(PostGreSQLContainer.class)
-@DataJpaTest(properties = "application.catalogServiceUrl=http://dummy")
+@DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate"})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class OrderRepositoryTest {
 
