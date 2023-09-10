@@ -1,4 +1,9 @@
-/* Licensed under Apache-2.0 2023 */
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+</p>
+***/
+
 package com.example.api.gateway;
 
 import org.springframework.boot.SpringApplication;

@@ -295,7 +295,9 @@
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
-                            <content>/* Licensed under Apache-2.0 $YEAR */</content>
+                            <!-- specify either content or file, but not both -->
+                            <file>${project.basedir}/license-header</file>
+                            <!-- <content>/* Licensed under Apache-2.0 $YEAR */</content> -->
                         </licenseHeader>
                     </java>
                 </configuration>
