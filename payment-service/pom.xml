@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0-M1</version>
+        <version>3.2.0-M2</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.paymentservice</groupId>
@@ -218,7 +218,6 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <publish>true</publish>
                     </image>
-                    <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                     <docker>
                         <publishRegistry>
                             <username>${CI_DOCKER_USERNAME}</username>
