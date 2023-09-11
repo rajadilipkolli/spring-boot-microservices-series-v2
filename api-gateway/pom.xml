@@ -23,6 +23,7 @@
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
 
         <spotless.version>2.39.0</spotless.version>
+        <wiremock.version>3.0.4</wiremock.version>
         <properties-maven-plugin.version>1.2.0</properties-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -151,16 +152,17 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>mockserver</artifactId>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>${wiremock.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-			<groupId>org.mock-server</groupId>
-			<artifactId>mockserver-client-java</artifactId>
-			<version>5.15.0</version>
-			<scope>test</scope>
-		</dependency>
+            <groupId>com.github.wiremock</groupId>
+            <artifactId>wiremock-testcontainers-java</artifactId>
+            <version>1.0-alpha-7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -409,12 +411,8 @@
             </snapshots>
         </repository>
         <repository>
-            <id>netflix-candidates</id>
-            <name>Netflix Candidates</name>
-            <url>https://artifactory-oss.prod.netflix.net/artifactory/maven-oss-candidates</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
+            <id>jitpack</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
     <pluginRepositories>

@@ -20,14 +20,16 @@ public class TestAPIGatewayApplication {
     @ServiceConnection(name = "openzipkin/zipkin")
     GenericContainer<?> zipkinContainer() {
         return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411);
+                .withExposedPorts(9411)
+                .withReuse(true);
     }
 
     @Bean
     @ServiceConnection(name = "redis")
     GenericContainer<?> redisContainer() {
         return new GenericContainer<>(DockerImageName.parse("redis").withTag("7.2.1-alpine"))
-                .withExposedPorts(6379);
+                .withExposedPorts(6379)
+                .withReuse(true);
     }
 
     public static void main(String[] args) {

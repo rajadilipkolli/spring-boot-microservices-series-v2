@@ -10,42 +10,47 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.model.HttpResponse;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
-import org.testcontainers.containers.MockServerContainer;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.utility.DockerImageName;
+import org.wiremock.integrations.testcontainers.WireMockContainer;
 
 @Slf4j
 class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @Container
-    static MockServerContainer mockServer =
-            new MockServerContainer(DockerImageName.parse("mockserver/mockserver:5.15.0"));
+    static final WireMockContainer wireMockServer =
+            new WireMockContainer("wiremock/wiremock:3x-alpine")
+                    .withMappingFromResource(
+                            "order-by-id",
+                            RateLimiterConfigurationIntegrationTest.class,
+                            RateLimiterConfigurationIntegrationTest.class.getSimpleName()
+                                    + "/mocks-config.json");
 
-    private MockServerClient mockServerClient;
-
-    @BeforeAll
-    void setUp() {
-        mockServer.start();
-        String uri = "http://%s:%d".formatted(mockServer.getHost(), mockServer.getServerPort());
-        System.setProperty("spring.cloud.gateway.routes[0].uri", uri);
-        mockServerClient = new MockServerClient(mockServer.getHost(), mockServer.getServerPort());
+    static {
+        wireMockServer.start();
     }
 
-    @RepeatedTest(value = 25)
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.cloud.gateway.routes[0].uri", wireMockServer::getBaseUrl);
+        registry.add("spring.cloud.gateway.routes[0].id", () -> "order-service");
+        registry.add(
+                "spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/order-service/**");
+        registry.add("spring.cloud.gateway.routes[0].filters[0].name", () -> "RequestRateLimiter");
+        registry.add(
+                "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.replenishRate",
+                () -> "10");
+        registry.add(
+                "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.burstCapacity",
+                () -> "20");
+    }
+
+    @RepeatedTest(value = 60)
     void testOrderService() {
-        mockServerClient
-                .when(HttpRequest.request().withPath("/order-service/api/1"))
-                .respond(
-                        HttpResponse.response()
-                                .withBody("{\"id\":1}")
-                                .withHeader("Content-Type", "application/json"));
         EntityExchangeResult<String> r =
                 webTestClient
                         .get()
@@ -56,13 +61,14 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .returnResult();
 
         List<String> remainingToken = r.getResponseHeaders().get("X-RateLimit-Remaining");
+        int statusCode = r.getStatus().value();
         log.info(
                 "Received: status->{}, payload->{}, remaining->{}",
-                r.getStatus(),
+                statusCode,
                 r.getResponseBody(),
                 remainingToken);
 
-        assertThat(r.getStatus().value()).isIn(404, 429);
+        assertThat(statusCode).isIn(200, 429);
         assertThat(remainingToken).isNotEmpty().hasSize(1);
     }
 }

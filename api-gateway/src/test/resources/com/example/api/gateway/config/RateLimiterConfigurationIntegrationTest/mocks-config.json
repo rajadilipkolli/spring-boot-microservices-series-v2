@@ -1,0 +1,27 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPattern": "/order-service/api/1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "orderId": 1,
+          "customerId" : 1,
+          "status" : "COMPLETED",
+          "items" : [
+            {
+              "itemId" : 1,
+              "productId" : "P001"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

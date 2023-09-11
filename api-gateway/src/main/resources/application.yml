@@ -33,17 +33,6 @@ spring:
             - Path=/order-service/**
           uri: lb://order-service
           filters:
-            - name: CircuitBreaker
-              args:
-                name: exampleSlowCircuitBreaker
-                fallbackUri: forward:/fallback/api/order
-            - name: Retry
-              args:
-                retries: 3
-                method: GET
-                backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter.replenishRate: 60
@@ -52,9 +41,24 @@ spring:
           predicates:
             - Path=/inventory-service/**
           uri: lb://inventory-service
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: exampleSlowCircuitBreaker
+                fallbackUri: forward:/fallback/api/inventory
         - id: catalog-service
           predicates:
             - Path=/catalog-service/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                method: GET
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: true
           uri: lb://catalog-service
         - id: payment-service
           predicates:

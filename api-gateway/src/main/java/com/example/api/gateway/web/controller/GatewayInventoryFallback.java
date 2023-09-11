@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/fallback/api/order")
-public class GatewayOrderFallback {
+@RequestMapping("/fallback/api/inventory")
+public class GatewayInventoryFallback {
 
     @GetMapping("/{id}")
     public Mono<String> fallback(@PathVariable Long id) {
