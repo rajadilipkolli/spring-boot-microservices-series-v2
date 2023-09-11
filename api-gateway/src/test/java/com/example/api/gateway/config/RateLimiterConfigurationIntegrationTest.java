@@ -23,7 +23,7 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @Container
     static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:3x-alpine")
+            new WireMockContainer("wiremock/wiremock:latest-alpine")
                     .withMappingFromResource(
                             "order-by-id",
                             RateLimiterConfigurationIntegrationTest.class,
