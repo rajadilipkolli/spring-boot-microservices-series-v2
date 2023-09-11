@@ -12,7 +12,7 @@
     </springProfile>
 
     <springProfile name="!default">
-        <property name="LOG_FILE" value="${java.io.tmpdir:-/tmp}/${appName}.log"/>
+        <property name="LOG_FILE" value="${java.io.tmpdir:-/tmp}/logs/${appName}.log"/>
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />

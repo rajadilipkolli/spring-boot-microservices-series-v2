@@ -3,12 +3,15 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml" />
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
+    <springProperty scope="context" name="appName" source="spring.application.name"/>
+
     <springProfile name="default">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
         </root>
     </springProfile>
     <springProfile name="!default">
+        <property name="LOG_FILE" value="${java.io.tmpdir:-/tmp}/logs/${appName}.log"/>
         <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
         <root level="INFO">
             <appender-ref ref="FILE" />
@@ -17,6 +20,7 @@
     </springProfile>
 
     <logger name="com.example.inventoryservice" level="DEBUG"/>
+    <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.transaction" level="TRACE" />
     <logger name="org.springframework.kafka.transaction" level="DEBUG" />
 
