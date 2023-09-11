@@ -170,6 +170,7 @@ services:
       - naming-server
       - tempo
       - loki
+      - redis
       # - mongodb
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -287,9 +288,9 @@ services:
       postgresql:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://tempo:9411
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
