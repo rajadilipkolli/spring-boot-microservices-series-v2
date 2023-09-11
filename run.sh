@@ -28,8 +28,8 @@ function start_infra() {
 }
 
 function start_infra_full() {
-    echo "Starting grafana promtail postgresql kafka  config-server naming-server...."
-    docker compose -f docker-compose-tools.yml up -d grafana promtail postgresql kafka config-server naming-server
+    echo "Starting grafana promtail postgresql kafka redis config-server naming-server...."
+    docker compose -f docker-compose-tools.yml up -d grafana promtail postgresql kafka redis config-server naming-server
     docker compose -f docker-compose-tools.yml logs -f
 }
 
