@@ -8,6 +8,7 @@ on:
       - docker-compose-tools.yml
       - .github/**
       - config/**
+      - gatling-tests/**
   pull_request:
     types:
       - opened
