@@ -38,10 +38,10 @@ public class CreateProductSimulation extends Simulation {
                             () -> {
                                 Map<String, Object> objectMap = new HashMap<>();
                                 objectMap.put(
-                                        "code", "Product" + new SecureRandom().nextInt(101, 200));
+                                        "code", "P000)" + new SecureRandom().nextInt(101, 200));
                                 objectMap.put(
                                         "productName",
-                                        "Product Name " + new SecureRandom().nextInt());
+                                        "A Random Product" + new SecureRandom().nextInt());
                                 objectMap.put("price", new SecureRandom().nextLong(10, 100));
                                 objectMap.put("customerId", new SecureRandom().nextInt(1, 100));
                                 return objectMap;
@@ -99,7 +99,7 @@ public class CreateProductSimulation extends Simulation {
                                                       "customerId": #{customerId},
                                                       "items": [
                                                         {
-                                                          "productId": "#{code}",
+                                                          "productCode": "#{code}",
                                                           "quantity": 10,
                                                           "productPrice": 5
                                                         }
@@ -132,7 +132,7 @@ public class CreateProductSimulation extends Simulation {
     public CreateProductSimulation() {
         this.setUp(
                         scn.pause(Duration.ofSeconds(1))
-                                .injectOpen(constantUsersPerSec(5).during(Duration.ofSeconds(30))))
+                                .injectOpen(constantUsersPerSec(20).during(Duration.ofSeconds(60))))
                 .protocols(httpProtocol);
     }
 }
