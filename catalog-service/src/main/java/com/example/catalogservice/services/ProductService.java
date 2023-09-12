@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.services;
 
+import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
@@ -28,6 +29,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @Transactional
 @RequiredArgsConstructor
+@Loggable
 public class ProductService {
 
     private final ProductRepository productRepository;

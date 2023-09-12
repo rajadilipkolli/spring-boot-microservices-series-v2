@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.web.controllers;
 
+import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
@@ -30,6 +31,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/catalog")
 @RequiredArgsConstructor
+@Loggable
 public class ProductController {
 
     private final ProductService productService;
