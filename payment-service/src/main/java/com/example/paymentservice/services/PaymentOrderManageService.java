@@ -3,6 +3,7 @@ package com.example.paymentservice.services;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
+import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.repositories.CustomerRepository;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Loggable
 public class PaymentOrderManageService {
 
     private final CustomerRepository customerRepository;

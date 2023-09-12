@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.mapper.CustomerMapper;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Service
 @Transactional
+@Loggable
 public class CustomerService {
 
     private final CustomerRepository customerRepository;

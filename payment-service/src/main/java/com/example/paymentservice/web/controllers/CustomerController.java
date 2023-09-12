@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
+import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
@@ -27,6 +28,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/customers")
+@Loggable
 public class CustomerController {
 
     private final CustomerService customerService;
