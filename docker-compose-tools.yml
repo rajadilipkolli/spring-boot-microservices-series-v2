@@ -365,7 +365,7 @@ services:
       - "4317:4317" # OTLP
       - "9411:9411" # Zipkin
     volumes:
-      - ./docker/tempo/tempo.yml:/etc/tempo-config.yml
+      - ./config/tempo/tempo.yml:/etc/tempo-config.yml
     networks:
       - microservice-network
 networks:
