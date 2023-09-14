@@ -16,7 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.DynamicInsert;
 
 @Entity
 @Table(name = "inventory")
@@ -24,7 +23,6 @@ import org.hibernate.annotations.DynamicInsert;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@DynamicInsert
 public class Inventory {
 
     @Id
@@ -35,7 +33,7 @@ public class Inventory {
     private String productCode;
 
     @Column(name = "quantity")
-    private Integer availableQuantity;
+    private Integer availableQuantity = 0;
 
-    private Integer reservedItems;
+    private Integer reservedItems = 0;
 }

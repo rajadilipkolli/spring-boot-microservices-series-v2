@@ -102,7 +102,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue(), Long.class))
                 .andExpect(jsonPath("$.availableQuantity", is(10)))
-                // .andExpect(jsonPath("$.reservedItems", is(0)))
+                .andExpect(jsonPath("$.reservedItems", is(0)))
                 .andExpect(jsonPath("$.productCode", is(inventoryRequest.productCode())));
     }
 
