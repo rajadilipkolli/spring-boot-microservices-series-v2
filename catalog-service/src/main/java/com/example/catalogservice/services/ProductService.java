@@ -12,14 +12,14 @@ import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.repositories.ProductRepository;
-import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
 import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.domain.Sort;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -35,7 +35,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
-    private final KafkaTemplate<String, ProductDto> kafkaTemplate;
+    private final StreamBridge streamBridge;
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findAll", contextualName = "find-all-products")
@@ -112,7 +112,8 @@ public class ProductService {
                 .flatMap(productRepository::save)
                 .map(
                         savedProduct -> {
-                            kafkaTemplate.send(AppConstants.KAFKA_TOPIC, productDto);
+                            streamBridge.send(
+                                    "inventory-out-0", productDto, MediaType.APPLICATION_JSON);
                             return savedProduct;
                         });
     }
