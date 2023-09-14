@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -112,8 +111,7 @@ public class ProductService {
                 .flatMap(productRepository::save)
                 .map(
                         savedProduct -> {
-                            streamBridge.send(
-                                    "inventory-out-0", productDto, MediaType.APPLICATION_JSON);
+                            streamBridge.send("inventory-out-0", productDto);
                             return savedProduct;
                         });
     }

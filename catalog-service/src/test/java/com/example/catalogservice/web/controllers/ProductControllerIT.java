@@ -166,7 +166,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     @Disabled("Till parsing issue is fixed")
-    void shouldFindProductWhenInventoryIsDown() throws JsonProcessingException {
+    void shouldFindProductWhenInventoryIsDown() {
 
         Product product = savedProductList.get(0);
         Long productId = product.getId();
