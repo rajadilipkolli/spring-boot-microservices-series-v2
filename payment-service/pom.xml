@@ -21,7 +21,6 @@
         <java.version>17</java.version>
         <spring-cloud.version>2023.0.0-M1</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
-        <commons-io.version>2.13.0</commons-io.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -139,15 +138,6 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc-openapi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
         </dependency>
         <dependency>
             <groupId>net.datafaker</groupId>
