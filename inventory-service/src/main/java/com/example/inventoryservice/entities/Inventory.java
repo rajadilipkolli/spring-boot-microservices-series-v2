@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "inventories")
+@Table(name = "inventory")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,7 +33,7 @@ public class Inventory {
     private String productCode;
 
     @Column(name = "quantity")
-    private Integer availableQuantity = 0;
+    private Integer availableQuantity;
 
     private Integer reservedItems;
 }
