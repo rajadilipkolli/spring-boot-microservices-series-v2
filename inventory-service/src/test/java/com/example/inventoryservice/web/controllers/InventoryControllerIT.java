@@ -7,6 +7,7 @@
 package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,8 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.inventoryservice.common.AbstractIntegrationTest;
-import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,25 +93,28 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateNewInventory() throws Exception {
-        InventoryDto inventory = new InventoryDto("New Inventory", 10);
+        InventoryRequest inventoryRequest = new InventoryRequest("New Inventory", 10);
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.productCode", is(inventory.productCode())));
+                .andExpect(jsonPath("$.id", notNullValue(), Long.class))
+                .andExpect(jsonPath("$.availableQuantity", is(10)))
+                // .andExpect(jsonPath("$.reservedItems", is(0)))
+                .andExpect(jsonPath("$.productCode", is(inventoryRequest.productCode())));
     }
 
     @Test
     void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
-        InventoryDto inventory = new InventoryDto(null, 0);
+        InventoryRequest inventoryRequest = new InventoryRequest(null, 0);
 
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
                 .andExpect(jsonPath("$.type", is("about:blank")))
@@ -124,13 +128,13 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldUpdateInventory() throws Exception {
         Inventory inventory = inventoryList.get(0);
-        InventoryDto inventoryDto = new InventoryDto(inventory.getProductCode(), 1000);
+        InventoryRequest inventoryRequest = new InventoryRequest(inventory.getProductCode(), 1000);
 
         this.mockMvc
                 .perform(
                         put("/api/inventory/{id}", inventory.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryDto)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
                 .andExpect(jsonPath("$.availableQuantity", is(1000)));

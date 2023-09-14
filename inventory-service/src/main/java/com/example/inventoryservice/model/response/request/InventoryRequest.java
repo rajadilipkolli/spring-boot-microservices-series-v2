@@ -4,13 +4,13 @@
 </p>
 ***/
 
-package com.example.inventoryservice.dtos;
+package com.example.inventoryservice.model.response.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.io.Serializable;
 
-public record InventoryDto(
+public record InventoryRequest(
         @NotBlank(message = "ProductCode can't be blank") String productCode,
         @PositiveOrZero(message = "Quantity can't be negative") Integer availableQuantity)
         implements Serializable {}

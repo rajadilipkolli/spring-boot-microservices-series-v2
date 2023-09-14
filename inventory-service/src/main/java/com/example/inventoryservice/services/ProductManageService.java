@@ -21,7 +21,6 @@ public class ProductManageService {
     public void manage(ProductDto productDto) {
         Inventory inventory = new Inventory();
         inventory.setProductCode(productDto.code());
-        inventory.setAvailableQuantity(0);
         this.inventoryRepository.save(inventory);
     }
 }

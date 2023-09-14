@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice.web.controllers;
 
-import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.response.PagedResult;
+import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.List;
@@ -79,19 +79,20 @@ public class InventoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Inventory createInventory(@RequestBody @Validated InventoryDto inventoryDto) {
-        return inventoryService.saveInventory(inventoryDto);
+    public Inventory createInventory(@RequestBody @Validated InventoryRequest inventoryRequest) {
+        return inventoryService.saveInventory(inventoryRequest);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Inventory> updateInventory(
-            @PathVariable Long id, @RequestBody @Validated InventoryDto inventoryDto) {
+            @PathVariable Long id, @RequestBody @Validated InventoryRequest inventoryRequest) {
         return inventoryService
                 .findInventoryById(id)
                 .map(
-                        inventoryObj -> {
+                        inventoryFromDB -> {
                             return ResponseEntity.ok(
-                                    inventoryService.updateInventory(inventoryObj, inventoryDto));
+                                    inventoryService.updateInventory(
+                                            inventoryFromDB, inventoryRequest));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

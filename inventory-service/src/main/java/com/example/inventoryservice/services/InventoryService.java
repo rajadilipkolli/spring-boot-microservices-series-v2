@@ -7,10 +7,10 @@
 package com.example.inventoryservice.services;
 
 import com.example.inventoryservice.config.logging.Loggable;
-import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.response.PagedResult;
+import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
@@ -56,9 +56,9 @@ public class InventoryService {
         return inventoryRepository.findById(id);
     }
 
-    public Inventory saveInventory(InventoryDto inventoryDto) {
+    public Inventory saveInventory(InventoryRequest inventoryRequest) {
 
-        Inventory inventory = this.inventoryMapper.toEntity(inventoryDto);
+        Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
         return inventoryRepository.save(inventory);
     }
 
@@ -66,9 +66,8 @@ public class InventoryService {
         inventoryRepository.deleteById(id);
     }
 
-    public Inventory updateInventory(Inventory inventory, InventoryDto inventoryDto) {
-        inventory.setAvailableQuantity(inventoryDto.availableQuantity());
-        inventory.setProductCode(inventoryDto.productCode());
+    public Inventory updateInventory(Inventory inventory, InventoryRequest inventoryRequest) {
+        this.inventoryMapper.updateInventoryFromRequest(inventoryRequest, inventory);
         return inventoryRepository.save(inventory);
     }
 

@@ -19,9 +19,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.inventoryservice.dtos.InventoryDto;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.response.PagedResult;
+import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.services.InventoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -105,14 +105,14 @@ class InventoryControllerTest {
     @Test
     void shouldCreateNewInventory() throws Exception {
         Inventory inventory = new Inventory(1L, "some text", 1, 0);
-        given(inventoryService.saveInventory(any(InventoryDto.class))).willReturn(inventory);
+        given(inventoryService.saveInventory(any(InventoryRequest.class))).willReturn(inventory);
 
-        InventoryDto inventoryDto = new InventoryDto("some text", 1);
+        InventoryRequest inventoryRequest = new InventoryRequest("some text", 1);
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryDto)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
@@ -120,13 +120,13 @@ class InventoryControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
-        InventoryDto inventory = new InventoryDto(null, 0);
+        InventoryRequest inventoryRequest = new InventoryRequest(null, 0);
 
         this.mockMvc
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(header().string("Content-Type", is("application/problem+json")))
                 .andExpect(jsonPath("$.type", is("about:blank")))
@@ -142,15 +142,15 @@ class InventoryControllerTest {
         Long inventoryId = 1L;
         Inventory inventory = new Inventory(inventoryId, "Updated text", 30, 0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        InventoryDto inventoryDto = new InventoryDto("Updated text", 30);
-        given(inventoryService.updateInventory(inventory, inventoryDto))
+        InventoryRequest inventoryRequest = new InventoryRequest("Updated text", 30);
+        given(inventoryService.updateInventory(inventory, inventoryRequest))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
         this.mockMvc
                 .perform(
                         put("/api/inventory/{id}", inventory.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
     }

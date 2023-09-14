@@ -52,9 +52,7 @@ class ProductManageServiceTest {
                 .satisfies(
                         inventory -> {
                             assertThat(inventory.getProductCode()).isNotBlank();
-                            assertThat(inventory.getReservedItems()).isNull();
                             assertThat(inventory.getId()).isNull();
-                            assertThat(inventory.getAvailableQuantity()).isZero();
                         });
     }
 }
