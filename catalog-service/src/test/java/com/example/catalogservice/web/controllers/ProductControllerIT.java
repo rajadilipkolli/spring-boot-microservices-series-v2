@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -314,6 +315,37 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(productDto.description())
                 .jsonPath("$.price")
                 .isEqualTo(productDto.price());
+    }
+
+    @Test
+    void shouldThrowConflictForCreateNewProduct() {
+        ProductDto productDto = new ProductDto("P001", "name 4", "description 4", 19.0);
+
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productDto), ProductDto.class)
+                .exchange()
+                .expectStatus()
+                .isEqualTo(HttpStatus.CONFLICT)
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/already-exists")
+                .jsonPath("$.title")
+                .isEqualTo("Product Already Exists")
+                .jsonPath("$.status")
+                .isEqualTo(409)
+                .jsonPath("$.detail")
+                .isEqualTo("Product with id P001 already Exists")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/catalog")
+                .jsonPath("$.timestamp")
+                .isNotEmpty()
+                .jsonPath("$.errorCategory")
+                .isEqualTo("Generic");
     }
 
     @Test

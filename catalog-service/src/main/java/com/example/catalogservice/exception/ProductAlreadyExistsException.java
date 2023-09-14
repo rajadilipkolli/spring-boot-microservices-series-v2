@@ -1,0 +1,32 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+</p>
+***/
+
+package com.example.catalogservice.exception;
+
+import java.net.URI;
+import java.time.Instant;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponseException;
+
+public class ProductAlreadyExistsException extends ErrorResponseException {
+    public ProductAlreadyExistsException(String productCode) {
+        super(
+                HttpStatus.CONFLICT,
+                asProblemDetail("Product with id " + productCode + " already Exists"),
+                null);
+    }
+
+    private static ProblemDetail asProblemDetail(String message) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message);
+        problemDetail.setTitle("Product Already Exists");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/already-exists"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+}

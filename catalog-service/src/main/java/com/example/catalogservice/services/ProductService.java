@@ -8,6 +8,7 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.response.InventoryDto;
@@ -18,6 +19,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -113,6 +115,12 @@ public class ProductService {
                         savedProduct -> {
                             streamBridge.send("inventory-out-0", productDto);
                             return savedProduct;
+                        })
+                .onErrorResume(
+                        DuplicateKeyException.class,
+                        e -> {
+                            // Handle unique key constraint violation here
+                            return Mono.error(new ProductAlreadyExistsException(productDto.code()));
                         });
     }
 
