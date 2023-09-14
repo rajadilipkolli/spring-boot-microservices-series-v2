@@ -85,13 +85,13 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Inventory> updateInventory(
-            @PathVariable Long id, @RequestBody Inventory inventory) {
+            @PathVariable Long id, @RequestBody @Validated InventoryDto inventoryDto) {
         return inventoryService
                 .findInventoryById(id)
                 .map(
                         inventoryObj -> {
-                            inventory.setId(id);
-                            return ResponseEntity.ok(inventoryService.updateInventory(inventory));
+                            return ResponseEntity.ok(
+                                    inventoryService.updateInventory(inventoryObj, inventoryDto));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

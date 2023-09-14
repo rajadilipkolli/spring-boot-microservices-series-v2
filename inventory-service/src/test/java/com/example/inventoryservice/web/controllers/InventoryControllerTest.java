@@ -142,7 +142,8 @@ class InventoryControllerTest {
         Long inventoryId = 1L;
         Inventory inventory = new Inventory(inventoryId, "Updated text", 30, 0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        given(inventoryService.updateInventory(any(Inventory.class)))
+        InventoryDto inventoryDto = new InventoryDto("Updated text", 30);
+        given(inventoryService.updateInventory(inventory, inventoryDto))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
         this.mockMvc

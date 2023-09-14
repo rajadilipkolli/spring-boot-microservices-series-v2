@@ -66,7 +66,9 @@ public class InventoryService {
         inventoryRepository.deleteById(id);
     }
 
-    public Inventory updateInventory(Inventory inventory) {
+    public Inventory updateInventory(Inventory inventory, InventoryDto inventoryDto) {
+        inventory.setAvailableQuantity(inventoryDto.availableQuantity());
+        inventory.setProductCode(inventoryDto.productCode());
         return inventoryRepository.save(inventory);
     }
 

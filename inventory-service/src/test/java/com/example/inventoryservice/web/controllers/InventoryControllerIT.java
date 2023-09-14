@@ -124,15 +124,16 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldUpdateInventory() throws Exception {
         Inventory inventory = inventoryList.get(0);
-        inventory.setProductCode("Updated Inventory");
+        InventoryDto inventoryDto = new InventoryDto(inventory.getProductCode(), 1000);
 
         this.mockMvc
                 .perform(
                         put("/api/inventory/{id}", inventory.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(1000)));
     }
 
     @Test
