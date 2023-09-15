@@ -1,6 +1,20 @@
 {
   "databaseChangeLog": [
     {
+      "property": {
+        "name": "stringType",
+        "value": "varchar(255)",
+        "dbms": "!postgresql"
+      }
+    },
+    {
+      "property": {
+        "name": "stringType",
+        "value": "text",
+        "dbms": "postgresql"
+      }
+    },
+    {
       "changeSet": {
         "id": "create_inventory_sequence",
         "author": "rajakolli",
@@ -47,7 +61,7 @@
                       "nullable": false
                     },
                     "name": "product_code",
-                    "type": "VARCHAR(255)"
+                    "type": "${stringType}"
                   }
                 },
                 {
