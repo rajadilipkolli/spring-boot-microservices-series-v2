@@ -3,6 +3,7 @@ package simulation;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.rampUsers;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -132,7 +133,9 @@ public class CreateProductSimulation extends Simulation {
     public CreateProductSimulation() {
         this.setUp(
                         scn.pause(Duration.ofSeconds(1))
-                                .injectOpen(constantUsersPerSec(20).during(Duration.ofSeconds(60))))
+                                .injectOpen(
+                                        rampUsers(5).during(Duration.ofSeconds(30)),
+                                        constantUsersPerSec(30).during(Duration.ofSeconds(60))))
                 .protocols(httpProtocol);
     }
 }

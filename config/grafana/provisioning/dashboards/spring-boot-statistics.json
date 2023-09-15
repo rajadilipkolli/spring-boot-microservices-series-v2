@@ -20,7 +20,6 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 10280,
   "graphTooltip": 0,
-  "id": 6,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -408,86 +407,6 @@
       }
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus-micro-service"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
-                }
-              },
-              "type": "special"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "dateTimeAsIso"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 6,
-        "x": 0,
-        "y": 4
-      },
-      "id": 56,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.1.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-micro-service"
-          },
-          "expr": "process_start_time_seconds{application=\"$application\", instance=\"$instance\"}*1000",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "",
-          "metric": "",
-          "refId": "A",
-          "step": 14400
-        }
-      ],
-      "title": "Start time",
-      "type": "stat"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -686,6 +605,86 @@
       }
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-micro-service"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "dateTimeAsIso"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 0,
+        "y": 14
+      },
+      "id": 56,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-micro-service"
+          },
+          "expr": "process_start_time_seconds{application=\"$application\", instance=\"$instance\"}*1000",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "",
+          "metric": "",
+          "refId": "A",
+          "step": 14400
+        }
+      ],
+      "title": "Start time",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "loki",
@@ -695,7 +694,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 17
       },
       "id": 48,
       "panels": [],
@@ -726,7 +725,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 15
+        "y": 18
       },
       "hiddenSeries": false,
       "id": 85,
@@ -838,7 +837,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 23
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 88,
@@ -949,8 +948,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 31
+        "x": 6,
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 80,
@@ -1038,7 +1037,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 50,
@@ -1128,7 +1127,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 83,
@@ -1226,7 +1225,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 49
       },
       "hiddenSeries": false,
       "id": 78,
@@ -1324,7 +1323,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 82,
@@ -1422,7 +1421,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 57
       },
       "hiddenSeries": false,
       "id": 68,
@@ -1527,7 +1526,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 65
       },
       "id": 72,
       "panels": [],
@@ -1558,7 +1557,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 66
       },
       "hiddenSeries": false,
       "id": 74,
@@ -1648,7 +1647,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 66
       },
       "hiddenSeries": false,
       "id": 76,
@@ -1733,7 +1732,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 76
       },
       "id": 34,
       "panels": [],
@@ -1791,7 +1790,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 74
+        "y": 77
       },
       "id": 44,
       "links": [],
@@ -1842,7 +1841,7 @@
         "h": 8,
         "w": 20,
         "x": 4,
-        "y": 74
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1981,7 +1980,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 78
+        "y": 81
       },
       "id": 46,
       "links": [],
@@ -2032,7 +2031,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 82
+        "y": 85
       },
       "hiddenSeries": false,
       "id": 38,
@@ -2119,7 +2118,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 82
+        "y": 85
       },
       "hiddenSeries": false,
       "id": 42,
@@ -2206,7 +2205,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 82
+        "y": 85
       },
       "hiddenSeries": false,
       "id": 40,
@@ -2279,32 +2278,6 @@
       }
     },
     {
-      "collapsed": false,
-      "datasource": {
-        "type": "loki",
-        "uid": "loki-micro-service"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 88
-      },
-      "id": 18,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki-micro-service"
-          },
-          "refId": "A"
-        }
-      ],
-      "title": "HTTP Statistics",
-      "type": "row"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2319,7 +2292,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 89
+        "y": 91
       },
       "hiddenSeries": false,
       "id": 4,
@@ -2394,6 +2367,32 @@
       }
     },
     {
+      "collapsed": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-micro-service"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 98
+      },
+      "id": 18,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-micro-service"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP Statistics",
+      "type": "row"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2408,7 +2407,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 2,
@@ -2494,7 +2493,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 106
       },
       "id": 22,
       "panels": [],
@@ -2552,7 +2551,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 104
+        "y": 107
       },
       "id": 28,
       "links": [],
@@ -2604,7 +2603,7 @@
         "h": 7,
         "w": 9,
         "x": 4,
-        "y": 104
+        "y": 107
       },
       "hiddenSeries": false,
       "id": 24,
@@ -2693,7 +2692,7 @@
         "h": 7,
         "w": 11,
         "x": 13,
-        "y": 104
+        "y": 107
       },
       "hiddenSeries": false,
       "id": 26,
@@ -2819,7 +2818,7 @@
         "h": 3,
         "w": 4,
         "x": 0,
-        "y": 108
+        "y": 111
       },
       "id": 32,
       "links": [],
@@ -2870,7 +2869,7 @@
         "h": 7,
         "w": 13,
         "x": 0,
-        "y": 111
+        "y": 114
       },
       "hiddenSeries": false,
       "id": 30,
@@ -2964,7 +2963,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 118
+        "y": 121
       },
       "id": 8,
       "panels": [],
@@ -2995,7 +2994,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 119
+        "y": 122
       },
       "hiddenSeries": false,
       "id": 6,
@@ -3085,7 +3084,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 119
+        "y": 122
       },
       "hiddenSeries": false,
       "id": 10,
@@ -3175,7 +3174,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 126
+        "y": 129
       },
       "hiddenSeries": false,
       "id": 14,
@@ -3265,7 +3264,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 126
+        "y": 129
       },
       "hiddenSeries": false,
       "id": 16,
@@ -3355,7 +3354,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 126
+        "y": 129
       },
       "hiddenSeries": false,
       "id": 20,
@@ -3440,8 +3439,8 @@
       {
         "current": {
           "selected": true,
-          "text": "order-service",
-          "value": "order-service"
+          "text": "inventory-service",
+          "value": "inventory-service"
         },
         "datasource": {
           "type": "prometheus",
