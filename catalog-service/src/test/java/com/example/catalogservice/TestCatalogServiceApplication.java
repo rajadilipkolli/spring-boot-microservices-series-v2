@@ -30,7 +30,7 @@ public class TestCatalogServiceApplication {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSqlContainer() {
-        return new PostgreSQLContainer<>("postgres:15.4-alpine").withReuse(true);
+        return new PostgreSQLContainer<>("postgres:16.0-alpine").withReuse(true);
     }
 
     @Bean
