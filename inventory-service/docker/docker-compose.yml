@@ -2,7 +2,7 @@ version: '3.8'
 services:
 
   postgresqldb:
-    image: postgres:16-alpine
+    image: postgres:16.0-alpine
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
