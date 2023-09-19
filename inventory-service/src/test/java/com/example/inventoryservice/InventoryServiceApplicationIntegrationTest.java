@@ -6,19 +6,16 @@
 
 package com.example.inventoryservice;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.inventoryservice.common.AbstractIntegrationTest;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 class InventoryServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
-    @Autowired private DataSource dataSource;
-
     @Test
-    void contextLoads() {
-        assertThat(dataSource).isNotNull();
+    void contextLoads() throws Exception {
+        this.mockMvc.perform(get("/actuator")).andExpect(status().isOk());
     }
 }

@@ -24,11 +24,13 @@ import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.services.InventoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.instancio.Instancio;
+import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -40,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = InventoryController.class)
 @ActiveProfiles("test")
+@ExtendWith(InstancioExtension.class)
 class InventoryControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -52,14 +55,11 @@ class InventoryControllerTest {
 
     @BeforeEach
     void setUp() {
-        this.inventoryList = new ArrayList<>();
-        this.inventoryList.add(new Inventory(1L, "text 1", 1, 0));
-        this.inventoryList.add(new Inventory(2L, "text 2", 2, 0));
-        this.inventoryList.add(new Inventory(3L, "text 3", 3, 0));
+        inventoryList = Instancio.ofList(Inventory.class).size(10).create();
     }
 
     @Test
-    void shouldFetchAllInventorys() throws Exception {
+    void shouldFetchAllInventories() throws Exception {
         Page<Inventory> page = new PageImpl<>(inventoryList);
         PagedResult<Inventory> inventoryPagedResult = new PagedResult<>(page);
         given(inventoryService.findAllInventories(0, 10, "id", "asc"))
@@ -70,7 +70,7 @@ class InventoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()", is(8)))
                 .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
-                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.totalElements", is(10)))
                 .andExpect(jsonPath("$.pageNumber", is(1)))
                 .andExpect(jsonPath("$.totalPages", is(1)))
                 .andExpect(jsonPath("$.isFirst", is(true)))

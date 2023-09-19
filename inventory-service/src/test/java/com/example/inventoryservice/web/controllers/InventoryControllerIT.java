@@ -20,13 +20,16 @@ import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryRepository;
-import java.util.ArrayList;
 import java.util.List;
+import org.instancio.Instancio;
+import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+@ExtendWith(InstancioExtension.class)
 class InventoryControllerIT extends AbstractIntegrationTest {
 
     @Autowired private InventoryRepository inventoryRepository;
@@ -35,13 +38,10 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        inventoryRepository.deleteAll();
+        inventoryRepository.deleteAllInBatch();
 
-        inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(null, "First Inventory", 5, 0));
-        inventoryList.add(new Inventory(null, "Second Inventory", 6, 0));
-        inventoryList.add(new Inventory(null, "Third Inventory", 7, 0));
-        inventoryList = inventoryRepository.saveAll(inventoryList);
+        inventoryList =
+                inventoryRepository.saveAll(Instancio.ofList(Inventory.class).size(15).create());
     }
 
     @Test
@@ -50,13 +50,13 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(get("/api/inventory"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()", is(8)))
-                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
-                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.data.size()", is(10)))
+                .andExpect(jsonPath("$.totalElements", is(15)))
                 .andExpect(jsonPath("$.pageNumber", is(1)))
-                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(2)))
                 .andExpect(jsonPath("$.isFirst", is(true)))
-                .andExpect(jsonPath("$.isLast", is(true)))
-                .andExpect(jsonPath("$.hasNext", is(false)))
+                .andExpect(jsonPath("$.isLast", is(false)))
+                .andExpect(jsonPath("$.hasNext", is(true)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
@@ -80,15 +80,22 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(get("/api/inventory/product").param("codes", productCodeList))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()", is(inventoryList.size())))
-                .andExpect(jsonPath("$[0].productCode").value("First Inventory"))
-                .andExpect(jsonPath("$[0].availableQuantity").value(5))
-                .andExpect(jsonPath("$[0].reservedItems").value(0))
-                .andExpect(jsonPath("$[1].productCode").value("Second Inventory"))
-                .andExpect(jsonPath("$[1].availableQuantity").value(6))
-                .andExpect(jsonPath("$[1].reservedItems").value(0))
-                .andExpect(jsonPath("$[2].productCode").value("Third Inventory"))
-                .andExpect(jsonPath("$[2].availableQuantity").value(7))
-                .andExpect(jsonPath("$[2].reservedItems").value(0));
+                .andExpect(
+                        jsonPath("$[0].productCode").value(inventoryList.get(0).getProductCode()))
+                .andExpect(
+                        jsonPath("$[0].availableQuantity")
+                                .value(inventoryList.get(0).getAvailableQuantity()))
+                .andExpect(
+                        jsonPath("$[0].reservedItems")
+                                .value(inventoryList.get(0).getReservedItems()))
+                .andExpect(
+                        jsonPath("$[1].productCode").value(inventoryList.get(1).getProductCode()))
+                .andExpect(
+                        jsonPath("$[1].availableQuantity")
+                                .value(inventoryList.get(1).getAvailableQuantity()))
+                .andExpect(
+                        jsonPath("$[1].reservedItems")
+                                .value(inventoryList.get(1).getReservedItems()));
     }
 
     @Test
