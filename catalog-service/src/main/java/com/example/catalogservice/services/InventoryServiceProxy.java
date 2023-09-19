@@ -51,7 +51,7 @@ public class InventoryServiceProxy {
             TimeLimiterRegistry timeLimiterRegistry) {
         this.webClient = webClient;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT);
-        this.retry = retryRegistry.retry(DEFAULT);
+        this.retry = retryRegistry.retry("product-api");
         this.rateLimiter = rateLimiterRegistry.rateLimiter(DEFAULT);
         this.timeLimiter = timeLimiterRegistry.timeLimiter(DEFAULT);
     }

@@ -23,7 +23,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -166,7 +166,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    @Disabled("Till parsing issue is fixed")
+    @DisplayName("temporarily reduced to 1 retry")
     void shouldFindProductWhenInventoryIsDown() {
 
         Product product = savedProductList.get(0);
