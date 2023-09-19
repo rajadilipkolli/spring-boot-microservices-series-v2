@@ -12,15 +12,19 @@ import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.response.InventoryDto;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dtos.ProductDto;
 import io.micrometer.observation.annotation.Observed;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -40,42 +44,55 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findAll", contextualName = "find-all-products")
-    public Flux<Product> findAllProducts(String sortBy, String sortDir) {
+    public Mono<PagedResult<Product>> findAllProducts(
+            int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
-        return this.productRepository
-                .findAll(sort)
-                .collectList()
-                .flatMapMany(
-                        products -> {
-                            if (products.isEmpty()) {
-                                log.info("No Products Exists");
-                                return Flux.empty();
-                            } else {
-                                List<String> productCodeList =
-                                        products.stream().map(Product::getCode).toList();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
 
-                                return getInventoryByProductCodes(productCodeList)
-                                        .collectMap(
-                                                InventoryDto::productCode,
-                                                InventoryDto::availableQuantity)
-                                        .flatMapMany(
-                                                inventoriesMap -> {
-                                                    products.forEach(
-                                                            product -> {
-                                                                int availableQuantity =
-                                                                        inventoriesMap.getOrDefault(
-                                                                                product.getCode(),
-                                                                                0);
-                                                                product.setInStock(
-                                                                        availableQuantity > 0);
-                                                            });
-                                                    return Flux.fromIterable(products);
-                                                });
+        Mono<Long> totalProductsCountMono = productRepository.count();
+        Mono<List<Product>> pagedProductsMono = productRepository.findAllBy(pageable).collectList();
+
+        return Mono.zip(totalProductsCountMono, pagedProductsMono)
+                .flatMap(
+                        tuple -> {
+                            long count = tuple.getT1();
+                            List<Product> products =
+                                    count == 0 ? Collections.emptyList() : tuple.getT2();
+
+                            if (count == 0) {
+                                return Mono.just(
+                                        new PagedResult<>(
+                                                new PageImpl<>(products, pageable, count)));
                             }
+
+                            List<String> productCodeList =
+                                    products.stream()
+                                            .map(Product::getCode)
+                                            .collect(Collectors.toList());
+
+                            return getInventoryByProductCodes(productCodeList)
+                                    .collectMap(
+                                            InventoryDto::productCode,
+                                            InventoryDto::availableQuantity)
+                                    .map(
+                                            inventoriesMap -> {
+                                                updateProductAvailability(products, inventoriesMap);
+                                                return new PagedResult<>(
+                                                        new PageImpl<>(products, pageable, count));
+                                            });
                         });
+    }
+
+    private void updateProductAvailability(
+            List<Product> products, Map<String, Integer> inventoriesMap) {
+        products.forEach(
+                product -> {
+                    int availableQuantity = inventoriesMap.getOrDefault(product.getCode(), 0);
+                    product.setInStock(availableQuantity > 0);
+                });
     }
 
     private Flux<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
