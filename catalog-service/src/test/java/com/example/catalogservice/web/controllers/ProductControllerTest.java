@@ -8,11 +8,14 @@ package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
@@ -22,10 +25,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @WebFluxTest(controllers = ProductController.class)
@@ -48,8 +52,10 @@ class ProductControllerTest {
 
     @Test
     void shouldFetchAllProducts() {
-        given(productService.findAllProducts("id", "asc"))
-                .willReturn(Flux.fromIterable(productList));
+        Page<Product> page = new PageImpl<>(productList);
+        PagedResult<Product> pagedResult = new PagedResult<>(page);
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
 
         webTestClient
                 .get()
@@ -57,9 +63,19 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBodyList(Product.class)
-                .hasSize(productList.size())
-                .isEqualTo(productList); // Ensure fetched posts match the expected posts
+                .expectBody(PagedResult.class)
+                .value(
+                        response -> {
+                            assertAll(
+                                    () -> assertTrue(response.isFirst()),
+                                    () -> assertTrue(response.isLast()),
+                                    () -> assertFalse(response.hasNext()),
+                                    () -> assertFalse(response.hasPrevious()),
+                                    () -> assertEquals(3, response.totalElements()),
+                                    () -> assertEquals(1, response.pageNumber()),
+                                    () -> assertEquals(1, response.totalPages()),
+                                    () -> assertEquals(productList.size(), response.data().size()));
+                        });
     }
 
     @Test

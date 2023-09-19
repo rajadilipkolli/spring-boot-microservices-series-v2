@@ -6,11 +6,14 @@
 
 package com.example.catalogservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.response.InventoryDto;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -88,39 +91,32 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog")
+                .uri("/api/catalog?pageSize=2&pageNo=1")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBodyList(Product.class)
-                .hasSize(savedProductList.size())
-                .isEqualTo(savedProductList); // Ensure fetched posts match the expected posts
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody(PagedResult.class)
+                .consumeWith(
+                        response -> {
+                            PagedResult<Product> pagedResult = response.getResponseBody();
+                            assertThat(pagedResult).isNotNull();
+                            assertThat(pagedResult.isFirst()).isFalse();
+                            assertThat(pagedResult.isLast()).isTrue();
+                            assertThat(pagedResult.hasNext()).isFalse();
+                            assertThat(pagedResult.hasPrevious()).isTrue();
+                            assertThat(pagedResult.totalElements()).isEqualTo(3);
+                            assertThat(pagedResult.pageNumber()).isEqualTo(2);
+                            assertThat(pagedResult.totalPages()).isEqualTo(2);
+                            assertThat(pagedResult.data().size()).isEqualTo(1);
+                        });
     }
 
     @Test
     void shouldFetchAllProductsAsEmpty() {
 
         productRepository.deleteAll().block();
-        webTestClient
-                .get()
-                .uri("/api/catalog")
-                .exchange()
-                .expectStatus()
-                .isOk()
-                .expectBodyList(Product.class)
-                .hasSize(0);
-    }
-
-    @Test
-    void shouldFetchAllProductsWithCircuitBreaker() {
-
-        transitionToOpenState("getInventoryByProductCodes");
-        circuitBreakerRegistry
-                .circuitBreaker("getInventoryByProductCodes")
-                .transitionToHalfOpenState();
-
-        mockBackendEndpoint(500, "Product with id 100 not found");
-
         webTestClient
                 .get()
                 .uri(
@@ -132,8 +128,55 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBodyList(Product.class)
-                .hasSize(3);
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody(PagedResult.class)
+                .value(
+                        response ->
+                                assertAll(
+                                        () -> assertTrue(response.isFirst()),
+                                        () -> assertTrue(response.isLast()),
+                                        () -> assertFalse(response.hasNext()),
+                                        () -> assertFalse(response.hasPrevious()),
+                                        () -> assertEquals(0, response.totalElements()),
+                                        () -> assertEquals(1, response.pageNumber()),
+                                        () -> assertEquals(0, response.totalPages()),
+                                        () -> assertEquals(0, response.data().size())));
+    }
+
+    @Test
+    void shouldFetchAllProductsWithCircuitBreaker() {
+
+        transitionToOpenState("getInventoryByProductCodes");
+        circuitBreakerRegistry
+                .circuitBreaker("getInventoryByProductCodes")
+                .transitionToHalfOpenState();
+
+        mockBackendEndpoint(
+                500, """
+        {"message":"Product with id 100 not found"}
+        """);
+
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody(PagedResult.class)
+                .value(
+                        response ->
+                                assertAll(
+                                        () -> assertTrue(response.isFirst()),
+                                        () -> assertTrue(response.isLast()),
+                                        () -> assertFalse(response.hasNext()),
+                                        () -> assertFalse(response.hasPrevious()),
+                                        () -> assertEquals(3, response.totalElements()),
+                                        () -> assertEquals(1, response.pageNumber()),
+                                        () -> assertEquals(1, response.totalPages()),
+                                        () -> assertEquals(3, response.data().size())));
 
         // Then, As it is still failing state should not change
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
@@ -152,6 +195,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
@@ -171,13 +216,19 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         Product product = savedProductList.get(0);
         Long productId = product.getId();
-        mockBackendEndpoint(500, "Product with id 100 not found");
+        mockBackendEndpoint(
+                500,
+                """
+                                        {"message":"Product with id 100 not found"}
+                                        """);
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())

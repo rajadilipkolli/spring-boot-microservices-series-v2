@@ -29,7 +29,7 @@ public class CircuitBreakerConfig {
                 entryAddedEvent
                         .getAddedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("CircuitBreaker EntryAddedEvent : {}", event));
             }
 
             @Override
@@ -64,14 +64,28 @@ public class CircuitBreakerConfig {
                 entryAddedEvent
                         .getAddedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("Retry EntryAddedEvent : {}", event));
             }
 
             @Override
-            public void onEntryRemovedEvent(EntryRemovedEvent<Retry> entryRemoveEvent) {}
+            public void onEntryRemovedEvent(EntryRemovedEvent<Retry> entryRemoveEvent) {
+                entryRemoveEvent
+                        .getRemovedEntry()
+                        .getEventPublisher()
+                        .onEvent(event -> log.info("Retry EntryRemovedEvent : {}", event));
+            }
 
             @Override
-            public void onEntryReplacedEvent(EntryReplacedEvent<Retry> entryReplacedEvent) {}
+            public void onEntryReplacedEvent(EntryReplacedEvent<Retry> entryReplacedEvent) {
+                entryReplacedEvent
+                        .getOldEntry()
+                        .getEventPublisher()
+                        .onEvent(event -> log.info("Old Entry :{}", event));
+                entryReplacedEvent
+                        .getNewEntry()
+                        .getEventPublisher()
+                        .onEvent(event -> log.info("New Entry :{}", event));
+            }
         };
     }
 }
