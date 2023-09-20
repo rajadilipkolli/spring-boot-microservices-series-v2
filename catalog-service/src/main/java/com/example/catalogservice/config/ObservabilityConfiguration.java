@@ -14,8 +14,8 @@ import io.micrometer.observation.aop.ObservedAspect;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -27,11 +27,15 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 @Configuration(proxyBeanMethods = false)
-@RequiredArgsConstructor
-@Slf4j
 public class ObservabilityConfiguration {
 
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final ApplicationProperties applicationProperties;
+
+    public ObservabilityConfiguration(ApplicationProperties applicationProperties) {
+        this.applicationProperties = applicationProperties;
+    }
 
     // To have the @Observed support we need to register this aspect
     @Bean

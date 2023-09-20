@@ -28,7 +28,8 @@ import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -36,8 +37,9 @@ import reactor.core.publisher.Mono;
 
 @Service
 @Loggable
-@Slf4j
 public class InventoryServiceProxy {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private static final String DEFAULT = "default";
 

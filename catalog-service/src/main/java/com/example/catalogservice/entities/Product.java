@@ -8,17 +8,11 @@ package com.example.catalogservice.entities;
 
 import java.io.Serial;
 import java.io.Serializable;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table(name = "products")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Product implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
@@ -34,4 +28,69 @@ public class Product implements Serializable {
     private double price;
 
     @Transient private boolean inStock;
+
+    public Product() {}
+
+    public Product(
+            Long id,
+            String code,
+            String productName,
+            String description,
+            double price,
+            boolean inStock) {
+        this.id = id;
+        this.code = code;
+        this.productName = productName;
+        this.description = description;
+        this.price = price;
+        this.inStock = inStock;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public boolean isInStock() {
+        return inStock;
+    }
+
+    public void setInStock(boolean inStock) {
+        this.inStock = inStock;
+    }
 }

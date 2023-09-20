@@ -12,13 +12,15 @@ import io.github.resilience4j.core.registry.EntryRemovedEvent;
 import io.github.resilience4j.core.registry.EntryReplacedEvent;
 import io.github.resilience4j.core.registry.RegistryEventConsumer;
 import io.github.resilience4j.retry.Retry;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@Slf4j
 public class CircuitBreakerConfig {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Bean
     RegistryEventConsumer<CircuitBreaker> myRegistryEventConsumer() {

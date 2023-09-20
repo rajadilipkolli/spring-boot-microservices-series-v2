@@ -15,7 +15,6 @@ import com.example.common.dtos.ProductDto;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +29,14 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/catalog")
-@RequiredArgsConstructor
 @Loggable
 public class ProductController {
 
     private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
     @GetMapping
     public Mono<PagedResult<Product>> getAllPosts(

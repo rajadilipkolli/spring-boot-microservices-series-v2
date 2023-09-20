@@ -19,8 +19,8 @@ import io.micrometer.observation.annotation.Observed;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
@@ -33,16 +33,27 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
-@Slf4j
 @Transactional
-@RequiredArgsConstructor
 @Loggable
 public class ProductService {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
     private final StreamBridge streamBridge;
+
+    public ProductService(
+            ProductRepository productRepository,
+            ProductMapper productMapper,
+            InventoryServiceProxy inventoryServiceProxy,
+            StreamBridge streamBridge) {
+        this.productRepository = productRepository;
+        this.productMapper = productMapper;
+        this.inventoryServiceProxy = inventoryServiceProxy;
+        this.streamBridge = streamBridge;
+    }
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findAll", contextualName = "find-all-products")
