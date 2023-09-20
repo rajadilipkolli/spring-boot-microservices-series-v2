@@ -6,8 +6,12 @@
 
 package com.example.catalogservice.services;
 
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
+
 import com.example.catalogservice.config.logging.Loggable;
+import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryDto;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -97,12 +101,20 @@ public class InventoryServiceProxy {
     private <T> Mono<T> executeWithFallback(
             Mono<T> publisher, Function<Throwable, Mono<T>> fallback) {
         return publisher
-                .transform(RetryOperator.of(retry))
                 .transform(TimeLimiterOperator.of(timeLimiter))
                 .transform(RateLimiterOperator.of(rateLimiter))
-                .transform(CircuitBreakerOperator.of(circuitBreaker))
+                .transformDeferred(RetryOperator.of(retry))
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
                 .onErrorResume(TimeoutException.class, fallback)
                 .onErrorResume(RequestNotPermitted.class, fallback)
-                .onErrorResume(Exception.class, fallback);
+                .onErrorResume(
+                        CallNotPermittedException.class,
+                        throwable -> {
+                            log.error(
+                                    "Circuit Breaker is in [{}]... Providing fallback response without calling the API",
+                                    circuitBreaker.getState());
+                            throw new CustomResponseStatusException(
+                                    SERVICE_UNAVAILABLE, "API service is unavailable");
+                        });
     }
 }

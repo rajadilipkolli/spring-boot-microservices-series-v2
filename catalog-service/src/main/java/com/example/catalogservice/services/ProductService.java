@@ -19,12 +19,14 @@ import io.micrometer.observation.annotation.Observed;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -69,9 +71,7 @@ public class ProductService {
                             }
 
                             List<String> productCodeList =
-                                    products.stream()
-                                            .map(Product::getCode)
-                                            .collect(Collectors.toList());
+                                    products.stream().map(Product::getCode).toList();
 
                             return getInventoryByProductCodes(productCodeList)
                                     .collectMap(
@@ -135,10 +135,9 @@ public class ProductService {
                         })
                 .onErrorResume(
                         DuplicateKeyException.class,
-                        e -> {
-                            // Handle unique key constraint violation here
-                            return Mono.error(new ProductAlreadyExistsException(productDto.code()));
-                        });
+                        e ->
+                                // Handle unique key constraint violation here
+                                Mono.error(new ProductAlreadyExistsException(productDto.code())));
     }
 
     public Mono<Product> updateProduct(Product product) {

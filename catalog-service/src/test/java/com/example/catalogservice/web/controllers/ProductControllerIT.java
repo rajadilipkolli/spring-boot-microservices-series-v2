@@ -7,8 +7,12 @@
 package com.example.catalogservice.web.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.Product;
@@ -19,6 +23,7 @@ import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
@@ -26,19 +31,21 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Autowired private ProductRepository productRepository;
+    @Autowired private ApplicationContext context;
 
     public static MockWebServer mockWebServer;
 
@@ -81,13 +88,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldFetchAllProducts() throws JsonProcessingException {
 
+        transitionToClosedState("getInventoryByProductCodes");
+
         mockBackendEndpoint(
-                200,
-                objectMapper.writeValueAsString(
-                        List.of(
-                                new InventoryDto("P001", 0),
-                                new InventoryDto("P002", 0),
-                                new InventoryDto("P003", 0))));
+                200, objectMapper.writeValueAsString(List.of(new InventoryDto("P003", 0))));
 
         webTestClient
                 .get()
@@ -109,8 +113,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                             assertThat(pagedResult.totalElements()).isEqualTo(3);
                             assertThat(pagedResult.pageNumber()).isEqualTo(2);
                             assertThat(pagedResult.totalPages()).isEqualTo(2);
-                            assertThat(pagedResult.data().size()).isEqualTo(1);
+                            assertThat(pagedResult.data()).hasSize(1);
                         });
+
+        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.CLOSED);
     }
 
     @Test
@@ -134,28 +140,29 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .value(
                         response ->
                                 assertAll(
-                                        () -> assertTrue(response.isFirst()),
-                                        () -> assertTrue(response.isLast()),
-                                        () -> assertFalse(response.hasNext()),
-                                        () -> assertFalse(response.hasPrevious()),
-                                        () -> assertEquals(0, response.totalElements()),
-                                        () -> assertEquals(1, response.pageNumber()),
-                                        () -> assertEquals(0, response.totalPages()),
-                                        () -> assertEquals(0, response.data().size())));
+                                        () -> assertThat(response.isFirst()).isTrue(),
+                                        () -> assertThat(response.isLast()).isTrue(),
+                                        () -> assertThat(response.hasNext()).isFalse(),
+                                        () -> assertThat(response.hasPrevious()).isFalse(),
+                                        () -> assertThat(response.totalElements()).isZero(),
+                                        () -> assertThat(response.pageNumber()).isEqualTo(1),
+                                        () -> assertThat(response.totalPages()).isZero(),
+                                        () -> assertThat(response.data()).isEmpty()));
+
+        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
     }
 
     @Test
     void shouldFetchAllProductsWithCircuitBreaker() {
 
         transitionToOpenState("getInventoryByProductCodes");
-        circuitBreakerRegistry
-                .circuitBreaker("getInventoryByProductCodes")
-                .transitionToHalfOpenState();
+        transitionToHalfOpenState("getInventoryByProductCodes");
 
         mockBackendEndpoint(
-                500, """
-        {"message":"Product with id 100 not found"}
-        """);
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                        """);
 
         webTestClient
                 .get()
@@ -185,10 +192,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldFindProductById() throws JsonProcessingException {
 
+        transitionToClosedState("default");
+
         Product product = savedProductList.get(0);
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 0)));
+                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -208,20 +217,35 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice());
+        checkHealthStatus("default", CircuitBreaker.State.CLOSED);
     }
 
     @Test
-    @DisplayName("temporarily reduced to 1 retry")
-    void shouldFindProductWhenInventoryIsDown() {
+    void shouldRetryOnErrorAndFetchSuccessResponse() throws JsonProcessingException {
+        WebTestClient testClient =
+                WebTestClient.bindToApplicationContext(context)
+                        .configureClient()
+                        .responseTimeout(Duration.ofSeconds(60))
+                        .build();
+
+        int requestCount = mockWebServer.getRequestCount();
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
 
         Product product = savedProductList.get(0);
         Long productId = product.getId();
         mockBackendEndpoint(
-                500,
-                """
-                                        {"message":"Product with id 100 not found"}
-                                        """);
-        webTestClient
+                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+
+        testClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
                 .exchange()
@@ -241,11 +265,122 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice())
                 .jsonPath("$.inStock")
-                .isEqualTo(false);
+                .isEqualTo(true);
+        assertThat(mockWebServer.getRequestCount() - requestCount).isEqualTo(3);
+        checkHealthStatus("default", CircuitBreaker.State.CLOSED);
+    }
+
+    @Test
+    void shouldRetryOnErrorAndBreakCircuitResponse() throws JsonProcessingException {
+        WebTestClient testClient =
+                WebTestClient.bindToApplicationContext(context)
+                        .configureClient()
+                        .responseTimeout(Duration.ofSeconds(60))
+                        .build();
+
+        int requestCount = mockWebServer.getRequestCount();
+
+        transitionToOpenState("default");
+        transitionToHalfOpenState("default");
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+
+        Product product = savedProductList.get(0);
+        Long productId = product.getId();
+        mockBackendEndpoint(
+                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+
+        testClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .is5xxServerError()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON);
+        assertThat(mockWebServer.getRequestCount() - requestCount).isEqualTo(3);
+
+        await().atMost(Duration.ofMillis(10000))
+                .untilAsserted(() -> checkHealthStatus("default", CircuitBreaker.State.HALF_OPEN));
+    }
+
+    @Test
+    void shouldRetryAndFailAndBreakCloseTheCircuitTest() throws JsonProcessingException {
+
+        Product product = savedProductList.get(0);
+        Long productId = product.getId();
+        // key here is adding 2nd enqueue request as call is made twice
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+        mockBackendEndpoint(
+                500,
+                """
+                        {"message":"Product with id 100 not found"}
+                    """);
+        mockBackendEndpoint(500, "ERROR");
+        mockBackendEndpoint(500, "ERROR");
+        mockBackendEndpoint(
+                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .is5xxServerError()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo(500)
+                .jsonPath("$.path")
+                .isEqualTo("/api/catalog/id/" + productId);
+
+        checkHealthStatus("default", CircuitBreaker.State.CLOSED);
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(3);
+
+        // 2nd try
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", productId)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice())
+                .jsonPath("$.inStock")
+                .isEqualTo(true);
+        checkHealthStatus("default", CircuitBreaker.State.CLOSED);
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
     }
 
     @Test
     void shouldNotFindProductById() {
+        transitionToClosedState("default");
         Long productId = 100L;
 
         webTestClient
@@ -255,7 +390,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectStatus()
                 .isNotFound()
                 .expectHeader()
-                .contentType("application/problem+json")
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .expectBody()
                 .jsonPath("$.type")
                 .isEqualTo("https://api.microservices.com/errors/not-found")
@@ -271,6 +406,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isNotEmpty()
                 .jsonPath("$.errorCategory")
                 .isEqualTo("Generic");
+        checkHealthStatus("default", CircuitBreaker.State.CLOSED);
     }
 
     @Test
@@ -439,6 +575,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
                 .value(is(product.getId().intValue()))
@@ -462,6 +600,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
