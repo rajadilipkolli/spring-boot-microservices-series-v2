@@ -196,7 +196,6 @@
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                     </image>
-                    <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                     <docker>
                         <publishRegistry>
                             <username>${CI_DOCKER_USERNAME}</username>
