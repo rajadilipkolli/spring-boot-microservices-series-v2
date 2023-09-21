@@ -9,6 +9,8 @@ package com.example.orderservice.exception;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandlingControllerAdvice {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
