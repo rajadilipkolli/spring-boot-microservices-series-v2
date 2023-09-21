@@ -72,6 +72,9 @@
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
                         <publish>true</publish>
+                        <env>
+                            <BP_JVM_VERSION>21</BP_JVM_VERSION>
+                        </env>
                     </image>
                     <docker>
                         <publishRegistry>
