@@ -22,7 +22,7 @@ jobs:
         working-directory: "order-service"
     strategy:
       matrix:
-        java: ["21"]
+        java: ["17"]
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
@@ -48,6 +48,6 @@ jobs:
         name: Build Image and push to docker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
-          DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-          DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
-        run: ./mvnw spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=${DOCKER_USERNAME} -Dspring-boot.build-image.publish=true
+          DOC_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
+          DOC_USERNAME: ${{secrets.DOCKER_USERNAME}}
+        run: ./mvnw spring-boot:build-image -DskipTests -DCI_DOCKER_PASSWORD=${DOC_PASSCODE} -DCI_DOCKER_USERNAME=${DOC_USERNAME} -Dspring-boot.build-image.publish=true
