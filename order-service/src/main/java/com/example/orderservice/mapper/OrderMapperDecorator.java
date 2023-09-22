@@ -16,9 +16,6 @@ public abstract class OrderMapperDecorator implements OrderMapper {
 
     @Override
     public void updateOrderFromOrderRequest(OrderRequest orderRequest, Order order) {
-        if (order == null) {
-            return;
-        }
         order.setCustomerId(orderRequest.customerId());
 
         // Convert request to OrderItems
@@ -43,11 +40,9 @@ public abstract class OrderMapperDecorator implements OrderMapper {
         detachedOrderItems.stream()
                 .filter(orderItem -> !newOrderItems.contains(orderItem))
                 .forEach(
-                        (orderItem) -> {
+                        orderItem -> {
                             orderItem.setOrder(order);
                             orderItem.setId(getOrderItemId(order.getItems(), orderItem));
-                            //                            OrderItem mergedBook =
-                            // orderItemRepository.save(orderItem);
                             order.getItems().set(order.getItems().indexOf(orderItem), orderItem);
                         });
 
@@ -56,14 +51,12 @@ public abstract class OrderMapperDecorator implements OrderMapper {
         newOrderItems.forEach(order::addOrderItem);
     }
 
+    // Manual Merge instead of using OrderItem mergedBook = orderItemRepository.save(orderItem);
     private Long getOrderItemId(List<OrderItem> items, OrderItem orderItem) {
-        Long orderItemId = null;
-        for (OrderItem item : items) {
-            if (Objects.equals(item.getProductCode(), orderItem.getProductCode())) {
-                orderItemId = item.getId();
-                break;
-            }
-        }
-        return orderItemId;
+        return items.stream()
+                .filter(item -> Objects.equals(item.getProductCode(), orderItem.getProductCode()))
+                .map(OrderItem::getId)
+                .findFirst()
+                .orElse(null);
     }
 }
