@@ -89,11 +89,10 @@ public class InventoryController {
         return inventoryService
                 .findInventoryById(id)
                 .map(
-                        inventoryFromDB -> {
-                            return ResponseEntity.ok(
-                                    inventoryService.updateInventory(
-                                            inventoryFromDB, inventoryRequest));
-                        })
+                        inventoryFromDB ->
+                                ResponseEntity.ok(
+                                        inventoryService.updateInventory(
+                                                inventoryFromDB, inventoryRequest)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
