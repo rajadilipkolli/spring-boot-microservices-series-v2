@@ -39,7 +39,7 @@ public class CircuitBreakerConfig {
                 entryRemoveEvent
                         .getRemovedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("CircuitBreaker EntryRemovedEvent : {}", event));
             }
 
             @Override
@@ -48,11 +48,19 @@ public class CircuitBreakerConfig {
                 entryReplacedEvent
                         .getOldEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("Old Entry :{}", event));
+                        .onEvent(
+                                event ->
+                                        log.info(
+                                                "CircuitBreaker EntryReplacedEvent Old Entry :{}",
+                                                event));
                 entryReplacedEvent
                         .getNewEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("New Entry :{}", event));
+                        .onEvent(
+                                event ->
+                                        log.info(
+                                                "CircuitBreaker EntryReplacedEvent New Entry :{}",
+                                                event));
             }
         };
     }
@@ -82,11 +90,13 @@ public class CircuitBreakerConfig {
                 entryReplacedEvent
                         .getOldEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("Old Entry :{}", event));
+                        .onEvent(
+                                event -> log.info("Retry EntryReplacedEvent Old Entry :{}", event));
                 entryReplacedEvent
                         .getNewEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("New Entry :{}", event));
+                        .onEvent(
+                                event -> log.info("Retry EntryReplacedEvent New Entry :{}", event));
             }
         };
     }

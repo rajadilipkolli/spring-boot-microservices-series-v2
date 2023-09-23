@@ -39,7 +39,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
@@ -222,11 +221,6 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldRetryOnErrorAndFetchSuccessResponse() throws JsonProcessingException {
-        WebTestClient testClient =
-                WebTestClient.bindToApplicationContext(context)
-                        .configureClient()
-                        .responseTimeout(Duration.ofSeconds(60))
-                        .build();
 
         int requestCount = mockWebServer.getRequestCount();
         mockBackendEndpoint(
@@ -245,7 +239,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
 
-        testClient
+        webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
                 .exchange()
@@ -272,11 +266,6 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldRetryOnErrorAndBreakCircuitResponse() throws JsonProcessingException {
-        WebTestClient testClient =
-                WebTestClient.bindToApplicationContext(context)
-                        .configureClient()
-                        .responseTimeout(Duration.ofSeconds(60))
-                        .build();
 
         int requestCount = mockWebServer.getRequestCount();
 
@@ -303,7 +292,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
 
-        testClient
+        webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
                 .exchange()
