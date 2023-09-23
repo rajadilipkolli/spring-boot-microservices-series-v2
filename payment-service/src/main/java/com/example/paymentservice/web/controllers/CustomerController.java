@@ -10,10 +10,10 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.utils.AppConstants;
+import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -78,7 +78,7 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(
-            @RequestBody @Validated CustomerRequest customerRequest) {
+            @RequestBody @Valid CustomerRequest customerRequest) {
         CustomerResponse response = customerService.saveCustomer(customerRequest);
         URI location =
                 ServletUriComponentsBuilder.fromCurrentRequest()
@@ -90,7 +90,7 @@ public class CustomerController {
 
     @PutMapping("/{id}")
     public ResponseEntity<CustomerResponse> updateCustomer(
-            @PathVariable Long id, @RequestBody CustomerRequest customerRequest) {
+            @PathVariable Long id, @RequestBody @Valid CustomerRequest customerRequest) {
         return ResponseEntity.ok(customerService.updateCustomer(id, customerRequest));
     }
 

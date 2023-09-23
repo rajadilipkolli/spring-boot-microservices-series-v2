@@ -1,10 +1,12 @@
 /*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
 package com.example.paymentservice.model.request;
 
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 public record CustomerRequest(
-        @NotEmpty(message = "Name cannot be empty") String name,
-        @NotEmpty(message = "Email cannot be empty") String email,
+        @NotBlank(message = "Name cannot be Blank") String name,
+        @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid")
+                String email,
         String address,
         int amountAvailable) {}

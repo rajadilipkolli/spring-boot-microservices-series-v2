@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 services:
 
   postgresql:
@@ -87,7 +87,7 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
     restart: unless-stopped
 
@@ -112,8 +112,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
-      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
     restart: unless-stopped
 
   order-service:
@@ -137,8 +135,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
-      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
     restart: unless-stopped
 
 networks:

@@ -158,9 +158,9 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(2)))
                 .andExpect(jsonPath("$.violations[0].field", is("email")))
-                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be empty")))
+                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
                 .andExpect(jsonPath("$.violations[1].field", is("name")))
-                .andExpect(jsonPath("$.violations[1].message", is("Name cannot be empty")))
+                .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
                 .andReturn();
     }
 
