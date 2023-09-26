@@ -49,6 +49,10 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
         <dependency>
@@ -261,9 +265,8 @@
                                 <defaultSchemaName>public</defaultSchemaName>
                                 
                                 <changeLogPath>db.changelog-master.yaml</changeLogPath>
-                                <changeLogDirectory>src/main/resources/db/changelog</changeLogPath>         
+                                <changeLogDirectory>src/main/resources/db/changelog</changeLogDirectory>         
                             </liquibase>
-
                             <!-- Generator parameters -->
                             <jooq>
                                 <generator>
@@ -278,7 +281,6 @@
                                     </target>
                                 </generator>
                             </jooq>
-
                         </configuration>
                     </execution>
                 </executions>
