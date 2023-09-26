@@ -22,6 +22,7 @@
         <spring-cloud.version>2023.0.0-M1</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
+        <testcontainers-jooq-codegen-maven-plugin.version>0.0.3</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.39.0</spotless.version>
@@ -117,7 +118,7 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-jooq</artifactId>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
@@ -220,6 +221,65 @@
                         <goals>
                             <goal>build-info</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                        <plugin>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
+                <version>${testcontainers-jooq-codegen-maven-plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${testcontainers.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${postgresql.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>generate-jooq-sources</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <database>
+                                <type>POSTGRES</type>
+                                <containerImage>postgres:16-alpine</containerImage> <!-- optional -->
+                                <username>test</username> <!-- optional -->
+                                <password>test</password> <!-- optional -->
+                                <databaseName>test</databaseName> <!-- optional -->
+                            </database>
+                            <liquibase>
+                                <!--<changeLogPath>src/main/resources/db/changelog/db.changelog-root.xml</changeLogPath>-->
+                                <liquibaseSchemaName>public</liquibaseSchemaName>
+                                <defaultSchemaName>public</defaultSchemaName>
+                                
+                                <changeLogPath>db.changelog-master.yaml</changeLogPath>
+                                <changeLogDirectory>src/main/resources/db/changelog</changeLogPath>         
+                            </liquibase>
+
+                            <!-- Generator parameters -->
+                            <jooq>
+                                <generator>
+                                    <database>
+                                        <includes>.*</includes>
+                                        <excludes>DATABASECHANGELOG</excludes>
+                                        <inputSchema>custom</inputSchema>
+                                    </database>
+                                    <target>
+                                        <packageName>org.jooq.codegen.maven.example</packageName>
+                                        <directory>target/generated-sources/jooq</directory>
+                                    </target>
+                                </generator>
+                            </jooq>
+
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
