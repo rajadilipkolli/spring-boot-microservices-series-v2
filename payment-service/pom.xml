@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.0-M3</version>
-        <relativePath /> <!-- lookup parent from repository -->
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.paymentservice</groupId>
     <artifactId>payment-service</artifactId>
@@ -22,6 +22,7 @@
         <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
+        <testcontainers-jooq-codegen-maven-plugin.version>0.0.3</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.39.0</spotless.version>
@@ -37,14 +38,18 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME />
-        <CI_DOCKER_PASSWORD />
+        <CI_DOCKER_USERNAME/>
+        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -91,7 +96,7 @@
             <groupId>net.ttddyy.observation</groupId>
             <artifactId>datasource-micrometer-spring-boot</artifactId>
             <version>1.0.2</version>
-		</dependency>
+        </dependency>
         <!-- Latency Visualization -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
@@ -117,7 +122,11 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-jooq</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
@@ -133,7 +142,7 @@
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -222,6 +231,72 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
+                <version>${testcontainers-jooq-codegen-maven-plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${testcontainers.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${postgresql.version}</version>
+                    </dependency>
+                </dependencies>
+                <goals>
+                    <goal>generate</goal>
+                </goals>
+                <executions>
+                    <execution>
+                        <id>generate-jooq-sources</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <database>
+                        <type>POSTGRES</type>
+                        <containerImage>postgres:16.0-alpine</containerImage>
+                        <username>test</username>
+                        <password>test</password>
+                        <databaseName>test</databaseName>
+                    </database>
+                    <liquibase>
+                        <liquibaseSchemaName>public</liquibaseSchemaName>
+                        <defaultSchemaName>public</defaultSchemaName>
+
+                        <changeLogPath>db.changelog-master.yaml</changeLogPath>
+                        <changeLogDirectory>src/main/resources/db/changelog/</changeLogDirectory>
+                    </liquibase>
+                    <!-- Generator parameters -->
+                    <jooq>
+                        <generator>
+                            <database>
+                                <includes>.*</includes>
+                                <excludes>DATABASECHANGELOG</excludes>
+                                <schemata>
+                                    <schema>
+                                        <inputSchema>custom</inputSchema>
+                                    </schema>
+                                    <schema>
+                                        <inputSchema>public</inputSchema>
+                                    </schema>
+                                </schemata>
+                            </database>
+                            <target>
+                                <packageName>org.jooq.codegen.maven.example</packageName>
+                                <directory>target/generated-sources/jooq</directory>
+                            </target>
+                        </generator>
+                    </jooq>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>

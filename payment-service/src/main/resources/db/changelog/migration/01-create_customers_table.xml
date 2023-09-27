@@ -11,7 +11,7 @@
     <changeSet author="rajakolli" id="createTable-customers">
         <createSequence
                         sequenceName="customers_seq"
-                        incrementBy="50"
+                        incrementBy="1"
                         startValue="1"
                         />
         <createTable tableName="customers">
@@ -28,5 +28,7 @@
             <column name="amount_available" type="int"/>
             <column name="amount_reserved" type="int"/>
         </createTable>
+
+        <addUniqueConstraint tableName="customers" columnNames="name, email" />
     </changeSet>
 </databaseChangeLog>
