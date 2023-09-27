@@ -17,7 +17,7 @@
     <description>Centralized Configuration Server</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
         <properties-maven-plugin.version>1.2.0</properties-maven-plugin.version>
         <sonar-maven-plugin.version>3.10.0.2594</sonar-maven-plugin.version>
