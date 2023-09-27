@@ -7,7 +7,6 @@ import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.response.CustomerResponse;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
@@ -43,21 +42,29 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     public Customer save(Customer customer) {
         if (customer.getId() == null) {
             CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
-            return Objects.requireNonNull(
-                            dsl.insertInto(CUSTOMERS)
-                                    .set(customersRecord)
-                                    .returningResult()
-                                    .fetchOne())
-                    .into(Customer.class);
+            return dsl.insertInto(CUSTOMERS)
+                    .set(customersRecord)
+                    .returningResult()
+                    .fetchOneInto(Customer.class);
         } else {
-            dsl.update(CUSTOMERS)
-                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
-                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountReserved())
-                    .set(CUSTOMERS.ADDRESS, customer.getAddress())
-                    .where(CUSTOMERS.ID.eq(customer.getId()))
-                    .execute();
+            int rowsUpdated =
+                    dsl.update(CUSTOMERS)
+                            .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
+                            .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
+                            .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                            .where(CUSTOMERS.ID.eq(customer.getId()))
+                            .execute();
+
+            if (rowsUpdated > 0) {
+                return customer;
+            } else {
+                CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
+                return dsl.insertInto(CUSTOMERS)
+                        .set(customersRecord)
+                        .returningResult()
+                        .fetchOneInto(Customer.class);
+            }
         }
-        return customer;
     }
 
     @Override
