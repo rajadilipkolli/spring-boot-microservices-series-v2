@@ -4,6 +4,7 @@ package com.example.paymentservice.repositories;
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.response.CustomerResponse;
 import java.util.List;
 import java.util.Objects;
@@ -11,7 +12,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
-import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
