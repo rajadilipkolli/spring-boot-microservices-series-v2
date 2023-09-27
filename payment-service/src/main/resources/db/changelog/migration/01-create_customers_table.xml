@@ -7,7 +7,16 @@
     
     <property  name="string.type"  value="varchar(255)"  dbms="!postgresql"/>
     <property  name="string.type"  value="text"  dbms="postgresql"/>
-
+    
+    <preConditions onFail="WARN">
+        <not>
+            <tableExists tableName="customers"/>
+            <and>
+                <sequenceExists sequenceName="customers_seq"/>
+            </and>
+        </not>
+    </preConditions>
+    
     <changeSet author="rajakolli" id="createTable-customers">
         <createSequence
                         sequenceName="customers_seq"
