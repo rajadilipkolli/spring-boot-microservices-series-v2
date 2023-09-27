@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0-M3</version>
-        <relativePath /> <!-- lookup parent from repository -->
+        <version>3.1.4</version>
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.paymentservice</groupId>
     <artifactId>payment-service</artifactId>
@@ -19,7 +19,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>17</java.version>
-        <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
+        <spring-cloud.version>2022.0.4</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.3</testcontainers-jooq-codegen-maven-plugin.version>
@@ -38,8 +38,8 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME />
-        <CI_DOCKER_PASSWORD />
+        <CI_DOCKER_USERNAME/>
+        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -96,7 +96,7 @@
             <groupId>net.ttddyy.observation</groupId>
             <artifactId>datasource-micrometer-spring-boot</artifactId>
             <version>1.0.2</version>
-		</dependency>
+        </dependency>
         <!-- Latency Visualization -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
@@ -142,7 +142,7 @@
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -232,7 +232,7 @@
                     </execution>
                 </executions>
             </plugin>
-                        <plugin>
+            <plugin>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
                 <version>${testcontainers-jooq-codegen-maven-plugin.version}</version>
@@ -264,12 +264,12 @@
                                 <databaseName>test</databaseName> <!-- optional -->
                             </database>
                             <liquibase>
-<!--                                <changeLogPath>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogPath>-->
+                                <!--                                <changeLogPath>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogPath>-->
                                 <liquibaseSchemaName>public</liquibaseSchemaName>
                                 <defaultSchemaName>public</defaultSchemaName>
-                                
+
                                 <changeLogPath>db.changelog-master.yaml</changeLogPath>
-                                <changeLogDirectory>src/main/resources/db/changelog</changeLogDirectory>         
+                                <changeLogDirectory>src/main/resources/db/changelog</changeLogDirectory>
                             </liquibase>
                             <!-- Generator parameters -->
                             <jooq>
