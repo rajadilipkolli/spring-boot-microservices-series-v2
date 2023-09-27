@@ -26,9 +26,9 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Override
     public Optional<CustomerResponse> findByName(String name) {
         return dsl.select()
-                        .from(CUSTOMERS)
-                        .where(CUSTOMERS.NAME.eq(name))
-                        .fetchOptionalInto(CustomerResponse.class);
+                .from(CUSTOMERS)
+                .where(CUSTOMERS.NAME.eq(name))
+                .fetchOptionalInto(CustomerResponse.class);
     }
 
     @Override
