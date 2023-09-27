@@ -124,7 +124,7 @@ function setupTestData() {
 
     body="{\"productCode\":\"$PROD_CODE"
     body+=\
-'","reservedItems":0,"availableQuantity":100}'
+'","availableQuantity":100}'
 
     # Update the product available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
@@ -135,7 +135,7 @@ function setupTestData() {
 
     body="{\"productCode\":\"$PROD_CODE_1"
     body+=\
-'","reservedItems":0,"availableQuantity":50}'
+'","availableQuantity":50}'
 
     # Update the product_1 available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
@@ -388,7 +388,7 @@ waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 60 sec for services to start"
-sleep 60
+sleep 6
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 

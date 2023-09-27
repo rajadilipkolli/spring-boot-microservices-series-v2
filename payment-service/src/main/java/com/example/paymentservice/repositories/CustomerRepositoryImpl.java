@@ -41,10 +41,23 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     @Override
     public Customer save(Customer customer) {
-        CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
-        return Objects.requireNonNull(
-                        dsl.insertInto(CUSTOMERS).set(customersRecord).returningResult().fetchOne())
-                .into(Customer.class);
+        if (customer.getId() == null) {
+            CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
+            return Objects.requireNonNull(
+                            dsl.insertInto(CUSTOMERS)
+                                    .set(customersRecord)
+                                    .returningResult()
+                                    .fetchOne())
+                    .into(Customer.class);
+        } else {
+            dsl.update(CUSTOMERS)
+                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
+                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountReserved())
+                    .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                    .where(CUSTOMERS.ID.eq(customer.getId()))
+                    .execute();
+        }
+        return customer;
     }
 
     @Override

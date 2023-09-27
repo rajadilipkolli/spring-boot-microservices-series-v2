@@ -22,7 +22,7 @@
         />
         <createTable tableName="customers">
             <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true" nullable="false" primaryKeyName="customers_pkey"/>
             </column>
             <column name="name" type="${string.type}">
                 <constraints nullable="false"/>
@@ -35,6 +35,7 @@
             <column name="amount_reserved" type="int"/>
         </createTable>
 
-        <addUniqueConstraint tableName="customers" columnNames="name, email"/>
+        <addUniqueConstraint tableName="customers" columnNames="name, email"
+                             constraintName="uc_customers_name_email_key"/>
     </changeSet>
 </databaseChangeLog>
