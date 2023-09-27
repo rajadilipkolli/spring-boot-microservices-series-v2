@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.1.4</version>
+        <version>3.2.0-M3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.paymentservice</groupId>
@@ -19,7 +19,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>17</java.version>
-        <spring-cloud.version>2022.0.4</spring-cloud.version>
+        <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.3</testcontainers-jooq-codegen-maven-plugin.version>
@@ -248,6 +248,9 @@
                         <version>${postgresql.version}</version>
                     </dependency>
                 </dependencies>
+                <goals>
+                    <goal>generate</goal>
+                </goals>
                 <executions>
                     <execution>
                         <id>generate-jooq-sources</id>
@@ -255,46 +258,45 @@
                             <goal>generate</goal>
                         </goals>
                         <phase>generate-sources</phase>
-                        <configuration>
-                            <database>
-                                <type>POSTGRES</type>
-                                <containerImage>postgres:16.0-alpine</containerImage> <!-- optional -->
-                                <username>test</username> <!-- optional -->
-                                <password>test</password> <!-- optional -->
-                                <databaseName>test</databaseName> <!-- optional -->
-                            </database>
-                            <liquibase>
-                                <!--                                <changeLogPath>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogPath>-->
-                                <liquibaseSchemaName>public</liquibaseSchemaName>
-                                <defaultSchemaName>public</defaultSchemaName>
-
-                                <changeLogPath>db.changelog-master.yaml</changeLogPath>
-                                <changeLogDirectory>src/main/resources/db/changelog</changeLogDirectory>
-                            </liquibase>
-                            <!-- Generator parameters -->
-                            <jooq>
-                                <generator>
-                                    <database>
-                                        <includes>.*</includes>
-                                        <excludes>DATABASECHANGELOG</excludes>
-                                        <schemata>
-                                            <schema>
-                                                <inputSchema>custom</inputSchema>
-                                            </schema>
-                                            <schema>
-                                                <inputSchema>public</inputSchema>
-                                            </schema>
-                                        </schemata>
-                                    </database>
-                                    <target>
-                                        <packageName>org.jooq.codegen.maven.example</packageName>
-                                        <directory>target/generated-sources/jooq</directory>
-                                    </target>
-                                </generator>
-                            </jooq>
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <database>
+                        <type>POSTGRES</type>
+                        <containerImage>postgres:16.0-alpine</containerImage>
+                        <username>test</username>
+                        <password>test</password>
+                        <databaseName>test</databaseName>
+                    </database>
+                    <liquibase>
+                        <liquibaseSchemaName>public</liquibaseSchemaName>
+                        <defaultSchemaName>public</defaultSchemaName>
+
+                        <changeLogPath>db.changelog-master.yaml</changeLogPath>
+                        <changeLogDirectory>src/main/resources/db/changelog/</changeLogDirectory>
+                    </liquibase>
+                    <!-- Generator parameters -->
+                    <jooq>
+                        <generator>
+                            <database>
+                                <includes>.*</includes>
+                                <excludes>DATABASECHANGELOG</excludes>
+                                <schemata>
+                                    <schema>
+                                        <inputSchema>custom</inputSchema>
+                                    </schema>
+                                    <schema>
+                                        <inputSchema>public</inputSchema>
+                                    </schema>
+                                </schemata>
+                            </database>
+                            <target>
+                                <packageName>org.jooq.codegen.maven.example</packageName>
+                                <directory>target/generated-sources/jooq</directory>
+                            </target>
+                        </generator>
+                    </jooq>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
