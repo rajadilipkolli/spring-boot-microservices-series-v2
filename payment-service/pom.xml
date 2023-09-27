@@ -264,7 +264,7 @@
                                 <databaseName>test</databaseName> <!-- optional -->
                             </database>
                             <liquibase>
-                                <!--<changeLogPath>src/main/resources/db/changelog/db.changelog-root.xml</changeLogPath>-->
+<!--                                <changeLogPath>src/main/resources/db/changelog/db.changelog-master.yaml</changeLogPath>-->
                                 <liquibaseSchemaName>public</liquibaseSchemaName>
                                 <defaultSchemaName>public</defaultSchemaName>
                                 
@@ -277,7 +277,14 @@
                                     <database>
                                         <includes>.*</includes>
                                         <excludes>DATABASECHANGELOG</excludes>
-                                        <inputSchema>custom</inputSchema>
+                                        <schemata>
+                                            <schema>
+                                                <inputSchema>custom</inputSchema>
+                                            </schema>
+                                            <schema>
+                                                <inputSchema>public</inputSchema>
+                                            </schema>
+                                        </schemata>
                                     </database>
                                     <target>
                                         <packageName>org.jooq.codegen.maven.example</packageName>

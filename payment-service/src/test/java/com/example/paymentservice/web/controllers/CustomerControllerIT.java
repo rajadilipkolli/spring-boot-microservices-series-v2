@@ -124,7 +124,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "New Customer", "first@customerRequest.email", "First Address", 0);
+                        "New Customer", "firstnew@customerRequest.email", "First Address", 0);
         this.mockMvc
                 .perform(
                         post("/api/customers")
