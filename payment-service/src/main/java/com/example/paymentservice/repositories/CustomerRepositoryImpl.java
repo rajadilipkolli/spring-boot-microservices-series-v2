@@ -1,7 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
-import static org.jooq.codegen.maven.example.tables.Customers.CUSTOMERS;
+import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.response.CustomerResponse;
@@ -11,7 +11,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
-import org.jooq.codegen.maven.example.tables.records.CustomersRecord;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;

@@ -273,7 +273,7 @@
                         <defaultSchemaName>public</defaultSchemaName>
 
                         <changeLogPath>db.changelog-master.yaml</changeLogPath>
-                        <changeLogDirectory>src/main/resources/db/changelog/</changeLogDirectory>
+                        <changeLogDirectory>src/main/resources/db/changelog</changeLogDirectory>
                     </liquibase>
                     <!-- Generator parameters -->
                     <jooq>
@@ -291,7 +291,7 @@
                                 </schemata>
                             </database>
                             <target>
-                                <packageName>org.jooq.codegen.maven.example</packageName>
+                                <packageName>com.example.paymentservice.jooq</packageName>
                                 <directory>target/generated-sources/jooq</directory>
                             </target>
                         </generator>
