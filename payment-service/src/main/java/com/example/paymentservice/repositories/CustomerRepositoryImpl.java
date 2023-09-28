@@ -88,8 +88,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     public List<Customer> saveAll(List<Customer> customerList) {
         InsertSetMoreStep<CustomersRecord> insertStepN =
                 dsl.insertInto(CUSTOMERS).set(dsl.newRecord(CUSTOMERS, customerList.get(0)));
-        for (var record : customerList.subList(1, customerList.size())) {
-            insertStepN = insertStepN.newRecord().set(dsl.newRecord(CUSTOMERS, record));
+        for (var customer : customerList.subList(1, customerList.size())) {
+            insertStepN = insertStepN.newRecord().set(dsl.newRecord(CUSTOMERS, customer));
         }
         return insertStepN.returning().fetch().into(Customer.class);
     }

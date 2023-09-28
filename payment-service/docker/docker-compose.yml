@@ -2,6 +2,7 @@ version: '3.9'
 services:
 
   postgresql:
+    container_name: postgresql
     image: postgres:16.0-alpine
     environment:
       - POSTGRES_USER=appuser
@@ -57,7 +58,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -74,7 +75,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -139,7 +140,3 @@ services:
 
 networks:
   payment-network:
-
-volumes:
-  postgres_data:
-    driver: local
