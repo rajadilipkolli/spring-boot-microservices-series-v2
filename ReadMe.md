@@ -164,3 +164,5 @@ taskkill /PID <type PID here> /f
 - Spring Cloud Seluth is deprecated in favor of Micrometer
 - With New Observability we cant use Rabbit as sender type and use asynchronous communication
 - Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
+
+- JOOQ expects `Transactional` annotation on repository though we have it on Service
