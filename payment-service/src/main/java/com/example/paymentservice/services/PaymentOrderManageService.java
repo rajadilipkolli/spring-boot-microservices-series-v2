@@ -46,7 +46,7 @@ public class PaymentOrderManageService {
             orderDto.setStatus("REJECT");
         }
         orderDto.setSource(AppConstants.SOURCE);
-        log.info("Saving customer after reserving : {}", customer.getId());
+        log.info("Saving customer: {} after reserving", customer);
         customerRepository.save(customer);
         kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
         log.info(
@@ -64,7 +64,7 @@ public class PaymentOrderManageService {
                 customerRepository
                         .findById(orderDto.getCustomerId())
                         .orElseThrow(() -> new CustomerNotFoundException(orderDto.getCustomerId()));
-        log.info("Found Customer: {}", customer.getId());
+        log.info("Found Customer: {}", customer);
         var orderPrice =
                 orderDto.getItems().stream()
                         .map(OrderItemDto::getPrice)
@@ -77,7 +77,8 @@ public class PaymentOrderManageService {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
         }
-        log.info("Saving customer After Confirmation:{}", customer.getId());
-        customerRepository.save(customer);
+        log.info("Saving customer :{} After Confirmation", customer);
+        Customer saved = customerRepository.save(customer);
+        log.debug("Saved customer :{}", saved);
     }
 }
