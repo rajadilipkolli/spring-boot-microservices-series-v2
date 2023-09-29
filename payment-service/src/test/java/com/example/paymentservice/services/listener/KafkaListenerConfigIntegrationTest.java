@@ -15,12 +15,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 
-@Disabled
 class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;

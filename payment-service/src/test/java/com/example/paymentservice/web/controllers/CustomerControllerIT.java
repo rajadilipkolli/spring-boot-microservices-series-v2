@@ -18,7 +18,6 @@ import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -61,7 +60,6 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldFetchAllCustomers() throws Exception {
         this.mockMvc
                 .perform(get("/api/customers"))
@@ -78,7 +76,6 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldFindCustomerById() throws Exception {
         Customer customer = customerList.get(0);
         Long customerId = customer.getId();
@@ -109,7 +106,6 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldFindCustomerByName() throws Exception {
         Customer customer = customerList.get(0);
         String customerName = customer.getName();
@@ -169,7 +165,6 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.get(0).getId();
         CustomerRequest customerRequest =
@@ -209,7 +204,6 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldDeleteCustomer() throws Exception {
         Customer customer = customerList.get(0);
 

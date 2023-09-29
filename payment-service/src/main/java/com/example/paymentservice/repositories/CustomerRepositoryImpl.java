@@ -19,13 +19,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
+@Transactional
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dsl;
 
     @Override
     public Optional<CustomerResponse> findByName(String name) {
-        return dsl.select()
+        return dsl.select(
+                        CUSTOMERS.ID,
+                        CUSTOMERS.NAME,
+                        CUSTOMERS.EMAIL,
+                        CUSTOMERS.ADDRESS,
+                        CUSTOMERS.AMOUNT_AVAILABLE)
                 .from(CUSTOMERS)
                 .where(CUSTOMERS.NAME.eq(name))
                 .fetchOptionalInto(CustomerResponse.class);
@@ -53,6 +59,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
                     .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
                     .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                    .set(CUSTOMERS.NAME, customer.getName())
+                    .set(CUSTOMERS.EMAIL, customer.getEmail())
                     .where(CUSTOMERS.ID.eq(customer.getId()))
                     .returningResult()
                     .fetchOneInto(Customer.class);
