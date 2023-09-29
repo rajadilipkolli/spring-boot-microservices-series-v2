@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
@@ -39,6 +40,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
+    @Transactional
     public Customer save(Customer customer) {
         if (customer.getId() == null) {
             CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
@@ -47,23 +49,13 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     .returningResult()
                     .fetchOneInto(Customer.class);
         } else {
-            int rowsUpdated =
-                    dsl.update(CUSTOMERS)
-                            .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
-                            .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
-                            .set(CUSTOMERS.ADDRESS, customer.getAddress())
-                            .where(CUSTOMERS.ID.eq(customer.getId()))
-                            .execute();
-
-            if (rowsUpdated > 0) {
-                return customer;
-            } else {
-                CustomersRecord customersRecord = dsl.newRecord(CUSTOMERS, customer);
-                return dsl.insertInto(CUSTOMERS)
-                        .set(customersRecord)
-                        .returningResult()
-                        .fetchOneInto(Customer.class);
-            }
+            return dsl.update(CUSTOMERS)
+                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
+                    .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
+                    .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                    .where(CUSTOMERS.ID.eq(customer.getId()))
+                    .returningResult()
+                    .fetchOneInto(Customer.class);
         }
     }
 
