@@ -102,6 +102,7 @@ spring:
     problemdetails:
       enabled: true
   output.ansi.enabled: ALWAYS
+  threads.virtual.enabled: true
 
 #SpringDoc Properties
 springdoc:
