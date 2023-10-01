@@ -378,6 +378,15 @@ echo "PORT=${PORT}"
 if [[ $@ == *"start"* ]]
 then
     echo "Restarting the test environment..."
+    echo "$ docker compose -f docker-compose.yml down --remove-orphans -v"
+    docker compose -f docker-compose.yml down --remove-orphans -v
+    echo "$ docker compose up -d"
+    docker compose -f docker-compose.yml up -d
+fi
+
+if [[ $@ == *"start_all"* ]]
+then
+    echo "Restarting the test environment..."
     echo "$ docker compose -f docker-compose-tools.yml down --remove-orphans -v"
     docker compose -f docker-compose-tools.yml down --remove-orphans -v
     echo "$ docker compose up -d"
@@ -388,7 +397,7 @@ waitForService curl -k http://${HOST}:${PORT}/actuator/health
 
 # waiting for services to come up
 echo "Sleeping for 60 sec for services to start"
-sleep 6
+sleep 60
 
 waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health
 
@@ -405,6 +414,14 @@ verifyAPIs
 echo "End, all tests OK:" `date`
 
 if [[ $@ == *"stop"* ]]
+then
+    echo "We are done, stopping the test environment..."
+    echo "$ docker compose -f docker-compose.yml down --remove-orphans -v"
+    docker compose -f docker-compose.yml down --remove-orphans -v
+fi
+
+
+if [[ $@ == *"stop_all"* ]]
 then
     echo "We are done, stopping the test environment..."
     echo "$ docker compose -f docker-compose-tools.yml down --remove-orphans -v"
