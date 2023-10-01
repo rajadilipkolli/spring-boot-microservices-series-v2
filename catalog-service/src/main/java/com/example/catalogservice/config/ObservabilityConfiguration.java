@@ -9,8 +9,6 @@ package com.example.catalogservice.config;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static reactor.core.publisher.Mono.just;
 
-import io.micrometer.observation.ObservationRegistry;
-import io.micrometer.observation.aop.ObservedAspect;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import java.util.concurrent.TimeUnit;
@@ -35,12 +33,6 @@ public class ObservabilityConfiguration {
 
     public ObservabilityConfiguration(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
-    }
-
-    // To have the @Observed support we need to register this aspect
-    @Bean
-    ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
-        return new ObservedAspect(observationRegistry);
     }
 
     @Bean
