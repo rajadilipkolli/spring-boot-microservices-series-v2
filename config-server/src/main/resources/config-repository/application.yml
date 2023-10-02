@@ -50,7 +50,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: configprops,env,health,info,logfile,loggers,metrics,refresh,prometheus
+        include: configprops,env,health,info,logfile,loggers,metrics,refresh,prometheus,circuitbreaker
   info:
     git:
       mode: full

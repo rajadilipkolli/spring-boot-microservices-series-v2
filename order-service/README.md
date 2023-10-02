@@ -1,11 +1,23 @@
 # order-service
 
 ### Run tests
-`$ ./mvnw clean verify`
+
+```shell
+./mvnw clean verify
+```
 
 ### Run locally
+
 ```shell
-./mvnw docker:start spring-boot:run
+docker-compose -f docker/docker-compose.yml up -d
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+### Using Testcontainers at Development Time
+You can run `TestApplication.java` from your IDE directly.
+You can also run the application using Maven as follows:
+
+```shell
+./mvnw spotless:apply spring-boot:test-run
 ```
 
 
