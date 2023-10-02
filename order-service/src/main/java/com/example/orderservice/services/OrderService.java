@@ -85,16 +85,17 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        if (productsExistsAndInStock(productCodes)) {
+        //While working in local independently with out kafka service and catlog service please comment if condition.
+//        if (productsExistsAndInStock(productCodes)) {
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = getPersistedOrder(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
-        } else {
-            throw new ProductNotFoundException(productCodes);
-        }
+//        } else {
+//            throw new ProductNotFoundException(productCodes);
+//        }
     }
 
     private boolean productsExistsAndInStock(List<String> productIds) {
@@ -123,5 +124,18 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderByIdAsDto(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
+    }
+
+    public PagedResult<OrderDto> getOrdersByCustomerId(Long customerId, Pageable pageable) {
+            var ordersList=orderRepository.findByCustomerId(customerId,pageable);
+            var ordersDto=ordersList.stream().map(orderMapper::toDto).toList();
+        return new PagedResult<>(ordersDto,
+                ordersList.getTotalElements(),
+                ordersList.getNumber(),
+                ordersList.getTotalPages(),
+                ordersList.isFirst(),
+                ordersList.isLast(),
+                ordersList.hasNext(),
+                ordersList.hasPrevious());
     }
 }

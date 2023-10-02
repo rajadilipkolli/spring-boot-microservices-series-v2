@@ -7,8 +7,11 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.entities.Order;
+import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.PagedResult;
+import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
@@ -18,6 +21,9 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,6 +45,8 @@ public class OrderController {
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
     private final OrderKafkaStreamService orderKafkaStreamService;
+    private final OrderRepository orderRepository;
+    private final OrderMapper orderMapper;
 
     @GetMapping
     public PagedResult<OrderDto> getAllOrders(
@@ -130,5 +138,10 @@ public class OrderController {
                             required = false)
                     int pageSize) {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
+    }
+    @GetMapping("customer/id")
+    public ResponseEntity<PagedResult<OrderDto>> ordersByCustomerId(@RequestParam Long customerId, Pageable pageable)
+    {
+        return ResponseEntity.ok(orderService.getOrdersByCustomerId(customerId, pageable));
     }
 }
