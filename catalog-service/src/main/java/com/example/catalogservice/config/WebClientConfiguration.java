@@ -25,13 +25,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 @Configuration(proxyBeanMethods = false)
-public class ObservabilityConfiguration {
+public class WebClientConfiguration {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final ApplicationProperties applicationProperties;
 
-    public ObservabilityConfiguration(ApplicationProperties applicationProperties) {
+    public WebClientConfiguration(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
     }
 

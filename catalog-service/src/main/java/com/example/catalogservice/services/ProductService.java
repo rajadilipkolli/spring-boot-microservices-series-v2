@@ -130,6 +130,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<Product> findProductByProductCode(String productCode) {
         return productRepository.findByCodeAllIgnoreCase(productCode);
     }
@@ -155,6 +156,7 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
         return productRepository.deleteById(id);
     }
@@ -168,6 +170,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Observed(name = "product.findById", contextualName = "findByProductId")
     public Mono<Product> findProductByProductId(Long id) {
         return productRepository.findById(id);
     }
