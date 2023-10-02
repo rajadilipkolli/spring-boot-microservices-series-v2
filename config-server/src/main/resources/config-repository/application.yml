@@ -39,8 +39,8 @@ management:
   metrics:
     distribution:
       percentiles-histogram:
-        all: true
         http.server.requests: true
+        resilience4j.circuitbreaker.calls: true
   endpoint:
     health:
       probes:
