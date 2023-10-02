@@ -85,17 +85,17 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        //While working in local independently with out kafka service and catlog service please comment if condition.
-//        if (productsExistsAndInStock(productCodes)) {
+        //While working in local independently without kafka service and catalog service please comment if condition.
+        if (productsExistsAndInStock(productCodes)) {
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = getPersistedOrder(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
-//        } else {
-//            throw new ProductNotFoundException(productCodes);
-//        }
+        } else {
+            throw new ProductNotFoundException(productCodes);
+        }
     }
 
     private boolean productsExistsAndInStock(List<String> productIds) {
