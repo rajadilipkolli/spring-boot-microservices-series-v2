@@ -49,7 +49,7 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        // Fetches only ParentEntities ids
+        // Fetches only ParentEntities ids inorder to server correct count in pagination.
         Page<Long> page = orderRepository.findAllOrders(pageable);
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
