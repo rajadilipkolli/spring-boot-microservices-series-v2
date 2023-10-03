@@ -6,12 +6,9 @@
 
 package com.example.orderservice.repositories;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.entities.Order;
 import java.util.List;
 import java.util.Optional;
-
-import com.example.orderservice.model.response.PagedResult;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -29,7 +26,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("select o from Order o join fetch o.items oi where o.id = :id")
     Optional<Order> findOrderById(@Param("id") Long id);
-    @Query(value = "select o from Order o join fetch o.items oi where o.customerId = :customerId",countQuery = "select count(o) from Order o where o.customerId=:customerId")
+
+    @Query(
+            value = "select o from Order o join fetch o.items oi where o.customerId = :customerId",
+            countQuery = "select count(o) from Order o where o.customerId=:customerId")
     Page<Order> findByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
     @Modifying

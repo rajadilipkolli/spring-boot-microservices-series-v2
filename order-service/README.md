@@ -18,46 +18,26 @@
 
 To run only the Order Service locally with clean logs, you can follow these steps:
 
-1. Open the `pom.xml` file in your project.
 
-2. Locate the following dependencies and comment them:
 
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-config</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-</dependency>
-```
-
-3.Spin up the Kafka and Postgres server by using below command:
+1.start the Kafka and Postgres servers by using below command(You should be inside appropriate directory and docker setup should be done :- ) :
 ```shell
 docker compose up kafka postgres
 ```
-4.In IntelIj Open Modify Run Configuration from Main class:
-        com.example.orderservice.OrderServiceApplication
-Set the Environment variable value to SPRING_PROFILES_ACTIVE=local
-
-5.In case local profile doesn't due to any issues possible not able to connect to postgresDB
-Modify the Environment Variable Value to SPRING_PROFILES_ACTIVE=local1 this brings application up by connecting to H2 database.
-
-6.Inorder to run only this service we need to comment the catalog service calls inside Order service class
+2.In IntelIj Open Modify Run Configuration from Main class:
+        `com.example.orderservice.OrderServiceApplication`
+Set the Environment variable value to 
 ```text
-       //While working in local independently with out kafka service and catlog service please comment if condition.
-//        if (productsExistsAndInStock(productCodes)) {
-
-//        } else {
-//            throw new ProductNotFoundException(productCodes);
-//        }
-
+SPRING_PROFILES_ACTIVE=local
 ```
+
+3.In case local profile doesn't due to any issues possible not able to connect to postgresDB
+Modify the Environment Variable Value as below this brings application up by connecting to H2 database.
+```text
+SPRING_PROFILES_ACTIVE=local1
+```
+ 
+
 
 ### Notes
 * KafkaStream DeadLetter is configured in `KafkaStreamsConfig.java`

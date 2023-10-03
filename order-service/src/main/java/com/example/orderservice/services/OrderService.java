@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderResponse;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.exception.ProductNotFoundException;
@@ -85,7 +86,6 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        //While working in local independently without kafka service and catalog service please comment if condition.
         if (productsExistsAndInStock(productCodes)) {
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = getPersistedOrder(orderEntity);
@@ -126,10 +126,20 @@ public class OrderService {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
     }
 
-    public PagedResult<OrderDto> getOrdersByCustomerId(Long customerId, Pageable pageable) {
-            var ordersList=orderRepository.findByCustomerId(customerId,pageable);
-            var ordersDto=ordersList.stream().map(orderMapper::toDto).toList();
-        return new PagedResult<>(ordersDto,
+    public PagedResult<OrderResponse> getOrdersByCustomerId(Long customerId, Pageable pageable) {
+        var ordersList = orderRepository.findByCustomerId(customerId, pageable);
+        List<CompletableFuture<OrderResponse>> completableFutureList =
+                ordersList.stream()
+                        .map(
+                                order ->
+                                        CompletableFuture.supplyAsync(
+                                                () -> this.orderMapper.toResponse(order)))
+                        .toList();
+        // Joining all completeable future to get DTOs
+        List<OrderResponse> orderListDto =
+                completableFutureList.stream().map(CompletableFuture::join).toList();
+        return new PagedResult<>(
+                orderListDto,
                 ordersList.getTotalElements(),
                 ordersList.getNumber(),
                 ordersList.getTotalPages(),

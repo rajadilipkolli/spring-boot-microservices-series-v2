@@ -8,6 +8,7 @@ package com.example.orderservice.mapper;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
+import com.example.common.dtos.OrderResponse;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.model.request.OrderItemRequest;
@@ -65,4 +66,7 @@ public interface OrderMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "lastModifiedDate", ignore = true)
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
+
+    @Mapping(source = "id", target = "orderId")
+    OrderResponse toResponse(Order order);
 }
