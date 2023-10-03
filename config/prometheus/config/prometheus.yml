@@ -42,3 +42,12 @@ scrape_configs:
       - targets: [ 'api-gateway:8765' ]
         labels:
           application: 'payment-service'
+
+rule_files:
+  - 'alert-rules.yml'
+
+alerting:
+  alertmanagers:
+    - scheme: http
+    - static_configs:
+        - targets: ['host.docker.internal:9093']
