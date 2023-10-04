@@ -1,0 +1,11 @@
+route:
+  receiver: app-down-alert-manager
+  repeat_interval: 1m
+receivers:
+  - name: 'app-down-alert-manager'
+    email_configs:
+      - to: 'dockertmt@gmail.com'
+        from: 'no-reply-data-envers@gmail.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'username'
+        auth_password: 'password'
