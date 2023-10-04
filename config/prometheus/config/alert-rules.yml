@@ -11,12 +11,12 @@ groups:
           summary: "Server {{ $labels.instance }} down"
           description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
 
-      # Triggers a critical alert if CPU usage of 'boot-data-envers-sample' exceeds 80% over 5 minutes.
+      # Triggers a critical alert if CPU usage of job {{ $labels.job }}  exceeds 80% over 5 minutes.
       - alert: HighCpuUsage
         expr: sum(rate(process_cpu_usage{job=~".+"}[5m])) > 0.8
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "High CPU usage detected for {{ $labels.instance }}"
-          description: "CPU usage of {{ $labels.instance }} has exceeded 80% for the past 5 minutes."
+          summary: "High CPU usage detected for {{ $labels.instance }} of job {{ $labels.job }} "
+          description: "CPU usage of {{ $labels.instance }} of job {{ $labels.job }} has exceeded 80% for the past 5 minutes."
