@@ -34,9 +34,8 @@ SPRING_PROFILES_ACTIVE=local
 3.In case local profile doesn't due to any issues possible not able to connect to postgresDB
 Modify the Environment Variable Value as below this brings application up by connecting to H2 database.
 ```text
-SPRING_PROFILES_ACTIVE=local1
+SPRING_PROFILES_ACTIVE=h2
 ```
- 
 
 
 ### Notes

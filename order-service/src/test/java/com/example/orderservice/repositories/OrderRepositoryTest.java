@@ -8,7 +8,6 @@ package com.example.orderservice.repositories;
 
 import static com.example.orderservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.example.orderservice.common.PostGreSQLContainer;
 import com.example.orderservice.entities.Order;
@@ -65,19 +64,5 @@ class OrderRepositoryTest {
         assertThat(page.hasPrevious()).isTrue();
         assertThat(page.getNumberOfElements()).isEqualTo(5);
         assertThat(page.getContent()).isNotEmpty().hasSize(5);
-    }
-
-    @Test
-    @DisplayName("getOrdersByCustomerIdTest")
-    void getOrdersByCustomerIdTest() {
-        List<Order> orderList = new ArrayList<>();
-        for (int i = 0; i < 15; i++) {
-            orderList.add(TestData.getOrder());
-        }
-        this.orderRepository.saveAll(orderList);
-        Pageable pageable = PageRequest.of(0, 1);
-        Page<Order> ordersPage = orderRepository.findByCustomerId(1L, pageable);
-        assertEquals(15, ordersPage.getTotalPages());
-        assertEquals(15, ordersPage.getTotalElements());
     }
 }

@@ -28,7 +28,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -197,7 +196,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @Disabled
     void shouldFindOrdersByCustomersId() throws Exception {
         OrderItem orderItem = orderList.get(0).getItems().get(0);
 

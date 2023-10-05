@@ -127,25 +127,32 @@ public class OrderService {
     }
 
     public PagedResult<OrderResponse> getOrdersByCustomerId(Long customerId, Pageable pageable) {
-        var ordersList = orderRepository.findByCustomerId(customerId, pageable);
+        // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
+        // pagination was about to be applied. Failing because 'Fail on pagination over collection
+        // fetch' is enabled.
+        // To fix above error Fetches only ParentEntities ids and then using keys fetch Data.
+        Page<Long> page = orderRepository.findAllOrdersByCustomerId(customerId, pageable);
+        // fetching parentAlongWithChildEntries
+        List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        // Mapping Order to OrderResponse CompletableFuture
         List<CompletableFuture<OrderResponse>> completableFutureList =
-                ordersList.stream()
+                ordersWithOrderItems.stream()
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(
                                                 () -> this.orderMapper.toResponse(order)))
                         .toList();
-        // Joining all completeable future to get DTOs
-        List<OrderResponse> orderListDto =
+        // Joining all completeable future to get OrderResponses
+        List<OrderResponse> orderResponse =
                 completableFutureList.stream().map(CompletableFuture::join).toList();
         return new PagedResult<>(
-                orderListDto,
-                ordersList.getTotalElements(),
-                ordersList.getNumber(),
-                ordersList.getTotalPages(),
-                ordersList.isFirst(),
-                ordersList.isLast(),
-                ordersList.hasNext(),
-                ordersList.hasPrevious());
+                orderResponse,
+                page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious());
     }
 }
