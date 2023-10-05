@@ -134,7 +134,7 @@ public class OrderController {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
     }
 
-    @GetMapping("customer/{id}")
+    @GetMapping("/customer/{id}")
     public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
