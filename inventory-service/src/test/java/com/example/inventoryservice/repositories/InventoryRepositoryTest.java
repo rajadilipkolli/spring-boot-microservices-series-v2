@@ -12,6 +12,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 import com.example.inventoryservice.config.MyPostGreSQLContainer;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -25,10 +26,17 @@ class InventoryRepositoryTest {
 
     @Autowired private InventoryRepository inventoryRepository;
 
+    @BeforeEach
+    void setUpData() {
+        inventoryRepository.deleteAll();
+    }
+
     @Test
     void findByProductCodeInAndQuantityAvailable() {
         List<Inventory> inventoryList =
-                List.of(new Inventory(1L, "product1", 10, 0), new Inventory(2L, "product2", 0, 0));
+                List.of(
+                        new Inventory(null, "product1", 10, 0),
+                        new Inventory(null, "product2", 0, 0));
         this.inventoryRepository.saveAll(inventoryList);
 
         List<Inventory> findAvailableInventory =

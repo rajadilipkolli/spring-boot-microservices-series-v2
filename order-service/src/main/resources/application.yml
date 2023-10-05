@@ -6,7 +6,6 @@ server:
 spring:
   application:
     name: order-service
-  threads.virtual.enabled: true
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer

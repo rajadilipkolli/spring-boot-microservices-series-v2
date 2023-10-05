@@ -12,13 +12,15 @@ import io.github.resilience4j.core.registry.EntryRemovedEvent;
 import io.github.resilience4j.core.registry.EntryReplacedEvent;
 import io.github.resilience4j.core.registry.RegistryEventConsumer;
 import io.github.resilience4j.retry.Retry;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@Slf4j
 public class CircuitBreakerConfig {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Bean
     RegistryEventConsumer<CircuitBreaker> myRegistryEventConsumer() {
@@ -29,7 +31,7 @@ public class CircuitBreakerConfig {
                 entryAddedEvent
                         .getAddedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("CircuitBreaker EntryAddedEvent : {}", event));
             }
 
             @Override
@@ -37,7 +39,7 @@ public class CircuitBreakerConfig {
                 entryRemoveEvent
                         .getRemovedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("CircuitBreaker EntryRemovedEvent : {}", event));
             }
 
             @Override
@@ -46,11 +48,19 @@ public class CircuitBreakerConfig {
                 entryReplacedEvent
                         .getOldEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("Old Entry :{}", event));
+                        .onEvent(
+                                event ->
+                                        log.info(
+                                                "CircuitBreaker EntryReplacedEvent Old Entry :{}",
+                                                event));
                 entryReplacedEvent
                         .getNewEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info("New Entry :{}", event));
+                        .onEvent(
+                                event ->
+                                        log.info(
+                                                "CircuitBreaker EntryReplacedEvent New Entry :{}",
+                                                event));
             }
         };
     }
@@ -64,14 +74,30 @@ public class CircuitBreakerConfig {
                 entryAddedEvent
                         .getAddedEntry()
                         .getEventPublisher()
-                        .onEvent(event -> log.info(event.toString()));
+                        .onEvent(event -> log.info("Retry EntryAddedEvent : {}", event));
             }
 
             @Override
-            public void onEntryRemovedEvent(EntryRemovedEvent<Retry> entryRemoveEvent) {}
+            public void onEntryRemovedEvent(EntryRemovedEvent<Retry> entryRemoveEvent) {
+                entryRemoveEvent
+                        .getRemovedEntry()
+                        .getEventPublisher()
+                        .onEvent(event -> log.info("Retry EntryRemovedEvent : {}", event));
+            }
 
             @Override
-            public void onEntryReplacedEvent(EntryReplacedEvent<Retry> entryReplacedEvent) {}
+            public void onEntryReplacedEvent(EntryReplacedEvent<Retry> entryReplacedEvent) {
+                entryReplacedEvent
+                        .getOldEntry()
+                        .getEventPublisher()
+                        .onEvent(
+                                event -> log.info("Retry EntryReplacedEvent Old Entry :{}", event));
+                entryReplacedEvent
+                        .getNewEntry()
+                        .getEventPublisher()
+                        .onEvent(
+                                event -> log.info("Retry EntryReplacedEvent New Entry :{}", event));
+            }
         };
     }
 }

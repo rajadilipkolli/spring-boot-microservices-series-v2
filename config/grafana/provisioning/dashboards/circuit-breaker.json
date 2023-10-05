@@ -110,7 +110,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
           "datasource": {
@@ -183,7 +183,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
           "datasource": {
@@ -241,7 +241,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.1.4",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -350,7 +350,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
           "datasource": {
@@ -413,8 +413,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#299c46",
-                "value": null
+                "color": "#299c46"
               },
               {
                 "color": "rgba(237, 129, 40, 0.89)",
@@ -1052,7 +1051,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 135
+        "y": 136
       },
       "id": 32,
       "panels": [
@@ -1379,6 +1378,6 @@
   "timezone": "",
   "title": "Circuit Breakers",
   "uid": "circuit-breakers",
-  "version": 1,
+  "version": 7,
   "weekStart": ""
 }

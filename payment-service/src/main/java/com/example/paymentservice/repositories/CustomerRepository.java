@@ -3,10 +3,24 @@ package com.example.paymentservice.repositories;
 
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.response.CustomerResponse;
+import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-public interface CustomerRepository extends JpaRepository<Customer, Long> {
+public interface CustomerRepository {
 
     Optional<CustomerResponse> findByName(String name);
+
+    Optional<Customer> findById(Long customerId);
+
+    Customer save(Customer customer);
+
+    void deleteById(Long id);
+
+    Page<Customer> findAll(Pageable pageable);
+
+    List<Customer> saveAll(List<Customer> customerList);
+
+    void deleteAll();
 }

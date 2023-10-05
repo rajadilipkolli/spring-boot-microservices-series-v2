@@ -13,15 +13,15 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.9.5</gatling.version>
-        <gatling-plugin.version>4.5.0</gatling-plugin.version>
-        <spotless.version>2.39.0</spotless.version>
+        <gatling-plugin.version>4.6.0</gatling-plugin.version>
+        <spotless.version>2.40.0</spotless.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.28</version>
+            <version>1.18.30</version>
             <scope>test</scope>
         </dependency>
         <dependency>

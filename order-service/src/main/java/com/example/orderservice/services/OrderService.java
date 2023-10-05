@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 @Loggable
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -48,9 +50,9 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        // Fetches only ParentEntities ids
+        // Fetches only ParentEntities ids inorder to server correct count in pagination.
         Page<Long> page = orderRepository.findAllOrders(pageable);
-        // fetching parentAlongWithChildEntries
+        // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
         // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderDto>> completableFutureList =
@@ -60,7 +62,7 @@ public class OrderService {
                                         CompletableFuture.supplyAsync(
                                                 () -> this.orderMapper.toDto(order)))
                         .toList();
-        // Joining all completeable future to get DTOs
+        // Joining all completable Future to get DTOs
         List<OrderDto> orderListDto =
                 completableFutureList.stream().map(CompletableFuture::join).toList();
         return new PagedResult<>(
@@ -87,6 +89,7 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .toList();
         if (productsExistsAndInStock(productCodes)) {
+            log.debug("ProductCodes :{} exists in db, hence proceeding", productCodes);
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = getPersistedOrder(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
@@ -94,6 +97,7 @@ public class OrderService {
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return persistedOrderDto;
         } else {
+            log.debug("one or more of product codes :{} does not exists in db", productCodes);
             throw new ProductNotFoundException(productCodes);
         }
     }

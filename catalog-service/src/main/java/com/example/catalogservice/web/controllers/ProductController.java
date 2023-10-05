@@ -8,13 +8,13 @@ package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.common.dtos.ProductDto;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,19 +25,31 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/catalog")
-@RequiredArgsConstructor
 @Loggable
 public class ProductController {
 
     private final ProductService productService;
 
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
+
     @GetMapping
-    public Flux<Product> getAllPosts(
+    public Mono<PagedResult<Product>> getAllPosts(
+            @RequestParam(
+                            value = "pageNo",
+                            defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
+                            required = false)
+                    int pageNo,
+            @RequestParam(
+                            value = "pageSize",
+                            defaultValue = AppConstants.DEFAULT_PAGE_SIZE,
+                            required = false)
+                    int pageSize,
             @RequestParam(
                             value = "sortBy",
                             defaultValue = AppConstants.DEFAULT_SORT_BY,
@@ -48,7 +60,7 @@ public class ProductController {
                             defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
                             required = false)
                     String sortDir) {
-        return productService.findAllProducts(sortBy, sortDir);
+        return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
 
     @GetMapping("/id/{id}")

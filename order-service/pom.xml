@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0-M1</version>
-        <relativePath /> <!-- lookup parent from repository -->
+        <version>3.2.0-M3</version>
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.orderservice</groupId>
     <artifactId>order-service</artifactId>
@@ -18,14 +18,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <java.version>17</java.version>
-        <spring-cloud.version>2023.0.0-M1</spring-cloud.version>
-        <commons-io.version>2.13.0</commons-io.version>
+        <java.version>21</java.version>
+        <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
         <org-mapstruct.version>1.5.5.Final</org-mapstruct.version>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
-        <spotless.version>2.39.0</spotless.version>
+        <spotless.version>2.40.0</spotless.version>
         <mockserver-netty.version>5.15.0</mockserver-netty.version>
         <maven-checkstyle-plugin.version>3.3.0</maven-checkstyle-plugin.version>
         <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
@@ -40,8 +39,8 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME />
-        <CI_DOCKER_PASSWORD />
+        <CI_DOCKER_USERNAME/>
+        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -84,7 +83,7 @@
 
         <dependency>
             <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot2</artifactId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
         </dependency>
         <!-- To fix Spring Cloud LoadBalancer is currently working with the default
 			cache. You can switch to using Caffeine cache, by adding it -->
@@ -95,7 +94,7 @@
         <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
-            <version>2.0.1</version>
+            <version>2.0.2</version>
         </dependency>
 
         <dependency>
@@ -125,16 +124,21 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- Tracing -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-otel</artifactId>
         </dependency>
         <dependency>
-			<groupId>net.ttddyy.observation</groupId>
-			<artifactId>datasource-micrometer-spring-boot</artifactId>
-			<version>1.0.2</version>
-		</dependency>
+            <groupId>net.ttddyy.observation</groupId>
+            <artifactId>datasource-micrometer-spring-boot</artifactId>
+            <version>1.0.2</version>
+        </dependency>
         <!-- Latency Visualization -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
@@ -159,15 +163,6 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc-openapi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>${commons-io.version}</version>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -378,7 +373,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.12.3</version>
+                        <version>10.12.4</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -500,7 +495,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.15.0</version>
+                            <version>1.17.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->

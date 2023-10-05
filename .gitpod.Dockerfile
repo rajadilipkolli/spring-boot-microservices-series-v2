@@ -1,7 +1,7 @@
-FROM gitpod/workspace-full
+FROM gitpod/workspace-java-17
 
 USER root
 
 RUN bash -c ". /home/gitpod/.sdkman/bin/sdkman-init.sh \
-             && sdk install java 20.0.2-graal \
-             && sdk default java 20.0.2-graal"
+             && sdk install java 21-graalce \
+             && sdk default java 21-graalce"

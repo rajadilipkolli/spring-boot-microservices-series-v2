@@ -16,7 +16,7 @@ public class TestPaymentApplication {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("15.4-alpine"))
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("16.0-alpine"))
                 .withReuse(true);
     }
 

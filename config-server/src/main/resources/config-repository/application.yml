@@ -2,6 +2,9 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
 jdbc:
   datasource-proxy:
     # enable and configure query logging
@@ -36,8 +39,8 @@ management:
   metrics:
     distribution:
       percentiles-histogram:
-        all: true
         http.server.requests: true
+        resilience4j.circuitbreaker.calls: true
   endpoint:
     health:
       probes:
@@ -47,7 +50,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: configprops,env,health,info,logfile,loggers,metrics,refresh,prometheus
+        include: configprops,env,health,info,loggers,metrics,refresh,prometheus,circuitbreakers
   info:
     git:
       mode: full
@@ -99,6 +102,7 @@ spring:
     problemdetails:
       enabled: true
   output.ansi.enabled: ALWAYS
+  threads.virtual.enabled: true
 
 #SpringDoc Properties
 springdoc:

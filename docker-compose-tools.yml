@@ -3,7 +3,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:15.4-alpine
+    image: postgres:16.0-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -106,7 +106,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -126,7 +126,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -298,7 +298,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:10.1.1
+    image: grafana/grafana:10.1.4
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -342,7 +342,7 @@ services:
       - microservice-network
 
   prometheus:
-    image: prom/prometheus:v2.47.0
+    image: prom/prometheus:v2.47.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -351,7 +351,8 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/prometheus/config/alert-rules.yml:/etc/prometheus/alert-rules.yml
     networks:
       - microservice-network
 
@@ -370,6 +371,18 @@ services:
       - microservice-network
 networks:
   microservice-network:
+
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alert-manager/tmp:/data
+      - ./config/alert-manager/config:/config
+    command: --config.file=/config/alertmanager.yml --log.level=debug
+    networks:
+      - microservice-network
 
 volumes:
   # mongo-data:

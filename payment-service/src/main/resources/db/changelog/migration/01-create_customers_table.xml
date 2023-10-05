@@ -4,29 +4,38 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
-    
-    <property  name="string.type"  value="varchar(255)"  dbms="!postgresql"/>
-    <property  name="string.type"  value="text"  dbms="postgresql"/>
+
+    <property name="string.type" value="varchar(255)" dbms="!postgresql"/>
+    <property name="string.type" value="text" dbms="postgresql"/>
 
     <changeSet author="rajakolli" id="createTable-customers">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sequenceExists sequenceName="customers_seq"/>
+                <tableExists tableName="customers"/>
+            </not>
+        </preConditions>
         <createSequence
-                        sequenceName="customers_seq"
-                        incrementBy="50"
-                        startValue="1"
-                        />
+                sequenceName="customers_seq"
+                incrementBy="1"
+                startValue="1"
+        />
         <createTable tableName="customers">
             <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true" nullable="false" primaryKeyName="customers_pkey"/>
             </column>
             <column name="name" type="${string.type}">
                 <constraints nullable="false"/>
             </column>
             <column name="email" type="${string.type}">
-                <constraints nullable="false" />
+                <constraints nullable="false"/>
             </column>
-            <column name="address" type="${string.type}" />
+            <column name="address" type="${string.type}"/>
             <column name="amount_available" type="int"/>
             <column name="amount_reserved" type="int"/>
         </createTable>
+
+        <addUniqueConstraint tableName="customers" columnNames="name, email"
+                             constraintName="uc_customers_name_email_key"/>
     </changeSet>
 </databaseChangeLog>

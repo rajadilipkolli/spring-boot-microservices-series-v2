@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0-M2</version>
+        <version>3.2.0-M3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -16,14 +16,14 @@
     <description>API Gateway for Microservice</description>
 
     <properties>
-        <java.version>17</java.version>
-        <spring-cloud.version>2023.0.0-M1</spring-cloud.version>
+        <java.version>21</java.version>
+        <spring-cloud.version>2023.0.0-M2</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
 
-        <spotless.version>2.39.0</spotless.version>
-        <wiremock.version>3.0.4</wiremock.version>
+        <spotless.version>2.40.0</spotless.version>
+        <wiremock.version>3.2.0</wiremock.version>
         <properties-maven-plugin.version>1.2.0</properties-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -196,7 +196,6 @@
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                     </image>
-                    <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                     <docker>
                         <publishRegistry>
                             <username>${CI_DOCKER_USERNAME}</username>
