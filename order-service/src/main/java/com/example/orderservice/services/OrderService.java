@@ -13,6 +13,7 @@ import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;
@@ -127,5 +128,35 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Optional<OrderDto> findOrderByIdAsDto(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
+    }
+
+    public PagedResult<OrderResponse> getOrdersByCustomerId(Long customerId, Pageable pageable) {
+        // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
+        // pagination was about to be applied. Failing because 'Fail on pagination over collection
+        // fetch' is enabled.
+        // To fix above error Fetches only ParentEntities ids and then using keys fetch Data.
+        Page<Long> page = orderRepository.findAllOrdersByCustomerId(customerId, pageable);
+        // fetching parentAlongWithChildEntries
+        List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        // Mapping Order to OrderResponse CompletableFuture
+        List<CompletableFuture<OrderResponse>> completableFutureList =
+                ordersWithOrderItems.stream()
+                        .map(
+                                order ->
+                                        CompletableFuture.supplyAsync(
+                                                () -> this.orderMapper.toResponse(order)))
+                        .toList();
+        // Joining all completeable future to get OrderResponses
+        List<OrderResponse> orderResponse =
+                completableFutureList.stream().map(CompletableFuture::join).toList();
+        return new PagedResult<>(
+                orderResponse,
+                page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious());
     }
 }

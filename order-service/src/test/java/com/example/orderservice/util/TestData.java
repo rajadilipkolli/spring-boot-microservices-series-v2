@@ -22,7 +22,7 @@ public class TestData {
         OrderItem orderItem = new OrderItem();
         orderItem.setProductCode("Product1");
         orderItem.setQuantity(10);
-        orderItem.setProductPrice(BigDecimal.TEN);
+        orderItem.setProductPrice(new BigDecimal("10.1"));
         OrderItem orderItem1 = new OrderItem();
         orderItem1.setProductCode("Product2");
         orderItem1.setQuantity(100);

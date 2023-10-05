@@ -27,6 +27,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o join fetch o.items oi where o.id = :id")
     Optional<Order> findOrderById(@Param("id") Long id);
 
+    @Query(
+            value = "select o from Order o join fetch o.items oi where o.customerId = :customerId",
+            countQuery = "select count(o) from Order o where o.customerId=:customerId")
+    Page<Order> findByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+
+    @Query("select o.id from Order o where o.customerId = :customerId")
+    Page<Long> findAllOrdersByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+
     @Modifying
     @Transactional
     @Query("update Order o set o.status =:status, o.source =:source where o.id = :id")

@@ -12,6 +12,8 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderItemResponse;
+import com.example.orderservice.model.response.OrderResponse;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.DecoratedWith;
 import org.mapstruct.Mapper;
@@ -43,6 +45,7 @@ public interface OrderMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "order", ignore = true)
+    @Mapping(target = "price", ignore = true)
     OrderItem orderItemRequestToOrderItem(OrderItemRequest orderItemRequest);
 
     @AfterMapping
@@ -65,4 +68,11 @@ public interface OrderMapper {
     @Mapping(target = "lastModifiedBy", ignore = true)
     @Mapping(target = "lastModifiedDate", ignore = true)
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
+
+    @Mapping(source = "id", target = "orderId")
+    OrderResponse toResponse(Order order);
+
+    @Mapping(target = "itemId", source = "id")
+    @Mapping(target = "productId", source = "productCode")
+    OrderItemResponse orderItemToOrderItemResponse(OrderItem orderItem);
 }

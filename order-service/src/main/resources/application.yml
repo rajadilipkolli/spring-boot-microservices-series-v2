@@ -3,7 +3,6 @@ server:
   servlet:
     contextPath: /${spring.application.name}
   forward-headers-strategy: framework
-
 spring:
   application:
     name: order-service
