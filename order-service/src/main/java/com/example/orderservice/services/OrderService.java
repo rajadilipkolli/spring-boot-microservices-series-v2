@@ -7,13 +7,13 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderResponse;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;

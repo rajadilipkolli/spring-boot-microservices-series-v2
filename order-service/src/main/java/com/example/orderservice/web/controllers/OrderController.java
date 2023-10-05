@@ -7,8 +7,8 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderResponse;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
@@ -134,9 +134,9 @@ public class OrderController {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
     }
 
-    @GetMapping("customer/id")
+    @GetMapping("customer/{id}")
     public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
-            @RequestParam Long customerId, Pageable pageable) {
-        return ResponseEntity.ok(orderService.getOrdersByCustomerId(customerId, pageable));
+            @PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
 }

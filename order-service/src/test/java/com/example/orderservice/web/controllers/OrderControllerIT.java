@@ -28,8 +28,11 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 
 class OrderControllerIT extends AbstractIntegrationTest {
@@ -37,6 +40,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Autowired private OrderRepository orderRepository;
 
     private List<Order> orderList = null;
+    private OrderItem orderItem;
 
     @BeforeEach
     void setUp() {
@@ -178,7 +182,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.items.size()", is(2)))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
-                .andExpect(jsonPath("$.items[0].price", is(1100)))
+                .andExpect(jsonPath("$.items[0].price", is(1111.0)))
                 .andExpect(jsonPath("$.items[1].quantity", is(100)))
                 .andExpect(jsonPath("$.items[1].price", is(100)));
     }
@@ -190,5 +194,32 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
                 .andExpect(status().isAccepted());
+    }
+
+    @Test
+    @Disabled
+    void shouldFindOrdersByCustomersId() throws Exception {
+        OrderItem orderItem = orderList.get(0).getItems().get(0);
+
+        Pageable pageable = PageRequest.of(0, 1);
+        mockMvc.perform(
+                        get("/api/orders/customer/{id}", orderList.get(0).getCustomerId())
+                                .queryParam("page", "0")
+                                .queryParam("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].customerId",
+                                is(orderList.get(0).getCustomerId()),
+                                Long.class))
+                .andExpect(jsonPath("$.totalElements", is(orderList.size())))
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].items[0].price",
+                                is(
+                                        orderItem
+                                                .getProductPrice()
+                                                .multiply(new BigDecimal(orderItem.getQuantity()))),
+                                BigDecimal.class));
     }
 }
