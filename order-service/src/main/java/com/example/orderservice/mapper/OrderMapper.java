@@ -14,6 +14,7 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
+import java.math.RoundingMode;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.DecoratedWith;
 import org.mapstruct.Mapper;
@@ -21,7 +22,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValueCheckStrategy;
 
-@Mapper(componentModel = "spring", nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS)
+@Mapper(
+        componentModel = "spring",
+        nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS,
+        imports = RoundingMode.class)
 @DecoratedWith(OrderMapperDecorator.class)
 public interface OrderMapper {
 
@@ -68,9 +72,17 @@ public interface OrderMapper {
     @Mapping(target = "lastModifiedDate", ignore = true)
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
 
+    @Mapping(
+            target = "totalPrice",
+            expression =
+                    "java(items.stream().map(OrderItemResponse::price).reduce(BigDecimal.ZERO, BigDecimal::add))")
     @Mapping(source = "id", target = "orderId")
     OrderResponse toResponse(Order order);
 
+    @Mapping(
+            target = "price",
+            expression =
+                    "java(productPrice.multiply(new BigDecimal(quantity)).setScale(2, RoundingMode.HALF_UP))")
     @Mapping(target = "itemId", source = "id")
     @Mapping(target = "productId", source = "productCode")
     OrderItemResponse orderItemToOrderItemResponse(OrderItem orderItem);
