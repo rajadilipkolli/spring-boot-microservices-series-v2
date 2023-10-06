@@ -14,7 +14,9 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -43,7 +45,7 @@ public class OrderController {
     private final OrderKafkaStreamService orderKafkaStreamService;
 
     @GetMapping
-    public PagedResult<OrderDto> getAllOrders(
+    public PagedResult<OrderResponse> getAllOrders(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
@@ -70,11 +72,11 @@ public class OrderController {
     @GetMapping("/{id}")
     // @Retry(name = "order-api", fallbackMethod = "hardcodedResponse")
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    // @RateLimiter(name="default")
-    // @Bulkhead(name = "order-api")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    @RateLimiter(name = "default")
+    @Bulkhead(name = "order-api")
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
         return orderService
-                .findOrderByIdAsDto(id)
+                .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -84,14 +86,15 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderDto> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
-        OrderDto response = orderService.saveOrder(orderRequest);
-        return ResponseEntity.created(URI.create("/api/orders/" + response.getOrderId()))
-                .body(response);
+    public ResponseEntity<OrderResponse> createOrder(
+            @RequestBody @Valid OrderRequest orderRequest) {
+        OrderResponse orderResponse = orderService.saveOrder(orderRequest);
+        return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
+                .body(orderResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrderDto> updateOrder(
+    public ResponseEntity<OrderResponse> updateOrder(
             @PathVariable Long id, @RequestBody OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)

@@ -30,8 +30,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 class OrderControllerIT extends AbstractIntegrationTest {
@@ -39,7 +38,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Autowired private OrderRepository orderRepository;
 
     private List<Order> orderList = null;
-    private OrderItem orderItem;
 
     @BeforeEach
     void setUp() {
@@ -95,6 +93,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
                 .andExpect(jsonPath("$.status", is(order.getStatus())))
                 .andExpect(jsonPath("$.source", is(order.getSource())))
+                .andExpect(jsonPath("$.totalPrice").value("201.0"))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
     }
 
@@ -114,9 +113,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.orderId", notNullValue()))
                 .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
                 .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.totalPrice").value("100.0"))
                 .andExpect(jsonPath("$.items.size()", is(1)))
                 .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                .andExpect(jsonPath("$.items[0].price", is(100)));
+                .andExpect(jsonPath("$.items[0].price", is(100.0)));
     }
 
     @Test
@@ -131,7 +131,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isNotFound())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Product Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
@@ -179,11 +182,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.totalPrice").value("1211.0"))
                 .andExpect(jsonPath("$.items.size()", is(2)))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
                 .andExpect(jsonPath("$.items[0].price", is(1111.0)))
                 .andExpect(jsonPath("$.items[1].quantity", is(100)))
-                .andExpect(jsonPath("$.items[1].price", is(100)));
+                .andExpect(jsonPath("$.items[1].price", is(100.0)));
     }
 
     @Test
@@ -198,19 +202,17 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldFindOrdersByCustomersId() throws Exception {
         OrderItem orderItem = orderList.get(0).getItems().get(0);
-
-        Pageable pageable = PageRequest.of(0, 1);
         mockMvc.perform(
                         get("/api/orders/customer/{id}", orderList.get(0).getCustomerId())
                                 .queryParam("page", "0")
                                 .queryParam("size", "1"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(orderList.size())))
                 .andExpect(
                         jsonPath(
                                 "$.data[0].customerId",
                                 is(orderList.get(0).getCustomerId()),
                                 Long.class))
-                .andExpect(jsonPath("$.totalElements", is(orderList.size())))
                 .andExpect(
                         jsonPath(
                                 "$.data[0].items[0].price",

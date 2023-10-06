@@ -16,11 +16,11 @@ import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderItemResponse;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
@@ -28,6 +28,7 @@ import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +38,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -58,20 +60,44 @@ class OrderControllerTest {
     @Test
     void shouldFetchAllOrders() throws Exception {
 
-        List<OrderDto> orderListDto = new ArrayList<>();
-        orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
-        orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
-        orderListDto.add(new OrderDto(null, 1L, "NEW", "", new ArrayList<>()));
-        Page<OrderDto> page = new PageImpl<>(orderListDto);
-        PagedResult<OrderDto> inventoryPagedResult = new PagedResult<>(page);
+        List<OrderResponse> orderResponseList = new ArrayList<>();
+        orderResponseList.add(
+                new OrderResponse(
+                        null,
+                        1L,
+                        "NEW",
+                        "",
+                        LocalDateTime.now(),
+                        BigDecimal.TEN,
+                        new ArrayList<>()));
+        orderResponseList.add(
+                new OrderResponse(
+                        null,
+                        1L,
+                        "NEW",
+                        "",
+                        LocalDateTime.now(),
+                        BigDecimal.TEN,
+                        new ArrayList<>()));
+        orderResponseList.add(
+                new OrderResponse(
+                        null,
+                        1L,
+                        "NEW",
+                        "",
+                        LocalDateTime.now(),
+                        BigDecimal.TEN,
+                        new ArrayList<>()));
+        Page<OrderResponse> page = new PageImpl<>(orderResponseList);
+        PagedResult<OrderResponse> orderResponsePagedResult = new PagedResult<>(page);
 
-        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(inventoryPagedResult);
+        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderResponsePagedResult);
 
         this.mockMvc
                 .perform(get("/api/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()", is(8)))
-                .andExpect(jsonPath("$.data.size()", is(orderListDto.size())))
+                .andExpect(jsonPath("$.data.size()", is(orderResponseList.size())))
                 .andExpect(jsonPath("$.totalElements", is(3)))
                 .andExpect(jsonPath("$.pageNumber", is(1)))
                 .andExpect(jsonPath("$.totalPages", is(1)))
@@ -84,13 +110,15 @@ class OrderControllerTest {
     @Test
     void shouldFindOrderById() throws Exception {
         Long orderId = 1L;
-        OrderDto order = new OrderDto(1L, 1L, "NEW", "", new ArrayList<>());
-        given(orderService.findOrderByIdAsDto(orderId)).willReturn(Optional.of(order));
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L, 1L, "NEW", "", LocalDateTime.now(), BigDecimal.TEN, new ArrayList<>());
+        given(orderService.findOrderByIdAsResponse(orderId)).willReturn(Optional.of(orderResponse));
 
         this.mockMvc
                 .perform(get("/api/orders/{id}", orderId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class));
+                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
     }
 
     @Test
@@ -103,17 +131,21 @@ class OrderControllerTest {
 
     @Test
     void shouldCreateNewOrder() throws Exception {
-        OrderDto orderDto = new OrderDto(10L, 1L, "NEW", "", new ArrayList<>());
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductId("Product1");
-        orderItemDto.setQuantity(10);
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderDto.setItems(List.of(orderItemDto));
 
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
-
-        given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderDto);
+        OrderItemResponse orderItemDto =
+                new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L,
+                        1L,
+                        "NEW",
+                        "",
+                        LocalDateTime.now(),
+                        BigDecimal.TEN,
+                        List.of(orderItemDto));
+        given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
 
         this.mockMvc
                 .perform(
@@ -122,7 +154,7 @@ class OrderControllerTest {
                                 .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class))
+                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
                 .andExpect(jsonPath("$.items.size()", is(1)));
     }
 
@@ -151,47 +183,51 @@ class OrderControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutCustomerId() throws Exception {
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(0L);
+        OrderRequest orderRequest =
+                new OrderRequest(0L, List.of(new OrderItemRequest("P001", 10, BigDecimal.TEN)));
 
         this.mockMvc
                 .perform(
                         post("/api/orders")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("about:blank")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.detail", is("Invalid request content.")))
                 .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.violations", hasSize(2)))
+                .andExpect(jsonPath("$.violations", hasSize(1)))
                 .andExpect(jsonPath("$.violations[0].field", is("customerId")))
                 .andExpect(jsonPath("$.violations[0].message", is("CustomerId should be positive")))
-                .andExpect(jsonPath("$.violations[1].field", is("items")))
-                .andExpect(jsonPath("$.violations[1].message", is("Order without items not valid")))
                 .andReturn();
     }
 
     @Test
     void shouldUpdateOrder() throws Exception {
-        OrderDto orderDto = new OrderDto(1L, 1L, "NEW", "", new ArrayList<>());
 
         OrderRequest orderRequest =
                 new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
 
-        given(orderService.findOrderById(orderDto.getOrderId()))
-                .willReturn(Optional.of(new Order()));
-        given(orderService.updateOrder(eq(orderRequest), any(Order.class))).willReturn(orderDto);
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L, 1L, "NEW", "", LocalDateTime.now(), BigDecimal.TEN, new ArrayList<>());
+
+        given(orderService.findOrderById(1L)).willReturn(Optional.of(new Order()));
+        given(orderService.updateOrder(eq(orderRequest), any(Order.class)))
+                .willReturn(orderResponse);
 
         this.mockMvc
                 .perform(
-                        put("/api/orders/{id}", orderDto.getOrderId())
+                        put("/api/orders/{id}", 1L)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(orderDto.getCustomerId()), Long.class));
+                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
     }
 
     @Test

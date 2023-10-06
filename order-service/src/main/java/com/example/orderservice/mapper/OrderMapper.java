@@ -45,7 +45,6 @@ public interface OrderMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "order", ignore = true)
-    @Mapping(target = "price", ignore = true)
     OrderItem orderItemRequestToOrderItem(OrderItemRequest orderItemRequest);
 
     @AfterMapping
