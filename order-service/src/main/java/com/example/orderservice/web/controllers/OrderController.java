@@ -14,6 +14,7 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
@@ -38,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Validated
-public class OrderController {
+public class OrderController implements OrderApi {
 
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
@@ -95,7 +96,7 @@ public class OrderController {
 
     @PutMapping("/{id}")
     public ResponseEntity<OrderResponse> updateOrder(
-            @PathVariable Long id, @RequestBody OrderRequest orderRequest) {
+            @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
                 .map(
@@ -123,6 +124,7 @@ public class OrderController {
     }
 
     @GetMapping("/all")
+    @Override
     public List<OrderDto> all(
             @RequestParam(
                             value = "pageNo",
