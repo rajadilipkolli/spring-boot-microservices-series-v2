@@ -104,9 +104,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - catalog-network
     depends_on:
