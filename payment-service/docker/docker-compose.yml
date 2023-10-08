@@ -124,7 +124,7 @@ services:
         limits:
           memory: 1050m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - payment-network
     depends_on:
