@@ -130,10 +130,8 @@ services:
       - postgresqldb
       - kafka
     environment:
-      - SPRING_PROFILES_ACTIVE=local
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE=http://naming-server:8761/eureka
     restart: unless-stopped
 
 networks:

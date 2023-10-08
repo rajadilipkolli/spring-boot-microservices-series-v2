@@ -4,8 +4,7 @@ services:
   catalogservice:
     build: ..
     ports:
-      - "18080:8080"
-      - "18787:8787"
+      - "18080:18080"
     restart: always
     depends_on:
       - postgresqldb
