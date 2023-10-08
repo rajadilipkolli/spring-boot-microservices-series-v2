@@ -1,7 +1,7 @@
 version: '3.8'
 services:
 
-  postgresqldb:
+  postgresql:
     image: postgres:16.0-alpine
     environment:
       - POSTGRES_USER=appuser
@@ -63,7 +63,8 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
@@ -79,7 +80,8 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
@@ -89,16 +91,17 @@ services:
     networks:
       - inventory-network
     depends_on:
-      - config-server
-      - zipkin-server
+      config-server:
+        condition: service_started
     environment:
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
     restart: unless-stopped
 
   catalog-service:
     container_name: catalog-service
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
@@ -108,15 +111,15 @@ services:
     networks:
       - inventory-network
     depends_on:
-      - naming-server
-      - zipkin-server
-      - postgresqldb
-      - kafka
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      postgresql:
+        condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=local
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
+      - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE=http://naming-server:8761/eureka
     restart: unless-stopped
 
 networks:
