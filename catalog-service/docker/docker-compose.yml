@@ -119,8 +119,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
-      - EUREKA.CLIENT.SERVICE-URL.DEFAULTZONE=http://naming-server:8761/eureka
-      - SPRING_KAFKA_BOOTSTRAP-SERVERS=broker:29092
     restart: unless-stopped
 
 networks:
