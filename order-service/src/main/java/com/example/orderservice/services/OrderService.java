@@ -13,6 +13,7 @@ import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;
@@ -40,7 +41,7 @@ public class OrderService {
     private final KafkaOrderProducer kafkaOrderProducer;
 
     @Transactional(readOnly = true)
-    public PagedResult<OrderDto> findAllOrders(
+    public PagedResult<OrderResponse> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
@@ -49,30 +50,12 @@ public class OrderService {
 
         // create Pageable instance
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        // Fetches only ParentEntities ids inorder to server correct count in pagination.
+        // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
+        // pagination was about to be applied. Failing because 'Fail on pagination over collection
+        // fetch' is enabled.
+        // To fix above error Fetches only ParentEntities ids and then using keys fetch Data.
         Page<Long> page = orderRepository.findAllOrders(pageable);
-        // fetching parent along With ChildEntries
-        List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
-        // Mapping Order to OrderDTO CompletableFuture
-        List<CompletableFuture<OrderDto>> completableFutureList =
-                ordersWithOrderItems.stream()
-                        .map(
-                                order ->
-                                        CompletableFuture.supplyAsync(
-                                                () -> this.orderMapper.toDto(order)))
-                        .toList();
-        // Joining all completable Future to get DTOs
-        List<OrderDto> orderListDto =
-                completableFutureList.stream().map(CompletableFuture::join).toList();
-        return new PagedResult<>(
-                orderListDto,
-                page.getTotalElements(),
-                page.getNumber() + 1,
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast(),
-                page.hasNext(),
-                page.hasPrevious());
+        return getOrderResponsePagedResult(page);
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +63,7 @@ public class OrderService {
         return orderRepository.findOrderById(id);
     }
 
-    public OrderDto saveOrder(OrderRequest orderRequest) {
+    public OrderResponse saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
                 orderRequest.items().stream()
@@ -94,7 +77,7 @@ public class OrderService {
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
-            return persistedOrderDto;
+            return this.orderMapper.toResponse(savedOrder);
         } else {
             log.debug("one or more of product codes :{} does not exists in db", productCodes);
             throw new ProductNotFoundException(productCodes);
@@ -109,10 +92,10 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
-    public OrderDto updateOrder(OrderRequest orderRequest, Order orderObj) {
+    public OrderResponse updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = getPersistedOrder(orderObj);
-        return this.orderMapper.toDto(persistedOrder);
+        return this.orderMapper.toResponse(persistedOrder);
     }
 
     public Order getPersistedOrder(Order orderObj) {
@@ -125,7 +108,43 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<OrderDto> findOrderByIdAsDto(Long id) {
-        return orderRepository.findOrderById(id).map(this.orderMapper::toDto);
+    public Optional<OrderResponse> findOrderByIdAsResponse(Long id) {
+        return orderRepository.findOrderById(id).map(this.orderMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResult<OrderResponse> getOrdersByCustomerId(Long customerId, Pageable pageable) {
+        // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
+        // pagination was about to be applied. Failing because 'Fail on pagination over collection
+        // fetch' is enabled.
+        // To fix above error Fetches only ParentEntities ids and then using keys fetch Data.
+        Page<Long> page = orderRepository.findAllOrdersByCustomerId(customerId, pageable);
+        // fetching parentAlongWithChildEntries
+        return getOrderResponsePagedResult(page);
+    }
+
+    private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
+        // fetching parent along With ChildEntries
+        List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        // Mapping Order to OrderDTO CompletableFuture
+        List<CompletableFuture<OrderResponse>> completableFutureList =
+                ordersWithOrderItems.stream()
+                        .map(
+                                order ->
+                                        CompletableFuture.supplyAsync(
+                                                () -> this.orderMapper.toResponse(order)))
+                        .toList();
+        // Joining all completable Future to get DTOs
+        List<OrderResponse> orderListDto =
+                completableFutureList.stream().map(CompletableFuture::join).toList();
+        return new PagedResult<>(
+                orderListDto,
+                page.getTotalElements(),
+                page.getNumber() + 1,
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious());
     }
 }

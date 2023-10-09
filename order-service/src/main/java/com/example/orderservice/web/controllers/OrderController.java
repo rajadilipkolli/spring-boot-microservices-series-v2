@@ -8,16 +8,21 @@ package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.web.api.OrderApi;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,14 +39,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Validated
-public class OrderController {
+public class OrderController implements OrderApi {
 
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
     private final OrderKafkaStreamService orderKafkaStreamService;
 
     @GetMapping
-    public PagedResult<OrderDto> getAllOrders(
+    public PagedResult<OrderResponse> getAllOrders(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
@@ -68,11 +73,11 @@ public class OrderController {
     @GetMapping("/{id}")
     // @Retry(name = "order-api", fallbackMethod = "hardcodedResponse")
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    // @RateLimiter(name="default")
-    // @Bulkhead(name = "order-api")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    @RateLimiter(name = "default")
+    @Bulkhead(name = "order-api")
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
         return orderService
-                .findOrderByIdAsDto(id)
+                .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -82,15 +87,16 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderDto> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
-        OrderDto response = orderService.saveOrder(orderRequest);
-        return ResponseEntity.created(URI.create("/api/orders/" + response.getOrderId()))
-                .body(response);
+    public ResponseEntity<OrderResponse> createOrder(
+            @RequestBody @Valid OrderRequest orderRequest) {
+        OrderResponse orderResponse = orderService.saveOrder(orderRequest);
+        return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
+                .body(orderResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrderDto> updateOrder(
-            @PathVariable Long id, @RequestBody OrderRequest orderRequest) {
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
                 .map(
@@ -118,6 +124,7 @@ public class OrderController {
     }
 
     @GetMapping("/all")
+    @Override
     public List<OrderDto> all(
             @RequestParam(
                             value = "pageNo",
@@ -130,5 +137,11 @@ public class OrderController {
                             required = false)
                     int pageSize) {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
+    }
+
+    @GetMapping("/customer/{id}")
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+            @PathVariable Long id, Pageable pageable) {
+        return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
 }

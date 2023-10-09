@@ -58,7 +58,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.5.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -332,7 +332,7 @@ services:
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
-      - ./docker/promtail/promtail.yml:/etc/promtail/config.yml
+      - ./config/promtail/promtail.yml:/etc/promtail/config.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/config.yml
@@ -342,7 +342,7 @@ services:
       - microservice-network
 
   prometheus:
-    image: prom/prometheus:v2.47.0
+    image: prom/prometheus:v2.47.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -369,6 +369,19 @@ services:
       - ./config/tempo/tempo.yml:/etc/tempo-config.yml
     networks:
       - microservice-network
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alert-manager/tmp:/data
+      - ./config/alert-manager/config:/config
+    command: --config.file=/config/alertmanager.yml --log.level=debug
+    networks:
+      - microservice-network
+
 networks:
   microservice-network:
 
@@ -389,3 +402,5 @@ volumes:
   redis_data:
   postgres_data:
     driver: local
+
+

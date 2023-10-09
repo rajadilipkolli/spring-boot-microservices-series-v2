@@ -1,0 +1,17 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  datasource:
+    url: jdbc:h2:file:/data/demo
+    username: sa
+    password: password
+    driverClassName: org.h2.Driver
+  jpa:
+    spring.jpa.database-platform: org.hibernate.dialect.H2Dialect
+  config:
+    import: optional:configserver:${CONFIG_SERVER:http://localhost:8888}/
+application:
+  catalog-service-url: http://localhost:18080/catalog-service

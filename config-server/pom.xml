@@ -72,7 +72,6 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
-                        <publish>true</publish>
                     </image>
                     <docker>
                         <publishRegistry>

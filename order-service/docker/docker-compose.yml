@@ -31,7 +31,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.5.1
     ports:
       - "9092:9092"
     healthcheck:
@@ -106,7 +106,7 @@ services:
         limits:
           memory: 1050m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - order-network
     depends_on:
