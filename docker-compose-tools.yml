@@ -332,7 +332,7 @@ services:
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
-      - ./docker/promtail/promtail.yml:/etc/promtail/config.yml
+      - ./config/promtail/promtail.yml:/etc/promtail/config.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/config.yml
@@ -369,11 +369,9 @@ services:
       - ./config/tempo/tempo.yml:/etc/tempo-config.yml
     networks:
       - microservice-network
-networks:
-  microservice-network:
 
   alertmanager:
-    image: prom/alertmanager:v0.25.0
+    image: prom/alertmanager:v0.26.0
     container_name: alertmanager
     ports:
       - "9093:9093"
@@ -384,8 +382,13 @@ networks:
     networks:
       - microservice-network
 
+networks:
+  microservice-network:
+
 volumes:
   # mongo-data:
   redis_data:
   postgres_data:
     driver: local
+
+

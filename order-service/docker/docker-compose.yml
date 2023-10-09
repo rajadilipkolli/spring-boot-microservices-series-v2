@@ -106,7 +106,7 @@ services:
         limits:
           memory: 1050m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - order-network
     depends_on:
