@@ -168,14 +168,18 @@ taskkill /PID <type PID here> /f
 - JOOQ expects `Transactional` annotation on repository though we have it on Service
 
 #### Alert manager and Prometheus
-docker-compose-tools.yml(contains config for prometheus and alertmanager)
+docker-compose-tools.yml(contains config for prometheus and alertmanager)  
+
 ``Flow: prometheus.yml --> alert-rules.yml --> alert-manager.yml``
 
 Each microservice in your Spring Boot project generates and exposes metrics related to its health and performance.
 
-_Step 1:_ **Prometheus** periodically pulls metrics from the microservices. Metrics are collected from each microservice through HTTP endpoints exposed by them.
-_Step 2:_ Prometheus evaluates the collected metrics against the **alerting rules** defined in alert-rules.yml. Rules include conditions like server uptime, CPU usage.
-_Step 3:_ If a rule condition is met (e.g., a server is down for more than 1 minute or high CPU usage is detected), Prometheus triggers an alert.
+_Step 1:_ **Prometheus** periodically pulls metrics from the microservices. Metrics are collected from each microservice through HTTP endpoints exposed by them.  
+
+_Step 2:_ Prometheus evaluates the collected metrics against the **alerting rules** defined in alert-rules.yml. Rules include conditions like server uptime, CPU usage.  
+
+_Step 3:_ If a rule condition is met (e.g., a server is down for more than 1 minute or high CPU usage is detected), Prometheus triggers an alert.  
+
 _Step 4:_ **Alert Manager** receives the alerts from Prometheus and routes alerts based on configurations and sends notifications.
 
 You can monitor the status of alerts by accessing the Prometheus web UI at localhost:9090. The UI provides information about triggered alerts and their severity.
