@@ -382,9 +382,6 @@ services:
     networks:
       - microservice-network
 
-networks:
-  microservice-network:
-
   alertmanager:
     image: prom/alertmanager:v0.25.0
     container_name: alertmanager
@@ -396,6 +393,9 @@ networks:
     command: --config.file=/config/alertmanager.yml --log.level=debug
     networks:
       - microservice-network
+
+  networks:
+    microservice-network:
 
 volumes:
   # mongo-data:
