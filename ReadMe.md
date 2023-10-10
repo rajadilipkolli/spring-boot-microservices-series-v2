@@ -110,6 +110,29 @@ Now, [Gateway Swagger](http://localhost:8765/swagger-ui.html) serves as an aggre
  ![](images/swagger.jpg) 
 
 
+### Alert manager and Prometheus
+docker-compose-tools.yml(contains config for prometheus and alertmanager)
+
+```mermaid
+---
+title: How alertManager works
+---
+flowchart TD
+prometheus.yml --> alert-rules.yml --> alert-manager.yml
+```
+
+Each microservice in your Spring Boot project generates and exposes metrics related to its health and performance.
+
+`Step 1:` **Prometheus** periodically pulls metrics from the microservices. Metrics are collected from each microservice through HTTP endpoints exposed by them.
+
+`Step 2:` Prometheus evaluates the collected metrics against the **alerting rules** defined in alert-rules.yml. Rules include conditions like server uptime, CPU usage.
+
+`Step 3:` If a rule condition is met (e.g., a server is down for more than 1 minute or high CPU usage is detected), Prometheus triggers an alert.
+
+`Step 4:` **Alert Manager** receives the alerts from Prometheus and routes alerts based on configurations and sends notifications.
+
+You can monitor the status of alerts by accessing the Prometheus web UI at localhost:9090. The UI provides information about triggered alerts and their severity.
+
 ### Liquibase Formats
 
  - Liquibase will support various formats and these are implemented in below services
@@ -166,20 +189,3 @@ taskkill /PID <type PID here> /f
 - Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
 
 - JOOQ expects `Transactional` annotation on repository though we have it on Service
-
-#### Alert manager and Prometheus
-docker-compose-tools.yml(contains config for prometheus and alertmanager)
-
-``Flow: prometheus.yml --> alert-rules.yml --> alert-manager.yml``
-
-Each microservice in your Spring Boot project generates and exposes metrics related to its health and performance.
-
-``Step 1:`` **Prometheus** periodically pulls metrics from the microservices. Metrics are collected from each microservice through HTTP endpoints exposed by them.
-
-``Step 2:`` Prometheus evaluates the collected metrics against the **alerting rules** defined in alert-rules.yml. Rules include conditions like server uptime, CPU usage.
-
-``Step 3:`` If a rule condition is met (e.g., a server is down for more than 1 minute or high CPU usage is detected), Prometheus triggers an alert.
-
-``Step 4:`` **Alert Manager** receives the alerts from Prometheus and routes alerts based on configurations and sends notifications.
-
-You can monitor the status of alerts by accessing the Prometheus web UI at localhost:9090. The UI provides information about triggered alerts and their severity.
