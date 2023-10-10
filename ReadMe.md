@@ -58,7 +58,7 @@ Initial Code generated using [springboot generator](https://github.com/sivaprasa
 
 ### Local SetUp and running using docker
 
-To run in local, first build all services using command
+To run all services in local, first build all services using command or check individual service ReadMe.md for instructions to start.
 
 ```shell
 ./mvnw clean spotless:apply spring-boot:build-image -DskipTests

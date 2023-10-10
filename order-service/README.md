@@ -12,8 +12,9 @@
 docker-compose -f docker/docker-compose.yml up -d
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
+
 ### Using Testcontainers at Development Time
-You can run `TestApplication.java` from your IDE directly.
+You can run `TestOrderServiceApplication.java` from your IDE directly.
 You can also run the application using Maven as follows:
 
 ```shell
@@ -26,7 +27,7 @@ You can also run the application using Maven as follows:
 * Actuator Endpoint: http://localhost:18282/order-service/actuator
 * Catalog Service : http://localhost:18080/catalog-service/swagger-ui.html
 
-## Running only this Service Locally - Tips
+### Running only this Service Locally - Tips
 
 To run only the Order Service locally with clean logs, you can follow these steps:
 
