@@ -8,6 +8,7 @@ package com.example.orderservice.util;
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ public class TestData {
     public static Order getOrder() {
         Order order = new Order();
         order.setCustomerId(1L);
-        order.setStatus("NEW");
+        order.setStatus(OrderStatus.NEW);
         OrderItem orderItem = new OrderItem();
         orderItem.setProductCode("Product1");
         orderItem.setQuantity(10);

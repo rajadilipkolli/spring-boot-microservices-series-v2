@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -253,7 +254,7 @@ class OrderControllerTest {
     @Test
     void shouldDeleteOrder() throws Exception {
         Long orderId = 1L;
-        Order order = new Order(orderId, 1L, "NEW", "", 1L, new ArrayList<>());
+        Order order = new Order(orderId, 1L, OrderStatus.NEW, "", 1L, new ArrayList<>());
         given(orderService.findById(orderId)).willReturn(Optional.of(order));
         doNothing().when(orderService).deleteOrderById(orderId);
 

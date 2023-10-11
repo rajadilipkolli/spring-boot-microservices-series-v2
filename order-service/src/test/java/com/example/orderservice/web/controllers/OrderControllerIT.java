@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.repositories.OrderRepository;
@@ -48,11 +49,11 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.orderList.add(order1);
         Order order2 = new Order();
         order2.setCustomerId(1L);
-        order2.setStatus("NEW");
+        order2.setStatus(OrderStatus.NEW);
         this.orderList.add(order2);
         Order order3 = new Order();
         order3.setCustomerId(1L);
-        order3.setStatus("NEW");
+        order3.setStatus(OrderStatus.NEW);
         OrderItem orderItem2 = new OrderItem();
         orderItem2.setProductCode("Product3");
         orderItem2.setQuantity(100);
@@ -91,7 +92,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
                 .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
-                .andExpect(jsonPath("$.status", is(order.getStatus())))
+                .andExpect(jsonPath("$.status", is(order.getStatus().name())))
                 .andExpect(jsonPath("$.source", is(order.getSource())))
                 .andExpect(jsonPath("$.totalPrice").value("201.0"))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
