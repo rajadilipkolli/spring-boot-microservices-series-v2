@@ -10,6 +10,6 @@ public enum OrderStatus {
     NEW,
     ACCEPT,
     REJECT,
-    COMPLETED,
+    CONFIRMED,
     FAILED
 }
