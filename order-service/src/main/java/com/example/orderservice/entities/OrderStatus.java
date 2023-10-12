@@ -9,7 +9,8 @@ package com.example.orderservice.entities;
 public enum OrderStatus {
     NEW,
     ACCEPT,
-    REJECT,
+    REJECTED,
     CONFIRMED,
-    FAILED
+    FAILED,
+    ROLLBACK
 }

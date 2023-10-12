@@ -7,6 +7,7 @@
 package com.example.orderservice.repositories;
 
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -40,7 +41,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("update Order o set o.status =:status, o.source =:source where o.id = :id")
     int updateOrderStatusAndSourceById(
             @Param("id") Long orderId,
-            @Param("status") String status,
+            @Param("status") OrderStatus status,
             @Param("source") String source);
 
     @Query("select o.id from Order o")

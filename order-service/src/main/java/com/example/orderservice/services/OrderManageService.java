@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,9 @@ public class OrderManageService {
         orderDto.setItems(orderStock.getItems());
         int rows =
                 this.orderRepository.updateOrderStatusAndSourceById(
-                        orderDto.getOrderId(), orderDto.getStatus(), orderDto.getSource());
+                        orderDto.getOrderId(),
+                        OrderStatus.valueOf(orderDto.getStatus()),
+                        orderDto.getSource());
         log.info(
                 "Updated Status as {} for orderId :{} in {} rows",
                 orderDto.getStatus(),
