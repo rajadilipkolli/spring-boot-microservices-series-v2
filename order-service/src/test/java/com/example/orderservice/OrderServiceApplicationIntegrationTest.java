@@ -36,7 +36,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
     void shouldFetchAllOrdersFromStream() {
         // waiting till is kafka stream is changed from PARTITIONS_ASSIGNED to RUNNING
         await().pollDelay(5, SECONDS)
-                .atMost(10, SECONDS)
+                .atMost(60, SECONDS)
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () ->
