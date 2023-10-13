@@ -14,13 +14,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 
-@DataJpaTest(properties = {
-    "spring.jpa.hibernate.ddl-auto=validate",
-    "spring.test.database.replace=none",
-    "spring.datasource.url=jdbc:tc:postgres:16.0-alpine:///db"
-})
+@DataJpaTest(
+        properties = {
+            "spring.jpa.hibernate.ddl-auto=validate",
+            "spring.test.database.replace=none",
+            "spring.datasource.url=jdbc:tc:postgres:16.0-alpine:///db"
+        })
 class InventoryRepositoryTest {
 
     @Autowired private InventoryRepository inventoryRepository;
