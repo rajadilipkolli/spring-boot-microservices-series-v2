@@ -7,21 +7,20 @@
 package com.example.inventoryservice.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
-import com.example.inventoryservice.config.MyPostGreSQLContainer;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 
-@DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=validate")
-@ImportTestcontainers(MyPostGreSQLContainer.class)
-@AutoConfigureTestDatabase(replace = NONE)
+@DataJpaTest(
+        properties = {
+            "spring.jpa.hibernate.ddl-auto=validate",
+            "spring.test.database.replace=none",
+            "spring.datasource.url=jdbc:tc:postgres:16.0-alpine:///db"
+        })
 class InventoryRepositoryTest {
 
     @Autowired private InventoryRepository inventoryRepository;
