@@ -37,7 +37,7 @@ import reactor.core.publisher.Mono;
 @Loggable
 public class ProductService {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;

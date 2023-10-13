@@ -39,7 +39,7 @@ import reactor.core.publisher.Mono;
 @Loggable
 public class InventoryServiceProxy {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(InventoryServiceProxy.class);
 
     private static final String DEFAULT = "default";
 
