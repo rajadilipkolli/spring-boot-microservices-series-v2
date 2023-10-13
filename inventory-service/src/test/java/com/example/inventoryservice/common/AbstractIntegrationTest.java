@@ -18,9 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @ActiveProfiles({PROFILE_TEST})
-@SpringBootTest(
-        webEnvironment = RANDOM_PORT,
-        classes = TestInventoryApplication.class)
+@SpringBootTest(webEnvironment = RANDOM_PORT, classes = TestInventoryApplication.class)
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
