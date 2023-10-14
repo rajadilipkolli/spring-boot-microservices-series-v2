@@ -17,6 +17,7 @@ import com.example.orderservice.model.response.OrderResponse;
 import java.math.RoundingMode;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.DecoratedWith;
+import org.mapstruct.InheritConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -61,15 +62,7 @@ public interface OrderMapper {
                                 order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
     }
 
-    @Mapping(target = "status", ignore = true)
-    @Mapping(target = "source", ignore = true)
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "items", ignore = true)
-    @Mapping(target = "version", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "createdDate", ignore = true)
-    @Mapping(target = "lastModifiedBy", ignore = true)
-    @Mapping(target = "lastModifiedDate", ignore = true)
+    @InheritConfiguration
     void updateOrderFromOrderRequest(OrderRequest orderRequest, @MappingTarget Order order);
 
     @Mapping(
