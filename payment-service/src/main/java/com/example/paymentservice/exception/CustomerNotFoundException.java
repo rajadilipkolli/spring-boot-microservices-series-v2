@@ -16,4 +16,12 @@ public class CustomerNotFoundException extends AbstractThrowableProblem {
                 Status.NOT_FOUND,
                 "Customer with Id '%d' not found".formatted(customerId));
     }
+
+    public CustomerNotFoundException(String customerName) {
+        super(
+                TYPE,
+                "Customer Not Found",
+                Status.NOT_FOUND,
+                "Customer with Name '%s' not found".formatted(customerName));
+    }
 }

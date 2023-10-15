@@ -4,6 +4,7 @@ package com.example.paymentservice.mapper;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,5 +33,9 @@ public class CustomerMapper {
         customer.setName(customerRequest.name());
         customer.setAddress(customerRequest.address());
         customer.setEmail(customerRequest.email());
+    }
+
+    public List<CustomerResponse> toListResponse(List<Customer> customerList) {
+        return customerList.stream().map(this::toResponse).toList();
     }
 }

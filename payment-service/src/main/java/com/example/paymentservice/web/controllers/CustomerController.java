@@ -2,7 +2,6 @@
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.config.logging.Loggable;
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
@@ -34,7 +33,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping
-    public PagedResult<Customer> getAllCustomers(
+    public PagedResult<CustomerResponse> getAllCustomers(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
@@ -73,7 +72,7 @@ public class CustomerController {
         return customerService
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new CustomerNotFoundException(name));
     }
 
     @PostMapping

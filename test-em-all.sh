@@ -146,7 +146,7 @@ function setupTestData() {
 
     # Creating Customer
     recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"
-    CUSTOMER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .id)
+    CUSTOMER_ID=$(echo ${COMPOSITE_RESPONSE} | jq .customerId)
  
 }
 

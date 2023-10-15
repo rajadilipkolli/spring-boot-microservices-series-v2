@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -62,8 +63,8 @@ class CustomerControllerTest {
 
     @Test
     void shouldFetchAllCustomers() throws Exception {
-        Page<Customer> page = new PageImpl<>(customerList);
-        PagedResult<Customer> postPagedResult = new PagedResult<>(page);
+        Page<CustomerResponse> page = new PageImpl<>(getCustomerResponseList());
+        PagedResult<CustomerResponse> postPagedResult = new PagedResult<>(page);
         FindCustomersQuery findCustomersQuery = new FindCustomersQuery(0, 10, "id", "desc");
         given(customerService.findAllCustomers(findCustomersQuery)).willReturn(postPagedResult);
 
@@ -79,6 +80,39 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.isLast", is(true)))
                 .andExpect(jsonPath("$.hasNext", is(false)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
+    }
+
+    private List<CustomerResponse> getCustomerResponseList() {
+        return customerList.stream()
+                .map(
+                        customer ->
+                                new CustomerResponse(
+                                        customer.getId(),
+                                        customer.getName(),
+                                        customer.getEmail(),
+                                        customer.getAddress(),
+                                        customer.getAmountAvailable()))
+                .toList();
+    }
+
+    @Test
+    void shouldReturn404WhenFetchingNonExistingCustomer() throws Exception {
+        String customerName = "junitCustomer";
+        given(customerService.findCustomerByName(customerName))
+                .willThrow(new CustomerNotFoundException(customerName));
+
+        this.mockMvc
+                .perform(get("/api/customers/name/{name}", customerName))
+                .andExpect(status().isNotFound())
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(
+                        jsonPath("$.detail").value("Customer with Name 'junitCustomer' not found"));
     }
 
     @Test
@@ -108,18 +142,25 @@ class CustomerControllerTest {
 
     @Test
     void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
-        Long orderId = 1L;
+        Long customerId = 1L;
         CustomerRequest customerRequest =
                 new CustomerRequest(
                         "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
-        given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
-                .willThrow(new CustomerNotFoundException(1L));
+        given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
+                .willThrow(new CustomerNotFoundException(customerId));
 
         this.mockMvc
                 .perform(
-                        put("/api/customers/{id}", 1L)
+                        put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isNotFound());
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
     }
 }

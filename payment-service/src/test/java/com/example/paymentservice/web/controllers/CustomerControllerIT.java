@@ -96,7 +96,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/customers/{id}", customerId))
                 .andExpect(status().isNotFound())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
@@ -149,7 +152,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(customer)))
                 .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(
                         jsonPath(
                                 "$.type",
@@ -195,7 +201,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isNotFound())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
@@ -224,7 +233,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customerId))
                 .andExpect(status().isNotFound())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
