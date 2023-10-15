@@ -1,59 +1,98 @@
-resilience4j:
-  bulkhead:
-    instances:
-      default:
-        maxConcurrentCalls: 100
-        maxWaitDuration: 10ms
-      product-api:
-        maxConcurrentCalls: 100
-  ratelimiter:
-    instances:
-      default:
-        limitForPeriod: 1000
-        limitRefreshPeriod: 10s
-        timeoutDuration: 0
-        registerHealthIndicator: true
-        eventConsumerBufferSize: 100
-  retry:
-    instances:
-      default:
-        maxAttempts: 3
-        waitDuration: 10s
-        enableExponentialBackoff: true
-        exponentialBackoffMultiplier: 2
-        ignoreExceptions:
-          - com.example.catalogservice.exception.ProductNotFoundException
-  timelimiter:
-    instances:
-      default:
-        timeoutDuration: 2s
-        cancelRunningFuture: true
-
-spring.webflux.problemdetails.enabled: true
-
-management.health.circuitbreakers.enabled: true
-management.health.ratelimiters.enabled: true
-
 resilience4j.circuitbreaker:
   configs:
     default:
       registerHealthIndicator: true
-      slidingWindowSize: 100
-      permittedNumberOfCallsInHalfOpenState: 10
-      waitDurationInOpenState: 10000
-      failureRateThreshold: 60
+      slidingWindowSize: 10
+      minimumNumberOfCalls: 5
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 5s
+      failureRateThreshold: 50
       eventConsumerBufferSize: 10
+      recordExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.util.concurrent.TimeoutException
+        - java.io.IOException
+      ignoreExceptions:
+        - com.example.learning.exception.BusinessException
     shared:
-      slidingWindowSize: 50
-      permittedNumberOfCallsInHalfOpenState: 2
+      slidingWindowSize: 100
+      permittedNumberOfCallsInHalfOpenState: 30
+      waitDurationInOpenState: 1s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+      ignoreExceptions:
+        - com.example.learning.exception.BusinessException
   instances:
     default:
       baseConfig: default
-      waitDurationInOpenState: 5000
     getInventoryByProductCodes:
       baseConfig: shared
-
+resilience4j.retry:
+  configs:
+    default:
+      maxAttempts: 3
+      waitDuration: 100
+      retryExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.util.concurrent.TimeoutException
+        - java.io.IOException
+      ignoreExceptions:
+        - com.example.learning.exception.BusinessException
+  instances:
+    default:
+      baseConfig: default
+    getInventoryByProductCodes:
+      baseConfig: default
+resilience4j.bulkhead:
+  configs:
+    default:
+      maxConcurrentCalls: 100
+  instances:
+    default:
+      maxConcurrentCalls: 10
+    getInventoryByProductCodes:
+      maxWaitDuration: 10ms
+      maxConcurrentCalls: 20
+resilience4j.thread-pool-bulkhead:
+  configs:
+    default:
+      maxThreadPoolSize: 4
+      coreThreadPoolSize: 2
+      queueCapacity: 2
+  instances:
+    default:
+      baseConfig: default
+    getInventoryByProductCodes:
+      maxThreadPoolSize: 1
+      coreThreadPoolSize: 1
+      queueCapacity: 1
 resilience4j.ratelimiter:
   configs:
-    instances:
-      registerHealthIndicator: true
+    default:
+      registerHealthIndicator: false
+      limitForPeriod: 100
+      limitRefreshPeriod: 1s
+      timeoutDuration: 0
+      eventConsumerBufferSize: 100
+  instances:
+    default:
+      baseConfig: default
+    getInventoryByProductCodes:
+      limitForPeriod: 6
+      limitRefreshPeriod: 500ms
+      timeoutDuration: 3s
+resilience4j.timelimiter:
+  configs:
+    default:
+      cancelRunningFuture: false
+      timeoutDuration: 2s
+  instances:
+    default:
+      baseConfig: default
+    getInventoryByProductCodes:
+      baseConfig: default
+
+spring.webflux.problemdetails.enabled: true
+management.health:circuitbreakers.enabled: true
+management.health.ratelimiters.enabled: true
