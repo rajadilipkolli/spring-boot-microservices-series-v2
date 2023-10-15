@@ -3,13 +3,19 @@ package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
+import com.example.paymentservice.model.request.CustomerRequest;
+import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +28,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.zalando.problem.jackson.ProblemModule;
@@ -72,5 +79,47 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.isLast", is(true)))
                 .andExpect(jsonPath("$.hasNext", is(false)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
+    }
+
+    @Test
+    void shouldUpdateCustomer() throws Exception {
+
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+
+        given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
+                .willReturn(
+                        new CustomerResponse(
+                                1L,
+                                "customerUpdatedName",
+                                "junitEmail@email.com",
+                                "junitAddress",
+                                100));
+
+        this.mockMvc
+                .perform(
+                        put("/api/customers/{id}", 1L)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerId", is(1L), Long.class));
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
+        Long orderId = 1L;
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+        given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
+                .willThrow(new CustomerNotFoundException(1L));
+
+        this.mockMvc
+                .perform(
+                        put("/api/customers/{id}", 1L)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isNotFound());
     }
 }

@@ -56,8 +56,8 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Customer> findCustomerById(Long id) {
-        return customerRepository.findById(id);
+    public Optional<CustomerResponse> findCustomerById(Long id) {
+        return customerRepository.findById(id).map(customerMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -68,10 +68,6 @@ public class CustomerService {
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
         Customer customer = customerMapper.toEntity(customerRequest);
         return customerMapper.toResponse(customerRepository.save(customer));
-    }
-
-    public void deleteCustomerById(Long id) {
-        customerRepository.deleteById(id);
     }
 
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
@@ -88,5 +84,9 @@ public class CustomerService {
 
         // Map the updated customer to a response object and return it
         return customerMapper.toResponse(updatedCustomer);
+    }
+
+    public void deleteCustomerById(Long id) {
+        customerRepository.deleteById(id);
     }
 }

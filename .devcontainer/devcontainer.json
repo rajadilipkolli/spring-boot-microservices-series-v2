@@ -17,7 +17,8 @@
 		"vscode": {
 			"extensions": [
 				"vscjava.vscode-java-pack",
-				"vmware.vscode-boot-dev-pack"
+				"vmware.vscode-boot-dev-pack",
+				"ms-vscode-remote.remote-containers"
 			]
 		}
 	},

@@ -61,7 +61,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(ResponseEntity::ok)
@@ -83,7 +83,7 @@ public class CustomerController {
         URI location =
                 ServletUriComponentsBuilder.fromCurrentRequest()
                         .path("/api/customers/{id}")
-                        .buildAndExpand(response.id())
+                        .buildAndExpand(response.customerId())
                         .toUri();
         return ResponseEntity.created(location).body(response);
     }
@@ -95,7 +95,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Customer> deleteCustomer(@PathVariable Long id) {
+    public ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(
