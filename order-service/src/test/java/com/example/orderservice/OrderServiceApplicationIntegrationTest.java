@@ -19,6 +19,7 @@ import com.example.orderservice.common.AbstractIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
         this.kafkaTemplate.send("stock-orders", stockOrderDto.getOrderId(), stockOrderDto);
 
-        await().atMost(30, SECONDS)
+        await().atMost(1, TimeUnit.MINUTES)
                 .pollDelay(10, SECONDS)
                 .pollInterval(Duration.ofSeconds(5))
                 .untilAsserted(

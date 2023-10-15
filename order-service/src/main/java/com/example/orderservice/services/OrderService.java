@@ -37,7 +37,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
-    private final CatalogServiceProxy catalogServiceProxy;
+    private final CatalogService catalogService;
     private final KafkaOrderProducer kafkaOrderProducer;
 
     @Transactional(readOnly = true)
@@ -85,7 +85,7 @@ public class OrderService {
     }
 
     private boolean productsExistsAndInStock(List<String> productIds) {
-        return catalogServiceProxy.productsExistsByCodes(productIds);
+        return catalogService.productsExistsByCodes(productIds);
     }
 
     public void deleteOrderById(Long id) {
