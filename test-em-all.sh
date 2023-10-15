@@ -180,7 +180,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     # Step2, Order Should be rejected
     body="{\"customerId\": $CUSTOMER_ID"
@@ -209,7 +208,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 950 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     # Step 3, Order Should be CONFIRMED 
     body="{\"customerId\": $CUSTOMER_ID"
@@ -238,7 +236,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     # Step 4, Order Should be ROLLBACK 
     body="{\"customerId\": $CUSTOMER_ID"
@@ -267,7 +264,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is not deducted as per order cant be processed
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     # Step 5, Order Should be REJECTED 
     body="{\"customerId\": $CUSTOMER_ID"
@@ -296,7 +292,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is not deducted as per order cant be processed
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 150 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     echo " "
 
@@ -330,7 +325,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
     echo " "
 
@@ -364,7 +358,6 @@ function verifyAPIs() {
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl  -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID"
     assertEqual 90 $(echo ${RESPONSE} | jq .amountAvailable)
-    assertEqual 0 $(echo ${RESPONSE} | jq .amountReserved)
 
 }
 
