@@ -2,15 +2,15 @@ resilience4j:
   bulkhead:
     instances:
       default:
-        maxConcurrentCalls: 10
+        maxConcurrentCalls: 100
         maxWaitDuration: 10ms
       product-api:
-        maxConcurrentCalls: 10
+        maxConcurrentCalls: 100
   ratelimiter:
     instances:
       default:
-        limitForPeriod: 10
-        limitRefreshPeriod: 1s
+        limitForPeriod: 1000
+        limitRefreshPeriod: 10s
         timeoutDuration: 0
         registerHealthIndicator: true
         eventConsumerBufferSize: 100
@@ -25,9 +25,9 @@ resilience4j:
           - com.example.catalogservice.exception.ProductNotFoundException
   timelimiter:
     instances:
-        default:
-            timeoutDuration: 2s
-            cancelRunningFuture: true
+      default:
+        timeoutDuration: 2s
+        cancelRunningFuture: true
 
 spring.webflux.problemdetails.enabled: true
 
