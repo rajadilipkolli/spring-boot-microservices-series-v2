@@ -14,7 +14,7 @@ resilience4j.circuitbreaker:
         - java.util.concurrent.TimeoutException
         - java.io.IOException
       ignoreExceptions:
-        - com.example.learning.exception.BusinessException
+        - com.example.catalogservice.exception.ProductNotFoundException
     shared:
       slidingWindowSize: 100
       permittedNumberOfCallsInHalfOpenState: 30
@@ -22,7 +22,7 @@ resilience4j.circuitbreaker:
       failureRateThreshold: 50
       eventConsumerBufferSize: 10
       ignoreExceptions:
-        - com.example.learning.exception.BusinessException
+        - com.example.catalogservice.exception.ProductNotFoundException
   instances:
     default:
       baseConfig: default
@@ -38,7 +38,7 @@ resilience4j.retry:
         - java.util.concurrent.TimeoutException
         - java.io.IOException
       ignoreExceptions:
-        - com.example.learning.exception.BusinessException
+        - com.example.catalogservice.exception.ProductNotFoundException
   instances:
     default:
       baseConfig: default
@@ -94,5 +94,5 @@ resilience4j.timelimiter:
       baseConfig: default
 
 spring.webflux.problemdetails.enabled: true
-management.health:circuitbreakers.enabled: true
+management.health.circuitbreakers.enabled: true
 management.health.ratelimiters.enabled: true
