@@ -11,6 +11,7 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.model.response.request.InventoryRequest;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,8 @@ public class InventoryService {
 
     private final InventoryMapper inventoryMapper;
 
+    private final InventoryJOOQRepository inventoryJOOQRepository;
+
     @Transactional(readOnly = true)
     public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
@@ -48,12 +51,12 @@ public class InventoryService {
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return new PagedResult<>(inventoryRepository.findAll(pageable));
+        return new PagedResult<>(inventoryJOOQRepository.findAll(pageable));
     }
 
     @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryRepository.findById(id);
+        return inventoryJOOQRepository.findById(id);
     }
 
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
@@ -73,11 +76,11 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
-        return this.inventoryRepository.findByProductCode(productCode);
+        return this.inventoryJOOQRepository.findByProductCode(productCode);
     }
 
     @Transactional(readOnly = true)
     public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
-        return this.inventoryRepository.findByProductCodeIn(productCodes);
+        return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
     }
 }

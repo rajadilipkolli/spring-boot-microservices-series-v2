@@ -9,6 +9,7 @@ package com.example.inventoryservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 public class InventoryOrderManageService {
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public void reserve(OrderDto orderDto) {
@@ -41,7 +43,7 @@ public class InventoryOrderManageService {
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
         List<Inventory> inventoryListFromDB =
-                inventoryRepository.findByProductCodeIn(productCodeList);
+                inventoryJOOQRepository.findByProductCodeIn(productCodeList);
 
         if (inventoryListFromDB.size() != productCodeList.size()) {
             log.error(
@@ -98,7 +100,7 @@ public class InventoryOrderManageService {
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
         Map<String, Inventory> inventoryMap =
-                inventoryRepository.findByProductCodeIn(productCodeList).stream()
+                inventoryJOOQRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
         for (OrderItemDto orderItemDto : orderDto.getItems()) {
