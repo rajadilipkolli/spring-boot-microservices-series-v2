@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
-import com.example.inventoryservice.model.response.request.InventoryRequest;
+import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import org.instancio.Instancio;
@@ -68,7 +68,9 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/inventory/{productCode}", productCode))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity").value(inventory.getAvailableQuantity()))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
     }
 
     @Test
@@ -144,7 +146,8 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
-                .andExpect(jsonPath("$.availableQuantity", is(1000)));
+                .andExpect(jsonPath("$.availableQuantity", is(1000)))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
     }
 
     @Test
@@ -154,6 +157,8 @@ class InventoryControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(inventory.getAvailableQuantity())))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
     }
 }

@@ -7,8 +7,8 @@
 package com.example.inventoryservice.web.controllers;
 
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.PagedResult;
-import com.example.inventoryservice.model.response.request.InventoryRequest;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.List;

@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.inventoryservice.model.response.request;
+package com.example.inventoryservice.model.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;

@@ -7,7 +7,7 @@
 package com.example.inventoryservice.mapper;
 
 import com.example.inventoryservice.entities.Inventory;
-import com.example.inventoryservice.model.response.request.InventoryRequest;
+import com.example.inventoryservice.model.request.InventoryRequest;
 import org.mapstruct.InheritConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -18,9 +18,9 @@ public interface InventoryMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "reservedItems", ignore = true)
-    Inventory toEntity(InventoryRequest inventoryDto);
+    Inventory toEntity(InventoryRequest inventoryRequest);
 
     @InheritConfiguration
     void updateInventoryFromRequest(
-            InventoryRequest inventoryDto, @MappingTarget Inventory inventory);
+            InventoryRequest inventoryRequest, @MappingTarget Inventory inventory);
 }
