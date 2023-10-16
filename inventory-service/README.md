@@ -11,7 +11,7 @@ docker-compose -f docker/docker-compose.yml up -d
 ```
 
 ### Using Testcontainers at Development Time
-You can run `TestInventoryServiceApplication.java` from your IDE directly.
+You can run `TestInventoryApplication.java` from your IDE directly.
 You can also run the application using Maven as follows:
 
 ```shell
