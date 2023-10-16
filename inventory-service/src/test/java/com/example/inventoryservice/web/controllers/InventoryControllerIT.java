@@ -24,13 +24,11 @@ import java.util.List;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
-@Disabled
 @ExtendWith(InstancioExtension.class)
 class InventoryControllerIT extends AbstractIntegrationTest {
 
