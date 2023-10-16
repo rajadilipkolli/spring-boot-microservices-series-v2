@@ -39,6 +39,7 @@ public class TestOrderServiceApplication {
     }
 
     public static void main(String[] args) {
+        System.setProperty("spring.profiles.active", "local");
         SpringApplication.from(OrderServiceApplication::main)
                 .with(TestOrderServiceApplication.class)
                 .run(args);

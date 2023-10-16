@@ -7,7 +7,10 @@ import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.response.CustomerResponse;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
@@ -114,8 +117,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         dslContext.deleteFrom(CUSTOMERS).where(CUSTOMERS.ID.eq(id)).execute();
     }
 
-    private Collection<SortField<?>> getSortFields(Sort sortSpecification) {
-        Collection<SortField<?>> querySortFields = new ArrayList<>();
+    private List<SortField<?>> getSortFields(Sort sortSpecification) {
+        List<SortField<?>> querySortFields = new ArrayList<>();
 
         if (sortSpecification == null) {
             return querySortFields;

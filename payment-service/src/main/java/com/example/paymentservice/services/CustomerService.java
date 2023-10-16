@@ -10,6 +10,7 @@ import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class CustomerService {
     private final CustomerMapper customerMapper;
 
     @Transactional(readOnly = true)
-    public PagedResult<Customer> findAllCustomers(FindCustomersQuery findCustomersQuery) {
+    public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
         log.info(
                 "Fetching findAllCustomers for pageNo {} with pageSize {}, sorting By {} {}",
                 findCustomersQuery.pageNo() - 1,
@@ -41,8 +42,18 @@ public class CustomerService {
 
         Pageable pageable = createPageable(findCustomersQuery);
         Page<Customer> page = customerRepository.findAll(pageable);
+        List<CustomerResponse> customerResponseList =
+                customerMapper.toListResponse(page.getContent());
 
-        return new PagedResult<>(page);
+        return new PagedResult<>(
+                customerResponseList,
+                page.getTotalElements(),
+                page.getNumber() + 1, // for user page number starts from 1
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious());
     }
 
     private Pageable createPageable(FindCustomersQuery findCustomersQuery) {
@@ -56,8 +67,8 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Customer> findCustomerById(Long id) {
-        return customerRepository.findById(id);
+    public Optional<CustomerResponse> findCustomerById(Long id) {
+        return customerRepository.findById(id).map(customerMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -68,10 +79,6 @@ public class CustomerService {
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
         Customer customer = customerMapper.toEntity(customerRequest);
         return customerMapper.toResponse(customerRepository.save(customer));
-    }
-
-    public void deleteCustomerById(Long id) {
-        customerRepository.deleteById(id);
     }
 
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
@@ -88,5 +95,9 @@ public class CustomerService {
 
         // Map the updated customer to a response object and return it
         return customerMapper.toResponse(updatedCustomer);
+    }
+
+    public void deleteCustomerById(Long id) {
+        customerRepository.deleteById(id);
     }
 }

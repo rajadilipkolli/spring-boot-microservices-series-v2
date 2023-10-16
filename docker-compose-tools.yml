@@ -203,6 +203,8 @@ services:
         condition: service_started
       loki :
         condition: service_started
+      api-gateway:
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/

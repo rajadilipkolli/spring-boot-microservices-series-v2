@@ -7,6 +7,7 @@
 package com.example.orderservice.config;
 
 import com.example.orderservice.services.CatalogServiceProxy;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,11 +24,13 @@ public class HttpClientConfig {
     private final ApplicationProperties applicationProperties;
 
     @Bean
-    public HttpServiceProxyFactory httpServiceProxyFactory(RestClient.Builder builder) {
+    public HttpServiceProxyFactory httpServiceProxyFactory(
+            RestClient.Builder builder, ObservationRegistry observationRegistry) {
         RestClient restClient =
                 builder.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .baseUrl(applicationProperties.catalogServiceUrl())
+                        .observationRegistry(observationRegistry)
                         .build();
         return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
     }

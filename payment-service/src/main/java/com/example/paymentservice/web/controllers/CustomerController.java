@@ -2,7 +2,6 @@
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.config.logging.Loggable;
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
@@ -34,7 +33,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @GetMapping
-    public PagedResult<Customer> getAllCustomers(
+    public PagedResult<CustomerResponse> getAllCustomers(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
@@ -61,7 +60,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(ResponseEntity::ok)
@@ -73,7 +72,7 @@ public class CustomerController {
         return customerService
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new CustomerNotFoundException(name));
     }
 
     @PostMapping
@@ -83,7 +82,7 @@ public class CustomerController {
         URI location =
                 ServletUriComponentsBuilder.fromCurrentRequest()
                         .path("/api/customers/{id}")
-                        .buildAndExpand(response.id())
+                        .buildAndExpand(response.customerId())
                         .toUri();
         return ResponseEntity.created(location).body(response);
     }
@@ -95,7 +94,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Customer> deleteCustomer(@PathVariable Long id) {
+    public ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(
