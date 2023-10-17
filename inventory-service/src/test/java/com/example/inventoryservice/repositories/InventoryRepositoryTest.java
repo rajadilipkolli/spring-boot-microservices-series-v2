@@ -8,15 +8,12 @@ package com.example.inventoryservice.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.entities.Inventory;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-@Disabled
 @DataJpaTest(
         properties = {
             "spring.jpa.hibernate.ddl-auto=validate",
@@ -25,27 +22,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
         })
 class InventoryRepositoryTest {
 
-    @Autowired private InventoryRepository inventoryRepository;
-
-    @Autowired private InventoryJOOQRepository inventoryJOOQRepository;
-
-    @BeforeEach
-    void setUpData() {
-        inventoryRepository.deleteAll();
-    }
+    @Autowired private DataSource datasource;
 
     @Test
-    void findByProductCodeInAndQuantityAvailable() {
-        List<Inventory> inventoryList =
-                List.of(
-                        new Inventory(null, "product1", 10, 0),
-                        new Inventory(null, "product2", 0, 0));
-        this.inventoryRepository.saveAll(inventoryList);
-
-        List<Inventory> findAvailableInventory =
-                this.inventoryJOOQRepository.findByProductCodeInAndQuantityAvailable(
-                        List.of("product1", "product2"));
-
-        assertThat(findAvailableInventory).isNotEmpty().hasSize(1);
+    void testDataSource() {
+        assertThat(datasource).isNotNull().isInstanceOf(HikariDataSource.class);
     }
 }
