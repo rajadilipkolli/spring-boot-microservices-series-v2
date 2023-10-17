@@ -29,7 +29,7 @@
         <maven-checkstyle-plugin.version>3.3.0</maven-checkstyle-plugin.version>
         <spotless.version>2.40.0</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
-        <okhttp3.version>4.11.0</okhttp3.version>
+        <okhttp3.version>4.12.0</okhttp3.version>
 
         <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
 
