@@ -37,7 +37,6 @@ Set the Environment variable value to
 SPRING_PROFILES_ACTIVE=local
 ```
 
-
 ### Useful Links
 * Swagger UI: http://localhost:18080/catalog-service/swagger-ui.html
 * Actuator Endpoint: http://localhost:18080/catalog-service/actuator
