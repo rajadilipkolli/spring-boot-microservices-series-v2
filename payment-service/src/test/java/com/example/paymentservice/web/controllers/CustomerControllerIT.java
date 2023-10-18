@@ -127,7 +127,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "New Customer", "firstnew@customerRequest.email", "First Address", 0);
+                        "New Customer", "firstnew@customerRequest.email", "First Address", 10_000);
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -162,11 +162,16 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 is("https://zalando.github.io/problem/constraint-violation")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(2)))
-                .andExpect(jsonPath("$.violations[0].field", is("email")))
-                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
-                .andExpect(jsonPath("$.violations[1].field", is("name")))
-                .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
+                .andExpect(jsonPath("$.violations", hasSize(3)))
+                .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
+                .andExpect(
+                        jsonPath(
+                                "$.violations[0].message",
+                                is("AmountAvailable must be greater than 0")))
+                .andExpect(jsonPath("$.violations[1].field", is("email")))
+                .andExpect(jsonPath("$.violations[1].message", is("Email cannot be Blank")))
+                .andExpect(jsonPath("$.violations[2].field", is("name")))
+                .andExpect(jsonPath("$.violations[2].message", is("Name cannot be Blank")))
                 .andReturn();
     }
 
@@ -193,7 +198,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
         long customerId = customerList.get(0).getId() + 99_999;
         CustomerRequest customerRequest =
-                new CustomerRequest("Updated text", "first@customer.email", "First Address", 0);
+                new CustomerRequest(
+                        "Updated text", "first@customer.email", "First Address", 10_000);
 
         this.mockMvc
                 .perform(
