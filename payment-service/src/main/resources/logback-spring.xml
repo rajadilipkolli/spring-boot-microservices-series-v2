@@ -25,5 +25,6 @@
     <logger name="org.springframework.transaction" level="DEBUG" />
     <logger name="org.springframework.kafka.transaction" level="DEBUG" />
     <logger name="org.apache.kafka.clients.Metadata" level="WARN" />
+    <logger name="org.jooq.tools.LoggerListener" level="DEBUG" />
 
 </configuration>
