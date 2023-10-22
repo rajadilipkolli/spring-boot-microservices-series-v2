@@ -103,7 +103,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -168,7 +168,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -234,7 +234,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -313,7 +313,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -379,7 +379,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 13
       },
       "id": 52,
       "panels": [],
@@ -411,7 +411,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 21
+        "y": 14
       },
       "hiddenSeries": false,
       "id": 2,
@@ -432,7 +432,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -499,7 +499,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 21
       },
       "id": 53,
       "panels": [],
@@ -531,7 +531,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 36
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 3,
@@ -552,7 +552,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -618,7 +618,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 29
       },
       "id": 54,
       "panels": [],
@@ -650,7 +650,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 51
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 35,
@@ -671,7 +671,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -737,7 +737,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 37
       },
       "id": 64,
       "panels": [],
@@ -768,7 +768,7 @@
         "h": 9,
         "w": 6,
         "x": 0,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 62,
@@ -789,7 +789,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -857,7 +857,7 @@
         "h": 9,
         "w": 6,
         "x": 6,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 69,
@@ -878,7 +878,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -946,7 +946,7 @@
         "h": 9,
         "w": 6,
         "x": 12,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 77,
@@ -967,7 +967,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1069,7 +1069,7 @@
         "h": 9,
         "w": 6,
         "x": 18,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 79,
@@ -1090,7 +1090,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1152,7 +1152,7 @@
       }
     }
   ],
-  "refresh": "1m",
+  "refresh": "auto",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],
@@ -1160,9 +1160,13 @@
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
@@ -1190,9 +1194,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
