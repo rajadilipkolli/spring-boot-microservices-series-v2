@@ -23,6 +23,6 @@
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.transaction" level="TRACE" />
     <logger name="org.springframework.kafka.transaction" level="DEBUG" />
-
+    <logger name="org.jooq.tools.LoggerListener" level="DEBUG" />
 
 </configuration>

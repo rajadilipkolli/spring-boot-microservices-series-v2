@@ -10,6 +10,9 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  testcontainers:
+    beans:
+      startup: parallel
 
 ######## Kafka Configuration  #########
 spring.kafka:
