@@ -368,7 +368,7 @@ echo "Start Tests:" `date`
 echo "HOST=${HOST}"
 echo "PORT=${PORT}"
 
-if [[ $@ == "start" ]]
+if [[ $@ == *"start"* ]]
 then
     echo "Restarting the test environment..."
     echo "$ docker compose -f docker-compose.yml down --remove-orphans -v"
