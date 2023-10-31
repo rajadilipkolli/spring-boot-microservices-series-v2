@@ -8,6 +8,7 @@ import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
+import io.micrometer.core.annotation.Timed;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class PaymentOrderManageService {
     private final CustomerRepository customerRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
+    @Timed(percentiles = 1.0)
     public void reserve(OrderDto orderDto) {
         log.debug(
                 "Reserving Order with Id :{} in payment service with payload {}",
@@ -55,6 +57,7 @@ public class PaymentOrderManageService {
                 AppConstants.PAYMENT_ORDERS_TOPIC);
     }
 
+    @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {
         log.debug(
                 "Confirming Order with Id :{} in payment service with payload {}",

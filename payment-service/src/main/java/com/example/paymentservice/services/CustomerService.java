@@ -24,14 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @Loggable
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
 
-    @Transactional(readOnly = true)
     public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
         log.info(
                 "Fetching findAllCustomers for pageNo {} with pageSize {}, sorting By {} {}",
@@ -42,18 +41,10 @@ public class CustomerService {
 
         Pageable pageable = createPageable(findCustomersQuery);
         Page<Customer> page = customerRepository.findAll(pageable);
+
         List<CustomerResponse> customerResponseList =
                 customerMapper.toListResponse(page.getContent());
-
-        return new PagedResult<>(
-                customerResponseList,
-                page.getTotalElements(),
-                page.getNumber() + 1, // for user page number starts from 1
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast(),
-                page.hasNext(),
-                page.hasPrevious());
+        return new PagedResult<>(customerResponseList, page);
     }
 
     private Pageable createPageable(FindCustomersQuery findCustomersQuery) {
@@ -66,21 +57,21 @@ public class CustomerService {
         return PageRequest.of(pageNo, findCustomersQuery.pageSize(), sort);
     }
 
-    @Transactional(readOnly = true)
     public Optional<CustomerResponse> findCustomerById(Long id) {
         return customerRepository.findById(id).map(customerMapper::toResponse);
     }
 
-    @Transactional(readOnly = true)
     public Optional<CustomerResponse> findCustomerByName(String name) {
         return customerRepository.findByName(name);
     }
 
+    @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
         Customer customer = customerMapper.toEntity(customerRequest);
         return customerMapper.toResponse(customerRepository.save(customer));
     }
 
+    @Transactional
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
         Customer customer =
                 customerRepository
@@ -97,6 +88,7 @@ public class CustomerService {
         return customerMapper.toResponse(updatedCustomer);
     }
 
+    @Transactional
     public void deleteCustomerById(Long id) {
         customerRepository.deleteById(id);
     }

@@ -14,9 +14,10 @@ public record PagedResult<T>(
         @JsonProperty("isLast") boolean isLast,
         @JsonProperty("hasNext") boolean hasNext,
         @JsonProperty("hasPrevious") boolean hasPrevious) {
-    public PagedResult(Page<T> page) {
+
+    public <R> PagedResult(List<T> data, Page<R> page) {
         this(
-                page.getContent(),
+                data,
                 page.getTotalElements(),
                 page.getNumber() + 1, // for user page number starts from 1
                 page.getTotalPages(),

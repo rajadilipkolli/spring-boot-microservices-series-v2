@@ -34,6 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -68,8 +69,9 @@ class CustomerControllerTest {
 
     @Test
     void shouldFetchAllCustomers() throws Exception {
-        Page<CustomerResponse> page = new PageImpl<>(getCustomerResponseList());
-        PagedResult<CustomerResponse> postPagedResult = new PagedResult<>(page);
+        Page<Customer> page = new PageImpl<>(customerList);
+        PagedResult<CustomerResponse> postPagedResult =
+                new PagedResult<>(getCustomerResponseList(), page);
         FindCustomersQuery findCustomersQuery = new FindCustomersQuery(0, 10, "id", "desc");
         given(customerService.findAllCustomers(findCustomersQuery)).willReturn(postPagedResult);
 
@@ -124,7 +126,7 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -143,7 +145,7 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -172,15 +174,18 @@ class CustomerControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-        CustomerRequest customer = new CustomerRequest(null, null, null, 1);
+        CustomerRequest customerRequest = new CustomerRequest(null, null, null, 1);
 
         this.mockMvc
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customer)))
+                                .content(objectMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
+                .andExpect(
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(
                         jsonPath(
                                 "$.type",
@@ -237,7 +242,7 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -269,7 +274,7 @@ class CustomerControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
