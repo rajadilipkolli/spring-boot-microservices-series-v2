@@ -42,7 +42,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:7.2.1-alpine'
+    image: 'redis:7.2.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -300,7 +300,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:10.1.5
+    image: grafana/grafana:10.2.0
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -359,7 +359,7 @@ services:
       - microservice-network
 
   tempo:
-    image: grafana/tempo:2.2.3
+    image: grafana/tempo:2.3.0
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml

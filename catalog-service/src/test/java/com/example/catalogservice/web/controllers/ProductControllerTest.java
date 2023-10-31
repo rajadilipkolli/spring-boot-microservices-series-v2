@@ -9,7 +9,6 @@ package com.example.catalogservice.web.controllers;
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -179,7 +178,7 @@ class ProductControllerTest {
     void shouldUpdateProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductByProductId(productId)).willReturn(Mono.just(product));
+        given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(Product.class)))
                 .willAnswer((invocation) -> Mono.just(invocation.getArgument(0)));
 
@@ -207,7 +206,7 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findProductByProductId(productId)).willReturn(Mono.empty());
+        given(productService.findById(productId)).willReturn(Mono.empty());
         Product product =
                 new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
 
@@ -225,7 +224,7 @@ class ProductControllerTest {
     void shouldDeleteProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findProductByProductId(productId)).willReturn(Mono.just(product));
+        given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
         webTestClient
@@ -250,7 +249,7 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenDeletingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findProductByProductId(productId)).willReturn(Mono.empty());
+        given(productService.findById(productId)).willReturn(Mono.empty());
 
         webTestClient
                 .delete()

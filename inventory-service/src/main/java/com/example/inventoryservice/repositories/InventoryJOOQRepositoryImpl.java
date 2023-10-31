@@ -35,10 +35,8 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     @Transactional(readOnly = true)
     public Optional<Inventory> findById(Long inventoryId) {
         return dslContext
-                .select()
-                .from(INVENTORY)
-                .where(INVENTORY.ID.eq(inventoryId))
-                .fetchOptionalInto(Inventory.class);
+                .fetchOptional(INVENTORY, INVENTORY.ID.eq(inventoryId))
+                .map(r -> r.into(Inventory.class));
     }
 
     @Override

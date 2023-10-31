@@ -65,10 +65,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Transactional(readOnly = true)
     public Optional<Customer> findById(Long customerId) {
         return dslContext
-                .select()
-                .from(CUSTOMERS)
-                .where(CUSTOMERS.ID.eq(customerId))
-                .fetchOptionalInto(Customer.class);
+                .fetchOptional(CUSTOMERS, CUSTOMERS.ID.eq(customerId))
+                .map(r -> r.into(Customer.class));
     }
 
     @Override

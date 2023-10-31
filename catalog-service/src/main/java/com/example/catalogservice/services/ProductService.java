@@ -111,8 +111,10 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<Product> findProductById(Long id) {
-        return findProductByProductId(id)
+        return productRepository
+                .findById(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                 .flatMap(
                         product ->
@@ -170,8 +172,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    @Observed(name = "product.findById", contextualName = "findByProductId")
-    public Mono<Product> findProductByProductId(Long id) {
+    @Observed(name = "product.findById", contextualName = "findById")
+    public Mono<Product> findById(Long id) {
         return productRepository.findById(id);
     }
 }

@@ -27,7 +27,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:7.2.1-alpine'
+    image: 'redis:7.2.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'

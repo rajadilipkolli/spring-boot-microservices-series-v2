@@ -377,7 +377,7 @@ then
     docker compose -f docker-compose.yml up -d
 fi
 
-if [[ $@ == *"start_all"* ]]
+if [[ $@ == "start_all" ]]
 then
     echo "Restarting the test environment..."
     echo "$ docker compose -f docker-compose-tools.yml down --remove-orphans -v"

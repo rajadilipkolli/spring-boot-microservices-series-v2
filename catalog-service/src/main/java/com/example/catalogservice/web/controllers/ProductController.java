@@ -101,7 +101,7 @@ public class ProductController {
     public Mono<ResponseEntity<Product>> updateProduct(
             @PathVariable Long id, @RequestBody Product product) {
         return productService
-                .findProductByProductId(id)
+                .findById(id)
                 .flatMap(
                         catalogObj -> {
                             product.setId(id);
@@ -113,7 +113,7 @@ public class ProductController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Product>> deleteProduct(@PathVariable Long id) {
         return productService
-                .findProductByProductId(id)
+                .findById(id)
                 .flatMap(
                         product ->
                                 productService
