@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -102,183 +104,193 @@ class CustomerControllerTest {
                 .toList();
     }
 
-    @Test
-    void shouldFindCustomerById() throws Exception {
-        Long customerId = 1L;
-        CustomerResponse customerResponse =
-                new CustomerResponse(customerId, "text 1", "junit@email.com", "junitAddress", 100);
-        given(customerService.findCustomerById(customerId))
-                .willReturn(Optional.of(customerResponse));
+    @Nested
+    @DisplayName("find methods")
+    class Find {
+        @Test
+        void shouldFindCustomerById() throws Exception {
+            Long customerId = 1L;
+            CustomerResponse customerResponse =
+                    new CustomerResponse(
+                            customerId, "text 1", "junit@email.com", "junitAddress", 100);
+            given(customerService.findCustomerById(customerId))
+                    .willReturn(Optional.of(customerResponse));
 
-        this.mockMvc
-                .perform(get("/api/customers/{id}", customerId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(customerResponse.name())));
+            mockMvc.perform(get("/api/customers/{id}", customerId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is(customerResponse.name())));
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingCustomerById() throws Exception {
+            Long customerId = 1L;
+            given(customerService.findCustomerById(customerId)).willReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/customers/{id}", customerId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingCustomerByName() throws Exception {
+            String customerName = "junitCustomer";
+            given(customerService.findCustomerByName(customerName))
+                    .willThrow(new CustomerNotFoundException(customerName));
+
+            mockMvc.perform(get("/api/customers/name/{name}", customerName))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Customer with Name 'junitCustomer' not found"));
+        }
     }
 
-    @Test
-    void shouldReturn404WhenFetchingNonExistingCustomerById() throws Exception {
-        Long customerId = 1L;
-        given(customerService.findCustomerById(customerId)).willReturn(Optional.empty());
+    @Nested
+    @DisplayName("save methods")
+    class Save {
+        @Test
+        void shouldCreateNewCustomer() throws Exception {
 
-        this.mockMvc
-                .perform(get("/api/customers/{id}", customerId))
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Customer Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
+            CustomerRequest customerRequest =
+                    new CustomerRequest("junitName", "email@junit.com", "junitAddress", 10);
+            CustomerResponse customerResponse =
+                    new CustomerResponse(1L, "junitName", "email@junit.com", "junitAddress", 10);
+            given(customerService.saveCustomer(any(CustomerRequest.class)))
+                    .willReturn(customerResponse);
+            mockMvc.perform(
+                            post("/api/customers")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.name", is(customerRequest.name())));
+        }
+
+        @Test
+        void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
+            CustomerRequest customerRequest = new CustomerRequest(null, null, null, 1);
+
+            mockMvc.perform(
+                            post("/api/customers")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://zalando.github.io/problem/constraint-violation")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.violations", hasSize(2)))
+                    .andExpect(jsonPath("$.violations[0].field", is("email")))
+                    .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[1].field", is("name")))
+                    .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
+                    .andReturn();
+        }
     }
 
-    @Test
-    void shouldReturn404WhenFetchingNonExistingCustomerByName() throws Exception {
-        String customerName = "junitCustomer";
-        given(customerService.findCustomerByName(customerName))
-                .willThrow(new CustomerNotFoundException(customerName));
+    @Nested
+    @DisplayName("update methods")
+    class Update {
+        @Test
+        void shouldUpdateCustomer() throws Exception {
 
-        this.mockMvc
-                .perform(get("/api/customers/name/{name}", customerName))
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Customer Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(
-                        jsonPath("$.detail").value("Customer with Name 'junitCustomer' not found"));
+            CustomerRequest customerRequest =
+                    new CustomerRequest(
+                            "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+
+            given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
+                    .willReturn(
+                            new CustomerResponse(
+                                    1L,
+                                    "customerUpdatedName",
+                                    "junitEmail@email.com",
+                                    "junitAddress",
+                                    100));
+
+            mockMvc.perform(
+                            put("/api/customers/{id}", 1L)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.customerId", is(1L), Long.class));
+        }
+
+        @Test
+        void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
+            Long customerId = 1L;
+            CustomerRequest customerRequest =
+                    new CustomerRequest(
+                            "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+            given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
+                    .willThrow(new CustomerNotFoundException(customerId));
+
+            mockMvc.perform(
+                            put("/api/customers/{id}", customerId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
+        }
     }
 
-    @Test
-    void shouldCreateNewCustomer() throws Exception {
+    @Nested
+    @DisplayName("delete methods")
+    class Delete {
+        @Test
+        void shouldDeleteCustomer() throws Exception {
+            Long customerId = 1L;
+            CustomerResponse customer =
+                    new CustomerResponse(
+                            customerId, "Some text", "junit@email.com", "junitAddress", 0);
+            given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
+            doNothing().when(customerService).deleteCustomerById(customerId);
 
-        CustomerRequest customerRequest =
-                new CustomerRequest("junitName", "email@junit.com", "junitAddress", 10);
-        CustomerResponse customerResponse =
-                new CustomerResponse(1L, "junitName", "email@junit.com", "junitAddress", 10);
-        given(customerService.saveCustomer(any(CustomerRequest.class)))
-                .willReturn(customerResponse);
-        this.mockMvc
-                .perform(
-                        post("/api/customers")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name", is(customerRequest.name())));
-    }
+            mockMvc.perform(delete("/api/customers/{id}", customerId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is(customer.name())));
+        }
 
-    @Test
-    void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-        CustomerRequest customerRequest = new CustomerRequest(null, null, null, 1);
+        @Test
+        void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
+            Long customerId = 1L;
+            given(customerService.findCustomerById(customerId)).willReturn(Optional.empty());
 
-        this.mockMvc
-                .perform(
-                        post("/api/customers")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(
-                        jsonPath(
-                                "$.type",
-                                is("https://zalando.github.io/problem/constraint-violation")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(2)))
-                .andExpect(jsonPath("$.violations[0].field", is("email")))
-                .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
-                .andExpect(jsonPath("$.violations[1].field", is("name")))
-                .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
-                .andReturn();
-    }
-
-    @Test
-    void shouldUpdateCustomer() throws Exception {
-
-        CustomerRequest customerRequest =
-                new CustomerRequest(
-                        "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
-
-        given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
-                .willReturn(
-                        new CustomerResponse(
-                                1L,
-                                "customerUpdatedName",
-                                "junitEmail@email.com",
-                                "junitAddress",
-                                100));
-
-        this.mockMvc
-                .perform(
-                        put("/api/customers/{id}", 1L)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(1L), Long.class));
-    }
-
-    @Test
-    void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
-        Long customerId = 1L;
-        CustomerRequest customerRequest =
-                new CustomerRequest(
-                        "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
-        given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
-                .willThrow(new CustomerNotFoundException(customerId));
-
-        this.mockMvc
-                .perform(
-                        put("/api/customers/{id}", customerId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Customer Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
-    }
-
-    @Test
-    void shouldDeleteCustomer() throws Exception {
-        Long customerId = 1L;
-        CustomerResponse customer =
-                new CustomerResponse(customerId, "Some text", "junit@email.com", "junitAddress", 0);
-        given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
-        doNothing().when(customerService).deleteCustomerById(customerId);
-
-        this.mockMvc
-                .perform(delete("/api/customers/{id}", customerId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name", is(customer.name())));
-    }
-
-    @Test
-    void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
-        Long customerId = 1L;
-        given(customerService.findCustomerById(customerId)).willReturn(Optional.empty());
-
-        this.mockMvc
-                .perform(delete("/api/customers/{id}", customerId))
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Customer Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
+            mockMvc.perform(delete("/api/customers/{id}", customerId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
+        }
     }
 }
