@@ -38,6 +38,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -113,159 +115,195 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
-    @Test
-    void shouldFindOrderById() throws Exception {
-        Long orderId = 1L;
-        OrderResponse orderResponse =
-                new OrderResponse(
-                        1L, 1L, "NEW", "", LocalDateTime.now(), BigDecimal.TEN, new ArrayList<>());
-        given(orderService.findOrderByIdAsResponse(orderId)).willReturn(Optional.of(orderResponse));
+    @Nested
+    @DisplayName("find methods")
+    class Find {
 
-        this.mockMvc
-                .perform(get("/api/orders/{id}", orderId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+        @Test
+        void shouldFindOrderById() throws Exception {
+            Long orderId = 1L;
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "",
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+            given(orderService.findOrderByIdAsResponse(orderId))
+                    .willReturn(Optional.of(orderResponse));
+
+            mockMvc.perform(get("/api/orders/{id}", orderId))
+                    .andExpect(status().isOk())
+                    .andExpect(
+                            jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingOrder() throws Exception {
+            Long orderId = 1L;
+            given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+        }
     }
 
-    @Test
-    void shouldReturn404WhenFetchingNonExistingOrder() throws Exception {
-        Long orderId = 1L;
-        given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
+    @Nested
+    @DisplayName("save methods")
+    class Save {
+        @Test
+        void shouldCreateNewOrder() throws Exception {
 
-        this.mockMvc.perform(get("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+            OrderItemResponse orderItemDto =
+                    new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "",
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            List.of(orderItemDto));
+            given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
+
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.orderId", notNullValue()))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.items.size()", is(1)));
+        }
+
+        @Test
+        void shouldFailCreatingNewOrder() throws Exception {
+
+            OrderRequest orderRequest = new OrderRequest(1L, new ArrayList<>());
+
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.violations", hasSize(1)))
+                    .andExpect(jsonPath("$.violations[0].field", is("items")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message", is("Order without items not valid")))
+                    .andReturn();
+        }
+
+        @Test
+        void shouldReturn400WhenCreateNewOrderWithoutCustomerId() throws Exception {
+            OrderRequest orderRequest =
+                    new OrderRequest(0L, List.of(new OrderItemRequest("P001", 10, BigDecimal.TEN)));
+
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.violations", hasSize(1)))
+                    .andExpect(jsonPath("$.violations[0].field", is("customerId")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message", is("CustomerId should be positive")))
+                    .andReturn();
+        }
     }
 
-    @Test
-    void shouldCreateNewOrder() throws Exception {
+    @Nested
+    @DisplayName("update methods")
+    class Update {
+        @Test
+        void shouldUpdateOrder() throws Exception {
 
-        OrderRequest orderRequest =
-                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
-        OrderItemResponse orderItemDto =
-                new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
-        OrderResponse orderResponse =
-                new OrderResponse(
-                        1L,
-                        1L,
-                        "NEW",
-                        "",
-                        LocalDateTime.now(),
-                        BigDecimal.TEN,
-                        List.of(orderItemDto));
-        given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
 
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
-                .andExpect(jsonPath("$.items.size()", is(1)));
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "",
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+
+            given(orderService.findOrderById(1L)).willReturn(Optional.of(new Order()));
+            given(orderService.updateOrder(eq(orderRequest), any(Order.class)))
+                    .willReturn(orderResponse);
+
+            mockMvc.perform(
+                            put("/api/orders/{id}", 1L)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(
+                            jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+        }
+
+        @Test
+        void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
+            Long orderId = 1L;
+            given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
+            OrderRequest order =
+                    new OrderRequest(
+                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+
+            mockMvc.perform(
+                            put("/api/orders/{id}", orderId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(order)))
+                    .andExpect(status().isNotFound());
+        }
     }
 
-    @Test
-    void shouldFailCreatingNewOrder() throws Exception {
+    @Nested
+    @DisplayName("delete methods")
+    class Delete {
+        @Test
+        void shouldDeleteOrder() throws Exception {
+            Long orderId = 1L;
+            Order order = new Order(orderId, 1L, OrderStatus.NEW, "", 1L, new ArrayList<>());
+            given(orderService.findById(orderId)).willReturn(Optional.of(order));
+            doNothing().when(orderService).deleteOrderById(orderId);
 
-        OrderRequest orderRequest = new OrderRequest(1L, new ArrayList<>());
+            mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
+        }
 
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("items")))
-                .andExpect(jsonPath("$.violations[0].message", is("Order without items not valid")))
-                .andReturn();
-    }
+        @Test
+        void shouldReturn404WhenDeletingNonExistingOrder() throws Exception {
+            Long orderId = 1L;
+            given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-    @Test
-    void shouldReturn400WhenCreateNewOrderWithoutCustomerId() throws Exception {
-        OrderRequest orderRequest =
-                new OrderRequest(0L, List.of(new OrderItemRequest("P001", 10, BigDecimal.TEN)));
-
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.violations", hasSize(1)))
-                .andExpect(jsonPath("$.violations[0].field", is("customerId")))
-                .andExpect(jsonPath("$.violations[0].message", is("CustomerId should be positive")))
-                .andReturn();
-    }
-
-    @Test
-    void shouldUpdateOrder() throws Exception {
-
-        OrderRequest orderRequest =
-                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
-
-        OrderResponse orderResponse =
-                new OrderResponse(
-                        1L, 1L, "NEW", "", LocalDateTime.now(), BigDecimal.TEN, new ArrayList<>());
-
-        given(orderService.findOrderById(1L)).willReturn(Optional.of(new Order()));
-        given(orderService.updateOrder(eq(orderRequest), any(Order.class)))
-                .willReturn(orderResponse);
-
-        this.mockMvc
-                .perform(
-                        put("/api/orders/{id}", 1L)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
-    }
-
-    @Test
-    void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
-        Long orderId = 1L;
-        given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
-        OrderRequest order =
-                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
-
-        this.mockMvc
-                .perform(
-                        put("/api/orders/{id}", orderId)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(order)))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Long orderId = 1L;
-        Order order = new Order(orderId, 1L, OrderStatus.NEW, "", 1L, new ArrayList<>());
-        given(orderService.findById(orderId)).willReturn(Optional.of(order));
-        doNothing().when(orderService).deleteOrderById(orderId);
-
-        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
-    }
-
-    @Test
-    void shouldReturn404WhenDeletingNonExistingOrder() throws Exception {
-        Long orderId = 1L;
-        given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
-
-        this.mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+            mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+        }
     }
 }
