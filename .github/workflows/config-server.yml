@@ -42,7 +42,7 @@ jobs:
           native-image --version
 
       - name: Build and analyze
-        run: ./mvnw -Pnative clean verify
+        run: ./mvnw clean verify
 
       - if: ${{ github.ref == 'refs/heads/main' }}
         name: Build Image and push to docker

@@ -12,6 +12,19 @@ http://localhost:8888/{projectname}/{profile}
  
 Ex: http://localhost:8888/catalog-service/default
 
+
+### Run tests
+
+```shell
+./mvnw clean verify
+```
+
+### Run locally
+
+```shell
+./mvnw spring-boot:run
+```
+
 ## Actuator Endpoints
  - http://localhost:8888/actuator/health
  - http://localhost:8888/actuator/info (done using maven build plugin and git info plugin)
