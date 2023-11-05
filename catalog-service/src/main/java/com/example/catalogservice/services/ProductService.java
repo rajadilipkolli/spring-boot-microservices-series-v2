@@ -13,6 +13,7 @@ import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.response.InventoryDto;
 import com.example.catalogservice.model.response.PagedResult;
+import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dtos.ProductDto;
 import io.micrometer.observation.annotation.Observed;
@@ -57,7 +58,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findAll", contextualName = "find-all-products")
-    public Mono<PagedResult<Product>> findAllProducts(
+    public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
@@ -75,10 +76,18 @@ public class ProductService {
                             List<Product> products =
                                     count == 0 ? Collections.emptyList() : tuple.getT2();
 
+                            List<ProductResponse> productResponses =
+                                    products.isEmpty()
+                                            ? Collections.emptyList()
+                                            : products.stream()
+                                                    .map(productMapper::toProductResponse)
+                                                    .toList();
+
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
-                                                new PageImpl<>(products, pageable, count)));
+                                                productResponses,
+                                                new PageImpl<>(productResponses, pageable, count)));
                             }
 
                             List<String> productCodeList =
@@ -91,8 +100,18 @@ public class ProductService {
                                     .map(
                                             inventoriesMap -> {
                                                 updateProductAvailability(products, inventoriesMap);
+                                                List<ProductResponse> productResponseList =
+                                                        products.stream()
+                                                                .map(
+                                                                        productMapper
+                                                                                ::toProductResponse)
+                                                                .toList();
                                                 return new PagedResult<>(
-                                                        new PageImpl<>(products, pageable, count));
+                                                        productResponseList,
+                                                        new PageImpl<>(
+                                                                productResponseList,
+                                                                pageable,
+                                                                count));
                                             });
                         });
     }
@@ -112,7 +131,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findProductById", contextualName = "findProductById")
-    public Mono<Product> findProductById(Long id) {
+    public Mono<ProductResponse> findProductById(Long id) {
         return productRepository
                 .findById(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
@@ -124,7 +143,8 @@ public class ProductService {
                                                     product.setInStock(
                                                             inventoryDto.availableQuantity() > 0);
                                                     return product;
-                                                }));
+                                                }))
+                .map(productMapper::toProductResponse);
     }
 
     private Mono<InventoryDto> getInventoryByProductCode(String code) {
@@ -133,13 +153,15 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
-    public Mono<Product> findProductByProductCode(String productCode) {
-        return productRepository.findByCodeAllIgnoreCase(productCode);
+    public Mono<ProductResponse> findProductByProductCode(String productCode) {
+        return productRepository
+                .findByCodeAllIgnoreCase(productCode)
+                .map(productMapper::toProductResponse);
     }
 
     // saves product to db and sends message that new product is available for inventory
     @Observed(name = "product.save", contextualName = "saving-product")
-    public Mono<Product> saveProduct(ProductDto productDto) {
+    public Mono<ProductResponse> saveProduct(ProductDto productDto) {
         return Mono.just(this.productMapper.toEntity(productDto))
                 .flatMap(productRepository::save)
                 .map(
@@ -151,11 +173,15 @@ public class ProductService {
                         DuplicateKeyException.class,
                         e ->
                                 // Handle unique key constraint violation here
-                                Mono.error(new ProductAlreadyExistsException(productDto.code())));
+                                Mono.error(new ProductAlreadyExistsException(productDto.code())))
+                .map(productMapper::toProductResponse);
     }
 
-    public Mono<Product> updateProduct(Product product) {
-        return productRepository.save(product);
+    public Mono<ProductResponse> updateProduct(ProductDto productDto, Long id) {
+        Product product = productMapper.toEntity(productDto);
+        product.setId(id);
+        Mono<Product> savedProduct = productRepository.save(product);
+        return savedProduct.map(productMapper::toProductResponse);
     }
 
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
