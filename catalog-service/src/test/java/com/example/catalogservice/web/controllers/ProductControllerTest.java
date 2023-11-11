@@ -10,12 +10,11 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.mapper.ProductMapper;
+import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
@@ -41,7 +40,6 @@ class ProductControllerTest {
     @Autowired private WebTestClient webTestClient;
 
     @MockBean private ProductService productService;
-    @MockBean private ProductMapper productMapper;
 
     private List<ProductResponse> productResponseList;
 
@@ -59,7 +57,7 @@ class ProductControllerTest {
     @Test
     void shouldFetchAllProducts() {
         Page<ProductResponse> page = new PageImpl<>(productResponseList);
-        PagedResult<ProductResponse> pagedResult = new PagedResult<>(productResponseList, page);
+        PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
         given(productService.findAllProducts(0, 10, "id", "asc"))
                 .willReturn(Mono.just(pagedResult));
 
@@ -131,7 +129,7 @@ class ProductControllerTest {
     void shouldCreateProduct() {
         ProductResponse productResponse =
                 new ProductResponse(1L, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.saveProduct(any(ProductDto.class)))
+        given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         ProductDto productDto = new ProductDto("code 1", "name 1", "description 1", 9.0);
@@ -194,8 +192,8 @@ class ProductControllerTest {
         ProductDto productDto = new ProductDto("code 1", "Updated name", "description 1", 9.0);
         ProductResponse productResponse =
                 new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
-        given(productService.updateProduct(any(ProductDto.class), eq(1L)))
+        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
+        given(productService.updateProduct(any(ProductRequest.class), any(ProductResponse.class)))
                 .willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -242,9 +240,8 @@ class ProductControllerTest {
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
         ProductResponse productResponse =
                 new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
+        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
-        given(productMapper.toProductResponse(product)).willReturn(productResponse);
 
         webTestClient
                 .delete()

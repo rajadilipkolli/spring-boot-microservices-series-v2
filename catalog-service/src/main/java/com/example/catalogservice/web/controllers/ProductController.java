@@ -7,12 +7,11 @@
 package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.config.logging.Loggable;
-import com.example.catalogservice.mapper.ProductMapper;
+import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
-import com.example.common.dtos.ProductDto;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -34,11 +33,9 @@ import reactor.core.publisher.Mono;
 public class ProductController {
 
     private final ProductService productService;
-    private final ProductMapper productMapper;
 
-    public ProductController(ProductService productService, ProductMapper productMapper) {
+    public ProductController(ProductService productService) {
         this.productService = productService;
-        this.productMapper = productMapper;
     }
 
     @GetMapping
@@ -92,9 +89,9 @@ public class ProductController {
 
     @PostMapping
     public Mono<ResponseEntity<ProductResponse>> createProduct(
-            @RequestBody @Valid ProductDto productDto) {
+            @RequestBody @Valid ProductRequest productRequest) {
         return productService
-                .saveProduct(productDto)
+                .saveProduct(productRequest)
                 .map(
                         product ->
                                 ResponseEntity.created(
@@ -104,13 +101,13 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public Mono<ResponseEntity<ProductResponse>> updateProduct(
-            @PathVariable Long id, @RequestBody ProductDto productDto) {
+            @PathVariable Long id, @RequestBody ProductRequest productRequest) {
         return productService
                 .findById(id)
                 .flatMap(
                         catalogObj ->
                                 productService
-                                        .updateProduct(productDto, id)
+                                        .updateProduct(productRequest, catalogObj)
                                         .map(ResponseEntity::ok))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
@@ -119,7 +116,6 @@ public class ProductController {
     public Mono<ResponseEntity<ProductResponse>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findById(id)
-                .map(productMapper::toProductResponse)
                 .flatMap(
                         product ->
                                 productService
