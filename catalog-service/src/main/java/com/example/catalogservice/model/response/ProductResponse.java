@@ -12,4 +12,8 @@ public record ProductResponse(
         String productName,
         String description,
         double price,
-        boolean inStock) {}
+        boolean inStock) {
+    public ProductResponse updateProductAvailability(boolean inStock) {
+        return new ProductResponse(id, code, productName, description, price, inStock);
+    }
+}

@@ -114,13 +114,7 @@ public class ProductService {
                         productResponse -> {
                             int availableQuantity =
                                     inventoriesMap.getOrDefault(productResponse.code(), 0);
-                            return new ProductResponse(
-                                    productResponse.id(),
-                                    productResponse.code(),
-                                    productResponse.productName(),
-                                    productResponse.description(),
-                                    productResponse.price(),
-                                    availableQuantity > 0);
+                            return productResponse.updateProductAvailability(availableQuantity > 0);
                         })
                 .collect(Collectors.toList());
     }
