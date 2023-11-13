@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: 21
-          distribution: 'zulu' # Alternative distribution options are available.
+          distribution: 'microsoft' # Alternative distribution options are available.
           cache: 'maven'
 
       - name: Cache SonarCloud packages

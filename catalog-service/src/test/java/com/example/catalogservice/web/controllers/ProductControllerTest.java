@@ -7,8 +7,8 @@
 package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -69,20 +69,21 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class)
                 .value(
-                        response -> {
-                            assertAll(
-                                    () -> assertTrue(response.isFirst()),
-                                    () -> assertTrue(response.isLast()),
-                                    () -> assertFalse(response.hasNext()),
-                                    () -> assertFalse(response.hasPrevious()),
-                                    () -> assertEquals(3, response.totalElements()),
-                                    () -> assertEquals(1, response.pageNumber()),
-                                    () -> assertEquals(1, response.totalPages()),
-                                    () ->
-                                            assertEquals(
-                                                    productResponseList.size(),
-                                                    response.data().size()));
-                        });
+                        response ->
+                                assertThat(response)
+                                        .isNotNull()
+                                        .satisfies(
+                                                r -> {
+                                                    assertThat(r.isFirst()).isTrue();
+                                                    assertThat(r.isLast()).isTrue();
+                                                    assertThat(r.hasNext()).isFalse();
+                                                    assertThat(r.hasPrevious()).isFalse();
+                                                    assertThat(r.totalElements()).isEqualTo(3);
+                                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                                    assertThat(r.totalPages()).isEqualTo(1);
+                                                    assertThat(r.data().size())
+                                                            .isEqualTo(productResponseList.size());
+                                                }));
     }
 
     @Test
