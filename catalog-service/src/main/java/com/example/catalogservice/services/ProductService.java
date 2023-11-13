@@ -163,7 +163,9 @@ public class ProductService {
                 .flatMap(productRepository::save)
                 .map(
                         savedProduct -> {
-                            streamBridge.send("inventory-out-0", productRequest);
+                            streamBridge.send(
+                                    "inventory-out-0",
+                                    this.productMapper.toProductDto(productRequest));
                             return savedProduct;
                         })
                 .onErrorResume(

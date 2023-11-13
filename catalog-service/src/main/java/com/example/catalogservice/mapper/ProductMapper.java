@@ -9,6 +9,7 @@ package com.example.catalogservice.mapper;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.common.dtos.ProductDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -22,6 +23,8 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "inStock", ignore = true)
     Product toEntity(ProductRequest productRequest);
+
+    ProductDto toProductDto(ProductRequest productRequest);
 
     @Mapping(target = "inStock", ignore = true)
     @Mapping(target = "id", ignore = true)
