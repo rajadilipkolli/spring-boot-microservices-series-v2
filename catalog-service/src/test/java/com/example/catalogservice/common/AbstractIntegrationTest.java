@@ -10,6 +10,7 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.catalogservice.TestCatalogServiceApplication;
+import com.example.catalogservice.config.TestKafkaListenerConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false"},
-        classes = TestCatalogServiceApplication.class)
+        classes = {TestCatalogServiceApplication.class, TestKafkaListenerConfig.class})
 @AutoConfigureWebTestClient
 @AutoConfigureObservability(tracing = false)
 public abstract class AbstractIntegrationTest {

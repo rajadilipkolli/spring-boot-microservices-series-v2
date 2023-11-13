@@ -15,25 +15,27 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
+import com.example.catalogservice.config.TestKafkaListenerConfig;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
-import com.example.common.dtos.ProductDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,7 +46,7 @@ import reactor.core.publisher.Mono;
 class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Autowired private ProductRepository productRepository;
-    @Autowired private ApplicationContext context;
+    @Autowired private TestKafkaListenerConfig testKafkaListenerConfig;
 
     public static MockWebServer mockWebServer;
 
@@ -467,12 +469,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldCreateNewProduct() {
-        ProductDto productDto = new ProductDto("code 4", "name 4", "description 4", 19.0);
+        ProductRequest productRequest =
+                new ProductRequest("code 4", "name 4", "description 4", 19.0);
         webTestClient
                 .post()
                 .uri("/api/catalog")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(productDto), ProductDto.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isCreated()
@@ -484,24 +487,33 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.id")
                 .isNotEmpty()
                 .jsonPath("$.code")
-                .isEqualTo(productDto.code())
+                .isEqualTo(productRequest.code())
                 .jsonPath("$.productName")
-                .isEqualTo(productDto.productName())
+                .isEqualTo(productRequest.productName())
                 .jsonPath("$.description")
-                .isEqualTo(productDto.description())
+                .isEqualTo(productRequest.description())
                 .jsonPath("$.price")
-                .isEqualTo(productDto.price());
+                .isEqualTo(productRequest.price());
+
+        Awaitility.await()
+                .atMost(15, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofSeconds(1))
+                .pollDelay(Duration.ofSeconds(1))
+                .untilAsserted(
+                        () ->
+                                assertThat(testKafkaListenerConfig.getLatch().getCount())
+                                        .isEqualTo(9L));
     }
 
     @Test
     void shouldThrowConflictForCreateNewProduct() {
-        ProductDto productDto = new ProductDto("P001", "name 4", "description 4", 19.0);
+        ProductRequest productRequest = new ProductRequest("P001", "name 4", "description 4", 19.0);
 
         webTestClient
                 .post()
                 .uri("/api/catalog")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(productDto), ProductDto.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isEqualTo(HttpStatus.CONFLICT)
@@ -526,13 +538,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() {
-        ProductDto productDto = new ProductDto(null, null, null, null);
+        ProductRequest productRequest = new ProductRequest(null, null, null, null);
 
         webTestClient
                 .post()
                 .uri("/api/catalog")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(productDto)
+                .bodyValue(productRequest)
                 .exchange()
                 .expectStatus()
                 .isBadRequest()
