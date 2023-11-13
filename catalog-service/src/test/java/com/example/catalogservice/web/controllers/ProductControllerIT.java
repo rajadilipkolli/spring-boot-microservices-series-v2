@@ -9,10 +9,6 @@ package com.example.catalogservice.web.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.config.TestKafkaListenerConfig;
@@ -27,10 +23,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -140,15 +134,19 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody(PagedResult.class)
                 .value(
                         response ->
-                                assertAll(
-                                        () -> assertThat(response.isFirst()).isTrue(),
-                                        () -> assertThat(response.isLast()).isTrue(),
-                                        () -> assertThat(response.hasNext()).isFalse(),
-                                        () -> assertThat(response.hasPrevious()).isFalse(),
-                                        () -> assertThat(response.totalElements()).isZero(),
-                                        () -> assertThat(response.pageNumber()).isEqualTo(1),
-                                        () -> assertThat(response.totalPages()).isZero(),
-                                        () -> assertThat(response.data()).isEmpty()));
+                                assertThat(response)
+                                        .isNotNull()
+                                        .satisfies(
+                                                r -> {
+                                                    assertThat(r.isFirst()).isTrue();
+                                                    assertThat(r.isLast()).isTrue();
+                                                    assertThat(r.hasNext()).isFalse();
+                                                    assertThat(r.hasPrevious()).isFalse();
+                                                    assertThat(r.totalElements()).isZero();
+                                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                                    assertThat(r.totalPages()).isZero();
+                                                    assertThat(r.data()).isEmpty();
+                                                }));
 
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
     }
@@ -176,15 +174,20 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody(PagedResult.class)
                 .value(
                         response ->
-                                assertAll(
-                                        () -> assertTrue(response.isFirst()),
-                                        () -> assertTrue(response.isLast()),
-                                        () -> assertFalse(response.hasNext()),
-                                        () -> assertFalse(response.hasPrevious()),
-                                        () -> assertEquals(3, response.totalElements()),
-                                        () -> assertEquals(1, response.pageNumber()),
-                                        () -> assertEquals(1, response.totalPages()),
-                                        () -> assertEquals(3, response.data().size())));
+                                assertThat(response)
+                                        .isNotNull()
+                                        .satisfies(
+                                                r -> {
+                                                    assertThat(r.isFirst()).isTrue();
+                                                    assertThat(r.isLast()).isTrue();
+                                                    assertThat(r.hasNext()).isFalse();
+                                                    assertThat(r.hasPrevious()).isFalse();
+                                                    assertThat(r.totalElements()).isEqualTo(3);
+                                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                                    assertThat(r.totalPages()).isEqualTo(1);
+                                                    assertThat(r.data().size())
+                                                            .isEqualTo(savedProductList.size());
+                                                }));
 
         // Then, As it is still failing state should not change
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
@@ -495,8 +498,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.price")
                 .isEqualTo(productRequest.price());
 
-        Awaitility.await()
-                .atMost(15, TimeUnit.SECONDS)
+        await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofSeconds(1))
                 .pollDelay(Duration.ofSeconds(1))
                 .untilAsserted(
@@ -566,13 +568,16 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldUpdateProduct() {
         Product product = savedProductList.get(0);
-        product.setDescription("Updated Catalog");
+
+        ProductRequest productRequest =
+                new ProductRequest(
+                        product.getCode(), product.getProductName(), "Updated Catalog", 100D);
 
         webTestClient
                 .put()
                 .uri("/api/catalog/{id}", product.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(product), Product.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -586,9 +591,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.productName")
                 .value(is(product.getProductName()))
                 .jsonPath("$.description")
-                .value(is(product.getDescription()))
+                .value(is("Updated Catalog"))
                 .jsonPath("$.price")
-                .value(is(product.getPrice()));
+                .value(is(100.00));
     }
 
     @Test
