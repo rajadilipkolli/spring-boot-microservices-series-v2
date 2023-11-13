@@ -13,7 +13,16 @@ public record ProductResponse(
         String description,
         double price,
         boolean inStock) {
-    public ProductResponse updateProductAvailability(boolean inStock) {
-        return new ProductResponse(id, code, productName, description, price, inStock);
+
+    public ProductResponse withInStock(final boolean inStock) {
+        return this.inStock == inStock
+                ? this
+                : new ProductResponse(
+                        this.id,
+                        this.code,
+                        this.productName,
+                        this.description,
+                        this.price,
+                        inStock);
     }
 }

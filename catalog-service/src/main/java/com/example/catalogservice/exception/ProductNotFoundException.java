@@ -21,6 +21,13 @@ public class ProductNotFoundException extends ErrorResponseException {
                 null);
     }
 
+    public ProductNotFoundException(String productCode) {
+        super(
+                HttpStatus.NOT_FOUND,
+                asProblemDetail("Product with code " + productCode + " not found"),
+                null);
+    }
+
     private static ProblemDetail asProblemDetail(String message) {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, message);

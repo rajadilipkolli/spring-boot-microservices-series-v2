@@ -188,19 +188,22 @@ class ProductControllerTest {
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
-        Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        ProductDto productDto = new ProductDto("code 1", "Updated name", "description 1", 9.0);
+        Product product =
+                new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
+        ProductRequest productRequest =
+                new ProductRequest("code 1", "Updated name", "description 1", 9.0);
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
-        given(productService.updateProduct(any(ProductRequest.class), any(ProductResponse.class)))
+                new ProductResponse(
+                        productId, "code 1", "Updated name", "description 1", 9.0, true);
+        given(productService.findById(productId)).willReturn(Mono.just(product));
+        given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
                 .willReturn(Mono.just(productResponse));
 
         webTestClient
                 .put()
-                .uri("/api/catalog/{id}", product.getId())
+                .uri("/api/catalog/{id}", productId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(productDto), ProductDto.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -221,14 +224,14 @@ class ProductControllerTest {
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
         given(productService.findById(productId)).willReturn(Mono.empty());
-        Product product =
-                new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
+        ProductRequest productRequest =
+                new ProductRequest("code 1", "Updated name", "description 1", 9.0);
 
         webTestClient
                 .put()
-                .uri("/api/catalog/{id}", product.getId())
+                .uri("/api/catalog/{id}", productId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(product), Product.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isNotFound();
@@ -240,7 +243,7 @@ class ProductControllerTest {
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
         ProductResponse productResponse =
                 new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
+        given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
         webTestClient
@@ -265,7 +268,7 @@ class ProductControllerTest {
     @Test
     void shouldReturn404WhenDeletingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findById(productId)).willReturn(Mono.empty());
+        given(productService.findByIdWithMapping(productId)).willReturn(Mono.empty());
 
         webTestClient
                 .delete()

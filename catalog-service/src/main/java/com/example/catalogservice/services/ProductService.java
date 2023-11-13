@@ -35,7 +35,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @Loggable
 public class ProductService {
 
@@ -57,7 +57,6 @@ public class ProductService {
         this.streamBridge = streamBridge;
     }
 
-    @Transactional(readOnly = true)
     @Observed(name = "product.findAll", contextualName = "find-all-products")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
@@ -75,7 +74,7 @@ public class ProductService {
                         tuple -> {
                             long count = tuple.getT1();
 
-                            List<ProductResponse> products =
+                            List<ProductResponse> productResponseList =
                                     count == 0
                                             ? Collections.emptyList()
                                             : tuple.getT2().stream()
@@ -85,11 +84,14 @@ public class ProductService {
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
-                                                new PageImpl<>(products, pageable, count)));
+                                                new PageImpl<>(
+                                                        productResponseList, pageable, count)));
                             }
 
                             List<String> productCodeList =
-                                    products.stream().map(ProductResponse::code).toList();
+                                    productResponseList.stream()
+                                            .map(ProductResponse::code)
+                                            .toList();
 
                             return getInventoryByProductCodes(productCodeList)
                                     .collectMap(
@@ -99,7 +101,8 @@ public class ProductService {
                                             inventoriesMap -> {
                                                 List<ProductResponse> updatedProducts =
                                                         updateProductAvailability(
-                                                                products, inventoriesMap);
+                                                                productResponseList,
+                                                                inventoriesMap);
                                                 return new PagedResult<>(
                                                         new PageImpl<>(
                                                                 updatedProducts, pageable, count));
@@ -114,7 +117,7 @@ public class ProductService {
                         productResponse -> {
                             int availableQuantity =
                                     inventoriesMap.getOrDefault(productResponse.code(), 0);
-                            return productResponse.updateProductAvailability(availableQuantity > 0);
+                            return productResponse.withInStock(availableQuantity > 0);
                         })
                 .collect(Collectors.toList());
     }
@@ -123,7 +126,6 @@ public class ProductService {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
-    @Transactional(readOnly = true)
     @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<ProductResponse> findProductById(Long id) {
         return productRepository
@@ -145,15 +147,16 @@ public class ProductService {
         return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
-    @Transactional(readOnly = true)
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<ProductResponse> findProductByProductCode(String productCode) {
         return productRepository
                 .findByCodeAllIgnoreCase(productCode)
-                .map(productMapper::toProductResponse);
+                .map(productMapper::toProductResponse)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
     }
 
     // saves product to db and sends message that new product is available for inventory
+    @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         return Mono.just(this.productMapper.toEntity(productRequest))
@@ -172,24 +175,12 @@ public class ProductService {
                 .map(productMapper::toProductResponse);
     }
 
-    public Mono<ProductResponse> updateProduct(
-            ProductRequest productRequest, ProductResponse productResponse) {
-
-        Product product = productMapper.toEntity(productResponse);
-        // Update the post object with data from postRequest
-        productMapper.mapProductWithRequest(productRequest, product);
-
-        // Save the updated post object
-        Mono<Product> updatedProduct = productRepository.save(product);
-        return updatedProduct.map(productMapper::toProductResponse);
-    }
-
+    @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
         return productRepository.deleteById(id);
     }
 
-    @Transactional(readOnly = true)
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
         log.info("checking if products Exists :{}", productCodes);
         return productRepository
@@ -197,9 +188,21 @@ public class ProductService {
                 .map(count -> count == productCodes.size());
     }
 
-    @Transactional(readOnly = true)
     @Observed(name = "product.findById", contextualName = "findById")
-    public Mono<ProductResponse> findById(Long id) {
-        return productRepository.findById(id).map(productMapper::toProductResponse);
+    public Mono<ProductResponse> findByIdWithMapping(Long id) {
+        return findById(id).map(productMapper::toProductResponse);
+    }
+
+    @Transactional
+    public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
+        // Update the post object with data from postRequest
+        productMapper.mapProductWithRequest(productRequest, product);
+
+        // Save the updated post object
+        return productRepository.save(product).map(productMapper::toProductResponse);
+    }
+
+    public Mono<Product> findById(Long id) {
+        return this.productRepository.findById(id);
     }
 }

@@ -37,7 +37,7 @@ public class TestCatalogServiceApplication {
     @ServiceConnection
     KafkaContainer kafkaContainer(DynamicPropertyRegistry dynamicPropertyRegistry) {
         KafkaContainer kafkaContainer =
-                new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.1"))
+                new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.2"))
                         .withKraft()
                         .withReuse(true);
         dynamicPropertyRegistry.add(
