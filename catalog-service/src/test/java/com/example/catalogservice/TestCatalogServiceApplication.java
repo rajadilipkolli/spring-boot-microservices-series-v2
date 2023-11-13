@@ -46,6 +46,7 @@ public class TestCatalogServiceApplication {
     }
 
     public static void main(String[] args) {
+        System.setProperty("spring.profiles.active", "test");
         SpringApplication.from(CatalogServiceApplication::main)
                 .with(TestCatalogServiceApplication.class)
                 .run(args);

@@ -14,7 +14,9 @@ import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
+import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
@@ -39,20 +41,23 @@ class ProductControllerTest {
 
     @MockBean private ProductService productService;
 
-    private List<Product> productList;
+    private List<ProductResponse> productResponseList;
 
     @BeforeEach
     void setUp() {
-        this.productList = new ArrayList<>();
-        this.productList.add(new Product(1L, "code 1", "name 1", "description 1", 9.0, true));
-        this.productList.add(new Product(2L, "code 2", "name 2", "description 2", 10.0, true));
-        this.productList.add(new Product(3L, "code 3", "name 3", "description 3", 11.0, true));
+        this.productResponseList = new ArrayList<>();
+        this.productResponseList.add(
+                new ProductResponse(1L, "code 1", "name 1", "description 1", 9.0, true));
+        this.productResponseList.add(
+                new ProductResponse(2L, "code 2", "name 2", "description 2", 10.0, true));
+        this.productResponseList.add(
+                new ProductResponse(3L, "code 3", "name 3", "description 3", 11.0, true));
     }
 
     @Test
     void shouldFetchAllProducts() {
-        Page<Product> page = new PageImpl<>(productList);
-        PagedResult<Product> pagedResult = new PagedResult<>(page);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
+        PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
         given(productService.findAllProducts(0, 10, "id", "asc"))
                 .willReturn(Mono.just(pagedResult));
 
@@ -73,15 +78,19 @@ class ProductControllerTest {
                                     () -> assertEquals(3, response.totalElements()),
                                     () -> assertEquals(1, response.pageNumber()),
                                     () -> assertEquals(1, response.totalPages()),
-                                    () -> assertEquals(productList.size(), response.data().size()));
+                                    () ->
+                                            assertEquals(
+                                                    productResponseList.size(),
+                                                    response.data().size()));
                         });
     }
 
     @Test
     void shouldFindProductById() {
         Long productId = 1L;
-        Product product = new Product(productId, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.findProductById(productId)).willReturn(Mono.just(product));
+        ProductResponse productResponse =
+                new ProductResponse(productId, "code 1", "name 1", "description 1", 9.0, true);
+        given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
         webTestClient
                 .get()
@@ -91,15 +100,15 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(product.getId())
+                .isEqualTo(productResponse.id())
                 .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .isEqualTo(productResponse.code())
                 .jsonPath("$.productName")
-                .isEqualTo(product.getProductName())
+                .isEqualTo(productResponse.productName())
                 .jsonPath("$.description")
-                .isEqualTo(product.getDescription())
+                .isEqualTo(productResponse.description())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(productResponse.price());
     }
 
     @Test
@@ -118,8 +127,10 @@ class ProductControllerTest {
 
     @Test
     void shouldCreateProduct() {
-        Product product = new Product(1L, "code 1", "name 1", "description 1", 9.0, true);
-        given(productService.saveProduct(any(ProductDto.class))).willReturn(Mono.just(product));
+        ProductResponse productResponse =
+                new ProductResponse(1L, "code 1", "name 1", "description 1", 9.0, true);
+        given(productService.saveProduct(any(ProductRequest.class)))
+                .willReturn(Mono.just(productResponse));
 
         ProductDto productDto = new ProductDto("code 1", "name 1", "description 1", 9.0);
         webTestClient
@@ -178,15 +189,18 @@ class ProductControllerTest {
     void shouldUpdateProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
-        given(productService.updateProduct(any(Product.class)))
-                .willAnswer((invocation) -> Mono.just(invocation.getArgument(0)));
+        ProductDto productDto = new ProductDto("code 1", "Updated name", "description 1", 9.0);
+        ProductResponse productResponse =
+                new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
+        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
+        given(productService.updateProduct(any(ProductRequest.class), any(ProductResponse.class)))
+                .willReturn(Mono.just(productResponse));
 
         webTestClient
                 .put()
                 .uri("/api/catalog/{id}", product.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(product), Product.class)
+                .body(Mono.just(productDto), ProductDto.class)
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -224,7 +238,9 @@ class ProductControllerTest {
     void shouldDeleteProduct() {
         Long productId = 1L;
         Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
+        ProductResponse productResponse =
+                new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
+        given(productService.findById(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
         webTestClient

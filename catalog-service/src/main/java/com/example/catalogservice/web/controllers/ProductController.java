@@ -7,11 +7,11 @@
 package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.config.logging.Loggable;
-import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
+import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
-import com.example.common.dtos.ProductDto;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -39,7 +39,7 @@ public class ProductController {
     }
 
     @GetMapping
-    public Mono<PagedResult<Product>> getAllPosts(
+    public Mono<PagedResult<ProductResponse>> getAllPosts(
             @RequestParam(
                             value = "pageNo",
                             defaultValue = AppConstants.DEFAULT_PAGE_NUMBER,
@@ -68,12 +68,13 @@ public class ProductController {
     //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     //  @RateLimiter(name="default")
     //  @Bulkhead(name = "product-api")
-    public Mono<ResponseEntity<Product>> getProductById(@PathVariable Long id) {
+    public Mono<ResponseEntity<ProductResponse>> getProductById(@PathVariable Long id) {
         return productService.findProductById(id).map(ResponseEntity::ok);
     }
 
     @GetMapping("/productCode/{productCode}")
-    public Mono<ResponseEntity<Product>> getProductByProductCode(@PathVariable String productCode) {
+    public Mono<ResponseEntity<ProductResponse>> getProductByProductCode(
+            @PathVariable String productCode) {
         return productService
                 .findProductByProductCode(productCode)
                 .map(ResponseEntity::ok)
@@ -87,31 +88,32 @@ public class ProductController {
     }
 
     @PostMapping
-    public Mono<ResponseEntity<Product>> createProduct(@RequestBody @Valid ProductDto productDto) {
+    public Mono<ResponseEntity<ProductResponse>> createProduct(
+            @RequestBody @Valid ProductRequest productRequest) {
         return productService
-                .saveProduct(productDto)
+                .saveProduct(productRequest)
                 .map(
                         product ->
                                 ResponseEntity.created(
-                                                URI.create("/api/catalog/id/" + product.getId()))
+                                                URI.create("/api/catalog/id/" + product.id()))
                                         .body(product));
     }
 
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<Product>> updateProduct(
-            @PathVariable Long id, @RequestBody Product product) {
+    public Mono<ResponseEntity<ProductResponse>> updateProduct(
+            @PathVariable Long id, @RequestBody ProductRequest productRequest) {
         return productService
                 .findById(id)
                 .flatMap(
-                        catalogObj -> {
-                            product.setId(id);
-                            return productService.updateProduct(product).map(ResponseEntity::ok);
-                        })
+                        catalogObj ->
+                                productService
+                                        .updateProduct(productRequest, catalogObj)
+                                        .map(ResponseEntity::ok))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Product>> deleteProduct(@PathVariable Long id) {
+    public Mono<ResponseEntity<ProductResponse>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findById(id)
                 .flatMap(
