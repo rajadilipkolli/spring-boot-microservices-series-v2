@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.model.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public record ProductResponse(
@@ -13,7 +14,7 @@ public record ProductResponse(
         String code,
         String productName,
         String description,
-        double price,
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") double price,
         boolean inStock) {
 
     @JsonIgnore

@@ -189,3 +189,7 @@ taskkill /PID <type PID here> /f
 - Fluent-bit only supports AMD architecture hence swithced to pormtail. If you want to use fluent-bit please ensure grafana is started first and then other services are started.
 
 - JOOQ expects `Transactional` annotation on repository though we have it on Service
+
+
+### Tips
+then using `jsonPath` in a mvc test for asserting `BigDecimal` use `jsonPath("$.totalPrice").value(closeTo(100.00, 0.01))` instead of `jsonPath("$.totalPrice").value(100.00))`
