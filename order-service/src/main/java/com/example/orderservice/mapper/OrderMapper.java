@@ -68,7 +68,7 @@ public interface OrderMapper {
     @Mapping(
             target = "totalPrice",
             expression =
-                    "java(items.stream().map(OrderItemResponse::price).reduce(BigDecimal.ZERO, BigDecimal::add))")
+                    "java(items.stream().map(OrderItemResponse::price).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP))")
     @Mapping(source = "id", target = "orderId")
     OrderResponse toResponse(Order order);
 

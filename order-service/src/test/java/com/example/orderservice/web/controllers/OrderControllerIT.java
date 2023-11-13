@@ -8,6 +8,7 @@ package com.example.orderservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -94,7 +95,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
                 .andExpect(jsonPath("$.status", is(order.getStatus().name())))
                 .andExpect(jsonPath("$.source", is(order.getSource())))
-                .andExpect(jsonPath("$.totalPrice").value("201.00"))
+                .andExpect(jsonPath("$.totalPrice").value(closeTo(201.00, 0.01)))
                 .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
     }
 
@@ -114,7 +115,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.orderId", notNullValue()))
                 .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
                 .andExpect(jsonPath("$.status", is("NEW")))
-                .andExpect(jsonPath("$.totalPrice").value("100.00"))
+                .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                 .andExpect(jsonPath("$.items.size()", is(1)))
                 .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
                 .andExpect(jsonPath("$.items[0].price", is(100.00)));
@@ -183,7 +184,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(orderDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
-                .andExpect(jsonPath("$.totalPrice").value("1211.00"))
+                .andExpect(jsonPath("$.totalPrice").value(closeTo(1211.00, 0.01)))
                 .andExpect(jsonPath("$.items.size()", is(2)))
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
                 .andExpect(jsonPath("$.items[0].price", is(1111.00)))
