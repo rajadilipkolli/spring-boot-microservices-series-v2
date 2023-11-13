@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.model.response.InventoryDto;
+import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dtos.ProductDto;
@@ -90,7 +90,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         transitionToClosedState("getInventoryByProductCodes");
 
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(List.of(new InventoryDto("P003", 0))));
+                200, objectMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
 
         webTestClient
                 .get()
@@ -196,7 +196,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.get(0);
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -237,7 +237,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.get(0);
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
 
         webTestClient
                 .get()
@@ -290,7 +290,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.get(0);
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
 
         webTestClient
                 .get()
@@ -325,7 +325,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryDto(product.getCode(), 10)));
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)

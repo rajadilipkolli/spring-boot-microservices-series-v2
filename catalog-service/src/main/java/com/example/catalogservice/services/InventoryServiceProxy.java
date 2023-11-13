@@ -10,7 +10,7 @@ import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
-import com.example.catalogservice.model.response.InventoryDto;
+import com.example.catalogservice.model.response.InventoryResponse;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -62,26 +62,26 @@ public class InventoryServiceProxy {
         this.timeLimiter = timeLimiterRegistry.timeLimiter(DEFAULT);
     }
 
-    public Mono<InventoryDto> getInventoryByProductCode(String productCode) {
+    public Mono<InventoryResponse> getInventoryByProductCode(String productCode) {
         log.info("Fetching inventory information for productCode {}", productCode);
         return executeWithFallback(
                 webClient
                         .get()
                         .uri("/api/inventory/{productCode}", productCode)
                         .retrieve()
-                        .bodyToMono(InventoryDto.class),
+                        .bodyToMono(InventoryResponse.class),
                 throwable -> getInventoryByProductCodeFallBack(productCode, throwable));
     }
 
-    private Mono<InventoryDto> getInventoryByProductCodeFallBack(String code, Throwable e) {
+    private Mono<InventoryResponse> getInventoryByProductCodeFallBack(String code, Throwable e) {
         log.error("Exception occurred while fetching product details for code :{}", code, e);
-        return Mono.just(new InventoryDto(code, 0));
+        return Mono.just(new InventoryResponse(code, 0));
     }
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(
             name = "getInventoryByProductCodes",
             fallbackMethod = "getInventoryByProductCodesFallBack")
-    public Flux<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
+    public Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
         log.info("Fetching inventory information for productCodes : {}", productCodeList);
         return webClient
                 .get()
@@ -92,10 +92,10 @@ public class InventoryServiceProxy {
                             return uriBuilder.build();
                         })
                 .retrieve()
-                .bodyToFlux(InventoryDto.class);
+                .bodyToFlux(InventoryResponse.class);
     }
 
-    private Flux<InventoryDto> getInventoryByProductCodesFallBack(Exception e) {
+    private Flux<InventoryResponse> getInventoryByProductCodesFallBack(Exception e) {
         log.error("Exception occurred while fetching product details", e);
         return Flux.empty();
     }

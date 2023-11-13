@@ -6,6 +6,8 @@
 
 package com.example.catalogservice.model.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public record ProductResponse(
         Long id,
         String code,
@@ -14,6 +16,7 @@ public record ProductResponse(
         double price,
         boolean inStock) {
 
+    @JsonIgnore
     public ProductResponse withInStock(final boolean inStock) {
         return this.inStock == inStock
                 ? this

@@ -12,7 +12,7 @@ import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.InventoryDto;
+import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
@@ -95,8 +95,8 @@ public class ProductService {
 
                             return getInventoryByProductCodes(productCodeList)
                                     .collectMap(
-                                            InventoryDto::productCode,
-                                            InventoryDto::availableQuantity)
+                                            InventoryResponse::productCode,
+                                            InventoryResponse::availableQuantity)
                                     .map(
                                             inventoriesMap -> {
                                                 List<ProductResponse> updatedProducts =
@@ -122,7 +122,7 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    private Flux<InventoryDto> getInventoryByProductCodes(List<String> productCodeList) {
+    private Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
@@ -143,7 +143,7 @@ public class ProductService {
                 .map(productMapper::toProductResponse);
     }
 
-    private Mono<InventoryDto> getInventoryByProductCode(String code) {
+    private Mono<InventoryResponse> getInventoryByProductCode(String code) {
         return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
