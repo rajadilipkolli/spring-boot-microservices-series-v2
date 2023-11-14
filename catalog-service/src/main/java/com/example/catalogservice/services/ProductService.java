@@ -20,7 +20,6 @@ import io.micrometer.observation.annotation.Observed;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -119,7 +118,7 @@ public class ProductService {
                                     inventoriesMap.getOrDefault(productResponse.code(), 0);
                             return productResponse.withInStock(availableQuantity > 0);
                         })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {

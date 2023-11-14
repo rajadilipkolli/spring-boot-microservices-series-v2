@@ -81,8 +81,8 @@ class ProductControllerTest {
                                                     assertThat(r.totalElements()).isEqualTo(3);
                                                     assertThat(r.pageNumber()).isEqualTo(1);
                                                     assertThat(r.totalPages()).isEqualTo(1);
-                                                    assertThat(r.data().size())
-                                                            .isEqualTo(productResponseList.size());
+                                                    assertThat(r.data())
+                                                            .hasSameSizeAs(productResponseList);
                                                 }));
     }
 
