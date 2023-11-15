@@ -64,9 +64,10 @@ public class InventoryOrderManageService {
 
             int productCount = orderItemDto.getQuantity();
             if (productCount <= inventoryFromDB.getAvailableQuantity()) {
-                inventoryFromDB.setReservedItems(inventoryFromDB.getReservedItems() + productCount);
-                inventoryFromDB.setAvailableQuantity(
-                        inventoryFromDB.getAvailableQuantity() - productCount);
+                inventoryFromDB
+                        .setReservedItems(inventoryFromDB.getReservedItems() + productCount)
+                        .setAvailableQuantity(
+                                inventoryFromDB.getAvailableQuantity() - productCount);
                 updatedInventoryList.add(inventoryFromDB);
             } else {
                 log.info(
@@ -114,8 +115,9 @@ public class InventoryOrderManageService {
                     inventory.setReservedItems(inventory.getReservedItems() - productCount);
                 } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
                         && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource())) {
-                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
-                    inventory.setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
+                    inventory
+                            .setReservedItems(inventory.getReservedItems() - productCount)
+                            .setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
                 }
             }
         }

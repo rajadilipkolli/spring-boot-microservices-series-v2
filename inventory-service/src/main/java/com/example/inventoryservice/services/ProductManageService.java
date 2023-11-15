@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
 </p>
 ***/
 
@@ -19,8 +19,7 @@ public class ProductManageService {
     private final InventoryRepository inventoryRepository;
 
     public void manage(ProductDto productDto) {
-        Inventory inventory = new Inventory();
-        inventory.setProductCode(productDto.code());
+        Inventory inventory = new Inventory().setProductCode(productDto.code());
         this.inventoryRepository.save(inventory);
     }
 }
