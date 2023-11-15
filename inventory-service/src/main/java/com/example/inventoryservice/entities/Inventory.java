@@ -15,12 +15,10 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "inventory")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Inventory {
@@ -37,4 +35,24 @@ public class Inventory {
 
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
+
+    public Inventory setId(Long id) {
+        this.id = id;
+        return this;
+    }
+
+    public Inventory setProductCode(String productCode) {
+        this.productCode = productCode;
+        return this;
+    }
+
+    public Inventory setAvailableQuantity(Integer availableQuantity) {
+        this.availableQuantity = availableQuantity;
+        return this;
+    }
+
+    public Inventory setReservedItems(Integer reservedItems) {
+        this.reservedItems = reservedItems;
+        return this;
+    }
 }
