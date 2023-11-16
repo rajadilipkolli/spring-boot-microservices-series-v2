@@ -1,7 +1,7 @@
 server:
   port: 18282
   servlet:
-    context-path: /${spring.application.name}
+    contextPath: /${spring.application.name}
   forward-headers-strategy: framework
 spring:
   application:
@@ -17,8 +17,8 @@ spring:
               type:
                 headers: true
     streams:
-      client-id: order-service-stream-client
-      replication-factor: 1
+      clientId: order-service-stream-client
+      replicationFactor: 1
       producer:
         acks: all
       application-id: ${spring.application.name}

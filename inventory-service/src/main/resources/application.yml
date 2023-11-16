@@ -1,7 +1,7 @@
 server:
   port: 18181
   servlet:
-    context-path: /${spring.application.name}
+    contextPath: /${spring.application.name}
 spring:
   application:
     name: inventory-service
