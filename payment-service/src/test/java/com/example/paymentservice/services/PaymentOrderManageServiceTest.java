@@ -2,7 +2,7 @@
 package com.example.paymentservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
@@ -94,7 +94,8 @@ class PaymentOrderManageServiceTest {
         given(customerRepository.findById(1L)).willReturn(Optional.empty());
 
         // Assert
-        assertThrows(CustomerNotFoundException.class, () -> orderManageService.confirm(orderDto));
+        assertThatExceptionOfType(CustomerNotFoundException.class)
+                .isThrownBy(() -> orderManageService.confirm(orderDto));
     }
 
     @Test

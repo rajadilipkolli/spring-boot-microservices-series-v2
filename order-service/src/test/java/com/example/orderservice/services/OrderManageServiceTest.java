@@ -6,9 +6,10 @@
 
 package com.example.orderservice.services;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,7 +40,7 @@ class OrderManageServiceTest {
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        Assertions.assertEquals("CONFIRMED", actual.getStatus());
+        assertThat(actual.getStatus()).isEqualTo("CONFIRMED");
     }
 
     @Test
@@ -59,7 +60,7 @@ class OrderManageServiceTest {
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        Assertions.assertEquals("REJECTED", actual.getStatus());
+        assertThat(actual.getStatus()).isEqualTo("REJECTED");
     }
 
     @Test
@@ -79,8 +80,8 @@ class OrderManageServiceTest {
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        Assertions.assertEquals("ROLLBACK", actual.getStatus());
-        Assertions.assertEquals("PAYMENT", actual.getSource());
+        assertThat(actual.getStatus()).isEqualTo("ROLLBACK");
+        assertThat(actual.getSource()).isEqualTo("PAYMENT");
     }
 
     @Test
@@ -100,7 +101,7 @@ class OrderManageServiceTest {
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        Assertions.assertEquals("ROLLBACK", actual.getStatus());
-        Assertions.assertEquals("INVENTORY", actual.getSource());
+        assertThat(actual.getStatus()).isEqualTo("ROLLBACK");
+        assertThat(actual.getSource()).isEqualTo("INVENTORY");
     }
 }
