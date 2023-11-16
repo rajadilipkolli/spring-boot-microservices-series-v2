@@ -11,10 +11,10 @@ jobs:
     name: Run Unit & Integration Tests
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3.1.0
+        uses: actions/setup-java@v3.13.0
         with:
           java-version: 17
           distribution: 'adopt'
