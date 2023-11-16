@@ -39,8 +39,12 @@ management:
   metrics:
     distribution:
       percentiles-histogram:
-        http.server.requests: true
-        resilience4j.circuitbreaker.calls: true
+        http:
+          server:
+            requests: true
+        resilience4j:
+          circuitbreaker:
+            calls: true
   endpoint:
     health:
       probes:
@@ -95,15 +99,22 @@ spring:
           fail_on_pagination_over_collection_fetch: true
           in_clause_parameter_padding: true
           plan_cache_max_size: 4096
-        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 1
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 5
     # show-sql: true
   main:
     allow-bean-definition-overriding: true
   mvc:
     problemdetails:
       enabled: true
-  output.ansi.enabled: ALWAYS
-  threads.virtual.enabled: true
+  output:
+    ansi:
+      enabled: ALWAYS
+  threads:
+    virtual:
+      enabled: true
 
 #SpringDoc Properties
 springdoc:

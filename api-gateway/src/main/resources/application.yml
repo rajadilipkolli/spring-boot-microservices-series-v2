@@ -35,8 +35,9 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 60
-                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter:
+                  replenishRate: 60
+                  burstCapacity: 10
         - id: inventory-service
           predicates:
             - Path=/inventory-service/**

@@ -10,7 +10,9 @@ spring:
     password: password
     driverClassName: org.h2.Driver
   jpa:
-    spring.jpa.database-platform: org.hibernate.dialect.H2Dialect
+    spring:
+      jpa:
+        database-platform: org.hibernate.dialect.H2Dialect
   config:
     import: optional:configserver:${CONFIG_SERVER:http://localhost:8888}/
 application:
