@@ -24,7 +24,7 @@ public class HttpClientConfig {
     private final ApplicationProperties applicationProperties;
 
     @Bean
-    public HttpServiceProxyFactory httpServiceProxyFactory(
+    HttpServiceProxyFactory httpServiceProxyFactory(
             RestClient.Builder builder, ObservationRegistry observationRegistry) {
         RestClient restClient =
                 builder.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -36,8 +36,7 @@ public class HttpClientConfig {
     }
 
     @Bean
-    public CatalogServiceProxy catalogServiceProxy(
-            HttpServiceProxyFactory httpServiceProxyFactory) {
+    CatalogServiceProxy catalogServiceProxy(HttpServiceProxyFactory httpServiceProxyFactory) {
         return httpServiceProxyFactory.createClient(CatalogServiceProxy.class);
     }
 }

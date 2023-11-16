@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 public class ApiGatewayConfiguration {
 
     @Bean
-    public RouteLocator gatewayRouter(RouteLocatorBuilder builder) {
+    RouteLocator gatewayRouter(RouteLocatorBuilder builder) {
         return builder.routes()
                 .route(
                         routeSpec ->

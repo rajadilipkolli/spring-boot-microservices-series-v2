@@ -21,12 +21,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class CircuitBreakerConfiguration {
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
     @Bean
-    public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
+    Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
         return factory ->
                 factory.configureDefault(
                         id ->

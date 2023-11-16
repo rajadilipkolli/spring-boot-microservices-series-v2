@@ -45,7 +45,7 @@ public class SwaggerConfig {
 
     @Bean
     @Lazy(value = false)
-    public List<GroupedOpenApi> groupedOpenApis(
+    List<GroupedOpenApi> groupedOpenApis(
             RouteDefinitionLocator locator, SwaggerUiConfigProperties swaggerUiConfigProperties) {
         Set<AbstractSwaggerUiConfigProperties.SwaggerUrl> swaggerUrls =
                 swaggerUiConfigProperties.getUrls();
