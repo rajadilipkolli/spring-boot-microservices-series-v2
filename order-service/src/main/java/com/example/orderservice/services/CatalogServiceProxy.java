@@ -16,5 +16,5 @@ import org.springframework.web.service.annotation.GetExchange;
 public interface CatalogServiceProxy {
 
     @GetExchange("/api/catalog/exists")
-    boolean productsExistsByCodes(@RequestParam(name = "productCodes") List<String> productCodes);
+    boolean productsExistsByCodes(@RequestParam List<String> productCodes);
 }
