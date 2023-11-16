@@ -8,7 +8,7 @@ spring:
     url: jdbc:h2:file:/data/demo
     username: sa
     password: password
-    driverClassName: org.h2.Driver
+    driver-class-name: org.h2.Driver
   jpa:
     spring:
       jpa:
@@ -17,4 +17,4 @@ spring:
     import: optional:configserver:${CONFIG_SERVER:http://localhost:8888}/
 application:
   catalog-service-url: http://localhost:18080/catalog-service
-  byPassCircuitBreaker: true
+  by-pass-circuit-breaker: true

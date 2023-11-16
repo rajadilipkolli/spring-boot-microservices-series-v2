@@ -36,8 +36,8 @@ spring:
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter:
-                  replenishRate: 60
-                  burstCapacity: 10
+                  replenish-rate: 60
+                  burst-capacity: 10
         - id: inventory-service
           predicates:
             - Path=/inventory-service/**
@@ -46,7 +46,7 @@ spring:
             - name: CircuitBreaker
               args:
                 name: exampleSlowCircuitBreaker
-                fallbackUri: forward:/fallback/api/inventory
+                fallback-uri: forward:/fallback/api/inventory
         - id: catalog-service
           predicates:
             - Path=/catalog-service/**
@@ -56,10 +56,10 @@ spring:
                 retries: 3
                 method: GET
                 backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
+                  first-backoff: 50ms
+                  max-backoff: 500ms
                   factor: 2
-                  basedOnPreviousValue: true
+                  based-on-previous-value: true
           uri: lb://catalog-service
         - id: payment-service
           predicates:
@@ -77,16 +77,16 @@ spring:
 resilience4j:
   circuitbreaker:
     instances:
-      catalogService:
-        slidingWindowSize: 10
-        permittedNumberOfCallsInHalfOpenState: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10000
-        registerHealthIndicator: true
+      catalog-service:
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000
+        register-health-indicator: true
   timelimiter:
     instances:
-      catalogService:
-        timeoutDuration: 3s
+      catalog-service:
+        timeout-duration: 3s
 
 springdoc:
   cache:
@@ -99,5 +99,5 @@ springdoc:
 # adding this so that List<groupedopenapi> bean will trigger
   group-configs[0]:
     group: api-gateway
-    pathsToMatch: /**
+    paths-to-match: /**
 #  packagesToScan: com.example.api.gateway.web

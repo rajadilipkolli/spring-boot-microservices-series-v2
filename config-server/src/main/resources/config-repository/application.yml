@@ -1,9 +1,9 @@
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    service-url:
+      default-zone: http://localhost:8761/eureka/
   instance:
-    preferIpAddress: true
+    prefer-ip-address: true
 
 jdbc:
   datasource-proxy:
@@ -120,9 +120,9 @@ spring:
 springdoc:
   swagger-ui:
     #For sorting endpoints alphabetically
-    operationsSorter: alpha
+    operations-sorter: alpha
     #For sorting tags alphabetically
-    tagsSorter: alpha
+    tags-sorter: alpha
 ---
 spring:
   config:
@@ -138,7 +138,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://naming-server:8761/eureka/
+      default-zone: http://naming-server:8761/eureka/
 management:
   zipkin:
     tracing:
