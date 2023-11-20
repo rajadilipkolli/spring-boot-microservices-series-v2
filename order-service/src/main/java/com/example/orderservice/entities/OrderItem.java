@@ -64,12 +64,12 @@ public class OrderItem {
             return false;
         }
         Class<?> objectEffectiveClass =
-                o instanceof HibernateProxy
-                        ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass()
+                o instanceof HibernateProxy hp
+                        ? hp.getHibernateLazyInitializer().getPersistentClass()
                         : o.getClass();
         Class<?> thisEffectiveClass =
-                this instanceof HibernateProxy
-                        ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass()
+                this instanceof HibernateProxy hp
+                        ? hp.getHibernateLazyInitializer().getPersistentClass()
                         : this.getClass();
         if (thisEffectiveClass != objectEffectiveClass) {
             return false;
@@ -80,11 +80,8 @@ public class OrderItem {
 
     @Override
     public final int hashCode() {
-        return this instanceof HibernateProxy
-                ? ((HibernateProxy) this)
-                        .getHibernateLazyInitializer()
-                        .getPersistentClass()
-                        .hashCode()
+        return this instanceof HibernateProxy hp
+                ? hp.getHibernateLazyInitializer().getPersistentClass().hashCode()
                 : getClass().hashCode();
     }
 }

@@ -62,7 +62,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindInventoryByProductCode() throws Exception {
-        Inventory inventory = inventoryList.get(0);
+        Inventory inventory = inventoryList.getFirst();
         String productCode = inventory.getProductCode();
 
         this.mockMvc
@@ -83,13 +83,14 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()", is(inventoryList.size())))
                 .andExpect(
-                        jsonPath("$[0].productCode").value(inventoryList.get(0).getProductCode()))
+                        jsonPath("$[0].productCode")
+                                .value(inventoryList.getFirst().getProductCode()))
                 .andExpect(
                         jsonPath("$[0].availableQuantity")
-                                .value(inventoryList.get(0).getAvailableQuantity()))
+                                .value(inventoryList.getFirst().getAvailableQuantity()))
                 .andExpect(
                         jsonPath("$[0].reservedItems")
-                                .value(inventoryList.get(0).getReservedItems()))
+                                .value(inventoryList.getFirst().getReservedItems()))
                 .andExpect(
                         jsonPath("$[1].productCode").value(inventoryList.get(1).getProductCode()))
                 .andExpect(
@@ -136,7 +137,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateInventory() throws Exception {
-        Inventory inventory = inventoryList.get(0);
+        Inventory inventory = inventoryList.getFirst();
         InventoryRequest inventoryRequest = new InventoryRequest(inventory.getProductCode(), 1000);
 
         this.mockMvc
@@ -152,7 +153,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldDeleteInventory() throws Exception {
-        Inventory inventory = inventoryList.get(0);
+        Inventory inventory = inventoryList.getFirst();
 
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))

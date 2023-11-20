@@ -80,12 +80,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.hasNext", is(false)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)))
                 .andExpect(
-                        jsonPath("$.data[0].items.size()", is(orderList.get(0).getItems().size())));
+                        jsonPath(
+                                "$.data[0].items.size()",
+                                is(orderList.getFirst().getItems().size())));
     }
 
     @Test
     void shouldFindOrderById() throws Exception {
-        Order order = orderList.get(0);
+        Order order = orderList.getFirst();
         Long orderId = order.getId();
 
         this.mockMvc
@@ -173,7 +175,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldUpdateOrder() throws Exception {
         mockProductsExistsRequest(true, "product1", "product4");
-        Order order = orderList.get(0);
+        Order order = orderList.getFirst();
 
         OrderRequest orderDto = TestData.getOrderRequest(order);
 
@@ -194,7 +196,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldDeleteOrder() throws Exception {
-        Order order = orderList.get(0);
+        Order order = orderList.getFirst();
 
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
@@ -203,9 +205,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindOrdersByCustomersId() throws Exception {
-        OrderItem orderItem = orderList.get(0).getItems().get(0);
+        OrderItem orderItem = orderList.getFirst().getItems().get(0);
         mockMvc.perform(
-                        get("/api/orders/customer/{id}", orderList.get(0).getCustomerId())
+                        get("/api/orders/customer/{id}", orderList.getFirst().getCustomerId())
                                 .queryParam("page", "0")
                                 .queryParam("size", "1"))
                 .andExpect(status().isOk())
@@ -213,7 +215,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath(
                                 "$.data[0].customerId",
-                                is(orderList.get(0).getCustomerId()),
+                                is(orderList.getFirst().getCustomerId()),
                                 Long.class))
                 .andExpect(
                         jsonPath(

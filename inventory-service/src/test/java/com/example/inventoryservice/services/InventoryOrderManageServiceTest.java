@@ -213,8 +213,8 @@ class InventoryOrderManageServiceTest {
                 .satisfies(
                         inventory -> {
                             List<? extends Inventory> list = inventory.stream().toList();
-                            assertThat(list.get(0).getAvailableQuantity()).isIn(20, 40);
-                            assertThat(list.get(0).getReservedItems()).isIn(-10, -20);
+                            assertThat(list.getFirst().getAvailableQuantity()).isIn(20, 40);
+                            assertThat(list.getFirst().getReservedItems()).isIn(-10, -20);
                             assertThat(list.get(1).getAvailableQuantity()).isIn(20, 40);
                             assertThat(list.get(1).getReservedItems()).isIn(-10, -20);
                         });

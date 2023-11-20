@@ -110,7 +110,7 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                     INVENTORY.getClass().getField(sortFieldName.toUpperCase(Locale.ROOT));
             sortField = (TableField<InventoryRecord, Object>) tableField.get(INVENTORY);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
-            String errorMessage = String.format("Could not find table field: %s", sortFieldName);
+            String errorMessage = "Could not find table field: %s".formatted(sortFieldName);
             throw new InvalidDataAccessApiUsageException(errorMessage, ex);
         }
         return sortField;

@@ -98,7 +98,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         InsertSetMoreStep<CustomersRecord> insertStepN =
                 dslContext
                         .insertInto(CUSTOMERS)
-                        .set(dslContext.newRecord(CUSTOMERS, customerList.get(0)));
+                        .set(dslContext.newRecord(CUSTOMERS, customerList.getFirst()));
         for (var customer : customerList.subList(1, customerList.size())) {
             insertStepN = insertStepN.newRecord().set(dslContext.newRecord(CUSTOMERS, customer));
         }
@@ -141,7 +141,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     CUSTOMERS.getClass().getField(sortFieldName.toUpperCase(Locale.ROOT));
             sortField = (TableField<CustomersRecord, Object>) tableField.get(CUSTOMERS);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
-            String errorMessage = String.format("Could not find table field: %s", sortFieldName);
+            String errorMessage = "Could not find table field: %s".formatted(sortFieldName);
             throw new InvalidDataAccessApiUsageException(errorMessage, ex);
         }
         return sortField;

@@ -77,7 +77,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindCustomerById() throws Exception {
-        Customer customer = customerList.get(0);
+        Customer customer = customerList.getFirst();
         Long customerId = customer.getId();
 
         this.mockMvc
@@ -92,7 +92,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn404WhenFetchingNonExistingCustomer() throws Exception {
-        long customerId = customerList.get(0).getId() + 99_999;
+        long customerId = customerList.getFirst().getId() + 99_999;
         this.mockMvc
                 .perform(get("/api/customers/{id}", customerId))
                 .andExpect(status().isNotFound())
@@ -110,7 +110,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindCustomerByName() throws Exception {
-        Customer customer = customerList.get(0);
+        Customer customer = customerList.getFirst();
         String customerName = customer.getName();
 
         this.mockMvc
@@ -177,7 +177,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateCustomer() throws Exception {
-        Long customerId = customerList.get(0).getId();
+        Long customerId = customerList.getFirst().getId();
         CustomerRequest customerRequest =
                 new CustomerRequest("Updated text", "first@customer.email", "First Address", 500);
 
@@ -196,7 +196,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
-        long customerId = customerList.get(0).getId() + 99_999;
+        long customerId = customerList.getFirst().getId() + 99_999;
         CustomerRequest customerRequest =
                 new CustomerRequest(
                         "Updated text", "first@customer.email", "First Address", 10_000);
@@ -221,7 +221,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldDeleteCustomer() throws Exception {
-        Customer customer = customerList.get(0);
+        Customer customer = customerList.getFirst();
 
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customer.getId()))
@@ -235,7 +235,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
-        long customerId = customerList.get(0).getId() + 99_999;
+        long customerId = customerList.getFirst().getId() + 99_999;
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customerId))
                 .andExpect(status().isNotFound())

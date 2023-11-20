@@ -198,7 +198,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         transitionToClosedState("default");
 
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
                 200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
@@ -239,7 +239,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         {"message":"Product with id 100 not found"}
                     """);
 
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
                 200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
@@ -292,7 +292,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         {"message":"Product with id 100 not found"}
                     """);
 
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
                 200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
@@ -314,7 +314,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldRetryAndFailAndBreakCloseTheCircuitTest() throws JsonProcessingException {
 
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
         Long productId = product.getId();
         // key here is adding 2nd enqueue request as call is made twice
         mockBackendEndpoint(
@@ -405,7 +405,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldFindProductByProductCode() {
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
 
         webTestClient
                 .get()
@@ -567,7 +567,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldUpdateProduct() {
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
 
         ProductRequest productRequest =
                 new ProductRequest(
@@ -598,7 +598,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldDeleteProduct() {
-        Product product = savedProductList.get(0);
+        Product product = savedProductList.getFirst();
 
         webTestClient
                 .delete()
