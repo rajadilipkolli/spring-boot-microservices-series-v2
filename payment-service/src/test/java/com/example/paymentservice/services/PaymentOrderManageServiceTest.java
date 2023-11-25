@@ -36,7 +36,7 @@ class PaymentOrderManageServiceTest {
     @InjectMocks private PaymentOrderManageService orderManageService;
 
     @Test
-    void testConfirmWithValidOrder() {
+    void confirmWithValidOrder() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);
@@ -60,7 +60,7 @@ class PaymentOrderManageServiceTest {
 
     @ParameterizedTest
     @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
-    void testConfirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
+    void confirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);
@@ -86,7 +86,7 @@ class PaymentOrderManageServiceTest {
     }
 
     @Test
-    void testConfirmWithInvalidCustomer() {
+    void confirmWithInvalidCustomer() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);
@@ -99,7 +99,7 @@ class PaymentOrderManageServiceTest {
     }
 
     @Test
-    void testReserveWithValidOrderAccepted() {
+    void reserveWithValidOrderAccepted() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);
@@ -125,7 +125,7 @@ class PaymentOrderManageServiceTest {
     }
 
     @Test
-    void testReserveWithValidOrderRejected() {
+    void reserveWithValidOrderRejected() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setCustomerId(1L);

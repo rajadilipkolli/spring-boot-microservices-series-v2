@@ -37,4 +37,7 @@ spring:
           json:
             trusted:
               packages: 'com.example.common.dtos'
+  threads:
+    virtual:
+      enabled: true
 #      state-dir: /tmp/kafka-streams/

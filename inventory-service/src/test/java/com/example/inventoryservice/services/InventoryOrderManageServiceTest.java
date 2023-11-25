@@ -47,7 +47,7 @@ class InventoryOrderManageServiceTest {
     @InjectMocks private InventoryOrderManageService inventoryOrderManageService;
 
     @Test
-    void testReserve_AllProductsExist_OrderStatusIsNew_OrderIsAccepted() {
+    void reserve_AllProductsExist_OrderStatusIsNew_OrderIsAccepted() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -77,7 +77,7 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
-    void testReserve_AllProductsExistWithLessQuantity_OrderStatusIsNew_OrderIsRejected() {
+    void reserve_AllProductsExistWithLessQuantity_OrderStatusIsNew_OrderIsRejected() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -107,7 +107,7 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
-    void testReserve_NotAllProductsExist_OrderStatusIsNew_OrderIsNotProcessed() {
+    void reserve_NotAllProductsExist_OrderStatusIsNew_OrderIsNotProcessed() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -132,7 +132,7 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
-    void testReserve_OrderStatusIsNotNew_OrderIsRejected() {
+    void reserve_OrderStatusIsNotNew_OrderIsRejected() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -153,7 +153,7 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
-    void testConfirm() {
+    void confirm() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);
@@ -181,7 +181,7 @@ class InventoryOrderManageServiceTest {
     }
 
     @Test
-    void testConfirmWhenOrderStatusIsROLLBACK() {
+    void confirmWhenOrderStatusIsROLLBACK() {
         // Arrange
         OrderDto orderDto = new OrderDto();
         orderDto.setOrderId(1L);

@@ -34,7 +34,7 @@ class ProductManageServiceTest {
     @InjectMocks private ProductManageService productManageService;
 
     @Test
-    void testManage() {
+    void manage() {
         // Arrange
 
         ProductDto productDto = Instancio.create(ProductDto.class);

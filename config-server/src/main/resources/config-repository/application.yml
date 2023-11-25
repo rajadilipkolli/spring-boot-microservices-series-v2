@@ -135,6 +135,9 @@ spring:
   kafka:
     bootstrap-servers:
     - kafka:29092
+  threads:
+    virtual:
+      enabled: true
 eureka:
   client:
     service-url:
@@ -149,3 +152,6 @@ spring:
     activate:
       on-profile: "native"
     import: optional:configserver:http://localhost:8888/
+  threads:
+    virtual:
+      enabled: true

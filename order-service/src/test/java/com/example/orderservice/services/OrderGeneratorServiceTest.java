@@ -28,7 +28,7 @@ class OrderGeneratorServiceTest {
     @InjectMocks private OrderGeneratorService orderGeneratorService;
 
     @Test
-    void testGenerate() {
+    void generate() {
         // Arrange
         int expectedOrderCount = 10_000;
 

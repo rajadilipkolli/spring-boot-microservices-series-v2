@@ -27,7 +27,7 @@ class InventoryRepositoryTest {
     @Autowired private DataSource datasource;
 
     @Test
-    void testDataSource() {
+    void dataSource() {
         assertThat(datasource).isNotNull().isInstanceOf(HikariDataSource.class);
     }
 }

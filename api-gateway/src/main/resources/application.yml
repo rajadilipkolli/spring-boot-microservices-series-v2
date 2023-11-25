@@ -72,6 +72,9 @@ spring:
   webflux:
     problemdetails:
       enabled: true
+  threads:
+    virtual:
+      enabled: true
 #    base-path: /${spring.application.name}
 
 resilience4j:

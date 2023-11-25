@@ -50,7 +50,7 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @RepeatedTest(value = 60)
-    void testOrderService() {
+    void orderService() {
         EntityExchangeResult<String> r =
                 webTestClient
                         .get()

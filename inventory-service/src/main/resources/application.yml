@@ -32,3 +32,6 @@ spring:
             add:
               type:
                 headers: true
+  threads:
+    virtual:
+      enabled: true

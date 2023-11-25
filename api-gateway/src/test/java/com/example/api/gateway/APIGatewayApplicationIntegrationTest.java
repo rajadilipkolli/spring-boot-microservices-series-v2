@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
-    void testActuatorHealth() {
+    void actuatorHealth() {
         webTestClient
                 .get()
                 .uri("/actuator/health")

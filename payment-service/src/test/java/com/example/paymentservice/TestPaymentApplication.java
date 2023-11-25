@@ -16,7 +16,7 @@ public class TestPaymentApplication {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("16.0-alpine"))
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("16-alpine"))
                 .withReuse(true);
     }
 
@@ -31,7 +31,7 @@ public class TestPaymentApplication {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.1"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.2"))
                 .withKraft();
     }
 

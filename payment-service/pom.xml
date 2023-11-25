@@ -257,7 +257,7 @@
                 <configuration>
                     <database>
                         <type>POSTGRES</type>
-                        <containerImage>postgres:16.0-alpine</containerImage>
+                        <containerImage>postgres:16-alpine</containerImage>
                         <username>test</username>
                         <password>test</password>
                         <databaseName>test</databaseName>

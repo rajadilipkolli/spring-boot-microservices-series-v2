@@ -24,7 +24,7 @@ class OrderManageServiceTest {
     @InjectMocks private OrderManageService orderManageService;
 
     @Test
-    void testConfirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
+    void confirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -44,7 +44,7 @@ class OrderManageServiceTest {
     }
 
     @Test
-    void testConfirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
+    void confirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -64,7 +64,7 @@ class OrderManageServiceTest {
     }
 
     @Test
-    void testConfirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
+    void confirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
@@ -85,7 +85,7 @@ class OrderManageServiceTest {
     }
 
     @Test
-    void testConfirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
+    void confirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
         // Arrange
         OrderDto orderPayment = new OrderDto();
         orderPayment.setOrderId(12345L);
