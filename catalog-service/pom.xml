@@ -91,6 +91,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- To fix Spring Cloud LoadBalancer is currently working with the default
             cache.
