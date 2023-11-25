@@ -22,6 +22,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -39,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Validated
+@Slf4j
 public class OrderController implements OrderApi {
 
     private final OrderService orderService;
@@ -71,6 +73,7 @@ public class OrderController implements OrderApi {
     }
 
     public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+        log.error("Exception occurred ", ex);
         return ResponseEntity.ok("fallback-response for id : " + id);
     }
 

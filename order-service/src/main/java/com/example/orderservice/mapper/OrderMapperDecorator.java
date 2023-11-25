@@ -51,7 +51,8 @@ public abstract class OrderMapperDecorator implements OrderMapper {
         newOrderItems.forEach(order::addOrderItem);
     }
 
-    // Manual Merge instead of using OrderItem mergedBook = orderItemRepository.save(orderItem);
+    // Manual Merge instead of using `var mergedBook = orderItemRepository.save(orderItem)` which
+    // calls save in middle of transaction
     private Long getOrderItemId(List<OrderItem> items, OrderItem orderItem) {
         return items.stream()
                 .filter(item -> Objects.equals(item.getProductCode(), orderItem.getProductCode()))
