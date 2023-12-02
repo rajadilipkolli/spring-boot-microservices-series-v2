@@ -14,11 +14,13 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Profile("local")
 public class Initializer implements CommandLineRunner {
 
     private final InventoryRepository inventoryRepository;
@@ -29,9 +31,10 @@ public class Initializer implements CommandLineRunner {
         if (this.inventoryRepository.count() == 0) {
             SecureRandom r = new SecureRandom();
             List<Inventory> inventoryList = new ArrayList<>();
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < 100; i++) {
                 int count = r.nextInt(1000);
-                Inventory inventory = new Inventory(null, "Product" + i, count, 0);
+                Inventory inventory =
+                        new Inventory().setProductCode("Product" + i).setAvailableQuantity(count);
                 inventoryList.add(inventory);
             }
             inventoryRepository.saveAll(inventoryList);

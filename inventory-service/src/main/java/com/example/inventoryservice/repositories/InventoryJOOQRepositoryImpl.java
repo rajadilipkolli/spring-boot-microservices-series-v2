@@ -26,13 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
 
     private final DSLContext dslContext;
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Inventory> findById(Long inventoryId) {
         return dslContext
                 .fetchOptional(INVENTORY, INVENTORY.ID.eq(inventoryId))
@@ -40,7 +39,6 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<Inventory> findAll(Pageable pageable) {
         return new PageImpl<>(
                 dslContext
@@ -55,7 +53,6 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Inventory> findByProductCode(String productCode) {
         return dslContext
                 .select()
@@ -65,7 +62,6 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Inventory> findByProductCodeIn(List<String> productCodes) {
         return dslContext
                 .select()
@@ -75,7 +71,6 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Inventory> findByProductCodeInAndQuantityAvailable(List<String> productCodes) {
         return dslContext
                 .select()

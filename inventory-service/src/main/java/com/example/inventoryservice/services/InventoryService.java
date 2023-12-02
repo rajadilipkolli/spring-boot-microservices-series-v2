@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 @Loggable
 public class InventoryService {
 
@@ -36,7 +36,6 @@ public class InventoryService {
 
     private final InventoryJOOQRepository inventoryJOOQRepository;
 
-    @Transactional(readOnly = true)
     public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         log.info(
@@ -54,32 +53,31 @@ public class InventoryService {
         return new PagedResult<>(inventoryJOOQRepository.findAll(pageable));
     }
 
-    @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryById(Long id) {
         return inventoryJOOQRepository.findById(id);
     }
 
+    @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
-
         Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
         return inventoryRepository.save(inventory);
     }
 
+    @Transactional
     public void deleteInventoryById(Long id) {
         inventoryRepository.deleteById(id);
     }
 
+    @Transactional
     public Inventory updateInventory(Inventory inventory, InventoryRequest inventoryRequest) {
         this.inventoryMapper.updateInventoryFromRequest(inventoryRequest, inventory);
         return inventoryRepository.save(inventory);
     }
 
-    @Transactional(readOnly = true)
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
         return this.inventoryJOOQRepository.findByProductCode(productCode);
     }
 
-    @Transactional(readOnly = true)
     public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
         return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
     }
