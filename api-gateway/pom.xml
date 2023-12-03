@@ -20,7 +20,7 @@
         <spring-cloud.version>2023.0.0-RC1</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
+        <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
 
         <spotless.version>2.40.0</spotless.version>
         <wiremock.version>3.3.1</wiremock.version>
