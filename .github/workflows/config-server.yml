@@ -22,7 +22,7 @@ jobs:
         working-directory: "config-server"
     strategy:
       matrix:
-        java: ["17"]
+        java: ["21"]
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
@@ -50,4 +50,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           DOCKER_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
           DOC_USERNAME: ${{secrets.DOCKER_USERNAME}}
-        run: ./mvnw -Pnative spring-boot:build-image -Dspring-boot.build-image.publish=true -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=${DOC_USERNAME}
+        run: ./mvnw spring-boot:build-image -Dspring-boot.build-image.publish=true -DCI_DOCKER_PASSWORD=${DOCKER_PASSCODE} -DCI_DOCKER_USERNAME=${DOC_USERNAME}
