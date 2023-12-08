@@ -427,7 +427,43 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(product.getPrice())
+                .jsonPath("$.inStock")
+                .isEqualTo(false);
+    }
+
+    @Test
+    void shouldFindProductByProductCodeWithStock() throws JsonProcessingException {
+        Product product = savedProductList.getFirst();
+
+        mockBackendEndpoint(
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+        webTestClient
+                .get()
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/productCode/{productCode}")
+                                        .queryParam("fetchInStock", true)
+                                        .build(product.getCode()))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId())
+                .jsonPath("$.code")
+                .isEqualTo(product.getCode())
+                .jsonPath("$.productName")
+                .isEqualTo(product.getProductName())
+                .jsonPath("$.description")
+                .isEqualTo(product.getDescription())
+                .jsonPath("$.price")
+                .isEqualTo(product.getPrice())
+                .jsonPath("$.inStock")
+                .isEqualTo(true);
     }
 
     @Test

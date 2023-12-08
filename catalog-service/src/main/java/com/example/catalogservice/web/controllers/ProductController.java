@@ -63,8 +63,11 @@ public class ProductController {
 
     @GetMapping("/productCode/{productCode}")
     public Mono<ResponseEntity<ProductResponse>> getProductByProductCode(
-            @PathVariable String productCode) {
-        return productService.findProductByProductCode(productCode).map(ResponseEntity::ok);
+            @PathVariable String productCode,
+            @RequestParam(required = false) boolean fetchInStock) {
+        return productService
+                .findProductByProductCode(productCode, fetchInStock)
+                .map(ResponseEntity::ok);
     }
 
     @GetMapping("/exists")

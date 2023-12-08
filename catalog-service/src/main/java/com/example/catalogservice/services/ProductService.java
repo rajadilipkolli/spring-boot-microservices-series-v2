@@ -146,11 +146,27 @@ public class ProductService {
     }
 
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
-    public Mono<ProductResponse> findProductByProductCode(String productCode) {
-        return productRepository
-                .findByCodeAllIgnoreCase(productCode)
-                .map(productMapper::toProductResponse)
-                .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
+    public Mono<ProductResponse> findProductByProductCode(
+            String productCode, boolean fetchInStock) {
+        Mono<ProductResponse> productResponseMono =
+                productRepository
+                        .findByCodeAllIgnoreCase(productCode)
+                        .map(productMapper::toProductResponse)
+                        .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
+
+        if (fetchInStock) {
+            return productResponseMono.flatMap(this::fetchInventoryAndUpdateProductResponse);
+        }
+        return productResponseMono;
+    }
+
+    private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
+            ProductResponse productResponse) {
+        return getInventoryByProductCode(productResponse.code())
+                .map(
+                        inventoryResponse ->
+                                productResponse.withInStock(
+                                        inventoryResponse.availableQuantity() > 0));
     }
 
     // saves product to db and sends message that new product is available for inventory

@@ -140,6 +140,11 @@ function setupTestData() {
     # Update the product_1 available Quantity
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT"
 
+    # Verify that communication between catalog-service and inventory service is established
+    assertCurl 200 "curl  -k http://$HOST:$PORT/catalog-service/api/catalog/productCode/$PROD_CODE_1?fetchInStock=true"
+    assertEqual $PROD_CODE_1 $(echo ${RESPONSE} | jq .code)
+    assertEqual \"true\" $(echo ${RESPONSE} | jq .inStock)
+
     body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
 '","email": "docker@email.com","address": "docker Address","amountAvailable":1000}'
