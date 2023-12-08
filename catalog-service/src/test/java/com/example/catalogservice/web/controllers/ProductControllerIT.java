@@ -68,9 +68,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         List<Product> productList =
                 List.of(
-                        new Product(null, "P001", "name 1", "description 1", 9.0, false),
-                        new Product(null, "P002", "name 2", "description 2", 10.0, false),
-                        new Product(null, "P003", "name 3", "description 3", 11.0, false));
+                        new Product(null, "P001", "name 1", "description 1", 9.0),
+                        new Product(null, "P002", "name 2", "description 2", 10.0),
+                        new Product(null, "P003", "name 3", "description 3", 11.0));
         savedProductList =
                 productRepository
                         .deleteAll()

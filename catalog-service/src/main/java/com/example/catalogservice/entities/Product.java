@@ -9,7 +9,6 @@ package com.example.catalogservice.entities;
 import java.io.Serial;
 import java.io.Serializable;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table(name = "products")
@@ -27,23 +26,14 @@ public class Product implements Serializable {
 
     private double price;
 
-    @Transient private boolean inStock;
-
     public Product() {}
 
-    public Product(
-            Long id,
-            String code,
-            String productName,
-            String description,
-            double price,
-            boolean inStock) {
+    public Product(Long id, String code, String productName, String description, double price) {
         this.id = id;
         this.code = code;
         this.productName = productName;
         this.description = description;
         this.price = price;
-        this.inStock = inStock;
     }
 
     public Long getId() {
@@ -84,13 +74,5 @@ public class Product implements Serializable {
 
     public void setPrice(double price) {
         this.price = price;
-    }
-
-    public boolean isInStock() {
-        return inStock;
-    }
-
-    public void setInStock(boolean inStock) {
-        this.inStock = inStock;
     }
 }

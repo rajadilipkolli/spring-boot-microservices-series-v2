@@ -130,16 +130,15 @@ public class ProductService {
         return productRepository
                 .findById(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
+                .map(productMapper::toProductResponse)
                 .flatMap(
-                        product ->
-                                getInventoryByProductCode(product.getCode())
+                        productResponse ->
+                                getInventoryByProductCode(productResponse.code())
                                         .map(
                                                 inventoryDto -> {
-                                                    product.setInStock(
+                                                    return productResponse.withInStock(
                                                             inventoryDto.availableQuantity() > 0);
-                                                    return product;
-                                                }))
-                .map(productMapper::toProductResponse);
+                                                }));
     }
 
     private Mono<InventoryResponse> getInventoryByProductCode(String code) {

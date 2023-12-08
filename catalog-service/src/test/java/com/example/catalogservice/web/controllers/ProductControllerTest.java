@@ -189,8 +189,7 @@ class ProductControllerTest {
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
-        Product product =
-                new Product(productId, "code 1", "Updated name", "description 1", 9.0, true);
+        Product product = new Product(productId, "code 1", "Updated name", "description 1", 9.0);
         ProductRequest productRequest =
                 new ProductRequest("code 1", "Updated name", "description 1", 9.0);
         ProductResponse productResponse =
@@ -241,7 +240,7 @@ class ProductControllerTest {
     @Test
     void shouldDeleteProduct() {
         Long productId = 1L;
-        Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0, true);
+        Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0);
         ProductResponse productResponse =
                 new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
