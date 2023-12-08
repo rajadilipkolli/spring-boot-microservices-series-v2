@@ -108,9 +108,10 @@
           "values": false
         },
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -181,9 +182,10 @@
           "values": false
         },
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -241,7 +243,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -348,9 +350,10 @@
           "values": false
         },
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -413,7 +416,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#299c46"
+                "color": "#299c46",
+                "value": null
               },
               {
                 "color": "rgba(237, 129, 40, 0.89)",
@@ -439,6 +443,8 @@
       "links": [],
       "maxDataPoints": 100,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -451,7 +457,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.2.2",
       "repeatDirection": "h",
       "targets": [
         {
@@ -515,7 +521,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": true,
       "renderer": "flot",
@@ -622,7 +628,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -726,7 +732,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -855,7 +861,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.1",
+      "pluginVersion": "10.2.2",
       "pointradius": 2,
       "points": true,
       "renderer": "flot",
@@ -1051,7 +1057,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 136
+        "y": 137
       },
       "id": 32,
       "panels": [
@@ -1172,7 +1178,6 @@
   ],
   "refresh": "5s",
   "schemaVersion": 38,
-  "style": "dark",
   "tags": [],
   "templating": {
     "list": [
@@ -1378,6 +1383,6 @@
   "timezone": "",
   "title": "Circuit Breakers",
   "uid": "circuit-breakers",
-  "version": 7,
+  "version": 1,
   "weekStart": ""
 }
