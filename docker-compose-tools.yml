@@ -120,6 +120,8 @@ services:
       - microservice-network
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: dockerUser
+      SPRING_SECURITY_USER_PASSWORD: dockerSecret
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
@@ -140,7 +142,7 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -174,7 +176,7 @@ services:
       # - mongodb
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
     restart: unless-stopped
@@ -207,7 +209,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -235,7 +237,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -263,7 +265,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
     restart: unless-stopped
     labels:
@@ -291,7 +293,7 @@ services:
         condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888/
+      SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://tempo:9411
     labels:
       logging: "promtail"
