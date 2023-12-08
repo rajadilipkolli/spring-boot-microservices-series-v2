@@ -135,10 +135,10 @@ public class ProductService {
                         productResponse ->
                                 getInventoryByProductCode(productResponse.code())
                                         .map(
-                                                inventoryDto -> {
-                                                    return productResponse.withInStock(
-                                                            inventoryDto.availableQuantity() > 0);
-                                                }));
+                                                inventoryDto ->
+                                                        productResponse.withInStock(
+                                                                inventoryDto.availableQuantity()
+                                                                        > 0)));
     }
 
     private Mono<InventoryResponse> getInventoryByProductCode(String code) {

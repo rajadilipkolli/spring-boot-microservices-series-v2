@@ -67,7 +67,7 @@ public class KafkaStreamsConfig {
             KafkaConnectionDetails connectionDetails,
             KafkaProperties kafkaProperties,
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
-        Map<String, Object> properties = kafkaProperties.buildStreamsProperties();
+        Map<String, Object> properties = kafkaProperties.buildStreamsProperties(null);
         properties.put(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 connectionDetails.getStreamsBootstrapServers());

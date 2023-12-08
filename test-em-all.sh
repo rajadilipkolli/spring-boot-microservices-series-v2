@@ -142,7 +142,7 @@ function setupTestData() {
 
     # Verify that communication between catalog-service and inventory service is established
     assertCurl 200 "curl  -k http://$HOST:$PORT/catalog-service/api/catalog/productCode/$PROD_CODE_1?fetchInStock=true"
-    assertEqual $PROD_CODE_1 $(echo ${RESPONSE} | jq .code)
+    assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .code)
     assertEqual \"true\" $(echo ${RESPONSE} | jq .inStock)
 
     body="{\"name\": \"$CUSTOMER_NAME"
