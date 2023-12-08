@@ -109,9 +109,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -185,6 +186,8 @@
       "links": [],
       "maxDataPoints": 100,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -196,7 +199,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -279,6 +282,8 @@
       "links": [],
       "maxDataPoints": 100,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
@@ -290,7 +295,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -344,7 +349,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -443,7 +448,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -542,7 +547,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -663,9 +668,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -747,7 +753,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -859,7 +865,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -949,7 +955,7 @@
         "h": 8,
         "w": 8,
         "x": 6,
-        "y": 34
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 80,
@@ -970,7 +976,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1037,7 +1043,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 50,
@@ -1059,7 +1065,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1127,7 +1133,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 83,
@@ -1148,7 +1154,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1225,7 +1231,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 41
       },
       "hiddenSeries": false,
       "id": 78,
@@ -1246,7 +1252,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1323,7 +1329,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 82,
@@ -1344,7 +1350,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1421,7 +1427,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 49
       },
       "hiddenSeries": false,
       "id": 68,
@@ -1443,7 +1449,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1526,7 +1532,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 57
       },
       "id": 72,
       "panels": [],
@@ -1557,7 +1563,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 66
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 74,
@@ -1581,7 +1587,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1647,7 +1653,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 66
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 76,
@@ -1671,7 +1677,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1732,7 +1738,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 76
+        "y": 68
       },
       "id": 34,
       "panels": [],
@@ -1790,7 +1796,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 77
+        "y": 69
       },
       "id": 44,
       "links": [],
@@ -1807,9 +1813,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -1841,7 +1848,7 @@
         "h": 8,
         "w": 20,
         "x": 4,
-        "y": 77
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1865,7 +1872,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1980,7 +1987,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 81
+        "y": 73
       },
       "id": 46,
       "links": [],
@@ -1997,9 +2004,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -2031,7 +2039,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 85
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 38,
@@ -2052,7 +2060,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2118,7 +2126,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 85
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 42,
@@ -2139,7 +2147,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2205,7 +2213,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 85
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 40,
@@ -2226,7 +2234,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2292,7 +2300,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 83
       },
       "hiddenSeries": false,
       "id": 4,
@@ -2315,7 +2323,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2376,7 +2384,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 90
       },
       "id": 18,
       "panels": [],
@@ -2407,7 +2415,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 91
       },
       "hiddenSeries": false,
       "id": 2,
@@ -2430,7 +2438,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2493,7 +2501,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 106
+        "y": 98
       },
       "id": 22,
       "panels": [],
@@ -2551,7 +2559,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 107
+        "y": 99
       },
       "id": 28,
       "links": [],
@@ -2568,9 +2576,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -2603,7 +2612,7 @@
         "h": 7,
         "w": 9,
         "x": 4,
-        "y": 107
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 24,
@@ -2625,7 +2634,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2692,7 +2701,7 @@
         "h": 7,
         "w": 11,
         "x": 13,
-        "y": 107
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 26,
@@ -2714,7 +2723,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2818,7 +2827,7 @@
         "h": 3,
         "w": 4,
         "x": 0,
-        "y": 111
+        "y": 103
       },
       "id": 32,
       "links": [],
@@ -2835,9 +2844,10 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "targets": [
         {
           "datasource": {
@@ -2869,7 +2879,7 @@
         "h": 7,
         "w": 13,
         "x": 0,
-        "y": 114
+        "y": 106
       },
       "hiddenSeries": false,
       "id": 30,
@@ -2891,7 +2901,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -2963,7 +2973,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 121
+        "y": 113
       },
       "id": 8,
       "panels": [],
@@ -2994,7 +3004,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 122
+        "y": 114
       },
       "hiddenSeries": false,
       "id": 6,
@@ -3016,7 +3026,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3084,7 +3094,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 122
+        "y": 114
       },
       "hiddenSeries": false,
       "id": 10,
@@ -3106,7 +3116,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3174,7 +3184,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 129
+        "y": 121
       },
       "hiddenSeries": false,
       "id": 14,
@@ -3196,7 +3206,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3264,7 +3274,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 129
+        "y": 121
       },
       "hiddenSeries": false,
       "id": 16,
@@ -3286,7 +3296,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3354,7 +3364,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 129
+        "y": 121
       },
       "hiddenSeries": false,
       "id": 20,
@@ -3376,7 +3386,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.1.4",
+      "pluginVersion": "10.2.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -3430,9 +3440,8 @@
       }
     }
   ],
-  "refresh": "auto",
+  "refresh": "5s",
   "schemaVersion": 38,
-  "style": "dark",
   "tags": [],
   "templating": {
     "list": [
@@ -3492,9 +3501,10 @@
       },
       {
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "HikariPool-1",
-          "value": "HikariPool-1"
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "prometheus",
@@ -3574,8 +3584,8 @@
     ]
   },
   "time": {
-    "from": "2023-10-01T03:37:22.295Z",
-    "to": "2023-10-01T05:37:22.295Z"
+    "from": "now-1h",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -3603,8 +3613,8 @@
     ]
   },
   "timezone": "",
-  "title": "Spring Boot 3.1 Statistics",
-  "uid": "spring_boot_31",
+  "title": "Spring Boot 3.2 Statistics",
+  "uid": "spring_boot_32",
   "version": 1,
   "weekStart": ""
 }
