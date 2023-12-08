@@ -68,9 +68,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         List<Product> productList =
                 List.of(
-                        new Product(null, "P001", "name 1", "description 1", 9.0, false),
-                        new Product(null, "P002", "name 2", "description 2", 10.0, false),
-                        new Product(null, "P003", "name 3", "description 3", 11.0, false));
+                        new Product(null, "P001", "name 1", "description 1", 9.0),
+                        new Product(null, "P002", "name 2", "description 2", 10.0),
+                        new Product(null, "P003", "name 3", "description 3", 11.0));
         savedProductList =
                 productRepository
                         .deleteAll()
@@ -201,7 +201,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 0)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -220,7 +220,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(product.getPrice())
+                .jsonPath("$.inStock")
+                .isEqualTo(false);
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
     }
 

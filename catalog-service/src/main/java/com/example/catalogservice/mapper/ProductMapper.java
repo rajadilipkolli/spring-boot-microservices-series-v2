@@ -17,16 +17,15 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
+    @Mapping(target = "inStock", ignore = true)
     @Mapping(target = "withInStock", ignore = true)
     ProductResponse toProductResponse(Product product);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "inStock", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     ProductDto toProductDto(ProductRequest productRequest);
 
-    @Mapping(target = "inStock", ignore = true)
     @Mapping(target = "id", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);
 }
