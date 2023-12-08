@@ -19,7 +19,8 @@ import org.springframework.context.annotation.Import;
 @DataJpaTest(
         properties = {
             "spring.jpa.hibernate.ddl-auto=validate",
-            "spring.test.database.replace=none"
+            "spring.test.database.replace=none",
+            "spring.cloud.config.enabled=false"
         })
 @Import(ContainersConfig.class)
 class InventoryRepositoryTest {

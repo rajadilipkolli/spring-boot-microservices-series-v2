@@ -19,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jooq.JooqTest;
 import org.springframework.context.annotation.Import;
 
-@JooqTest(properties = {"spring.test.database.replace=none"})
+@JooqTest(properties = {"spring.test.database.replace=none", "spring.cloud.config.enabled=false"})
 @Import(ContainersConfig.class)
 class JOOQInventoryRepositoryTest {
 
