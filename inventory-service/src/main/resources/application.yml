@@ -5,11 +5,6 @@ server:
 spring:
   application:
     name: inventory-service
-  config:
-    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
-  mvc:
-    problemdetails:
-      enabled: true
   testcontainers:
     beans:
       startup: parallel
