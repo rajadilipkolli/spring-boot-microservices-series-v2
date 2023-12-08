@@ -16,6 +16,7 @@ import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
+import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Loggable
 @Slf4j
+@Observed(name = "orderService")
 public class OrderService {
 
     private final OrderRepository orderRepository;

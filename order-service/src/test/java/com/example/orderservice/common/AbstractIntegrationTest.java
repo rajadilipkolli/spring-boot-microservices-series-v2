@@ -9,9 +9,14 @@ package com.example.orderservice.common;
 import com.example.orderservice.TestOrderServiceApplication;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.observation.tck.TestObservationRegistry;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,9 +26,23 @@ import org.springframework.test.web.servlet.MockMvc;
         properties = {"spring.cloud.config.enabled=false"},
         classes = TestOrderServiceApplication.class)
 @AutoConfigureMockMvc
+@AutoConfigureObservability
 public abstract class AbstractIntegrationTest extends ContainerInitializer {
 
     @Autowired protected MockMvc mockMvc;
 
     @Autowired protected ObjectMapper objectMapper;
+
+    @TestConfiguration
+    static class ObservationTestConfiguration {
+        @Bean
+        TestObservationRegistry observationRegistry() {
+            return TestObservationRegistry.create();
+        }
+
+        @Bean
+        SimpleTracer simpleTracer() {
+            return new SimpleTracer();
+        }
+    }
 }
