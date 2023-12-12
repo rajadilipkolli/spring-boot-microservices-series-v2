@@ -72,7 +72,6 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
 
-        long count = kafkaListenerConfig.getDeadLetterLatch().getCount();
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofSeconds(1))
@@ -80,7 +79,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .untilAsserted(
                         () ->
                                 assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
-                                        .isEqualTo(count - 1));
+                                        .isZero());
     }
 
     @Test
