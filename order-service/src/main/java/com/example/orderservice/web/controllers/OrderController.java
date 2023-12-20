@@ -7,6 +7,7 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -69,10 +70,13 @@ public class OrderController implements OrderApi {
         return orderService
                 .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+        if (ex instanceof ProductNotFoundException productNotFoundException) {
+            throw productNotFoundException;
+        }
         log.error("Exception occurred ", ex);
         return ResponseEntity.ok("fallback-response for id : " + id);
     }

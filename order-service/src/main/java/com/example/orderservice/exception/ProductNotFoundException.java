@@ -16,13 +16,22 @@ import org.springframework.web.ErrorResponseException;
 public class ProductNotFoundException extends ErrorResponseException {
 
     public ProductNotFoundException(List<String> productIds) {
-        super(HttpStatus.NOT_FOUND, asProblemDetail(productIds), null);
+        super(
+                HttpStatus.NOT_FOUND,
+                asProblemDetail("One or More products Not found from " + productIds),
+                null);
     }
 
-    private static ProblemDetail asProblemDetail(List<String> productIds) {
+    public ProductNotFoundException(Long id) {
+        super(
+                HttpStatus.NOT_FOUND,
+                asProblemDetail("Product with Id - " + id + " Not found"),
+                null);
+    }
+
+    private static ProblemDetail asProblemDetail(String errorMessage) {
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND, "One or More products Not found from " + productIds);
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, errorMessage);
         problemDetail.setTitle("Product Not Found");
         problemDetail.setType(URI.create("http://api.products.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");

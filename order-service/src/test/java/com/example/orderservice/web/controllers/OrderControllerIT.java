@@ -30,6 +30,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -48,18 +50,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderList = new ArrayList<>();
         Order order1 = TestData.getOrder();
         this.orderList.add(order1);
-        Order order2 = new Order();
-        order2.setCustomerId(1L);
-        order2.setStatus(OrderStatus.NEW);
+        Order order2 = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
         this.orderList.add(order2);
-        Order order3 = new Order();
-        order3.setCustomerId(1L);
-        order3.setStatus(OrderStatus.NEW);
-        OrderItem orderItem2 = new OrderItem();
-        orderItem2.setProductCode("Product3");
-        orderItem2.setQuantity(100);
-        orderItem2.setProductPrice(BigDecimal.ONE);
-        order3.addOrderItem(orderItem2);
+        OrderItem orderItem =
+                new OrderItem()
+                        .setProductCode("Product3")
+                        .setQuantity(100)
+                        .setProductPrice(BigDecimal.ONE);
+        Order order3 = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
+        order3.addOrderItem(orderItem);
         this.orderList.add(order3);
 
         orderList = orderRepository.saveAll(orderList);
@@ -85,20 +84,40 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 is(orderList.getFirst().getItems().size())));
     }
 
-    @Test
-    void shouldFindOrderById() throws Exception {
-        Order order = orderList.getFirst();
-        Long orderId = order.getId();
+    @Nested
+    @DisplayName("find methods")
+    class Find {
+        @Test
+        void shouldFindOrderById() throws Exception {
+            Order order = orderList.getFirst();
+            Long orderId = order.getId();
 
-        this.mockMvc
-                .perform(get("/api/orders/{id}", orderId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
-                .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
-                .andExpect(jsonPath("$.status", is(order.getStatus().name())))
-                .andExpect(jsonPath("$.source", is(order.getSource())))
-                .andExpect(jsonPath("$.totalPrice").value(closeTo(201.00, 0.01)))
-                .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
+            mockMvc.perform(get("/api/orders/{id}", orderId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
+                    .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
+                    .andExpect(jsonPath("$.status", is(order.getStatus().name())))
+                    .andExpect(jsonPath("$.source", is(order.getSource())))
+                    .andExpect(jsonPath("$.totalPrice").value(closeTo(201.00, 0.01)))
+                    .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingOrder() throws Exception {
+            Long orderId = 10_000L;
+            mockMvc.perform(get("/api/orders/{id}", orderId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            "Content-Type",
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Product with Id - %d Not found".formatted(orderId)));
+        }
     }
 
     @Test

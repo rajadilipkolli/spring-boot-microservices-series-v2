@@ -15,12 +15,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 
@@ -32,11 +32,10 @@ import org.hibernate.proxy.HibernateProxy;
                         name = "UC_ORDER_ITEMS_PRODUCT_ORDER",
                         columnNames = {"product_code", "order_id"}))
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class OrderItem {
+public class OrderItem implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -54,6 +53,31 @@ public class OrderItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @ToString.Exclude
     private Order order;
+
+    public OrderItem setId(Long id) {
+        this.id = id;
+        return this;
+    }
+
+    public OrderItem setProductCode(String productCode) {
+        this.productCode = productCode;
+        return this;
+    }
+
+    public OrderItem setQuantity(int quantity) {
+        this.quantity = quantity;
+        return this;
+    }
+
+    public OrderItem setProductPrice(BigDecimal productPrice) {
+        this.productPrice = productPrice;
+        return this;
+    }
+
+    public OrderItem setOrder(Order order) {
+        this.order = order;
+        return this;
+    }
 
     @Override
     public final boolean equals(Object o) {

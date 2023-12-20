@@ -20,14 +20,16 @@ public class TestData {
         Order order = new Order();
         order.setCustomerId(1L);
         order.setStatus(OrderStatus.NEW);
-        OrderItem orderItem = new OrderItem();
-        orderItem.setProductCode("Product1");
-        orderItem.setQuantity(10);
-        orderItem.setProductPrice(new BigDecimal("10.1"));
-        OrderItem orderItem1 = new OrderItem();
-        orderItem1.setProductCode("Product2");
-        orderItem1.setQuantity(100);
-        orderItem1.setProductPrice(BigDecimal.ONE);
+        OrderItem orderItem =
+                new OrderItem()
+                        .setProductCode("Product1")
+                        .setQuantity(10)
+                        .setProductPrice(new BigDecimal("10.1"));
+        OrderItem orderItem1 =
+                new OrderItem()
+                        .setProductCode("Product2")
+                        .setQuantity(100)
+                        .setProductPrice(BigDecimal.ONE);
         order.addOrderItem(orderItem);
         order.addOrderItem(orderItem1);
         return order;

@@ -22,12 +22,10 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "orders")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Order extends Auditable<String> implements Serializable {
@@ -43,10 +41,40 @@ public class Order extends Auditable<String> implements Serializable {
 
     private String source;
 
-    @Version private Long version;
+    @Version private Short version;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
+
+    public Order setId(Long id) {
+        this.id = id;
+        return this;
+    }
+
+    public Order setCustomerId(Long customerId) {
+        this.customerId = customerId;
+        return this;
+    }
+
+    public Order setStatus(OrderStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public Order setSource(String source) {
+        this.source = source;
+        return this;
+    }
+
+    public Order setVersion(Short version) {
+        this.version = version;
+        return this;
+    }
+
+    public Order setItems(List<OrderItem> items) {
+        this.items = items;
+        return this;
+    }
 
     public void addOrderItem(OrderItem orderItem) {
         items.add(orderItem);

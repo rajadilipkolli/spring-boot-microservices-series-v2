@@ -145,7 +145,18 @@ class OrderControllerTest {
             Long orderId = 1L;
             given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+            mockMvc.perform(get("/api/orders/{id}", orderId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            "Content-Type",
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Product with Id - %d Not found".formatted(orderId)));
         }
     }
 
@@ -291,7 +302,7 @@ class OrderControllerTest {
         @Test
         void shouldDeleteOrder() throws Exception {
             Long orderId = 1L;
-            Order order = new Order(orderId, 1L, OrderStatus.NEW, "", 1L, new ArrayList<>());
+            Order order = new Order().setId(orderId).setCustomerId(1L).setStatus(OrderStatus.NEW);
             given(orderService.findById(orderId)).willReturn(Optional.of(order));
             doNothing().when(orderService).deleteOrderById(orderId);
 
