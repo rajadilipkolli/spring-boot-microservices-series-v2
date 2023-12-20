@@ -17,9 +17,7 @@ import java.util.List;
 public class TestData {
 
     public static Order getOrder() {
-        Order order = new Order();
-        order.setCustomerId(1L);
-        order.setStatus(OrderStatus.NEW);
+        Order order = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
         OrderItem orderItem =
                 new OrderItem()
                         .setProductCode("Product1")

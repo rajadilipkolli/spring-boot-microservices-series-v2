@@ -97,7 +97,7 @@ public class OrderController implements OrderApi {
                 .map(
                         orderObj ->
                                 ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     @DeleteMapping("/{id}")
@@ -109,7 +109,7 @@ public class OrderController implements OrderApi {
                             orderService.deleteOrderById(id);
                             return ResponseEntity.accepted().build();
                         })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
     @PostMapping("/generate")

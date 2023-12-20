@@ -292,7 +292,17 @@ class OrderControllerTest {
                             put("/api/orders/{id}", orderId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(order)))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            "Content-Type",
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Product with Id - %d Not found".formatted(orderId)));
         }
     }
 
@@ -314,7 +324,18 @@ class OrderControllerTest {
             Long orderId = 1L;
             given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
 
-            mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isNotFound());
+            mockMvc.perform(delete("/api/orders/{id}", orderId))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            "Content-Type",
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Product with Id - %d Not found".formatted(orderId)));
         }
     }
 }
