@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class GlobalExceptionHandlingControllerAdvice {
+public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail onException(MethodArgumentNotValidException methodArgumentNotValidException) {

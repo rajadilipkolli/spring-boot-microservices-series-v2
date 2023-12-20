@@ -143,7 +143,7 @@ class OrderControllerTest {
         @Test
         void shouldReturn404WhenFetchingNonExistingOrder() throws Exception {
             Long orderId = 1L;
-            given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
+            given(orderService.findOrderByIdAsResponse(orderId)).willReturn(Optional.empty());
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isNotFound())

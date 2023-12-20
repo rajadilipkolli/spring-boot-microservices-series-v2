@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Loggable
 @Slf4j
@@ -42,7 +42,6 @@ public class OrderService {
     private final CatalogService catalogService;
     private final KafkaOrderProducer kafkaOrderProducer;
 
-    @Transactional(readOnly = true)
     public PagedResult<OrderResponse> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -60,11 +59,11 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
-    @Transactional(readOnly = true)
     public Optional<Order> findOrderById(Long id) {
         return orderRepository.findOrderById(id);
     }
 
+    @Transactional
     public OrderResponse saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
@@ -90,31 +89,31 @@ public class OrderService {
         return catalogService.productsExistsByCodes(productIds);
     }
 
+    @Transactional
     public void deleteOrderById(Long id) {
         orderRepository.deleteById(id);
     }
 
+    @Transactional
     public OrderResponse updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = getPersistedOrder(orderObj);
         return this.orderMapper.toResponse(persistedOrder);
     }
 
+    @Transactional
     public Order getPersistedOrder(Order orderObj) {
         return this.orderRepository.save(orderObj);
     }
 
-    @Transactional(readOnly = true)
     public Optional<Order> findById(Long id) {
         return orderRepository.findById(id);
     }
 
-    @Transactional(readOnly = true)
     public Optional<OrderResponse> findOrderByIdAsResponse(Long id) {
         return orderRepository.findOrderById(id).map(this.orderMapper::toResponse);
     }
 
-    @Transactional(readOnly = true)
     public PagedResult<OrderResponse> getOrdersByCustomerId(Long customerId, Pageable pageable) {
         // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
         // pagination was about to be applied. Failing because 'Fail on pagination over collection
