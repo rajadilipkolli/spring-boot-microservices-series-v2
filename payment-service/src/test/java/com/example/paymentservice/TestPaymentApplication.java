@@ -37,6 +37,7 @@ public class TestPaymentApplication {
     }
 
     public static void main(String[] args) {
+        System.setProperty("spring.profiles.active", "local");
         SpringApplication.from(PaymentApplication::main)
                 .with(TestPaymentApplication.class)
                 .run(args);
