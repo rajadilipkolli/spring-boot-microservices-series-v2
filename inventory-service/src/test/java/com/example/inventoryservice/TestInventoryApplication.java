@@ -31,7 +31,7 @@ public class TestInventoryApplication {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.2"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.3"))
                 .withKraft()
                 .withReuse(true);
     }
