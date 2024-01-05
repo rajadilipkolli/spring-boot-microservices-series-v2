@@ -8,7 +8,7 @@ image:
 
 tasks:
   - before: sdk install mvnd
-    init: mvnd verify -DskipTests
+    init: mvnd test
 
 vscode:
   extensions:
