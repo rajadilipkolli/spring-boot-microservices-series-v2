@@ -17,21 +17,6 @@ public class Customer {
 
     public Customer() {}
 
-    public Customer(
-            final Long id,
-            final String name,
-            final String email,
-            final String address,
-            final int amountAvailable,
-            final int amountReserved) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.address = address;
-        this.amountAvailable = amountAvailable;
-        this.amountReserved = amountReserved;
-    }
-
     public Long getId() {
         return this.id;
     }

@@ -32,13 +32,12 @@ public class Initializer implements CommandLineRunner {
         for (int i = 0; i < 100; i++) {
             int count = secureRandom.nextInt(1000);
             Customer customer =
-                    new Customer(
-                            null,
-                            faker.name().fullName(),
-                            faker.name().lastName() + "@gmail.com",
-                            faker.address().fullAddress(),
-                            count,
-                            0);
+                    new Customer()
+                            .setName(faker.name().fullName())
+                            .setEmail(faker.name().lastName() + "@gmail.com")
+                            .setAddress(faker.address().fullAddress())
+                            .setAmountAvailable(count)
+                            .setAmountReserved(0);
             customerList.add(customer);
         }
         // Using BatchMode to save Entities

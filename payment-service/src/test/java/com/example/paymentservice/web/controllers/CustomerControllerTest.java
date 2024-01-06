@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
@@ -24,7 +24,6 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,13 +56,29 @@ class CustomerControllerTest {
 
     @BeforeEach
     void setUp() {
-        this.customerList = new ArrayList<>();
-        this.customerList.add(
-                new Customer(1L, "text 1", "first@customer.email", "First Address", 0, 0));
-        this.customerList.add(
-                new Customer(2L, "text 2", "second@customer.email", "Second Address", 0, 0));
-        this.customerList.add(
-                new Customer(3L, "text 3", "third@customer.email", "Third Address", 0, 0));
+        this.customerList =
+                List.of(
+                        new Customer()
+                                .setId(1L)
+                                .setName("First Customer")
+                                .setEmail("first@customer.email")
+                                .setAddress("First Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0),
+                        new Customer()
+                                .setId(2L)
+                                .setName("Second Customer")
+                                .setEmail("second@customer.email")
+                                .setAddress("Second Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0),
+                        new Customer()
+                                .setId(3L)
+                                .setName("Third Customer")
+                                .setEmail("third@customer.email")
+                                .setAddress("Third Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0));
 
         objectMapper.registerModule(new ProblemModule());
         objectMapper.registerModule(new ConstraintViolationProblemModule());

@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,13 +34,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         this.customerRepository.deleteAll();
         customer =
                 this.customerRepository.save(
-                        new Customer(
-                                null,
-                                "First Customer",
-                                "first@customer.email",
-                                "First Address",
-                                100,
-                                10));
+                        new Customer()
+                                .setName("First Customer")
+                                .setEmail("first@customer.email")
+                                .setAddress("First Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(10));
     }
 
     @Test

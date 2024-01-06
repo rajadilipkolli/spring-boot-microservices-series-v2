@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -35,27 +35,24 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
         customerList =
                 List.of(
-                        new Customer(
-                                null,
-                                "First Customer",
-                                "first@customer.email",
-                                "First Address",
-                                100,
-                                0),
-                        new Customer(
-                                null,
-                                "Second Customer",
-                                "second@customer.email",
-                                "Second Address",
-                                100,
-                                0),
-                        new Customer(
-                                null,
-                                "Third Customer",
-                                "third@customer.email",
-                                "Third Address",
-                                100,
-                                0));
+                        new Customer()
+                                .setName("First Customer")
+                                .setEmail("first@customer.email")
+                                .setAddress("First Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0),
+                        new Customer()
+                                .setName("Second Customer")
+                                .setEmail("second@customer.email")
+                                .setAddress("Second Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0),
+                        new Customer()
+                                .setName("Third Customer")
+                                .setEmail("third@customer.email")
+                                .setAddress("Third Address")
+                                .setAmountAvailable(100)
+                                .setAmountReserved(0));
         customerList = customerRepository.saveAll(customerList);
     }
 
