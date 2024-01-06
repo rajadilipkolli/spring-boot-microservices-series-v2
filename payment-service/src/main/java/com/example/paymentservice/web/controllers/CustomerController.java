@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.config.logging.Loggable;
@@ -11,7 +11,6 @@ import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.utils.AppConstants;
 import jakarta.validation.Valid;
 import java.net.URI;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,13 +23,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/customers")
 @Loggable
 public class CustomerController {
 
     private final CustomerService customerService;
+
+    public CustomerController(CustomerService customerService) {
+        this.customerService = customerService;
+    }
 
     @GetMapping
     public PagedResult<CustomerResponse> getAllCustomers(

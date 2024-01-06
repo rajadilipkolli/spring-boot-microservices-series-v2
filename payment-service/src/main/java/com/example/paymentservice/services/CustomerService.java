@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.config.logging.Loggable;
@@ -12,8 +12,8 @@ import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,15 +21,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
-@RequiredArgsConstructor
 @Service
 @Transactional(readOnly = true)
 @Loggable
 public class CustomerService {
 
+    private static final Logger log = LoggerFactory.getLogger(CustomerService.class);
+
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
+
+    public CustomerService(CustomerRepository customerRepository, CustomerMapper customerMapper) {
+        this.customerRepository = customerRepository;
+        this.customerMapper = customerMapper;
+    }
 
     public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
         log.info(

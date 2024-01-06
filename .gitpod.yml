@@ -12,7 +12,6 @@ tasks:
 
 vscode:
   extensions:
-    - GabrielBB.vscode-lombok
     - redhat.java
     - vmware.vscode-spring-boot
     - vscjava.vscode-java-pack

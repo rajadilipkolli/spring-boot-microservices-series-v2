@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
 import com.example.common.dtos.OrderDto;
@@ -10,19 +10,25 @@ import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import io.micrometer.core.annotation.Timed;
 import java.math.BigDecimal;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 @Loggable
 public class PaymentOrderManageService {
 
+    private static final Logger log = LoggerFactory.getLogger(PaymentOrderManageService.class);
+
     private final CustomerRepository customerRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+
+    public PaymentOrderManageService(
+            CustomerRepository customerRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+        this.customerRepository = customerRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Timed(percentiles = 1.0)
     public void reserve(OrderDto orderDto) {

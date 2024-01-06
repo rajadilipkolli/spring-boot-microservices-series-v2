@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
 import org.jooq.SortField;
@@ -25,14 +24,16 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dslContext;
 
+    public CustomerRepositoryImpl(DSLContext dslContext) {
+        this.dslContext = dslContext;
+    }
+
     @Override
-    @Transactional(readOnly = true)
     public Page<Customer> findAll(Pageable pageable) {
         return new PageImpl<>(
                 dslContext
@@ -47,7 +48,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<CustomerResponse> findByName(String name) {
         return dslContext
                 .select(
@@ -62,7 +62,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Customer> findById(Long customerId) {
         return dslContext
                 .fetchOptional(CUSTOMERS, CUSTOMERS.ID.eq(customerId))
@@ -94,6 +93,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
+    @Transactional
     public List<Customer> saveAll(List<Customer> customerList) {
         InsertSetMoreStep<CustomersRecord> insertStepN =
                 dslContext
@@ -106,11 +106,13 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
+    @Transactional
     public void deleteAll() {
         dslContext.deleteFrom(CUSTOMERS).execute();
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         dslContext.deleteFrom(CUSTOMERS).where(CUSTOMERS.ID.eq(id)).execute();
     }

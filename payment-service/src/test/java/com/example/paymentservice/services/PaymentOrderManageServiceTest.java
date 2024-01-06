@@ -10,10 +10,10 @@ import static org.mockito.Mockito.verify;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
-import com.example.paymentservice.data.TestData;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.repositories.CustomerRepository;
+import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
