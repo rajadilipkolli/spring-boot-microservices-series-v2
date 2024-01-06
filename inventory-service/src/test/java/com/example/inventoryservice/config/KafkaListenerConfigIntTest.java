@@ -26,6 +26,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                 inventoryRepository.save(
                         new Inventory().setProductCode("JUNIT_000").setAvailableQuantity(1000));
 
+        assertThat(stockOrderListener.getCountDownLatch().getCount()).isEqualTo(1);
         // publish event
         OrderDto orderDto = MockTestData.getOrderDto("ORDER");
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -44,6 +45,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                                                 assertThat(inventory1.getReservedItems())
                                                         .isEqualTo(10);
                                             });
+                            assertThat(stockOrderListener.getCountDownLatch().getCount()).isZero();
                         });
     }
 }

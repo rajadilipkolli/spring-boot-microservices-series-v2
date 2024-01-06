@@ -22,10 +22,6 @@ public class OrderItemDto implements Serializable {
 
     public OrderItemDto() {}
 
-    public BigDecimal getPrice() {
-        return productPrice.multiply(new BigDecimal(quantity));
-    }
-
     public OrderItemDto(Long itemId, String productId, int quantity, BigDecimal productPrice) {
         this.itemId = itemId;
         this.productId = productId;
@@ -63,6 +59,10 @@ public class OrderItemDto implements Serializable {
 
     public void setProductPrice(BigDecimal productPrice) {
         this.productPrice = productPrice;
+    }
+
+    public BigDecimal getPrice() {
+        return productPrice.multiply(new BigDecimal(quantity));
     }
 
     @Override
