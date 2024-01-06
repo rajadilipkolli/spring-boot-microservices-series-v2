@@ -9,8 +9,9 @@ package com.example.api.gateway.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.RepeatedTest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -18,8 +19,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.testcontainers.junit.jupiter.Container;
 import org.wiremock.integrations.testcontainers.WireMockContainer;
 
-@Slf4j
 class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(RateLimiterConfigurationIntegrationTest.class);
 
     @Container
     static final WireMockContainer wireMockServer =
