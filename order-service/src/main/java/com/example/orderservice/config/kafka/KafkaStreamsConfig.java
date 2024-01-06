@@ -14,8 +14,6 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serde;
@@ -31,6 +29,8 @@ import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.kafka.KafkaConnectionDetails;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
@@ -45,13 +45,17 @@ import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableKafkaStreams
-@Slf4j
-@RequiredArgsConstructor
 public class KafkaStreamsConfig {
 
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final OrderManageService orderManageService;
+
+    public KafkaStreamsConfig(OrderManageService orderManageService) {
+        this.orderManageService = orderManageService;
+    }
 
     @Bean
     StreamsBuilderFactoryBeanConfigurer configurer() {

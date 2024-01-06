@@ -10,19 +10,21 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class OrderManageService {
 
     private static final String ACCEPT = "ACCEPT";
     private static final String REJECT = "REJECT";
-
+    private static final Logger log = LoggerFactory.getLogger(OrderManageService.class);
     private final OrderRepository orderRepository;
+
+    public OrderManageService(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
 
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         log.info("Setting Status for order :{}", orderPayment);

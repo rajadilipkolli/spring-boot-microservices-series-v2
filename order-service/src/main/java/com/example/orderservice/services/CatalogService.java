@@ -9,17 +9,23 @@ package com.example.orderservice.services;
 import com.example.orderservice.config.ApplicationProperties;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class CatalogService {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final CatalogServiceProxy catalogServiceProxy;
     private final ApplicationProperties applicationProperties;
+
+    public CatalogService(
+            CatalogServiceProxy catalogServiceProxy, ApplicationProperties applicationProperties) {
+        this.catalogServiceProxy = catalogServiceProxy;
+        this.applicationProperties = applicationProperties;
+    }
 
     @CircuitBreaker(name = "default", fallbackMethod = "productsExistsDefaultValue")
     public boolean productsExistsByCodes(List<String> productCodes) {

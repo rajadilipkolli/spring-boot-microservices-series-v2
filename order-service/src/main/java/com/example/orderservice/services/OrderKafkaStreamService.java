@@ -11,21 +11,25 @@ import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class OrderKafkaStreamService {
 
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
+
+    public OrderKafkaStreamService(StreamsBuilderFactoryBean kafkaStreamsFactory) {
+        this.kafkaStreamsFactory = kafkaStreamsFactory;
+    }
 
     public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
         log.info(

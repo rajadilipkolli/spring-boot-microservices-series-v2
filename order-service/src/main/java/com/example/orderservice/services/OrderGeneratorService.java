@@ -11,17 +11,19 @@ import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class OrderGeneratorService {
 
     private static final SecureRandom RAND = new SecureRandom();
 
     private final OrderService orderService;
+
+    public OrderGeneratorService(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     @Async
     public void generate() {

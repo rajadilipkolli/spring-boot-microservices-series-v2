@@ -8,7 +8,6 @@ package com.example.orderservice.config;
 
 import com.example.orderservice.services.CatalogServiceProxy;
 import io.micrometer.observation.ObservationRegistry;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -18,10 +17,13 @@ import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 @Configuration(proxyBeanMethods = false)
-@RequiredArgsConstructor
 public class HttpClientConfig {
 
     private final ApplicationProperties applicationProperties;
+
+    public HttpClientConfig(ApplicationProperties applicationProperties) {
+        this.applicationProperties = applicationProperties;
+    }
 
     @Bean
     HttpServiceProxyFactory httpServiceProxyFactory(

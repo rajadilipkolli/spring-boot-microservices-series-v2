@@ -19,15 +19,9 @@ import jakarta.persistence.Version;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "orders")
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Order extends Auditable<String> implements Serializable {
 
     @Id
@@ -51,9 +45,17 @@ public class Order extends Auditable<String> implements Serializable {
         return this;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public Order setCustomerId(Long customerId) {
         this.customerId = customerId;
         return this;
+    }
+
+    public Long getCustomerId() {
+        return customerId;
     }
 
     public Order setStatus(OrderStatus status) {
@@ -61,9 +63,17 @@ public class Order extends Auditable<String> implements Serializable {
         return this;
     }
 
+    public OrderStatus getStatus() {
+        return status;
+    }
+
     public Order setSource(String source) {
         this.source = source;
         return this;
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public Order setVersion(Short version) {
@@ -71,9 +81,17 @@ public class Order extends Auditable<String> implements Serializable {
         return this;
     }
 
+    public Short getVersion() {
+        return version;
+    }
+
     public Order setItems(List<OrderItem> items) {
         this.items = items;
         return this;
+    }
+
+    public List<OrderItem> getItems() {
+        return items;
     }
 
     public void addOrderItem(OrderItem orderItem) {

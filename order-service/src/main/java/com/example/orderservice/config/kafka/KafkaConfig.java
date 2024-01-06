@@ -10,19 +10,19 @@ import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableKafka
-@Slf4j
-@RequiredArgsConstructor
 public class KafkaConfig {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Bean
     KafkaAdmin.NewTopics topics() {

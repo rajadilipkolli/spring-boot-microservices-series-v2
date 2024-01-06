@@ -8,18 +8,22 @@ package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class KafkaOrderProducer {
 
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+
+    public KafkaOrderProducer(KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Async
     public void sendOrder(OrderDto persistedOrderDto) {

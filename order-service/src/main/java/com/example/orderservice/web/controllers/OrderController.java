@@ -22,8 +22,8 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -39,14 +39,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
-@RequiredArgsConstructor
 @Validated
-@Slf4j
 public class OrderController implements OrderApi {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
     private final OrderKafkaStreamService orderKafkaStreamService;
+
+    public OrderController(
+            OrderService orderService,
+            OrderGeneratorService orderGeneratorService,
+            OrderKafkaStreamService orderKafkaStreamService) {
+        this.orderService = orderService;
+        this.orderGeneratorService = orderGeneratorService;
+        this.orderKafkaStreamService = orderKafkaStreamService;
+    }
 
     @GetMapping
     public PagedResult<OrderResponse> getAllOrders(

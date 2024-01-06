@@ -18,10 +18,6 @@ import jakarta.persistence.UniqueConstraint;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 
 @Entity
@@ -31,10 +27,6 @@ import org.hibernate.proxy.HibernateProxy;
                 @UniqueConstraint(
                         name = "UC_ORDER_ITEMS_PRODUCT_ORDER",
                         columnNames = {"product_code", "order_id"}))
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString
 public class OrderItem implements Serializable {
 
     @Id
@@ -51,7 +43,6 @@ public class OrderItem implements Serializable {
     private BigDecimal productPrice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @ToString.Exclude
     private Order order;
 
     public OrderItem setId(Long id) {
@@ -59,9 +50,17 @@ public class OrderItem implements Serializable {
         return this;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public OrderItem setProductCode(String productCode) {
         this.productCode = productCode;
         return this;
+    }
+
+    public String getProductCode() {
+        return productCode;
     }
 
     public OrderItem setQuantity(int quantity) {
@@ -69,14 +68,26 @@ public class OrderItem implements Serializable {
         return this;
     }
 
+    public int getQuantity() {
+        return quantity;
+    }
+
     public OrderItem setProductPrice(BigDecimal productPrice) {
         this.productPrice = productPrice;
         return this;
     }
 
+    public BigDecimal getProductPrice() {
+        return productPrice;
+    }
+
     public OrderItem setOrder(Order order) {
         this.order = order;
         return this;
+    }
+
+    public Order getOrder() {
+        return order;
     }
 
     @Override
