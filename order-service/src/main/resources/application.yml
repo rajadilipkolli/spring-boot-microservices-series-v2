@@ -15,7 +15,7 @@ spring:
           json:
             add:
               type:
-                headers: false
+                headers: true
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
