@@ -18,7 +18,6 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    @Disabled("until infra for streams is set up")
+    //     @Disabled("until infra for streams is set up")
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining
