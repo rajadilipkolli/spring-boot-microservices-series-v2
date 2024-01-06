@@ -8,6 +8,7 @@ import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.CoreDsl;
 import io.gatling.javaapi.core.ScenarioBuilder;
@@ -19,7 +20,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Stream;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,22 +111,31 @@ public class CreateProductSimulation extends Simulation {
                                     .check(status().is(201))
                                     .check(header("location").saveAs("location")));
 
-    @SneakyThrows
     private String getBodyAsString(String inventoryResponseBody) {
-        InventoryResponseDTO inventoryResponseDTO =
-                OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
-        int nextInt = new SecureRandom().nextInt(100, 1000);
-        String body =
-                OBJECT_MAPPER.writeValueAsString(
-                        inventoryResponseDTO.withAvailableQuantity(nextInt));
-        LOGGER.info("Update Inventory Request :{}", body);
-        return body;
+        String body;
+        try {
+            InventoryResponseDTO inventoryResponseDTO =
+                    OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
+            int nextInt = new SecureRandom().nextInt(100, 1000);
+
+            body =
+                    OBJECT_MAPPER.writeValueAsString(
+                            inventoryResponseDTO.withAvailableQuantity(nextInt));
+            LOGGER.info("Update Inventory Request :{}", body);
+            return body;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    @lombok.SneakyThrows
     private Long getInventoryId(String inventoryResponseBody) {
-        InventoryResponseDTO inventoryResponseDTO =
-                OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
+        InventoryResponseDTO inventoryResponseDTO = null;
+        try {
+            inventoryResponseDTO =
+                    OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         return inventoryResponseDTO.id();
     }
 
