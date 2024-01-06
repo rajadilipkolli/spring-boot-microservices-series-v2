@@ -14,7 +14,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
 
-@TestConfiguration
+@TestConfiguration(proxyBeanMethods = false)
 public class TestStockOrderListenerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(TestStockOrderListenerConfig.class);
@@ -27,7 +27,7 @@ public class TestStockOrderListenerConfig {
 
     @KafkaListener(id = "stocks", topics = "stock-orders", groupId = "inventory")
     public void onOrderEvent(@Payload OrderDto orderDto) {
-        log.info("Received Product: {}", orderDto);
+        log.info("Received Order: {}", orderDto);
         countDownLatch.countDown();
     }
 }

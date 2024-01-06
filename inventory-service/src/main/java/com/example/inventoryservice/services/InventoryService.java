@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -47,12 +47,7 @@ public class InventoryService {
 
     public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
-        log.info(
-                "Fetching findAllInventories for pageNo {} with pageSize {}, sorting BY {} {}",
-                pageNo,
-                pageSize,
-                sortBy,
-                sortDir);
+        log.info("Fetching findAllInventories for pageNo {} with sorting By {}", pageNo, sortBy);
 
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -85,7 +85,7 @@ public class OrderService {
         if (productsExistsAndInStock(productCodes)) {
             log.debug("ProductCodes :{} exists in db, hence proceeding", productCodes);
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
-            Order savedOrder = getPersistedOrder(orderEntity);
+            Order savedOrder = this.orderRepository.save(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
             kafkaOrderProducer.sendOrder(persistedOrderDto);
@@ -105,7 +105,6 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
-    @Transactional
     public OrderResponse updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
         Order persistedOrder = getPersistedOrder(orderObj);

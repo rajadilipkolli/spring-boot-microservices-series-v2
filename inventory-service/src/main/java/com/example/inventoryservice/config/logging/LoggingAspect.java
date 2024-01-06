@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoggingAspect {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
 
     private final Environment env;
 
@@ -40,8 +40,10 @@ public class LoggingAspect {
     }
 
     @Pointcut(
-            "@within(com.example.inventoryservice.config.logging.Loggable) || "
-                    + "@annotation(com.example.inventoryservice.config.logging.Loggable)")
+            """
+                @within(com.example.inventoryservice.config.logging.Loggable)
+                || @annotation(com.example.inventoryservice.config.logging.Loggable)
+            """)
     public void applicationPackagePointcut() {
         // pointcut definition
     }
