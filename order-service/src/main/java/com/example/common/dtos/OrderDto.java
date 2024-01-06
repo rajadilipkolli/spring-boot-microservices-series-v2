@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Positive;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class OrderDto implements Serializable {
 
@@ -64,5 +65,16 @@ public class OrderDto implements Serializable {
 
     public void setItems(List<OrderItemDto> items) {
         this.items = items;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", OrderDto.class.getSimpleName() + "[", "]")
+                .add("orderId=" + orderId)
+                .add("customerId=" + customerId)
+                .add("status='" + status + "'")
+                .add("source='" + source + "'")
+                .add("items=" + items)
+                .toString();
     }
 }

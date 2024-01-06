@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.common.dtos;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.StringJoiner;
 
 public class OrderItemDto implements Serializable {
 
@@ -18,6 +19,8 @@ public class OrderItemDto implements Serializable {
     private int quantity;
 
     private BigDecimal productPrice;
+
+    public OrderItemDto() {}
 
     public BigDecimal getPrice() {
         return productPrice.multiply(new BigDecimal(quantity));
@@ -60,5 +63,15 @@ public class OrderItemDto implements Serializable {
 
     public void setProductPrice(BigDecimal productPrice) {
         this.productPrice = productPrice;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", OrderItemDto.class.getSimpleName() + "[", "]")
+                .add("itemId=" + itemId)
+                .add("productId='" + productId + "'")
+                .add("quantity=" + quantity)
+                .add("productPrice=" + productPrice)
+                .toString();
     }
 }

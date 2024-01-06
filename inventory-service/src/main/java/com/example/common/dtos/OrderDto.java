@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -9,6 +9,7 @@ package com.example.common.dtos;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class OrderDto implements Serializable {
 
@@ -60,5 +61,16 @@ public class OrderDto implements Serializable {
 
     public void setItems(List<OrderItemDto> items) {
         this.items = items;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", OrderDto.class.getSimpleName() + "[", "]")
+                .add("orderId=" + orderId)
+                .add("customerId=" + customerId)
+                .add("status='" + status + "'")
+                .add("source='" + source + "'")
+                .add("items=" + items)
+                .toString();
     }
 }
