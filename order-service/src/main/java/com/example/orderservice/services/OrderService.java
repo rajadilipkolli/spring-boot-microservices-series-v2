@@ -105,15 +105,11 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
+    @Transactional
     public OrderResponse updateOrder(OrderRequest orderRequest, Order orderObj) {
         this.orderMapper.updateOrderFromOrderRequest(orderRequest, orderObj);
-        Order persistedOrder = getPersistedOrder(orderObj);
+        Order persistedOrder = this.orderRepository.save(orderObj);
         return this.orderMapper.toResponse(persistedOrder);
-    }
-
-    @Transactional
-    public Order getPersistedOrder(Order orderObj) {
-        return this.orderRepository.save(orderObj);
     }
 
     public Optional<Order> findById(Long id) {

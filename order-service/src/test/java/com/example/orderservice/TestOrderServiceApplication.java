@@ -1,12 +1,13 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice;
 
 import com.example.orderservice.common.PostGreSQLContainer;
+import com.example.orderservice.utils.AppConstants;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -39,7 +40,7 @@ public class TestOrderServiceApplication {
     }
 
     public static void main(String[] args) {
-        System.setProperty("spring.profiles.active", "local");
+        System.setProperty("spring.profiles.active", AppConstants.PROFILE_LOCAL);
         SpringApplication.from(OrderServiceApplication::main)
                 .with(TestOrderServiceApplication.class)
                 .run(args);
