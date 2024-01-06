@@ -6,6 +6,7 @@
 
 package com.example.orderservice;
 
+import static com.example.orderservice.util.TestData.getOrderDto;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
@@ -14,12 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    //     @Disabled("until infra for streams is set up")
+    @Disabled("until infra for streams is set up")
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining
@@ -75,20 +74,5 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                                         .perform(get("/api/orders/all"))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.size()", is(0))));
-    }
-
-    private OrderDto getOrderDto(String source) {
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(151L);
-        orderDto.setCustomerId(1001L);
-        orderDto.setStatus("ACCEPT");
-        orderDto.setSource(source);
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setItemId(1L);
-        orderItemDto.setProductId("P1");
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderDto.setItems(List.of(orderItemDto));
-        return orderDto;
     }
 }

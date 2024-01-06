@@ -6,6 +6,8 @@
 
 package com.example.orderservice.util;
 
+import com.example.common.dtos.OrderDto;
+import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
@@ -47,5 +49,20 @@ public class TestData {
                                 "product4",
                                 orderItem1.getQuantity(),
                                 orderItem1.getProductPrice())));
+    }
+
+    public static OrderDto getOrderDto(String source) {
+        OrderDto orderDto = new OrderDto();
+        orderDto.setOrderId(151L);
+        orderDto.setCustomerId(1001L);
+        orderDto.setStatus("ACCEPT");
+        orderDto.setSource(source);
+        OrderItemDto orderItemDto = new OrderItemDto();
+        orderItemDto.setItemId(1L);
+        orderItemDto.setProductId("P1");
+        orderItemDto.setProductPrice(BigDecimal.TEN);
+        orderItemDto.setQuantity(1);
+        orderDto.setItems(List.of(orderItemDto));
+        return orderDto;
     }
 }
