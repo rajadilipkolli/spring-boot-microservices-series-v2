@@ -12,8 +12,8 @@ import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -26,13 +26,20 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.retry.annotation.Backoff;
 
 @EnableKafka
-@Slf4j
 @Configuration(proxyBeanMethods = false)
-@RequiredArgsConstructor
 public class KafkaListenerConfig {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
+
+    public KafkaListenerConfig(
+            InventoryOrderManageService orderManageService,
+            ProductManageService productManageService) {
+        this.orderManageService = orderManageService;
+        this.productManageService = productManageService;
+    }
 
     // retries if processing of event fails
     @RetryableTopic(

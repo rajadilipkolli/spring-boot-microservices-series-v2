@@ -82,7 +82,12 @@ class InventoryControllerTest {
     @Test
     void shouldFindInventoryByProductCode() throws Exception {
         String productCode = "text 1";
-        Inventory inventory = new Inventory(1L, "text 1", 1, 0);
+        Inventory inventory =
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(10)
+                        .setReservedItems(0);
         given(inventoryService.findInventoryByProductCode(productCode))
                 .willReturn(Optional.of(inventory));
 
@@ -104,7 +109,12 @@ class InventoryControllerTest {
 
     @Test
     void shouldCreateNewInventory() throws Exception {
-        Inventory inventory = new Inventory(1L, "some text", 1, 0);
+        Inventory inventory =
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(10)
+                        .setReservedItems(0);
         given(inventoryService.saveInventory(any(InventoryRequest.class))).willReturn(inventory);
 
         InventoryRequest inventoryRequest = new InventoryRequest("some text", 1);
@@ -140,9 +150,14 @@ class InventoryControllerTest {
     @Test
     void shouldUpdateInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Updated text", 30, 0);
+        Inventory inventory =
+                new Inventory()
+                        .setId(inventoryId)
+                        .setProductCode("Updated Product")
+                        .setAvailableQuantity(30)
+                        .setReservedItems(0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        InventoryRequest inventoryRequest = new InventoryRequest("Updated text", 30);
+        InventoryRequest inventoryRequest = new InventoryRequest("Updated Product", 30);
         given(inventoryService.updateInventory(inventory, inventoryRequest))
                 .willAnswer((invocation) -> invocation.getArgument(0));
 
@@ -159,7 +174,12 @@ class InventoryControllerTest {
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.empty());
-        Inventory inventory = new Inventory(inventoryId, "Updated text", 8, 0);
+        Inventory inventory =
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(10)
+                        .setReservedItems(0);
 
         this.mockMvc
                 .perform(
@@ -172,7 +192,12 @@ class InventoryControllerTest {
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
-        Inventory inventory = new Inventory(inventoryId, "Some text", 5, 0);
+        Inventory inventory =
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(10)
+                        .setReservedItems(0);
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
         doNothing().when(inventoryService).deleteInventoryById(inventory.getId());
 

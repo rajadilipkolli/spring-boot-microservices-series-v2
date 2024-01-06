@@ -12,15 +12,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "inventory")
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Inventory {
 
     @Id
@@ -36,6 +30,10 @@ public class Inventory {
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
 
+    public Long getId() {
+        return id;
+    }
+
     public Inventory setId(Long id) {
         this.id = id;
         return this;
@@ -46,13 +44,25 @@ public class Inventory {
         return this;
     }
 
+    public String getProductCode() {
+        return productCode;
+    }
+
     public Inventory setAvailableQuantity(Integer availableQuantity) {
         this.availableQuantity = availableQuantity;
         return this;
     }
 
+    public Integer getAvailableQuantity() {
+        return availableQuantity;
+    }
+
     public Inventory setReservedItems(Integer reservedItems) {
         this.reservedItems = reservedItems;
         return this;
+    }
+
+    public Integer getReservedItems() {
+        return reservedItems;
     }
 }

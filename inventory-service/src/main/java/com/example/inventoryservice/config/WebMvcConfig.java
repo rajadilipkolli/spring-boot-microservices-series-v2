@@ -7,16 +7,18 @@
 package com.example.inventoryservice.config;
 
 import com.example.inventoryservice.config.ApplicationProperties.Cors;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration(proxyBeanMethods = false)
-@RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final ApplicationProperties properties;
+
+    public WebMvcConfig(ApplicationProperties properties) {
+        this.properties = properties;
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {

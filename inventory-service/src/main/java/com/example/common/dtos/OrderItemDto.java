@@ -8,13 +8,7 @@ package com.example.common.dtos;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class OrderItemDto implements Serializable {
 
     private Long itemId;
@@ -27,5 +21,44 @@ public class OrderItemDto implements Serializable {
 
     public BigDecimal getPrice() {
         return productPrice.multiply(new BigDecimal(quantity));
+    }
+
+    public OrderItemDto(Long itemId, String productId, int quantity, BigDecimal productPrice) {
+        this.itemId = itemId;
+        this.productId = productId;
+        this.quantity = quantity;
+        this.productPrice = productPrice;
+    }
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public BigDecimal getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(BigDecimal productPrice) {
+        this.productPrice = productPrice;
     }
 }

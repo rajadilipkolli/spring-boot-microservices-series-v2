@@ -62,8 +62,16 @@ class InventoryOrderManageServiceTest {
         given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
                 .willReturn(
                         List.of(
-                                new Inventory(1L, "product1", 10, 0),
-                                new Inventory(2L, "product2", 30, 0)));
+                                new Inventory()
+                                        .setId(1L)
+                                        .setProductCode("product1")
+                                        .setAvailableQuantity(10)
+                                        .setReservedItems(0),
+                                new Inventory()
+                                        .setId(2L)
+                                        .setProductCode("product2")
+                                        .setAvailableQuantity(30)
+                                        .setReservedItems(0)));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
@@ -92,8 +100,16 @@ class InventoryOrderManageServiceTest {
         given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
                 .willReturn(
                         List.of(
-                                new Inventory(1L, "product1", 10, 0),
-                                new Inventory(2L, "product2", 10, 0)));
+                                new Inventory()
+                                        .setId(1L)
+                                        .setProductCode("product1")
+                                        .setAvailableQuantity(10)
+                                        .setReservedItems(0),
+                                new Inventory()
+                                        .setId(2L)
+                                        .setProductCode("product2")
+                                        .setAvailableQuantity(10)
+                                        .setReservedItems(0)));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
@@ -119,7 +135,14 @@ class InventoryOrderManageServiceTest {
         orderDto.setItems(orderItems);
 
         given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
-                .willReturn(new ArrayList<>(List.of(new Inventory(1L, "product1", 0, 0))));
+                .willReturn(
+                        new ArrayList<>(
+                                List.of(
+                                        new Inventory()
+                                                .setId(1L)
+                                                .setProductCode("product1")
+                                                .setAvailableQuantity(0)
+                                                .setReservedItems(0))));
 
         // Act
         inventoryOrderManageService.reserve(orderDto);
@@ -164,8 +187,18 @@ class InventoryOrderManageServiceTest {
         orderDto.setItems(orderItems);
 
         List<Inventory> inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "product1", 0, 0));
-        inventoryList.add(new Inventory(2L, "product2", 0, 0));
+        inventoryList.add(
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(0)
+                        .setReservedItems(0));
+        inventoryList.add(
+                new Inventory()
+                        .setId(2L)
+                        .setProductCode("product2")
+                        .setAvailableQuantity(0)
+                        .setReservedItems(0));
 
         given(inventoryJOOQRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
 
@@ -192,8 +225,18 @@ class InventoryOrderManageServiceTest {
         orderDto.setItems(orderItems);
 
         List<Inventory> inventoryList = new ArrayList<>();
-        inventoryList.add(new Inventory(1L, "product1", 10, 0));
-        inventoryList.add(new Inventory(2L, "product2", 20, 0));
+        inventoryList.add(
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("product1")
+                        .setAvailableQuantity(10)
+                        .setReservedItems(0));
+        inventoryList.add(
+                new Inventory()
+                        .setId(2L)
+                        .setProductCode("product2")
+                        .setAvailableQuantity(20)
+                        .setReservedItems(0));
 
         given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(inventoryList);

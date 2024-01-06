@@ -12,7 +12,6 @@ import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.jooq.tables.records.InventoryRecord;
 import java.lang.reflect.Field;
 import java.util.*;
-import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.SortField;
 import org.jooq.TableField;
@@ -25,11 +24,14 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
 
     private final DSLContext dslContext;
+
+    public InventoryJOOQRepositoryImpl(DSLContext dslContext) {
+        this.dslContext = dslContext;
+    }
 
     @Override
     public Optional<Inventory> findById(Long inventoryId) {

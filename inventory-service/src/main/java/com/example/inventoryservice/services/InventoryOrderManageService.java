@@ -18,19 +18,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class InventoryOrderManageService {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryRepository inventoryRepository;
     private final InventoryJOOQRepository inventoryJOOQRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+
+    public InventoryOrderManageService(
+            InventoryRepository inventoryRepository,
+            InventoryJOOQRepository inventoryJOOQRepository,
+            KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+        this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     public void reserve(OrderDto orderDto) {
         log.info("Reserving Order in Inventory Service {}", orderDto);

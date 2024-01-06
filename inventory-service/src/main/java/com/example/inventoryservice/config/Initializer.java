@@ -11,19 +11,23 @@ import com.example.inventoryservice.repositories.InventoryRepository;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
 @Profile("local")
 public class Initializer implements CommandLineRunner {
 
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private final InventoryRepository inventoryRepository;
+
+    public Initializer(InventoryRepository inventoryRepository) {
+        this.inventoryRepository = inventoryRepository;
+    }
 
     @Override
     public void run(String... args) {

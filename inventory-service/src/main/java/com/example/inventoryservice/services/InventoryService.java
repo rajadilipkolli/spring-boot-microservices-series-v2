@@ -15,8 +15,8 @@ import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -24,17 +24,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Loggable
 public class InventoryService {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryRepository inventoryRepository;
 
     private final InventoryMapper inventoryMapper;
 
     private final InventoryJOOQRepository inventoryJOOQRepository;
+
+    public InventoryService(
+            InventoryRepository inventoryRepository,
+            InventoryMapper inventoryMapper,
+            InventoryJOOQRepository inventoryJOOQRepository) {
+        this.inventoryRepository = inventoryRepository;
+        this.inventoryMapper = inventoryMapper;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
+    }
 
     public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {

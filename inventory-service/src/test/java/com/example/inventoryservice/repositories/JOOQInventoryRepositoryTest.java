@@ -34,8 +34,14 @@ class JOOQInventoryRepositoryTest {
     void findByProductCodeInAndQuantityAvailable() {
         List<Inventory> inventoryList =
                 List.of(
-                        new Inventory(null, "product1", 10, 0),
-                        new Inventory(null, "product2", 0, 0));
+                        new Inventory()
+                                .setProductCode("product1")
+                                .setAvailableQuantity(10)
+                                .setReservedItems(0),
+                        new Inventory()
+                                .setProductCode("product2")
+                                .setAvailableQuantity(0)
+                                .setReservedItems(0));
         inventoryList.forEach(inventory -> dslContext.newRecord(INVENTORY, inventory).insert());
 
         List<Inventory> findAvailableInventory =
