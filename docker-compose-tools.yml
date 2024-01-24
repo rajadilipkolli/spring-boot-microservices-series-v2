@@ -332,7 +332,7 @@ services:
       - microservice-network
 
   promtail:
-    image: grafana/promtail:2.9.3
+    image: grafana/promtail:2.9.4
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
