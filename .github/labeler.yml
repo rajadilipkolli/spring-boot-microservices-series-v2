@@ -1,29 +1,10 @@
-"component : api-gateway":
- - api-gateway/**/*
-"component : catalog-service":
- - catalog-service/**/*
-"component : config-server":
- - config-server/**/*
-"component : inventory-service":
- - inventory-service/**/*
-"component : order-service":
- - order-service/**/*
-"component : payment-service":
- - payment-service/**/*
-"component : service-registry":
- - service-registry/**/*
-"component : gatling-tests":
- - gatling-tests/**/*
-"status: waiting-for-triage":
-  - ./*
-  - ./**/*
-"type: documentation": docs/**/*
-"type: dependency-upgrade":
-  - api-gateway/pom.xml
-  - catalog-service/pom.xml
-  - config-server/pom.xml
-  - inventory-service/pom.xml
-  - order-service/pom.xml
-  - payment-service/pom.xml
-  - service-registry/pom.xml
-  - gatling-tests/pom.xml
+- any:
+  - "type: dependency-upgrade":
+    - api-gateway/pom.xml
+    - catalog-service/pom.xml
+    - config-server/pom.xml
+    - inventory-service/pom.xml
+    - order-service/pom.xml
+    - payment-service/pom.xml
+    - service-registry/pom.xml
+    - gatling-tests/pom.xml
