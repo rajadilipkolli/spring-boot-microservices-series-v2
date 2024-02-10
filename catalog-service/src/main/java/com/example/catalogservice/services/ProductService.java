@@ -28,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -179,7 +180,8 @@ public class ProductService {
                         savedProduct -> {
                             streamBridge.send(
                                     "inventory-out-0",
-                                    this.productMapper.toProductDto(productRequest));
+                                    this.productMapper.toProductDto(productRequest),
+                                    MediaType.APPLICATION_JSON);
                             return savedProduct;
                         })
                 .onErrorResume(

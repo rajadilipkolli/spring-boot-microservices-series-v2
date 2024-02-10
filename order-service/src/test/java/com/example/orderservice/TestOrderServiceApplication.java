@@ -26,7 +26,7 @@ public class TestOrderServiceApplication {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.3"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
                 .withKraft()
                 .withReuse(true);
     }

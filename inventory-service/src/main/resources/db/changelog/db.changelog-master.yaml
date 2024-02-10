@@ -1,4 +1,5 @@
 databaseChangeLog:
-    - include:
-          file: 01-create_inventories_table.json
+    - includeAll:
+          path: migration/
+          errorIfMissingOrEmpty: true
           relativeToChangelogFile: true

@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
 package com.example.paymentservice;
 
 import org.springframework.boot.SpringApplication;
@@ -31,7 +31,7 @@ public class TestPaymentApplication {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.5.3"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
                 .withKraft()
                 .withReuse(true);
     }
