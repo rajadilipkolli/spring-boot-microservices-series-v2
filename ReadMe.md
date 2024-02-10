@@ -94,6 +94,7 @@ docker compose up zipkin-server postgresql pgadmin4 kafka config-server naming-s
 - Prometheus : http://localhost:9090
 - Zipkin (Centralized logs tracing) : http://localhost:9411/zipkin/
 ![](images/zipkin.jpg)
+- JobRunr Dashboard : http://localhost:28282/dashboard/overview
 
 ### Swagger URLs for accessing Services
 

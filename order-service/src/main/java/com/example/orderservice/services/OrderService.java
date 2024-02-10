@@ -18,6 +18,7 @@ import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import io.micrometer.observation.annotation.Observed;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -161,7 +162,8 @@ public class OrderService {
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order
         List<Order> byStatusOrderByIdAsc =
-                orderRepository.findByStatusOrderByIdAsc(OrderStatus.NEW);
+                orderRepository.findByStatusAndCreatedDateLessThanOrderByIdAsc(
+                        OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
         byStatusOrderByIdAsc.forEach(
                 order -> {
                     OrderDto persistedOrderDto = this.orderMapper.toDto(order);

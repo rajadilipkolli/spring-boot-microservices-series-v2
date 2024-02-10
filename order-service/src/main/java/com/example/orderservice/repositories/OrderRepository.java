@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.orderservice.repositories;
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -48,5 +49,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Long> findAllOrders(Pageable pageable);
 
     @EntityGraph(attributePaths = {"items"})
-    List<Order> findByStatusOrderByIdAsc(OrderStatus new1);
+    List<Order> findByStatusAndCreatedDateLessThanOrderByIdAsc(
+            OrderStatus status, LocalDateTime createdDate);
 }
