@@ -49,8 +49,9 @@ org:
       enabled: true
     background-job-server:
       enabled: true
+      metrics.enabled: true
     dashboard:
       enabled: true
-      port: ${server.port}
+      port: 28282
     miscellaneous:
       allow-anonymous-data-usage: false
