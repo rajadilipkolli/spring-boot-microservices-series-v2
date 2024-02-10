@@ -1,10 +1,10 @@
 - any:
-  - "type: dependency-upgrade":
-    - api-gateway/pom.xml
-    - catalog-service/pom.xml
-    - config-server/pom.xml
-    - inventory-service/pom.xml
-    - order-service/pom.xml
-    - payment-service/pom.xml
-    - service-registry/pom.xml
-    - gatling-tests/pom.xml
+    - "type: dependency-upgrade":
+        - api-gateway/pom.xml
+        - catalog-service/pom.xml
+        - config-server/pom.xml
+        - inventory-service/pom.xml
+        - order-service/pom.xml
+        - payment-service/pom.xml
+        - service-registry/pom.xml
+        - gatling-tests/pom.xml
