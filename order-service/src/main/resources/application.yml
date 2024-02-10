@@ -41,3 +41,16 @@ spring:
     virtual:
       enabled: true
 #      state-dir: /tmp/kafka-streams/
+
+### the background-job-server and dashboard are disabled by default
+org:
+  jobrunr:
+    job-scheduler:
+      enabled: true
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
+      port: ${server.port}
+    miscellaneous:
+      allow-anonymous-data-usage: false

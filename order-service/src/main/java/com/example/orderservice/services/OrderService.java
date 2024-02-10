@@ -9,6 +9,7 @@ package com.example.orderservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
@@ -20,6 +21,7 @@ import io.micrometer.observation.annotation.Observed;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import org.jobrunr.jobs.annotations.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -153,5 +155,18 @@ public class OrderService {
                 page.isLast(),
                 page.hasNext(),
                 page.hasPrevious());
+    }
+
+    @Job(name = "reProcessNewOrders", retries = 2)
+    public void retryNewOrders() {
+        // fetch all orders where Status is New in Order
+        List<Order> byStatusOrderByIdAsc =
+                orderRepository.findByStatusOrderByIdAsc(OrderStatus.NEW);
+        byStatusOrderByIdAsc.forEach(
+                order -> {
+                    OrderDto persistedOrderDto = this.orderMapper.toDto(order);
+                    log.info("Retrying Order :{}", persistedOrderDto);
+                    kafkaOrderProducer.sendOrder(persistedOrderDto);
+                });
     }
 }

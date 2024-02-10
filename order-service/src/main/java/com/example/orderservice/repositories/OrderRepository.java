@@ -46,4 +46,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("select o.id from Order o")
     Page<Long> findAllOrders(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"items"})
+    List<Order> findByStatusOrderByIdAsc(OrderStatus new1);
 }

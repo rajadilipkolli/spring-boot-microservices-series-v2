@@ -112,6 +112,14 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Scheduling -->
+        <dependency>
+            <groupId>org.jobrunr</groupId>
+            <artifactId>jobrunr-spring-boot-3-starter</artifactId>
+            <version>6.3.4</version>
+        </dependency>
+
+
         <!-- Observability -->
         <!-- Metrics -->
         <dependency>
