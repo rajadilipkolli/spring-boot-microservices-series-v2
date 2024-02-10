@@ -1,6 +1,30 @@
+api-gateway:
+  - changed-files:
+      - any-glob-to-any-file: 'api-gateway/**/*'
+catalog-service:
+  - changed-files:
+      - any-glob-to-any-file: 'catalog-service/**/*'
+config-server:
+  - changed-files:
+      - any-glob-to-any-file: 'config-server/**/*'
+inventory-service:
+  - changed-files:
+      - any-glob-to-any-file: 'inventory-service/**/*'
+order-service:
+  - changed-files:
+      - any-glob-to-any-file: 'order-service/**/*'
+payment-service:
+  - changed-files:
+      - any-glob-to-any-file: 'payment-service/**/*'
+service-registry:
+  - changed-files:
+      - any-glob-to-any-file: 'service-registry/**/*'
+gatling-tests:
+  - changed-files:
+      - any-glob-to-any-file: 'gatling-tests/**/*'
 Documentation:
   - changed-files:
-      - any-glob-to-any-file: docs/**/*
+      - any-glob-to-any-file: 'docs/**/*'
 dependency-upgrade:
   - changed-files:
       - any-glob-to-any-file:
