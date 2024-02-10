@@ -78,7 +78,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": []
       },
@@ -101,10 +102,11 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "targets": [
         {
           "datasource": {
@@ -144,7 +146,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": []
       },
@@ -167,10 +170,11 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "targets": [
         {
           "datasource": {
@@ -211,7 +215,8 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": []
       },
@@ -234,10 +239,11 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "targets": [
         {
           "datasource": {
@@ -289,6 +295,12 @@
         "type": "prometheus",
         "uid": "prometheus-micro-service"
       },
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -316,7 +328,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -382,7 +394,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 13
       },
       "id": 52,
       "panels": [],
@@ -408,13 +420,19 @@
         "uid": "prometheus-micro-service"
       },
       "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 21
+        "y": 14
       },
       "hiddenSeries": false,
       "id": 2,
@@ -435,7 +453,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -502,7 +520,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 21
       },
       "id": 53,
       "panels": [],
@@ -528,13 +546,19 @@
         "uid": "prometheus-micro-service"
       },
       "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 36
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 3,
@@ -555,7 +579,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -621,7 +645,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 29
       },
       "id": 54,
       "panels": [],
@@ -647,13 +671,19 @@
         "uid": "prometheus-micro-service"
       },
       "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 51
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 35,
@@ -674,7 +704,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -740,7 +770,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 37
       },
       "id": 64,
       "panels": [],
@@ -765,13 +795,19 @@
         "type": "prometheus",
         "uid": "prometheus-micro-service"
       },
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 6,
         "x": 0,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 62,
@@ -792,7 +828,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -854,13 +890,19 @@
         "type": "prometheus",
         "uid": "prometheus-micro-service"
       },
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 6,
         "x": 6,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 69,
@@ -881,7 +923,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -943,13 +985,19 @@
         "type": "prometheus",
         "uid": "prometheus-micro-service"
       },
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 6,
         "x": 12,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 77,
@@ -970,7 +1018,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1066,13 +1114,19 @@
         "type": "prometheus",
         "uid": "prometheus-micro-service"
       },
+      "fieldConfig": {
+        "defaults": {
+          "unitScale": true
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 6,
         "x": 18,
-        "y": 66
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 79,
@@ -1093,7 +1147,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.3.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1156,7 +1210,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
