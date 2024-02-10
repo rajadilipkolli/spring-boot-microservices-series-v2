@@ -1,29 +1,38 @@
-"component : api-gateway":
- - api-gateway/**/*
-"component : catalog-service":
- - catalog-service/**/*
-"component : config-server":
- - config-server/**/*
-"component : inventory-service":
- - inventory-service/**/*
-"component : order-service":
- - order-service/**/*
-"component : payment-service":
- - payment-service/**/*
-"component : service-registry":
- - service-registry/**/*
-"component : gatling-tests":
- - gatling-tests/**/*
-"status: waiting-for-triage":
-  - ./*
-  - ./**/*
-"type: documentation": docs/**/*
-"type: dependency-upgrade":
-  - api-gateway/pom.xml
-  - catalog-service/pom.xml
-  - config-server/pom.xml
-  - inventory-service/pom.xml
-  - order-service/pom.xml
-  - payment-service/pom.xml
-  - service-registry/pom.xml
-  - gatling-tests/pom.xml
+api-gateway:
+  - changed-files:
+      - any-glob-to-any-file: 'api-gateway/**/*'
+catalog-service:
+  - changed-files:
+      - any-glob-to-any-file: 'catalog-service/**/*'
+config-server:
+  - changed-files:
+      - any-glob-to-any-file: 'config-server/**/*'
+inventory-service:
+  - changed-files:
+      - any-glob-to-any-file: 'inventory-service/**/*'
+order-service:
+  - changed-files:
+      - any-glob-to-any-file: 'order-service/**/*'
+payment-service:
+  - changed-files:
+      - any-glob-to-any-file: 'payment-service/**/*'
+service-registry:
+  - changed-files:
+      - any-glob-to-any-file: 'service-registry/**/*'
+gatling-tests:
+  - changed-files:
+      - any-glob-to-any-file: 'gatling-tests/**/*'
+Documentation:
+  - changed-files:
+      - any-glob-to-any-file: 'docs/**/*'
+dependency-upgrade:
+  - changed-files:
+      - any-glob-to-any-file:
+          - api-gateway/pom.xml
+          - catalog-service/pom.xml
+          - config-server/pom.xml
+          - inventory-service/pom.xml
+          - order-service/pom.xml
+          - payment-service/pom.xml
+          - service-registry/pom.xml
+          - gatling-tests/pom.xml
