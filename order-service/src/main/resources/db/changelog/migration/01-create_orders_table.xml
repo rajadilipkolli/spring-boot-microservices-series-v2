@@ -33,7 +33,7 @@
             </column>
             <column name="source" type="${string.type}"/>
             <column name="status" type="${string.type}"/>
-            <column name="version" type="smallint"/>
+            <column name="version" type="tinyint"/>
             <column name="created_by" type="${string.type}"/>
             <column name="created_date" type="timestamptz" />
             <column name="last_modified_by" type="${string.type}"/>
