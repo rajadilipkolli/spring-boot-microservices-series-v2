@@ -15,8 +15,6 @@ import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -27,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @Loggable
 public class InventoryService {
-
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryRepository inventoryRepository;
 
@@ -47,7 +43,6 @@ public class InventoryService {
 
     public PagedResult<Inventory> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
-        log.info("Fetching findAllInventories for pageNo {} with sorting By {}", pageNo, sortBy);
 
         Sort sort =
                 sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
