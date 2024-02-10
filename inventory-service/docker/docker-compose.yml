@@ -77,6 +77,8 @@ services:
       - inventory-network
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: docker-dev
+      SPRING_SECURITY_USER_PASSWORD: docker-pass
 
   naming-server:
     container_name: naming-server
@@ -95,7 +97,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
   catalog-service:
@@ -119,7 +121,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
 networks:
