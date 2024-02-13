@@ -1,31 +1,31 @@
-api-gateway:
+"component : api-gateway":
   - changed-files:
       - any-glob-to-any-file: 'api-gateway/**/*'
-catalog-service:
+"component : catalog-service":
   - changed-files:
       - any-glob-to-any-file: 'catalog-service/**/*'
-config-server:
+"component : config-server":
   - changed-files:
       - any-glob-to-any-file: 'config-server/**/*'
-inventory-service:
+"component : inventory-service":
   - changed-files:
       - any-glob-to-any-file: 'inventory-service/**/*'
-order-service:
+"component : order-service":
   - changed-files:
       - any-glob-to-any-file: 'order-service/**/*'
-payment-service:
+"component : payment-service":
   - changed-files:
       - any-glob-to-any-file: 'payment-service/**/*'
-service-registry:
+"component : service-registry":
   - changed-files:
       - any-glob-to-any-file: 'service-registry/**/*'
-gatling-tests:
+"component : gatling-tests":
   - changed-files:
       - any-glob-to-any-file: 'gatling-tests/**/*'
 Documentation:
   - changed-files:
       - any-glob-to-any-file: 'docs/**/*'
-dependency-upgrade:
+"type : dependency-upgrade":
   - changed-files:
       - any-glob-to-any-file:
           - api-gateway/pom.xml
