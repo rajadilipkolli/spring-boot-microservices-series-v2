@@ -346,7 +346,7 @@ services:
       - microservice-network
 
   prometheus:
-    image: prom/prometheus:v2.50.0
+    image: prom/prometheus:v2.50.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
