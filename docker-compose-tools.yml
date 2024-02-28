@@ -9,6 +9,11 @@ services:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=appdb
+    healthcheck:
+      test: "pg_isready -U appuser -d appdb"
+      interval: 2s
+      timeout: 20s
+      retries: 10
     ports:
       - "5432:5432"
     networks:
@@ -24,7 +29,8 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - postgresql
+      postgresql:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - microservice-network
@@ -58,7 +64,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: confluentinc/cp-kafka:7.6.0
+    image: apache/kafka:3.7.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -202,7 +208,7 @@ services:
       naming-server:
         condition: service_started
       postgresql:
-        condition: service_started
+        condition: service_healthy
       loki :
         condition: service_started
       api-gateway:
@@ -234,7 +240,7 @@ services:
       naming-server:
         condition: service_started
       postgresql:
-        condition: service_started
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -262,7 +268,7 @@ services:
       naming-server:
         condition: service_started
       postgresql:
-        condition: service_started
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -290,7 +296,7 @@ services:
       naming-server:
         condition: service_started
       postgresql:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -394,5 +400,4 @@ volumes:
   redis_data:
   postgres_data:
     driver: local
-
 
