@@ -77,6 +77,8 @@ spring:
   datasource:
     hikari:
       auto-commit: false
+      data-source-properties:
+        ApplicationName: ${spring.application.name}
   jmx:
     enabled: false
   jpa:
