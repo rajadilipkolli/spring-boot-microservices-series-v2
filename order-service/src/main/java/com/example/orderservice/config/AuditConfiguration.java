@@ -1,12 +1,12 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.config;
 
-import com.example.orderservice.entities.EntityAuditorAware;
+import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
@@ -18,6 +18,6 @@ public class AuditConfiguration {
 
     @Bean
     AuditorAware<String> auditorProvider() {
-        return new EntityAuditorAware();
+        return () -> Optional.of("AppUser");
     }
 }
