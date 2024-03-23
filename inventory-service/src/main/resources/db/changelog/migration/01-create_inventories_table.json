@@ -77,6 +77,12 @@
                     "type": "INTEGER",
                     "defaultValue": "0"
                   }
+                },
+                {
+                  "column": {
+                    "name": "version",
+                    "type": "smallint"
+                  }
                 }
               ]
             }

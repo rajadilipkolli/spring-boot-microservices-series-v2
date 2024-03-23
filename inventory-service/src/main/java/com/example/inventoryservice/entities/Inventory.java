@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "inventory")
@@ -29,6 +30,8 @@ public class Inventory {
 
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
+
+    @Version private Short version;
 
     public Long getId() {
         return id;
@@ -64,5 +67,14 @@ public class Inventory {
 
     public Integer getReservedItems() {
         return reservedItems;
+    }
+
+    public Short getVersion() {
+        return version;
+    }
+
+    public Inventory setVersion(Short version) {
+        this.version = version;
+        return this;
     }
 }
