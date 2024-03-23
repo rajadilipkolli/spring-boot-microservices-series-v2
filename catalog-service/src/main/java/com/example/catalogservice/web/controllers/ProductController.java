@@ -77,9 +77,8 @@ public class ProductController {
     }
 
     @GetMapping("/generate")
-    public boolean create() {
-        productService.generateProducts();
-        return true;
+    public Mono<Boolean> createRandomProducts() {
+        return productService.generateProducts();
     }
 
     @PostMapping

@@ -226,16 +226,21 @@ public class ProductService {
         return this.productRepository.findById(id);
     }
 
-    public void generateProducts() {
-        for (int i = 0; i < 101; i++) {
-            int randomPrice = RAND.nextInt(100) + 1;
-            ProductRequest productRequest =
-                    new ProductRequest(
-                            "ProductCode" + i,
-                            "Gen Product" + i,
-                            "Gen Prod Description" + i,
-                            (double) randomPrice);
-            saveProduct(productRequest);
-        }
+    @Transactional
+    public Mono<Boolean> generateProducts() {
+        return Flux.range(0, 101)
+                .flatMap(
+                        i ->
+                                Mono.fromCallable(
+                                        () -> {
+                                            int randomPrice = RAND.nextInt(100) + 1;
+                                            return new ProductRequest(
+                                                    "ProductCode" + i,
+                                                    "Gen Product" + i,
+                                                    "Gen Prod Description" + i,
+                                                    (double) randomPrice);
+                                        }))
+                .flatMap(this::saveProduct)
+                .then(Mono.just(Boolean.TRUE));
     }
 }

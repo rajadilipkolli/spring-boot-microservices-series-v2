@@ -48,35 +48,31 @@ public class Product implements Serializable {
         return code;
     }
 
-    public Product setCode(String code) {
+    public void setCode(String code) {
         this.code = code;
-        return this;
     }
 
     public String getProductName() {
         return productName;
     }
 
-    public Product setProductName(String productName) {
+    public void setProductName(String productName) {
         this.productName = productName;
-        return this;
     }
 
     public String getDescription() {
         return description;
     }
 
-    public Product setDescription(String description) {
+    public void setDescription(String description) {
         this.description = description;
-        return this;
     }
 
     public double getPrice() {
         return price;
     }
 
-    public Product setPrice(double price) {
+    public void setPrice(double price) {
         this.price = price;
-        return this;
     }
 }
