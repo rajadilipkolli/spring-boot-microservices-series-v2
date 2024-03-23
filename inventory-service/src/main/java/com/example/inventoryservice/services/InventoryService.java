@@ -86,7 +86,14 @@ public class InventoryService {
     public void updateGeneratedInventory() {
         for (int i = 0; i < 101; i++) {
             int randomQuantity = RAND.nextInt(10_000) + 1;
-            updateInventoryById((long) i, new InventoryRequest("ProductCode" + i, randomQuantity));
+            int finalI = i;
+            findInventoryByProductCode("ProductCode" + i)
+                    .map(
+                            inventoryFromDB ->
+                                    updateInventory(
+                                            inventoryFromDB,
+                                            new InventoryRequest(
+                                                    "ProductCode" + finalI, randomQuantity)));
         }
     }
 
