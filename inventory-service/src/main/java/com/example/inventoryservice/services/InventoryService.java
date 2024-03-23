@@ -13,6 +13,7 @@ import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Loggable
 public class InventoryService {
 
+    private static final SecureRandom RAND = new SecureRandom();
     private final InventoryRepository inventoryRepository;
 
     private final InventoryMapper inventoryMapper;
@@ -79,5 +81,24 @@ public class InventoryService {
 
     public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
         return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
+    }
+
+    public void updateGeneratedInventory() {
+        for (int i = 0; i < 101; i++) {
+            int randomQuantity = RAND.nextInt(10_000) + 1;
+            int finalI = i;
+            findInventoryByProductCode("ProductCode" + i)
+                    .map(
+                            inventoryFromDB ->
+                                    updateInventory(
+                                            inventoryFromDB,
+                                            new InventoryRequest(
+                                                    "ProductCode" + finalI, randomQuantity)));
+        }
+    }
+
+    public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
+        return findInventoryById(id)
+                .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
     }
 }

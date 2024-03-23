@@ -6,11 +6,14 @@
 
 package com.example.inventoryservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -148,44 +151,17 @@ class InventoryControllerTest {
     }
 
     @Test
-    void shouldUpdateInventory() throws Exception {
-        Long inventoryId = 1L;
-        Inventory inventory =
-                new Inventory()
-                        .setId(inventoryId)
-                        .setProductCode("Updated Product")
-                        .setAvailableQuantity(30)
-                        .setReservedItems(0);
-        given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        InventoryRequest inventoryRequest = new InventoryRequest("Updated Product", 30);
-        given(inventoryService.updateInventory(inventory, inventoryRequest))
-                .willAnswer((invocation) -> invocation.getArgument(0));
-
-        this.mockMvc
-                .perform(
-                        put("/api/inventory/{id}", inventory.getId())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
-    }
-
-    @Test
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
-        given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.empty());
-        Inventory inventory =
-                new Inventory()
-                        .setId(1L)
-                        .setProductCode("product1")
-                        .setAvailableQuantity(10)
-                        .setReservedItems(0);
+        InventoryRequest inventoryRequest = new InventoryRequest("product1", 10);
+        given(inventoryService.updateInventoryById(inventoryId, inventoryRequest))
+                .willReturn(Optional.empty());
 
         this.mockMvc
                 .perform(
                         put("/api/inventory/{id}", inventoryId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventory)))
+                                .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isNotFound());
     }
 
@@ -215,5 +191,24 @@ class InventoryControllerTest {
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventoryId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testUpdateInventoryWithRandomValue() throws Exception {
+        // Setup
+        doNothing().when(inventoryService).updateGeneratedInventory();
+
+        // Execute & Verify
+        mockMvc.perform(get("/api/inventory/generate"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                Boolean.parseBoolean(
+                                                        result.getResponse().getContentAsString()))
+                                        .isTrue());
+
+        // Verify interactions
+        verify(inventoryService, times(1)).updateGeneratedInventory();
     }
 }

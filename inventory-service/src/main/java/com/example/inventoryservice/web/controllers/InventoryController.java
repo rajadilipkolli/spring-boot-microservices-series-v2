@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -67,6 +67,12 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getInventoryByProductCodes(codes));
     }
 
+    @GetMapping("/generate")
+    public boolean updateInventoryWithRandomValue() {
+        inventoryService.updateGeneratedInventory();
+        return true;
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Inventory createInventory(@RequestBody @Validated InventoryRequest inventoryRequest) {
@@ -77,12 +83,8 @@ public class InventoryController {
     public ResponseEntity<Inventory> updateInventory(
             @PathVariable Long id, @RequestBody @Validated InventoryRequest inventoryRequest) {
         return inventoryService
-                .findInventoryById(id)
-                .map(
-                        inventoryFromDB ->
-                                ResponseEntity.ok(
-                                        inventoryService.updateInventory(
-                                                inventoryFromDB, inventoryRequest)))
+                .updateInventoryById(id, inventoryRequest)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

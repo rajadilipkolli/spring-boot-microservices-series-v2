@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -17,6 +17,7 @@ import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.micrometer.observation.annotation.Observed;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import reactor.core.publisher.Mono;
 public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+    private static final SecureRandom RAND = new SecureRandom();
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
@@ -222,5 +224,18 @@ public class ProductService {
 
     public Mono<Product> findById(Long id) {
         return this.productRepository.findById(id);
+    }
+
+    public void generateProducts() {
+        for (int i = 0; i < 101; i++) {
+            int randomPrice = RAND.nextInt(100) + 1;
+            ProductRequest productRequest =
+                    new ProductRequest(
+                            "ProductCode" + i,
+                            "Gen Product" + i,
+                            "Gen Prod Description" + i,
+                            (double) randomPrice);
+            saveProduct(productRequest);
+        }
     }
 }
