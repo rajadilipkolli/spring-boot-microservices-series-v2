@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -120,9 +120,9 @@ public class OrderController implements OrderApi {
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
-    @PostMapping("/generate")
-    public boolean create() {
-        orderGeneratorService.generate();
+    @GetMapping("/generate")
+    public boolean createMockOrders() {
+        orderGeneratorService.generateOrders();
         return true;
     }
 

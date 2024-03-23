@@ -33,7 +33,7 @@ class OrderGeneratorServiceTest {
         int expectedOrderCount = 10_000;
 
         // Act
-        orderGeneratorService.generate();
+        orderGeneratorService.generateOrders();
 
         // Assert
         verify(orderService, times(expectedOrderCount)).saveOrder(any(OrderRequest.class));
