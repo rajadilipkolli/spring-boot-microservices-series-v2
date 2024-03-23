@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -229,13 +229,13 @@ public class ProductService {
     public void generateProducts() {
         for (int i = 0; i < 101; i++) {
             int randomPrice = RAND.nextInt(100) + 1;
-            ProductRequest product =
+            ProductRequest productRequest =
                     new ProductRequest(
                             "ProductCode" + i,
                             "Gen Product" + i,
                             "Gen Prod Description" + i,
                             (double) randomPrice);
-            saveProduct(product);
+            saveProduct(productRequest);
         }
     }
 }
