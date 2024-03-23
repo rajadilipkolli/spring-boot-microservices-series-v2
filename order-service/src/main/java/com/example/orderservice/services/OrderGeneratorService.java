@@ -29,7 +29,7 @@ public class OrderGeneratorService {
 
     @Async
     public void generateOrders() {
-        IntStream.rangeClosed(0, NUM_ORDERS)
+        IntStream.range(0, NUM_ORDERS)
                 .parallel()
                 .forEach(
                         value -> {
