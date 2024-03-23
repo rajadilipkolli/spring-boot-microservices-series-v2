@@ -14,6 +14,7 @@ import static org.mockito.BDDMockito.given;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
+import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dtos.ProductDto;
 import java.util.List;
@@ -71,6 +72,20 @@ class ProductServiceTest {
                                     request.productName(),
                                     request.description(),
                                     (double) randomPrice);
+                        });
+
+        // Stubbing productMapper.toProductResponse()
+        given(productMapper.toProductResponse(any(Product.class)))
+                .willAnswer(
+                        invocationOnMock -> {
+                            Product product = invocationOnMock.getArgument(0);
+                            return new ProductResponse(
+                                    product.getId(),
+                                    product.getCode(),
+                                    product.getProductName(),
+                                    product.getDescription(),
+                                    product.getPrice(),
+                                    true);
                         });
 
         given(
