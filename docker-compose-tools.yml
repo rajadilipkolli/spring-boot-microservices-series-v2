@@ -285,7 +285,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18085:18085"
     networks:

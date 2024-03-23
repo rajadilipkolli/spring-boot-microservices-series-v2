@@ -34,8 +34,11 @@ public class OrderGeneratorService {
                 .forEach(
                         value -> {
                             List<OrderItemRequest> orderItems = generateOrderItems();
-                            OrderRequest orderRequest =
-                                    new OrderRequest(RAND.nextLong(100), orderItems);
+                            long customerId = RAND.nextLong(100);
+                            if (customerId == 0) {
+                                customerId = 1;
+                            }
+                            OrderRequest orderRequest = new OrderRequest(customerId, orderItems);
                             orderService.saveOrder(orderRequest);
                         });
     }
