@@ -16,6 +16,7 @@ import com.example.inventoryservice.repositories.InventoryRepository;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -83,20 +84,24 @@ public class InventoryService {
         return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
     }
 
+    @Transactional
     public void updateGeneratedInventory() {
-        for (int i = 0; i < 101; i++) {
-            int randomQuantity = RAND.nextInt(10_000) + 1;
-            int finalI = i;
-            findInventoryByProductCode("ProductCode" + i)
-                    .map(
-                            inventoryFromDB ->
-                                    updateInventory(
-                                            inventoryFromDB,
-                                            new InventoryRequest(
-                                                    "ProductCode" + finalI, randomQuantity)));
-        }
+        IntStream.rangeClosed(0, 100)
+                .forEach(
+                        operand -> {
+                            int randomQuantity = RAND.nextInt(10_000) + 1;
+                            findInventoryByProductCode("ProductCode" + operand)
+                                    .map(
+                                            inventoryFromDB ->
+                                                    updateInventory(
+                                                            inventoryFromDB,
+                                                            new InventoryRequest(
+                                                                    "ProductCode" + operand,
+                                                                    randomQuantity)));
+                        });
     }
 
+    @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
         return findInventoryById(id)
                 .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));

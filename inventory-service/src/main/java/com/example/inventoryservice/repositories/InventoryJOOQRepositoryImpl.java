@@ -11,8 +11,14 @@ import static com.example.inventoryservice.jooq.tables.Inventory.INVENTORY;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.jooq.tables.records.InventoryRecord;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.Record5;
+import org.jooq.RecordMapper;
 import org.jooq.SortField;
 import org.jooq.TableField;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -37,19 +43,24 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     public Optional<Inventory> findById(Long inventoryId) {
         return dslContext
                 .fetchOptional(INVENTORY, INVENTORY.ID.eq(inventoryId))
-                .map(r -> r.into(Inventory.class));
+                .map(getRecord5InventoryRecordMapper());
     }
 
     @Override
     public Page<Inventory> findAll(Pageable pageable) {
         return new PageImpl<>(
                 dslContext
-                        .select()
+                        .select(
+                                INVENTORY.ID,
+                                INVENTORY.PRODUCT_CODE,
+                                INVENTORY.QUANTITY,
+                                INVENTORY.RESERVED_ITEMS,
+                                INVENTORY.VERSION)
                         .from(INVENTORY)
                         .orderBy(getSortFields(pageable.getSort()))
                         .limit(pageable.getPageSize())
                         .offset(pageable.getOffset())
-                        .fetchInto(Inventory.class),
+                        .fetch(getRecord5InventoryRecordMapper()),
                 pageable,
                 dslContext.fetchCount(INVENTORY));
     }
@@ -57,28 +68,54 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     @Override
     public Optional<Inventory> findByProductCode(String productCode) {
         return dslContext
-                .select()
+                .select(
+                        INVENTORY.ID,
+                        INVENTORY.PRODUCT_CODE,
+                        INVENTORY.QUANTITY,
+                        INVENTORY.RESERVED_ITEMS,
+                        INVENTORY.VERSION)
                 .from(INVENTORY)
                 .where(INVENTORY.PRODUCT_CODE.eq(productCode))
-                .fetchOptionalInto(Inventory.class);
+                .fetchOptional(getRecord5InventoryRecordMapper());
+    }
+
+    private static RecordMapper<Record5<Long, String, Integer, Integer, Short>, Inventory>
+            getRecord5InventoryRecordMapper() {
+        return record ->
+                new Inventory(
+                        record.value1(),
+                        record.value2(),
+                        record.value3(),
+                        record.value4(),
+                        record.value5());
     }
 
     @Override
     public List<Inventory> findByProductCodeIn(List<String> productCodes) {
         return dslContext
-                .select()
+                .select(
+                        INVENTORY.ID,
+                        INVENTORY.PRODUCT_CODE,
+                        INVENTORY.QUANTITY,
+                        INVENTORY.RESERVED_ITEMS,
+                        INVENTORY.VERSION)
                 .from(INVENTORY)
                 .where(INVENTORY.PRODUCT_CODE.in(productCodes))
-                .fetchInto(Inventory.class);
+                .fetch(getRecord5InventoryRecordMapper());
     }
 
     @Override
     public List<Inventory> findByProductCodeInAndQuantityAvailable(List<String> productCodes) {
         return dslContext
-                .select()
+                .select(
+                        INVENTORY.ID,
+                        INVENTORY.PRODUCT_CODE,
+                        INVENTORY.QUANTITY,
+                        INVENTORY.RESERVED_ITEMS,
+                        INVENTORY.VERSION)
                 .from(INVENTORY)
                 .where(INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.QUANTITY.gt(0)))
-                .fetchInto(Inventory.class);
+                .fetch(getRecord5InventoryRecordMapper());
     }
 
     private Collection<SortField<?>> getSortFields(Sort sortSpecification) {

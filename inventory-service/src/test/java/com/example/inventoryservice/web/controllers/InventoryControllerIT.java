@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -138,7 +138,9 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldUpdateInventory() throws Exception {
         Inventory inventory = inventoryList.getFirst();
-        InventoryRequest inventoryRequest = new InventoryRequest(inventory.getProductCode(), 1000);
+        Integer availableQuantity = inventory.getAvailableQuantity();
+        InventoryRequest inventoryRequest =
+                new InventoryRequest(inventory.getProductCode(), availableQuantity + 1000);
 
         this.mockMvc
                 .perform(
@@ -147,7 +149,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .content(objectMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
-                .andExpect(jsonPath("$.availableQuantity", is(1000)))
+                .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 1000)))
                 .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
     }
 

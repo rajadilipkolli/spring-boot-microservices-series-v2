@@ -33,6 +33,21 @@ public class Inventory {
 
     @Version private Short version;
 
+    public Inventory(
+            Long id,
+            String productCode,
+            Integer availableQuantity,
+            Integer reservedItems,
+            Short version) {
+        this.id = id;
+        this.productCode = productCode;
+        this.availableQuantity = availableQuantity;
+        this.reservedItems = reservedItems;
+        this.version = version;
+    }
+
+    public Inventory() {}
+
     public Long getId() {
         return id;
     }
