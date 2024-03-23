@@ -68,7 +68,7 @@ public class InventoryController {
     }
 
     @GetMapping("/generate")
-    public boolean create() {
+    public boolean updateInventoryWithRandomValue() {
         inventoryService.updateGeneratedInventory();
         return true;
     }
