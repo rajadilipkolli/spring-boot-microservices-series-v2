@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
@@ -81,13 +81,13 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
 
     private static RecordMapper<Record5<Long, String, Integer, Integer, Short>, Inventory>
             getRecord5InventoryRecordMapper() {
-        return record ->
+        return inventoryRecord ->
                 new Inventory(
-                        record.value1(),
-                        record.value2(),
-                        record.value3(),
-                        record.value4(),
-                        record.value5());
+                        inventoryRecord.value1(),
+                        inventoryRecord.value2(),
+                        inventoryRecord.value3(),
+                        inventoryRecord.value4(),
+                        inventoryRecord.value5());
     }
 
     @Override

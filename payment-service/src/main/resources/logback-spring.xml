@@ -22,9 +22,9 @@
 
     <logger name="com.example.paymentservice" level="DEBUG"/>
     <logger name="org.springframework.web" level="INFO" />
-    <logger name="org.springframework.transaction" level="DEBUG" />
-    <logger name="org.springframework.kafka.transaction" level="DEBUG" />
+    <logger name="org.springframework.transaction" level="INFO" />
+    <logger name="org.springframework.kafka.transaction" level="INFO" />
     <logger name="org.apache.kafka.clients.Metadata" level="WARN" />
-    <logger name="org.jooq.tools.LoggerListener" level="DEBUG" />
+    <logger name="org.jooq.tools.LoggerListener" level="INFO" />
 
 </configuration>

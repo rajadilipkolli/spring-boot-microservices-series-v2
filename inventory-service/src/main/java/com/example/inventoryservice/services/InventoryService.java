@@ -90,14 +90,15 @@ public class InventoryService {
                 .forEach(
                         operand -> {
                             int randomQuantity = RAND.nextInt(10_000) + 1;
-                            findInventoryByProductCode("ProductCode" + operand)
-                                    .map(
-                                            inventoryFromDB ->
-                                                    updateInventory(
-                                                            inventoryFromDB,
-                                                            new InventoryRequest(
-                                                                    "ProductCode" + operand,
-                                                                    randomQuantity)));
+                            Optional<Inventory> inventoryByProductCode =
+                                    findInventoryByProductCode("ProductCode" + operand);
+                            inventoryByProductCode.ifPresent(
+                                    inventoryFromDB ->
+                                            updateInventory(
+                                                    inventoryFromDB,
+                                                    new InventoryRequest(
+                                                            "ProductCode" + operand,
+                                                            randomQuantity)));
                         });
     }
 
