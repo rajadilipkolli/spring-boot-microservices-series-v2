@@ -163,6 +163,10 @@ You can monitor the status of alerts by accessing the Prometheus web UI at local
  ```shell
  docker compose logs -f
  ```
+ > follow logs of running container from last few lines only
+ ```shell
+ docker compose -f docker-compose-tools.yml logs --tail=500 -f
+ ```
 
 ### Kill Application running on port
 
