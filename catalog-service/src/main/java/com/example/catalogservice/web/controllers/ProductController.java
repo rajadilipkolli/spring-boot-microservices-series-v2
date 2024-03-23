@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -40,7 +40,7 @@ public class ProductController {
     }
 
     @GetMapping
-    public Mono<PagedResult<ProductResponse>> getAllPosts(
+    public Mono<PagedResult<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -74,6 +74,12 @@ public class ProductController {
     public Mono<ResponseEntity<Boolean>> productExistsByProductCodes(
             @RequestParam List<String> productCodes) {
         return productService.productExistsByProductCodes(productCodes).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/generate")
+    public boolean create() {
+        productService.generateProducts();
+        return true;
     }
 
     @PostMapping

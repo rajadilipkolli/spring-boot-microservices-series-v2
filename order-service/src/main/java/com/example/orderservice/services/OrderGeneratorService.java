@@ -31,11 +31,11 @@ public class OrderGeneratorService {
             int x = RAND.nextInt(5) + 1;
             OrderItemRequest orderItem =
                     new OrderItemRequest(
-                            "Product" + RAND.nextInt(100) + 1, x, new BigDecimal(100 * x));
+                            "ProductCode" + RAND.nextInt(100) + 1, x, new BigDecimal(100 * x));
             int y = RAND.nextInt(5) + 1;
             OrderItemRequest orderItem1 =
                     new OrderItemRequest(
-                            "Product" + RAND.nextInt(100) + 1, y, new BigDecimal(100 * y));
+                            "ProductCode" + RAND.nextInt(100) + 1, y, new BigDecimal(100 * y));
             OrderRequest o =
                     new OrderRequest(RAND.nextLong(100) + 1, List.of(orderItem, orderItem1));
             orderService.saveOrder(o);
