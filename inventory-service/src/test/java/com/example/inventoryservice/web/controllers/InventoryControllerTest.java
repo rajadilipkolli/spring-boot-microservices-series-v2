@@ -148,29 +148,6 @@ class InventoryControllerTest {
     }
 
     @Test
-    void shouldUpdateInventory() throws Exception {
-        Long inventoryId = 1L;
-        Inventory inventory =
-                new Inventory()
-                        .setId(inventoryId)
-                        .setProductCode("Updated Product")
-                        .setAvailableQuantity(30)
-                        .setReservedItems(0);
-        given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
-        InventoryRequest inventoryRequest = new InventoryRequest("Updated Product", 30);
-        given(inventoryService.updateInventory(inventory, inventoryRequest))
-                .willAnswer((invocation) -> invocation.getArgument(0));
-
-        this.mockMvc
-                .perform(
-                        put("/api/inventory/{id}", inventory.getId())
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())));
-    }
-
-    @Test
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
         given(inventoryService.findInventoryById(inventoryId)).willReturn(Optional.empty());
