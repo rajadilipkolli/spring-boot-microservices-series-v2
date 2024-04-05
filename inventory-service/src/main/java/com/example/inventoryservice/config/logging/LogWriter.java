@@ -6,6 +6,10 @@
 
 package com.example.inventoryservice.config.logging;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.logging.LogLevel;
+
 public class LogWriter {
 
     public static void write(Class<?> originClass, LogLevel logLevel, String message) {

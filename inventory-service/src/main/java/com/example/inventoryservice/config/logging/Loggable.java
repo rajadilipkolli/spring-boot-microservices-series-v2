@@ -13,6 +13,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import org.springframework.boot.logging.LogLevel;
 
 @Target({TYPE, METHOD})
 @Retention(RUNTIME)
