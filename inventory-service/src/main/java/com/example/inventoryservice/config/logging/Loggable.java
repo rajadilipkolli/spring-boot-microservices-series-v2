@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -17,4 +17,11 @@ import java.lang.annotation.Target;
 @Target({TYPE, METHOD})
 @Retention(RUNTIME)
 @Inherited
-public @interface Loggable {}
+public @interface Loggable {
+
+    boolean params() default true;
+
+    boolean result() default true;
+
+    LogLevel value() default LogLevel.DEBUG;
+}
