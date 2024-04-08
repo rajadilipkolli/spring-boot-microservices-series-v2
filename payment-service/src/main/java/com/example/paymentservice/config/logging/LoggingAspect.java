@@ -99,7 +99,7 @@ public class LoggingAspect {
         Method method = methodSignature.getMethod();
         Loggable methodAnnotation = method.getAnnotation(Loggable.class);
         Loggable classAnnotation = joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
-        return methodAnnotation != null ? methodAnnotation.value() : classAnnotation.value();
+        return Optional.ofNullable(methodAnnotation).orElse(classAnnotation).value();
     }
 
     private void logMethodParamsIfEnabled(
