@@ -20,7 +20,7 @@ public class LogWriter {
             case INFO -> logger.info(message);
             case WARN -> logger.warn(message);
             case ERROR, FATAL -> logger.error(message);
-            default -> logger.warn("No suitable logLevel found");
+            default -> logger.info("Defaulting to INFO level for message: {}", message);
         }
     }
 }
