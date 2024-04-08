@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.inventoryservice.config.logging;
+package com.example.catalogservice.config.logging;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -76,46 +76,18 @@ public class LoggingAspect {
 
     @Around("applicationPackagePointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-        Method method = methodSignature.getMethod();
-        Loggable methodAnnotation = method.getAnnotation(Loggable.class);
-
+        LogLevel logLevel = determineLogLevel(joinPoint);
+        String methodName = joinPoint.getSignature().getName();
         Class<?> originClass = joinPoint.getTarget().getClass();
-        Loggable classAnnotation = originClass.getAnnotation(Loggable.class);
 
-        // get current log level
-
-        LogLevel logLevel =
-                methodAnnotation != null ? methodAnnotation.value() : classAnnotation.value();
-
-        // before
-        String methodName = method.getName();
         LogWriter.write(originClass, LogLevel.INFO, methodName + "() start execution");
-
-        printParamsIfEnabled(
-                joinPoint,
-                methodSignature.getParameterNames(),
-                methodAnnotation,
-                originClass,
-                classAnnotation,
-                logLevel,
-                methodName);
+        logMethodParamsIfEnabled(joinPoint, logLevel, methodName);
 
         long start = System.currentTimeMillis();
-        // Start method execution
         Object result = joinPoint.proceed();
         long end = System.currentTimeMillis();
 
-        // show results
-        if (result != null) {
-            boolean printResponse =
-                    methodAnnotation != null ? methodAnnotation.result() : classAnnotation.result();
-            if (printResponse) {
-                LogWriter.write(originClass, logLevel, methodName + "() Returned : " + result);
-            }
-        }
-
-        // print results
+        logMethodResultIfEnabled(joinPoint, result, originClass, logLevel, methodName);
         LogWriter.write(
                 originClass,
                 LogLevel.INFO,
@@ -123,21 +95,31 @@ public class LoggingAspect {
                         + "() finished execution and took ("
                         + (end - start)
                         + ") mills to execute");
+
         return result;
     }
 
-    private void printParamsIfEnabled(
-            ProceedingJoinPoint joinPoint,
-            String[] parameterNames,
-            Loggable methodAnnotation,
-            Class<?> originClass,
-            Loggable classAnnotation,
-            LogLevel logLevel,
-            String methodName) {
+    private LogLevel determineLogLevel(ProceedingJoinPoint joinPoint) {
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        Loggable methodAnnotation = method.getAnnotation(Loggable.class);
+        Loggable classAnnotation = joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
+        return methodAnnotation != null ? methodAnnotation.value() : classAnnotation.value();
+    }
+
+    private void logMethodParamsIfEnabled(
+            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
+        Loggable methodAnnotation =
+                ((MethodSignature) joinPoint.getSignature())
+                        .getMethod()
+                        .getAnnotation(Loggable.class);
+        Loggable classAnnotation = joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
         boolean printParams =
                 methodAnnotation != null ? methodAnnotation.params() : classAnnotation.params();
 
         if (printParams && !ObjectUtils.isEmpty(joinPoint.getArgs())) {
+            String[] parameterNames =
+                    ((MethodSignature) joinPoint.getSignature()).getParameterNames();
             List<String> stringArrayList = new ArrayList<>();
             Object[] args = joinPoint.getArgs();
 
@@ -145,7 +127,31 @@ public class LoggingAspect {
                 stringArrayList.add(parameterNames[i] + " : " + args[i]);
             }
             String argsString = String.join(", ", stringArrayList);
-            LogWriter.write(originClass, logLevel, methodName + "() args :: -> " + argsString);
+            LogWriter.write(
+                    joinPoint.getTarget().getClass(),
+                    logLevel,
+                    methodName + "() args :: -> " + argsString);
+        }
+    }
+
+    private void logMethodResultIfEnabled(
+            ProceedingJoinPoint joinPoint,
+            Object result,
+            Class<?> originClass,
+            LogLevel logLevel,
+            String methodName) {
+        if (result != null) {
+            Loggable methodAnnotation =
+                    ((MethodSignature) joinPoint.getSignature())
+                            .getMethod()
+                            .getAnnotation(Loggable.class);
+            Loggable classAnnotation =
+                    joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
+            boolean printResponse =
+                    methodAnnotation != null ? methodAnnotation.result() : classAnnotation.result();
+            if (printResponse) {
+                LogWriter.write(originClass, logLevel, methodName + "() Returned : " + result);
+            }
         }
     }
 }
