@@ -78,27 +78,42 @@ public class LoggingAspect {
 
     @Around("applicationPackagePointcut()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        LogLevel logLevel = determineLogLevel(joinPoint);
         String methodName = joinPoint.getSignature().getName();
+        LogLevel logLevel = determineLogLevel(joinPoint);
 
-        logExecutionDetails(joinPoint, LogLevel.INFO, methodName + "() start execution");
-        logMethodParamsIfEnabled(joinPoint, logLevel, methodName);
+        logMethodStart(joinPoint, methodName);
+        logMethodParams(joinPoint, logLevel, methodName);
 
         long start = System.currentTimeMillis();
         Object result = joinPoint.proceed();
         long end = System.currentTimeMillis();
 
-        logMethodResultIfEnabled(joinPoint, result, logLevel, methodName);
+        logMethodResult(joinPoint, result, logLevel, methodName);
+        logMethodCompletion(joinPoint, methodName, end - start);
 
+        return result;
+    }
+
+    private void logMethodStart(ProceedingJoinPoint joinPoint, String methodName) {
+        logExecutionDetails(joinPoint, LogLevel.INFO, methodName + "() start execution");
+    }
+
+    private void logMethodParams(
+            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
+        logMethodParamsIfEnabled(joinPoint, logLevel, methodName);
+    }
+
+    private void logMethodResult(
+            ProceedingJoinPoint joinPoint, Object result, LogLevel logLevel, String methodName) {
+        logMethodResultIfEnabled(joinPoint, result, logLevel, methodName);
+    }
+
+    private void logMethodCompletion(
+            ProceedingJoinPoint joinPoint, String methodName, long timeTaken) {
         logExecutionDetails(
                 joinPoint,
                 LogLevel.INFO,
-                methodName
-                        + "() finished execution and took ("
-                        + +(end - start)
-                        + ") mills to execute");
-
-        return result;
+                methodName + "() finished execution and took (" + timeTaken + ") mills to execute");
     }
 
     // Generic method to retrieve Loggable annotation
@@ -139,7 +154,13 @@ public class LoggingAspect {
             Object[] args = joinPoint.getArgs();
 
             for (int i = 0; i < args.length; i++) {
-                stringArrayList.add(parameterNames[i] + " : " + args[i]);
+                String paramName = parameterNames[i];
+                Object argValue = args[i];
+                // Check if the parameter name suggests it might contain sensitive data
+                if (paramName.matches("(?i).*(password|creditCard|ssn).*")) {
+                    argValue = "REDACTED"; // Anonymize sensitive data
+                }
+                stringArrayList.add(paramName + " : " + argValue);
             }
             String argsString = String.join(", ", stringArrayList);
             logExecutionDetails(joinPoint, logLevel, methodName + "() args :: -> " + argsString);
