@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.stereotype.Service;
 
 @Service
+@Loggable
 public class OrderKafkaStreamService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());

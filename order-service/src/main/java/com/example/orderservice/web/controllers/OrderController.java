@@ -7,6 +7,7 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
@@ -40,6 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/orders")
 @Validated
+@Loggable
 public class OrderController implements OrderApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);

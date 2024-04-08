@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.utils.AppConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
+@Loggable
 public class KafkaOrderProducer {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
