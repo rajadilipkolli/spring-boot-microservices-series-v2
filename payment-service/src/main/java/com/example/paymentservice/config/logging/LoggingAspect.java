@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.AfterThrowing;
@@ -74,22 +75,22 @@ public class LoggingAspect {
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         LogLevel logLevel = determineLogLevel(joinPoint);
         String methodName = joinPoint.getSignature().getName();
-        Class<?> originClass = joinPoint.getTarget().getClass();
 
-        LogWriter.write(originClass, LogLevel.INFO, methodName + "() start execution");
+        logWhenEnabled(joinPoint, LogLevel.INFO, methodName + "() start execution");
         logMethodParamsIfEnabled(joinPoint, logLevel, methodName);
 
         long start = System.currentTimeMillis();
         Object result = joinPoint.proceed();
         long end = System.currentTimeMillis();
 
-        logMethodResultIfEnabled(joinPoint, result, originClass, logLevel, methodName);
-        LogWriter.write(
-                originClass,
+        logMethodResultIfEnabled(joinPoint, result, logLevel, methodName);
+
+        logWhenEnabled(
+                joinPoint,
                 LogLevel.INFO,
                 methodName
                         + "() finished execution and took ("
-                        + (end - start)
+                        + +(end - start)
                         + ") mills to execute");
 
         return result;
@@ -103,15 +104,24 @@ public class LoggingAspect {
         return Optional.ofNullable(methodAnnotation).orElse(classAnnotation).value();
     }
 
-    private void logMethodParamsIfEnabled(
-            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
+    private boolean shouldLog(
+            ProceedingJoinPoint joinPoint, Function<Loggable, Boolean> loggableProperty) {
         Loggable methodAnnotation =
                 ((MethodSignature) joinPoint.getSignature())
                         .getMethod()
                         .getAnnotation(Loggable.class);
         Loggable classAnnotation = joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
-        boolean printParams =
-                methodAnnotation != null ? methodAnnotation.params() : classAnnotation.params();
+        return loggableProperty.apply(
+                Optional.ofNullable(methodAnnotation).orElse(classAnnotation));
+    }
+
+    private void logWhenEnabled(ProceedingJoinPoint joinPoint, LogLevel logLevel, String message) {
+        LogWriter.write(joinPoint.getTarget().getClass(), logLevel, message);
+    }
+
+    private void logMethodParamsIfEnabled(
+            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
+        boolean printParams = shouldLog(joinPoint, Loggable::params);
 
         if (printParams && !ObjectUtils.isEmpty(joinPoint.getArgs())) {
             String[] parameterNames =
@@ -123,30 +133,16 @@ public class LoggingAspect {
                 stringArrayList.add(parameterNames[i] + " : " + args[i]);
             }
             String argsString = String.join(", ", stringArrayList);
-            LogWriter.write(
-                    joinPoint.getTarget().getClass(),
-                    logLevel,
-                    methodName + "() args :: -> " + argsString);
+            logWhenEnabled(joinPoint, logLevel, methodName + "() args :: -> " + argsString);
         }
     }
 
     private void logMethodResultIfEnabled(
-            ProceedingJoinPoint joinPoint,
-            Object result,
-            Class<?> originClass,
-            LogLevel logLevel,
-            String methodName) {
+            ProceedingJoinPoint joinPoint, Object result, LogLevel logLevel, String methodName) {
         if (result != null) {
-            Loggable methodAnnotation =
-                    ((MethodSignature) joinPoint.getSignature())
-                            .getMethod()
-                            .getAnnotation(Loggable.class);
-            Loggable classAnnotation =
-                    joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
-            boolean printResponse =
-                    methodAnnotation != null ? methodAnnotation.result() : classAnnotation.result();
+            boolean printResponse = shouldLog(joinPoint, Loggable::result);
             if (printResponse) {
-                LogWriter.write(originClass, logLevel, methodName + "() Returned : " + result);
+                logWhenEnabled(joinPoint, logLevel, methodName + "() Returned : " + result);
             }
         }
     }
