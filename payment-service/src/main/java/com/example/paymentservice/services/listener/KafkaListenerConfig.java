@@ -2,6 +2,7 @@
 package com.example.paymentservice.services.listener;
 
 import com.example.common.dtos.OrderDto;
+import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @EnableKafka
+@Loggable
 public class KafkaListenerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaListenerConfig.class);

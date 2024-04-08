@@ -6,6 +6,7 @@
 
 package com.example.orderservice.services;
 
+import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
+@Loggable
 public class OrderGeneratorService {
 
     private static final int NUM_ORDERS = 10_000;
