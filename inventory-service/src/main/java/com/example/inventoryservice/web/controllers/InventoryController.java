@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.web.controllers;
 
+import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.PagedResult;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/inventory")
+@Loggable
 public class InventoryController {
 
     private final InventoryService inventoryService;

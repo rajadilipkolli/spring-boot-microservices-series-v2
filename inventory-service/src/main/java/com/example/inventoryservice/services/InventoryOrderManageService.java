@@ -8,6 +8,7 @@ package com.example.inventoryservice.services;
 
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
+import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
@@ -24,9 +25,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
+@Loggable
 public class InventoryOrderManageService {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
     private final InventoryJOOQRepository inventoryJOOQRepository;
@@ -42,10 +44,11 @@ public class InventoryOrderManageService {
     }
 
     public void reserve(OrderDto orderDto) {
-        log.info("Reserving Order in Inventory Service {}", orderDto);
+        LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
         // Check if order status is not NEW
         if (!"NEW".equals(orderDto.getStatus())) {
-            log.error("Order status is not NEW, Hence Ignoring OrderID :{}", orderDto.getOrderId());
+            LOGGER.error(
+                    "Order status is not NEW, Hence Ignoring OrderID :{}", orderDto.getOrderId());
             return;
         }
         List<String> productCodeList =
@@ -55,7 +58,7 @@ public class InventoryOrderManageService {
                 inventoryJOOQRepository.findByProductCodeIn(productCodeList);
 
         if (inventoryListFromDB.size() != productCodeList.size()) {
-            log.error(
+            LOGGER.error(
                     "Not all products requested exist, Hence Ignoring OrderID : {}",
                     orderDto.getOrderId());
             return;
@@ -79,7 +82,7 @@ public class InventoryOrderManageService {
                                 inventoryFromDB.getAvailableQuantity() - productCount);
                 updatedInventoryList.add(inventoryFromDB);
             } else {
-                log.info(
+                LOGGER.info(
                         "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
                         orderDto.getOrderId());
                 orderDto.setStatus("REJECT");
@@ -89,7 +92,7 @@ public class InventoryOrderManageService {
 
         if (updatedInventoryList.size() == inventoryListFromDB.size()) {
             orderDto.setStatus("ACCEPT");
-            log.info(
+            LOGGER.info(
                     "Setting status as ACCEPT for inventoryIds : {}",
                     updatedInventoryList.stream().map(Inventory::getId).toList());
             inventoryRepository.saveAll(updatedInventoryList);
@@ -98,14 +101,14 @@ public class InventoryOrderManageService {
         orderDto.setSource("INVENTORY");
         // Send order to Kafka
         kafkaTemplate.send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
-        log.info(
+        LOGGER.info(
                 "Sent Order after reserving : {} from inventory service to topic {}",
                 orderDto,
                 AppConstants.STOCK_ORDERS_TOPIC);
     }
 
     public void confirm(OrderDto orderDto) {
-        log.info("Confirming Order in Inventory Service {}", orderDto);
+        LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
@@ -133,7 +136,7 @@ public class InventoryOrderManageService {
 
         inventoryRepository.saveAll(inventoryMap.values());
 
-        log.info(
+        LOGGER.info(
                 "Saving inventoryIds : {} After Confirmation",
                 inventoryMap.values().stream().map(Inventory::getId).toList());
     }
