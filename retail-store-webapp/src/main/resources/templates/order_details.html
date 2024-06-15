@@ -25,9 +25,9 @@
                 <template x-for="item in orderDetails.items">
                     <tr>
                         <td x-text="item.productId">Id</td>
-                        <td x-text="item.price">price</td>
+                        <td x-text="item.productPrice">price</td>
                         <td x-text="item.quantity">quantity</td>
-                        <td x-text="item.quantity * item.price">SubTotal</td>
+                        <td x-text="item.price">SubTotal</td>
                     </tr>
                 </template>
                 </tbody>
