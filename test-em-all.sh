@@ -110,7 +110,7 @@ function setupTestData() {
 
     body="{\"code\":\"$PROD_CODE_1"
     body+=\
-'","productName":"product name B","price":9.99, "description": "Nice Product"}'
+'","productName":"product name B","price":9.99, "imageUrl":"https://cdn.igp.com/f_auto,q_auto,t_pnopt12prodlp/products/p-you-are-my-penguin-personalized-magic-mug-265224-m.jpg","description": "Nice Product"}'
 
     #    Creating Product
     echo "creating product with code - " $PROD_CODE_1
