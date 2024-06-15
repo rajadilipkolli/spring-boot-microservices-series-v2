@@ -8,7 +8,7 @@
 <div layout:fragment="content">
     <div th:x-data="|initData('${orderNumber}')|">
         <h2>Your Order placed successfully</h2>
-        <h4>Order Number: <span x-text="orderDetails.orderNumber">orderNumber</span></h4>
+        <h4>Order Number: <span x-text="orderDetails.orderId">orderNumber</span></h4>
         <h4>Order Status: <span x-text="orderDetails.status">status</span></h4>
         <hr/>
         <div class="pb-3">
@@ -24,7 +24,7 @@
                 <tbody>
                 <template x-for="item in orderDetails.items">
                     <tr>
-                        <td x-text="item.name">name</td>
+                        <td x-text="item.productId">Id</td>
                         <td x-text="item.price">price</td>
                         <td x-text="item.quantity">quantity</td>
                         <td x-text="item.quantity * item.price">SubTotal</td>
@@ -35,7 +35,7 @@
                 <tr>
                     <th colspan="3"></th>
                     <th colspan="1" style="text-align: left">
-                        Total Amount: <span x-text="orderDetails.totalAmount">totalAmount</span>
+                        Total Amount: <span x-text="orderDetails.totalPrice">totalAmount</span>
                     </th>
                 </tr>
                 </tfoot>

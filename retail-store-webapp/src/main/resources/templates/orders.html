@@ -19,9 +19,9 @@
                 </tr>
                 </thead>
                 <tbody>
-                <template x-for="order in orders">
+                <template x-for="order in orders.data">
                     <tr>
-                        <td><a x-bind:href="'/orders/'+order.orderNumber" x-text="order.orderNumber">OrderNumber</a></td>
+                        <td><a x-bind:href="'/orders/'+order.orderId" x-text="order.orderId">OrderNumber</a></td>
                         <td x-text="order.status">status</td>
                     </tr>
                 </template>

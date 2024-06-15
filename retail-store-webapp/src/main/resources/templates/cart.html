@@ -25,7 +25,7 @@
                     <tbody>
                     <template x-for="item in cart.items">
                         <tr>
-                            <td x-text="item.name">name</td>
+                            <td x-text="item.productName">name</td>
                             <td x-text="item.price">price</td>
                             <td>
                                 <input type="number" min="0" x-model="item.quantity"
