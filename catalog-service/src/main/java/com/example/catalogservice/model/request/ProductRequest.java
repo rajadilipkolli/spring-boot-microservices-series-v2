@@ -13,4 +13,5 @@ public record ProductRequest(
         @NotBlank(message = "Product code can't be blank") String code,
         String productName,
         String description,
+        String imageUrl,
         @Positive Double price) {}

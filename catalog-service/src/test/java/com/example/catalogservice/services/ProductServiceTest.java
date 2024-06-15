@@ -53,12 +53,12 @@ class ProductServiceTest {
                         invocation -> {
                             ProductRequest request = invocation.getArgument(0);
                             int randomPrice = ThreadLocalRandom.current().nextInt(1, 101);
-                            return new Product(
-                                    1L,
-                                    request.code(),
-                                    request.productName(),
-                                    request.description(),
-                                    randomPrice);
+                            return new Product()
+                                    .setId(1L)
+                                    .setCode(request.code())
+                                    .setProductName(request.productName())
+                                    .setDescription(request.description())
+                                    .setPrice(randomPrice);
                         });
 
         // Stubbing productMapper.toProductDto()
@@ -84,6 +84,7 @@ class ProductServiceTest {
                                     product.getCode(),
                                     product.getProductName(),
                                     product.getDescription(),
+                                    null,
                                     product.getPrice(),
                                     true);
                         });

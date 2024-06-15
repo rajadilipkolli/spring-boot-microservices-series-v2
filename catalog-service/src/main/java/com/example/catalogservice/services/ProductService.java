@@ -238,6 +238,7 @@ public class ProductService {
                                                     "ProductCode" + i,
                                                     "Gen Product" + i,
                                                     "Gen Prod Description" + i,
+                                                    null,
                                                     (double) randomPrice);
                                         }))
                 .flatMap(this::saveProduct)

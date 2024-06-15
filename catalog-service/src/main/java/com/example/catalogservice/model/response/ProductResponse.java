@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
@@ -14,6 +14,7 @@ public record ProductResponse(
         String code,
         String productName,
         String description,
+        String imageUrl,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") double price,
         boolean inStock) {
 
@@ -26,6 +27,7 @@ public record ProductResponse(
                         this.code,
                         this.productName,
                         this.description,
+                        this.imageUrl,
                         this.price,
                         inStock);
     }

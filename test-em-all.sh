@@ -102,7 +102,7 @@ function setupTestData() {
 
     body="{\"code\":\"$PROD_CODE"
     body+=\
-'","productName":"product name A","price":100, "description": "A Beautiful Product"}'
+'","productName":"product name A","price":100, "imageUrl":"https://www.ikea.com/in/en/images/products/saellskaplig-jug-patterned-green__0941744_pe795674_s5.jpg?f=xl","description": "A Beautiful Product"}'
 
 #    Creating Product
     echo "creating product with code - " $PROD_CODE

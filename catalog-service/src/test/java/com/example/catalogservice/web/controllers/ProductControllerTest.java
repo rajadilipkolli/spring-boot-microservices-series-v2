@@ -47,11 +47,11 @@ class ProductControllerTest {
     void setUp() {
         this.productResponseList = new ArrayList<>();
         this.productResponseList.add(
-                new ProductResponse(1L, "code 1", "name 1", "description 1", 9.0, true));
+                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true));
         this.productResponseList.add(
-                new ProductResponse(2L, "code 2", "name 2", "description 2", 10.0, true));
+                new ProductResponse(2L, "code 2", "name 2", "description 2", null, 10.0, true));
         this.productResponseList.add(
-                new ProductResponse(3L, "code 3", "name 3", "description 3", 11.0, true));
+                new ProductResponse(3L, "code 3", "name 3", "description 3", null, 11.0, true));
     }
 
     @Test
@@ -90,7 +90,8 @@ class ProductControllerTest {
     void shouldFindProductById() {
         Long productId = 1L;
         ProductResponse productResponse =
-                new ProductResponse(productId, "code 1", "name 1", "description 1", 9.0, true);
+                new ProductResponse(
+                        productId, "code 1", "name 1", "description 1", null, 9.0, true);
         given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -129,7 +130,7 @@ class ProductControllerTest {
     @Test
     void shouldCreateProduct() {
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "name 1", "description 1", 9.0, true);
+                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true);
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
@@ -189,12 +190,18 @@ class ProductControllerTest {
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
-        Product product = new Product(productId, "code 1", "Updated name", "description 1", 9.0);
+        Product product =
+                new Product()
+                        .setId(productId)
+                        .setCode("code 1")
+                        .setProductName("Updated name")
+                        .setDescription("description 1")
+                        .setPrice(9.0);
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", 9.0);
+                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "Updated name", "description 1", 9.0, true);
+                        productId, "code 1", "Updated name", "description 1", null, 9.0, true);
         given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
                 .willReturn(Mono.just(productResponse));
@@ -225,7 +232,7 @@ class ProductControllerTest {
         Long productId = 1L;
         given(productService.findById(productId)).willReturn(Mono.empty());
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", 9.0);
+                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
 
         webTestClient
                 .put()
@@ -240,9 +247,15 @@ class ProductControllerTest {
     @Test
     void shouldDeleteProduct() {
         Long productId = 1L;
-        Product product = new Product(1L, "code 1", "Updated name", "description 1", 9.0);
+        Product product =
+                new Product()
+                        .setId(productId)
+                        .setCode("code 1")
+                        .setProductName("Updated name")
+                        .setDescription("description 1")
+                        .setPrice(9.0);
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "Updated name", "description 1", 9.0, true);
+                new ProductResponse(1L, "code 1", "Updated name", "description 1", null, 9.0, true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -68,9 +68,21 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         List<Product> productList =
                 List.of(
-                        new Product(null, "P001", "name 1", "description 1", 9.0),
-                        new Product(null, "P002", "name 2", "description 2", 10.0),
-                        new Product(null, "P003", "name 3", "description 3", 11.0));
+                        new Product()
+                                .setCode("P001")
+                                .setProductName("name 1")
+                                .setDescription("description 1")
+                                .setPrice(9.0),
+                        new Product()
+                                .setCode("P002")
+                                .setProductName("name 2")
+                                .setDescription("description 2")
+                                .setPrice(10.0),
+                        new Product()
+                                .setCode("P003")
+                                .setProductName("name 3")
+                                .setDescription("description 3")
+                                .setPrice(11.0));
         savedProductList =
                 productRepository
                         .deleteAll()
@@ -511,7 +523,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldCreateNewProduct() {
         ProductRequest productRequest =
-                new ProductRequest("code 4", "name 4", "description 4", 19.0);
+                new ProductRequest("code 4", "name 4", "description 4", null, 19.0);
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -547,7 +559,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldThrowConflictForCreateNewProduct() {
-        ProductRequest productRequest = new ProductRequest("P001", "name 4", "description 4", 19.0);
+        ProductRequest productRequest =
+                new ProductRequest("P001", "name 4", "description 4", null, 19.0);
 
         webTestClient
                 .post()
@@ -578,7 +591,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() {
-        ProductRequest productRequest = new ProductRequest(null, null, null, null);
+        ProductRequest productRequest = new ProductRequest(null, null, null, null, null);
 
         webTestClient
                 .post()
@@ -609,7 +622,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         ProductRequest productRequest =
                 new ProductRequest(
-                        product.getCode(), product.getProductName(), "Updated Catalog", 100D);
+                        product.getCode(), product.getProductName(), "Updated Catalog", null, 100D);
 
         webTestClient
                 .put()

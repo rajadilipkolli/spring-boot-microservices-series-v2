@@ -26,53 +26,61 @@ public class Product implements Serializable {
 
     private double price;
 
-    public Product() {}
+    private String imageUrl;
 
-    public Product(Long id, String code, String productName, String description, double price) {
-        this.id = id;
-        this.code = code;
-        this.productName = productName;
-        this.description = description;
-        this.price = price;
-    }
+    public Product() {}
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public Product setId(Long id) {
         this.id = id;
+        return this;
     }
 
     public String getCode() {
         return code;
     }
 
-    public void setCode(String code) {
+    public Product setCode(String code) {
         this.code = code;
+        return this;
     }
 
     public String getProductName() {
         return productName;
     }
 
-    public void setProductName(String productName) {
+    public Product setProductName(String productName) {
         this.productName = productName;
+        return this;
     }
 
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
+    public Product setDescription(String description) {
         this.description = description;
+        return this;
     }
 
     public double getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public Product setPrice(double price) {
         this.price = price;
+        return this;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public Product setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+        return this;
     }
 }

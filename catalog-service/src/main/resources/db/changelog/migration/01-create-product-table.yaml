@@ -47,6 +47,9 @@ databaseChangeLog:
               name: description
               type: ${string.type}
           - column:
+              name: image_url
+              type: ${string.type}
+          - column:
               name: price
               type: 'NUMERIC(19,2)'
         tableName: products
