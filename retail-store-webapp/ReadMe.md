@@ -16,7 +16,7 @@ password : admin1234
 
 ## UI
 
-[UI](http://localhost:8080)
+[Local UI](http://localhost:8080)
 
 ## Export realm
 
