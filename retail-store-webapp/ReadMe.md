@@ -4,7 +4,7 @@ Building RetailStore WebApp using Thymeleaf and Alpine.js
 
 Refer :: [YouTube Tutorial](https://www.youtube.com/watch?v=_2e7nfgH-u8)
 
-## Keyclock Admin console
+## Keycloak Admin console
 
 For accessing the Admin Console, hit [Admin Console](http://localhost:9191)
 and key in below credentials as per docker

@@ -101,7 +101,7 @@ services:
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     restart: "no"
     ports:
-      - "9000:9000"
+      - "19000:9000"
     environment:
       KAFKA_BROKERCONNECT: "broker:29092"
     depends_on:
@@ -112,7 +112,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.0
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    command: [ 'start-dev', '--http-port=9191' ]
     container_name: keycloak
     hostname: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
