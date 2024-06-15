@@ -6,7 +6,7 @@ Refer :: https://www.youtube.com/watch?v=_2e7nfgH-u8
 
 ## Keyclock Admin console
 
-For accessing Admin Console hit http://localhost:9191
+For accessing the Admin Console, hit http://localhost:9191
 and key in below credentials as per docker
 
 ```
@@ -34,8 +34,7 @@ $ exit
 $ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/realm/retailstore-realm.json
 ```
 
-
-To login use below credentials
+To login, use below credentials
 
 ```
 username: retail
