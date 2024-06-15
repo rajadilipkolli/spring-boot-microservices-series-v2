@@ -1,4 +1,4 @@
-version: '3.9'
+name: spring-boot-microservices-series-v2
 services:
 
   postgresql:
@@ -98,6 +98,7 @@ services:
     image: quay.io/keycloak/keycloak:25.0.0
     command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
     volumes:
       - ./realm-config:/opt/keycloak/data/import
@@ -278,6 +279,7 @@ services:
   retailstore-webapp:
     image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
     container_name: retailstore-webapp
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - retailstore_API_GATEWAY_URL=http://api-gateway:8765
