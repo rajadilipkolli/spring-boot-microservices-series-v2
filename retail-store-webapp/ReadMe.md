@@ -14,9 +14,9 @@ username: admin
 password : admin1234
 ```
 
-## UI 
+## UI
 
-http://localhost:8080
+[UI](http://localhost:8080)
 
 ## Export realm
 

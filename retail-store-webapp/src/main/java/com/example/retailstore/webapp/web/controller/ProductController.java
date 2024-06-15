@@ -34,8 +34,8 @@ class ProductController {
 
     @GetMapping("/api/products")
     @ResponseBody
-    PagedResult<ProductResponse> products(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
-        log.info("Fetching products for page: {}", page);
-        return catalogService.getProducts(page);
+    PagedResult<ProductResponse> products(@RequestParam(name = "page", defaultValue = "1") int page, Model model) {
+        log.info("Fetching products for page: {}", page - 1);
+        return catalogService.getProducts(page - 1);
     }
 }
