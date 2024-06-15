@@ -30,6 +30,9 @@ ports:
     visibility: public
   - port: 5672
     visibility: public
+  - port: 8080
+    visibility: public
+    onOpen: open-browser
   - port: 8761
     visibility: public
   - port: 8765
@@ -46,4 +49,3 @@ ports:
     visibility: public
   - port: 28282
     visibility: public
-    onOpen: open-browser

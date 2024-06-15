@@ -100,6 +100,16 @@
             "projectName": "order-service",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-RetailStoreWebappApplication<retail-store-webapp>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.retailstore.webapp.RetailStoreWebappApplication",
+            "projectName": "retail-store-webapp",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

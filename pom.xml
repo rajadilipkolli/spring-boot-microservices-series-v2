@@ -24,6 +24,7 @@
 		<module>config-server</module>
 		<module>service-registry</module>
 		<module>api-gateway</module>
+		<module>retail-store-webapp</module>
 	</modules>
 
 </project>
