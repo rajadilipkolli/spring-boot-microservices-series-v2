@@ -3,6 +3,7 @@ package com.example.retailstore.webapp.web.controller;
 import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
+import com.example.retailstore.webapp.services.SecurityHelper;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +19,11 @@ class OrderController {
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     private final OrderServiceClient orderServiceClient;
+    private final SecurityHelper securityHelper;
 
-    OrderController(OrderServiceClient orderServiceClient) {
+    OrderController(OrderServiceClient orderServiceClient, SecurityHelper securityHelper) {
         this.orderServiceClient = orderServiceClient;
+        this.securityHelper = securityHelper;
     }
 
     @GetMapping("/cart")
@@ -54,7 +57,7 @@ class OrderController {
     }
 
     private Map<String, ?> getHeaders() {
-        String accessToken = "token";
+        String accessToken = securityHelper.getAccessToken();
         return Map.of("Authorization", "Bearer " + accessToken);
     }
 }

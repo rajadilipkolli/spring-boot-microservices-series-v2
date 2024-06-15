@@ -14,10 +14,6 @@ username: admin
 password : admin1234
 ```
 
-## UI
-
-[Local UI](http://localhost:8080)
-
 ## Export realm
 
 Once the keycloak instance is up and running, we can create the realm, clients and users and then use the following steps to export the realm configuration.
@@ -38,6 +34,10 @@ $ exit
 # copy the exported realm configuration to local machine
 $ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/realm/retailstore-realm.json
 ```
+
+## UI
+
+[Local UI](http://localhost:8080)
 
 To login, use below credentials
 
