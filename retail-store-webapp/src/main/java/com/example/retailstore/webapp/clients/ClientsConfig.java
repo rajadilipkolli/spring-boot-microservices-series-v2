@@ -1,6 +1,7 @@
 package com.example.retailstore.webapp.clients;
 
 import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
+import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.config.ApplicationProperties;
 import java.time.Duration;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
@@ -22,18 +23,27 @@ class ClientsConfig {
 
     @Bean
     RestClientCustomizer restClientCustomizer() {
-        return restClientBuilder -> restClientBuilder
-                .baseUrl(properties.apiGatewayUrl())
-                .requestFactory(ClientHttpRequestFactories.get(ClientHttpRequestFactorySettings.DEFAULTS
+        return restClientBuilder -> restClientBuilder.requestFactory(
+                ClientHttpRequestFactories.get(ClientHttpRequestFactorySettings.DEFAULTS
                         .withConnectTimeout(Duration.ofSeconds(5))
                         .withReadTimeout(Duration.ofSeconds(5))));
     }
 
     @Bean
     CatalogServiceClient catalogServiceClient(RestClient.Builder builder) {
-        RestClient restClient = builder.build();
+        RestClient restClient =
+                builder.baseUrl(properties.apiGatewayUrl() + "/catalog-service").build();
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
                 .build();
         return factory.createClient(CatalogServiceClient.class);
+    }
+
+    @Bean
+    OrderServiceClient orderServiceClient(RestClient.Builder builder) {
+        RestClient restClient =
+                builder.baseUrl(properties.apiGatewayUrl() + "/order-service").build();
+        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
+                .build();
+        return factory.createClient(OrderServiceClient.class);
     }
 }

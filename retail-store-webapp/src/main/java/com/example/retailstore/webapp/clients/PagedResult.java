@@ -1,4 +1,4 @@
-package com.example.retailstore.webapp.clients.catalog;
+package com.example.retailstore.webapp.clients;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;

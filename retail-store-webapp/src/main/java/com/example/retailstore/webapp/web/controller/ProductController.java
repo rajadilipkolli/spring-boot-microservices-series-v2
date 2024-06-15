@@ -1,7 +1,7 @@
 package com.example.retailstore.webapp.web.controller;
 
+import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
-import com.example.retailstore.webapp.clients.catalog.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
