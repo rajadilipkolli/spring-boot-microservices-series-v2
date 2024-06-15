@@ -45,3 +45,21 @@ To login, use below credentials
 username: retail
 password : retail1234
 ```
+
+## OIDC Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant WebApp as RetailStore WebApp
+    participant AuthServer as OAuth2 Server
+
+    User->>WebApp: Requests Login
+    WebApp->>AuthServer: OAuth2 Authorization Request
+    AuthServer-->>User: Authorization Consent Page
+    User->>AuthServer: Provides Consent
+    AuthServer-->>WebApp: Authorization Code
+    WebApp->>AuthServer: Exchanges Code for Token
+    AuthServer-->>WebApp: Access Token
+    WebApp-->>User: User Data and UI
+```
