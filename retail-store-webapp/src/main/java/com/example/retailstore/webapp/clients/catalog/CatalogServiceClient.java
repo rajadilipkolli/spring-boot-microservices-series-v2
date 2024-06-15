@@ -5,6 +5,6 @@ import org.springframework.web.service.annotation.GetExchange;
 
 public interface CatalogServiceClient {
 
-    @GetExchange("/catalog/api/products")
-    PagedResult<ProductResponse> getProducts(@RequestParam int page);
+    @GetExchange("/catalog-service/api/catalog")
+    PagedResult<ProductResponse> getProducts(@RequestParam int pageNo);
 }
