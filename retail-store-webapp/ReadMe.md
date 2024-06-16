@@ -7,7 +7,7 @@ Refer :: [YouTube Tutorial](https://www.youtube.com/watch?v=_2e7nfgH-u8)
 ## Keycloak Admin console
 
 For accessing the Admin Console, hit [Admin Console](http://localhost:9191)
-and key in below credentials as per docker
+and key in the below credentials as per docker
 
 ```plaintext
 username: admin
@@ -39,7 +39,7 @@ $ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/re
 
 [Local UI](http://localhost:8080)
 
-To login, use below credentials
+To login, use the below credentials
 
 ```plaintext
 username: retail
