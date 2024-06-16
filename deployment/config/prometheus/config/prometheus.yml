@@ -42,6 +42,13 @@ scrape_configs:
       - targets: [ 'api-gateway:8765' ]
         labels:
           application: 'payment-service'
+  - job_name: 'retailstore-webapp'
+    scrape_interval: 2s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'retailstore-webapp:8080' ]
+        labels:
+          application: 'retailstore-webapp'
 
 rule_files:
   - 'alert-rules.yml'

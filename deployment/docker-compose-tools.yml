@@ -1,4 +1,4 @@
-version: '3.8'
+name: spring-boot-microservices-series-v2
 services:
 
   postgresql:
@@ -101,7 +101,7 @@ services:
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     restart: "no"
     ports:
-      - "9000:9000"
+      - "19000:9000"
     environment:
       KAFKA_BROKERCONNECT: "broker:29092"
     depends_on:
@@ -109,6 +109,26 @@ services:
         condition: service_healthy
     networks:
       - microservice-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: [ 'start-dev', '--http-port=9191' ]
+    container_name: keycloak
+    hostname: keycloak
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    volumes:
+      - ./realm-config:/opt/keycloak/data/import
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+    ports:
+      - "9191:9191"
+    networks:
+      - microservice-network
+    deploy:
+      resources:
+        limits:
+          memory: 2gb
 
   config-server:
     container_name: config-server
@@ -305,6 +325,29 @@ services:
       logging: "promtail"
       logging_jobname: "containerlogs"
     restart: unless-stopped
+
+  retailstore-webapp:
+    image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+    container_name: retailstore-webapp
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
+      - OAUTH2_SERVER_URL=http://keycloak:9191
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+    ports:
+      - "8080:8080"
+    networks:
+      - microservice-network
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    restart: unless-stopped
+
 
   ## Observability
   grafana:

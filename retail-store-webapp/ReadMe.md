@@ -4,19 +4,15 @@ Building RetailStore WebApp using Thymeleaf and Alpine.js
 
 Refer :: [YouTube Tutorial](https://www.youtube.com/watch?v=_2e7nfgH-u8)
 
-## Keyclock Admin console
+## Keycloak Admin console
 
 For accessing the Admin Console, hit [Admin Console](http://localhost:9191)
-and key in below credentials as per docker
+and key in the below credentials as per docker
 
 ```plaintext
 username: admin
 password : admin1234
 ```
-
-## UI
-
-[Local UI](http://localhost:8080)
 
 ## Export realm
 
@@ -39,9 +35,31 @@ $ exit
 $ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/realm/retailstore-realm.json
 ```
 
-To login, use below credentials
+## UI
+
+[Local UI](http://localhost:8080)
+
+To login, use the below credentials
 
 ```plaintext
 username: retail
 password : retail1234
+```
+
+## OIDC Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant WebApp as RetailStore WebApp
+    participant AuthServer as OAuth2 Server
+
+    User->>WebApp: Requests Login
+    WebApp->>AuthServer: OAuth2 Authorization Request
+    AuthServer-->>User: Authorization Consent Page
+    User->>AuthServer: Provides Consent
+    AuthServer-->>WebApp: Authorization Code
+    WebApp->>AuthServer: Exchanges Code for Token
+    AuthServer-->>WebApp: Access Token
+    WebApp-->>User: User Data and UI
 ```

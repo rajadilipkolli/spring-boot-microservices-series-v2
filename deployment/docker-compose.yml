@@ -1,4 +1,4 @@
-version: '3.9'
+name: spring-boot-microservices-series-v2
 services:
 
   postgresql:
@@ -93,6 +93,24 @@ services:
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
     networks:
       - microservice-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    container_name: keycloak
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    hostname: keycloak
+    volumes:
+      - ./realm-config:/opt/keycloak/data/import
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+    ports:
+      - "9191:9191"
+    deploy:
+      resources:
+        limits:
+          memory: 2gb
 
   config-server:
     container_name: config-server
@@ -257,6 +275,24 @@ services:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
+
+  retailstore-webapp:
+    image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+    container_name: retailstore-webapp
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
+      - OAUTH2_SERVER_URL=http://keycloak:9191
+    ports:
+      - "8080:8080"
+    networks:
+      - microservice-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 700m
 
 networks:
   microservice-network:
