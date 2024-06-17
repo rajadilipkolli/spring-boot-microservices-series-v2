@@ -36,6 +36,7 @@ public class Initializer implements CommandLineRunner {
                             .setName(faker.name().fullName())
                             .setEmail(faker.name().lastName() + "@gmail.com")
                             .setAddress(faker.address().fullAddress())
+                            .setPhone(faker.phoneNumber().phoneNumber())
                             .setAmountAvailable(count)
                             .setAmountReserved(0);
             customerList.add(customer);
