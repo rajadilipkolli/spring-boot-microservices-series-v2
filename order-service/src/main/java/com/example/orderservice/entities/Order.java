@@ -6,7 +6,7 @@
 
 package com.example.orderservice.entities;
 
-import com.example.orderservice.model.request.Address;
+import com.example.orderservice.model.Address;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.CascadeType;

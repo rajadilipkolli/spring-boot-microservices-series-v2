@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.model.request.Address;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -76,6 +76,13 @@ class OrderControllerTest {
                         1L,
                         "NEW",
                         "",
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"),
                         LocalDateTime.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
@@ -85,6 +92,13 @@ class OrderControllerTest {
                         1L,
                         "NEW",
                         "",
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"),
                         LocalDateTime.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
@@ -94,6 +108,13 @@ class OrderControllerTest {
                         1L,
                         "NEW",
                         "",
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"),
                         LocalDateTime.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
@@ -129,6 +150,7 @@ class OrderControllerTest {
                             1L,
                             "NEW",
                             "",
+                            getDeliveryAddress(),
                             LocalDateTime.now(),
                             BigDecimal.TEN,
                             new ArrayList<>());
@@ -139,6 +161,11 @@ class OrderControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(
                             jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+        }
+
+        private Address getDeliveryAddress() {
+            return new Address(
+                    "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country");
         }
 
         @Test
@@ -186,6 +213,13 @@ class OrderControllerTest {
                             1L,
                             "NEW",
                             "",
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"),
                             LocalDateTime.now(),
                             BigDecimal.TEN,
                             List.of(orderItemDto));
@@ -299,6 +333,13 @@ class OrderControllerTest {
                             1L,
                             "NEW",
                             "",
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"),
                             LocalDateTime.now(),
                             BigDecimal.TEN,
                             new ArrayList<>());

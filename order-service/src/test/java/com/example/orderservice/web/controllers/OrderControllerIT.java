@@ -22,7 +22,7 @@ import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.model.request.Address;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.repositories.OrderRepository;
@@ -121,6 +121,30 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
                     .andExpect(jsonPath("$.status", is(order.getStatus().name())))
                     .andExpect(jsonPath("$.source", is(order.getSource())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.addressLine1",
+                                    is(order.getDeliveryAddress().addressLine1())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.addressLine2",
+                                    is(order.getDeliveryAddress().addressLine2())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.city",
+                                    is(order.getDeliveryAddress().city())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.state",
+                                    is(order.getDeliveryAddress().state())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.zipCode",
+                                    is(order.getDeliveryAddress().zipCode())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.country",
+                                    is(order.getDeliveryAddress().country())))
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(201.00, 0.01)))
                     .andExpect(jsonPath("$.items.size()", is(order.getItems().size())));
         }
@@ -171,7 +195,31 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                 .andExpect(jsonPath("$.items.size()", is(1)))
                 .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                .andExpect(jsonPath("$.items[0].price", is(100.00)));
+                .andExpect(jsonPath("$.items[0].price", is(100.00)))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.addressLine1",
+                                is(orderRequest.deliveryAddress().addressLine1())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.addressLine2",
+                                is(orderRequest.deliveryAddress().addressLine2())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.city",
+                                is(orderRequest.deliveryAddress().city())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.state",
+                                is(orderRequest.deliveryAddress().state())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.zipCode",
+                                is(orderRequest.deliveryAddress().zipCode())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.country",
+                                is(orderRequest.deliveryAddress().country())));
     }
 
     @Test
@@ -247,13 +295,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockProductsExistsRequest(true, "product1", "product4");
         Order order = orderList.getFirst();
 
-        OrderRequest orderDto = TestData.getOrderRequest(order);
+        OrderRequest orderRequest = TestData.getOrderRequest(order);
 
         this.mockMvc
                 .perform(
                         put("/api/orders/{id}", order.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderDto)))
+                                .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(1211.00, 0.01)))
@@ -261,7 +309,31 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.items[0].quantity", is(110)))
                 .andExpect(jsonPath("$.items[0].price", is(1111.00)))
                 .andExpect(jsonPath("$.items[1].quantity", is(100)))
-                .andExpect(jsonPath("$.items[1].price", is(100.00)));
+                .andExpect(jsonPath("$.items[1].price", is(100.00)))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.addressLine1",
+                                is(orderRequest.deliveryAddress().addressLine1())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.addressLine2",
+                                is(orderRequest.deliveryAddress().addressLine2())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.city",
+                                is(orderRequest.deliveryAddress().city())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.state",
+                                is(orderRequest.deliveryAddress().state())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.zipCode",
+                                is(orderRequest.deliveryAddress().zipCode())))
+                .andExpect(
+                        jsonPath(
+                                "$.deliveryAddress.country",
+                                is(orderRequest.deliveryAddress().country())));
     }
 
     @Test

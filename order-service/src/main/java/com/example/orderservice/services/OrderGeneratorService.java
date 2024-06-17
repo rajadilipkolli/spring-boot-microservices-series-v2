@@ -7,7 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.orderservice.config.logging.Loggable;
-import com.example.orderservice.model.request.Address;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;

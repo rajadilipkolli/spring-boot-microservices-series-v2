@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.orderservice.model.request;
+package com.example.orderservice.model;
 
 import jakarta.validation.constraints.NotBlank;
 

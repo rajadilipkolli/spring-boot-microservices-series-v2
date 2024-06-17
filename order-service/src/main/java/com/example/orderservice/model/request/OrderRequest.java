@@ -6,6 +6,7 @@
 
 package com.example.orderservice.model.request;
 
+import com.example.orderservice.model.Address;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
