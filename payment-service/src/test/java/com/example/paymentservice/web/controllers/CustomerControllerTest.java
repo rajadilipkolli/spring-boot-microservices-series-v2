@@ -114,6 +114,7 @@ class CustomerControllerTest {
                                         customer.getId(),
                                         customer.getName(),
                                         customer.getEmail(),
+                                        customer.getPhone(),
                                         customer.getAddress(),
                                         customer.getAmountAvailable()))
                 .toList();
@@ -127,7 +128,12 @@ class CustomerControllerTest {
             Long customerId = 1L;
             CustomerResponse customerResponse =
                     new CustomerResponse(
-                            customerId, "text 1", "junit@email.com", "junitAddress", 100);
+                            customerId,
+                            "text 1",
+                            "junit@email.com",
+                            "9876543210",
+                            "junitAddress",
+                            100);
             given(customerService.findCustomerById(customerId))
                     .willReturn(Optional.of(customerResponse));
 
@@ -184,7 +190,8 @@ class CustomerControllerTest {
                     new CustomerRequest(
                             "junitName", "email@junit.com", "1234567890", "junitAddress", 10);
             CustomerResponse customerResponse =
-                    new CustomerResponse(1L, "junitName", "email@junit.com", "junitAddress", 10);
+                    new CustomerResponse(
+                            1L, "junitName", "email@junit.com", "9876543210", "junitAddress", 10);
             given(customerService.saveCustomer(any(CustomerRequest.class)))
                     .willReturn(customerResponse);
             mockMvc.perform(
@@ -243,6 +250,7 @@ class CustomerControllerTest {
                                     1L,
                                     "customerUpdatedName",
                                     "junitEmail@email.com",
+                                    "9876543210",
                                     "junitAddress",
                                     100));
 
@@ -291,7 +299,12 @@ class CustomerControllerTest {
             Long customerId = 1L;
             CustomerResponse customer =
                     new CustomerResponse(
-                            customerId, "Some text", "junit@email.com", "junitAddress", 0);
+                            customerId,
+                            "Some text",
+                            "junit@email.com",
+                            "9876543210",
+                            "junitAddress",
+                            0);
             given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
             doNothing().when(customerService).deleteCustomerById(customerId);
 

@@ -86,6 +86,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
@@ -119,6 +120,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
@@ -142,6 +144,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
@@ -196,6 +199,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
@@ -239,6 +243,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 

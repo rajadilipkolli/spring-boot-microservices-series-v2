@@ -25,6 +25,7 @@ public class CustomerMapper {
                 customer.getId(),
                 customer.getName(),
                 customer.getEmail(),
+                customer.getPhone(),
                 customer.getAddress(),
                 customer.getAmountAvailable());
     }
