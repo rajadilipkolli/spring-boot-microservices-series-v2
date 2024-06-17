@@ -38,6 +38,7 @@ jobs:
       - name: Start up softwares via Docker Compose
         run: |
           pwd
+          cd ..
           cd deployment
           docker compose up -d
           sleep 240
