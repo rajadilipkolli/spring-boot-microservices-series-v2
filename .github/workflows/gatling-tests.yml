@@ -22,7 +22,7 @@ jobs:
         working-directory: "gatling-tests"
     strategy:
       matrix:
-        java: ["17"]
+        java: ["21"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,11 +32,14 @@ jobs:
         uses: actions/setup-java@v4.2.1
         with:
           java-version: ${{ matrix.java }}
-          distribution: "zulu"
+          distribution: "temurin"
           cache: "maven"
       
       - name: Start up softwares via Docker Compose
         run: |
+          pwd
+          cd ..
+          cd deployment
           docker compose up -d
           sleep 240
           docker ps -a
