@@ -108,7 +108,7 @@ function setupTestData() {
     echo "creating product with code - " $PROD_CODE
     recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
-    body="{\"coproductCodede\":\"$PROD_CODE_1"
+    body="{\"productCode\":\"$PROD_CODE_1"
     body+=\
 '","productName":"product name B","price":9.99, "imageUrl":"https://cdn.igp.com/f_auto,q_auto,t_pnopt12prodlp/products/p-you-are-my-penguin-personalized-magic-mug-265224-m.jpg","description": "Nice Product"}'
 
