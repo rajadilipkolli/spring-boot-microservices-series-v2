@@ -46,12 +46,12 @@ public class OrderGeneratorService {
                                             customerId,
                                             orderItems,
                                             new Address(
-                                                    "Junit Address1",
-                                                    "AddressLine2",
-                                                    "city",
-                                                    "state",
-                                                    "zipCode",
-                                                    "country"));
+                                                    "Junit Address1" + customerId,
+                                                    "AddressLine2" + customerId,
+                                                    "city" + customerId,
+                                                    "state" + customerId,
+                                                    "zipCode" + customerId,
+                                                    "country" + customerId));
                             orderService.saveOrder(orderRequest);
                         });
     }
