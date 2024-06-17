@@ -11,6 +11,8 @@ public class Customer {
 
     private String address;
 
+    private String phone;
+
     private int amountAvailable;
 
     private int amountReserved;
@@ -61,6 +63,15 @@ public class Customer {
         return this;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
+    public Customer setPhone(String phone) {
+        this.phone = phone;
+        return this;
+    }
+
     public Customer setAmountAvailable(final int amountAvailable) {
         this.amountAvailable = amountAvailable;
         return this;
@@ -78,6 +89,8 @@ public class Customer {
                 + this.getName()
                 + ", email="
                 + this.getEmail()
+                + ", phone="
+                + this.getPhone()
                 + ", address="
                 + this.getAddress()
                 + ", amountAvailable="

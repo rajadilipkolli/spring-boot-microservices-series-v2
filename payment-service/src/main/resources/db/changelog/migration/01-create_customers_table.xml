@@ -30,6 +30,9 @@
             <column name="email" type="${string.type}">
                 <constraints nullable="false"/>
             </column>
+            <column name="phone" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
             <column name="address" type="${string.type}"/>
             <column name="amount_available" type="int"/>
             <column name="amount_reserved" type="int"/>

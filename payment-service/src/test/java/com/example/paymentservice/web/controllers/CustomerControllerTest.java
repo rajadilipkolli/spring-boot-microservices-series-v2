@@ -181,7 +181,8 @@ class CustomerControllerTest {
         void shouldCreateNewCustomer() throws Exception {
 
             CustomerRequest customerRequest =
-                    new CustomerRequest("junitName", "email@junit.com", "junitAddress", 10);
+                    new CustomerRequest(
+                            "junitName", "email@junit.com", "1234567890", "junitAddress", 10);
             CustomerResponse customerResponse =
                     new CustomerResponse(1L, "junitName", "email@junit.com", "junitAddress", 10);
             given(customerService.saveCustomer(any(CustomerRequest.class)))
@@ -196,7 +197,7 @@ class CustomerControllerTest {
 
         @Test
         void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-            CustomerRequest customerRequest = new CustomerRequest(null, null, null, 1);
+            CustomerRequest customerRequest = new CustomerRequest(null, null, null, null, 1);
 
             mockMvc.perform(
                             post("/api/customers")
@@ -213,7 +214,7 @@ class CustomerControllerTest {
                                     is("https://zalando.github.io/problem/constraint-violation")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
-                    .andExpect(jsonPath("$.violations", hasSize(2)))
+                    .andExpect(jsonPath("$.violations", hasSize(3)))
                     .andExpect(jsonPath("$.violations[0].field", is("email")))
                     .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
                     .andExpect(jsonPath("$.violations[1].field", is("name")))
@@ -230,7 +231,11 @@ class CustomerControllerTest {
 
             CustomerRequest customerRequest =
                     new CustomerRequest(
-                            "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+                            "customerUpdatedName",
+                            "junitEmail@email.com",
+                            "1234567890",
+                            "junitAddress",
+                            100);
 
             given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
                     .willReturn(
@@ -254,7 +259,11 @@ class CustomerControllerTest {
             Long customerId = 1L;
             CustomerRequest customerRequest =
                     new CustomerRequest(
-                            "customerUpdatedName", "junitEmail@email.com", "junitAddress", 100);
+                            "customerUpdatedName",
+                            "junitEmail@email.com",
+                            "1234567890",
+                            "junitAddress",
+                            100);
             given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
                     .willThrow(new CustomerNotFoundException(customerId));
 

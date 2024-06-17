@@ -72,8 +72,16 @@ public class CustomerService {
 
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
-        Customer customer = customerMapper.toEntity(customerRequest);
-        return customerMapper.toResponse(customerRepository.save(customer));
+        Optional<Customer> customerByEmail =
+                customerRepository.findByEmail(customerRequest.email());
+        Customer customer;
+        if (customerByEmail.isPresent()) {
+            customer = customerByEmail.get();
+        } else {
+            Customer requestCustomer = customerMapper.toEntity(customerRequest);
+            customer = customerRepository.save(requestCustomer);
+        }
+        return customerMapper.toResponse(customer);
     }
 
     @Transactional

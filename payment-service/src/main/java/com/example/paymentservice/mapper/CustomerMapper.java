@@ -15,6 +15,7 @@ public class CustomerMapper {
         customer.setName(customerRequest.name());
         customer.setEmail(customerRequest.email());
         customer.setAddress(customerRequest.address());
+        customer.setPhone(customerRequest.phone());
         customer.setAmountAvailable(customerRequest.amountAvailable());
         return customer;
     }
@@ -33,6 +34,7 @@ public class CustomerMapper {
         customer.setName(customerRequest.name());
         customer.setAddress(customerRequest.address());
         customer.setEmail(customerRequest.email());
+        customer.setPhone(customerRequest.phone());
     }
 
     public List<CustomerResponse> toListResponse(List<Customer> customerList) {
