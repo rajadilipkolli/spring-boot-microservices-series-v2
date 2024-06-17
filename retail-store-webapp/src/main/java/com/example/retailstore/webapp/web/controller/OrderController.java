@@ -1,9 +1,12 @@
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
+import com.example.retailstore.webapp.clients.order.OrderConfirmationDTO;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.services.SecurityHelper;
+import jakarta.validation.Valid;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +14,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -59,5 +64,12 @@ class OrderController {
     private Map<String, ?> getHeaders() {
         String accessToken = securityHelper.getAccessToken();
         return Map.of("Authorization", "Bearer " + accessToken);
+    }
+
+    @PostMapping("/api/orders")
+    @ResponseBody
+    OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
+        log.info("Creating order: {}", orderRequest);
+        return orderServiceClient.createOrder(getHeaders(), orderRequest);
     }
 }
