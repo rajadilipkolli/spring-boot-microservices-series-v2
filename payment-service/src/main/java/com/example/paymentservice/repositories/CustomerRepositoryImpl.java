@@ -54,6 +54,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                         CUSTOMERS.ID,
                         CUSTOMERS.NAME,
                         CUSTOMERS.EMAIL,
+                        CUSTOMERS.PHONE,
                         CUSTOMERS.ADDRESS,
                         CUSTOMERS.AMOUNT_AVAILABLE)
                 .from(CUSTOMERS)
@@ -65,6 +66,13 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     public Optional<Customer> findById(Long customerId) {
         return dslContext
                 .fetchOptional(CUSTOMERS, CUSTOMERS.ID.eq(customerId))
+                .map(r -> r.into(Customer.class));
+    }
+
+    @Override
+    public Optional<Customer> findByEmail(String customerEmail) {
+        return dslContext
+                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(customerEmail))
                 .map(r -> r.into(Customer.class));
     }
 
@@ -86,6 +94,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     .set(CUSTOMERS.ADDRESS, customer.getAddress())
                     .set(CUSTOMERS.NAME, customer.getName())
                     .set(CUSTOMERS.EMAIL, customer.getEmail())
+                    .set(CUSTOMERS.PHONE, customer.getPhone())
                     .where(CUSTOMERS.ID.eq(customer.getId()))
                     .returningResult()
                     .fetchOneInto(Customer.class);

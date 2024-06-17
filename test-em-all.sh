@@ -147,7 +147,7 @@ function setupTestData() {
 
     body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
-'","email": "docker@email.com","address": "docker Address","amountAvailable":1000}'
+'","email": "docker@email.com","phone":"9876543210","address": "docker Address","amountAvailable":1000}'
 
     # Creating Customer
     recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST"

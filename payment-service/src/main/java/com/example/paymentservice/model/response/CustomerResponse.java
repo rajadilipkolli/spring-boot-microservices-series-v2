@@ -2,4 +2,9 @@
 package com.example.paymentservice.model.response;
 
 public record CustomerResponse(
-        Long customerId, String name, String email, String address, int amountAvailable) {}
+        Long customerId,
+        String name,
+        String email,
+        String phone,
+        String address,
+        int amountAvailable) {}

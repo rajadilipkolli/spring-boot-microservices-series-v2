@@ -38,18 +38,21 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         new Customer()
                                 .setName("First Customer")
                                 .setEmail("first@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("First Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Second Customer")
                                 .setEmail("second@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("Second Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Third Customer")
                                 .setEmail("third@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("Third Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0));
@@ -83,6 +86,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
@@ -116,6 +120,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
@@ -124,7 +129,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "New Customer", "firstnew@customerRequest.email", "First Address", 10_000);
+                        "New Customer",
+                        "firstnew@customerRequest.email",
+                        "1234567890",
+                        "First Address",
+                        10_000);
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -135,13 +144,39 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
+                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+    }
+
+    @Test
+    void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
+        Customer customer = customerList.getFirst();
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        customer.getName(),
+                        customer.getEmail(),
+                        customer.getPhone(),
+                        customer.getAddress(),
+                        customer.getAmountAvailable());
+        this.mockMvc
+                .perform(
+                        post("/api/customers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists(HttpHeaders.LOCATION))
+                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
+                .andExpect(jsonPath("$.name", is(customerRequest.name())))
+                .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-        CustomerRequest customer = new CustomerRequest(null, null, null, 0);
+        CustomerRequest customer = new CustomerRequest(null, null, null, null, 0);
 
         this.mockMvc
                 .perform(
@@ -159,7 +194,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 is("https://zalando.github.io/problem/constraint-violation")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(3)))
+                .andExpect(jsonPath("$.violations", hasSize(4)))
                 .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
                 .andExpect(
                         jsonPath(
@@ -176,7 +211,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.getFirst().getId();
         CustomerRequest customerRequest =
-                new CustomerRequest("Updated text", "first@customer.email", "First Address", 500);
+                new CustomerRequest(
+                        "Updated text", "first@customer.email", "1234567890", "First Address", 500);
 
         this.mockMvc
                 .perform(
@@ -188,6 +224,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
@@ -196,7 +233,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         long customerId = customerList.getFirst().getId() + 99_999;
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "Updated text", "first@customer.email", "First Address", 10_000);
+                        "Updated text",
+                        "first@customer.email",
+                        "1234567890",
+                        "First Address",
+                        10_000);
 
         this.mockMvc
                 .perform(
@@ -227,6 +268,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
