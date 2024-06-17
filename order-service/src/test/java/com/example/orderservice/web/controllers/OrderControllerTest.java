@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.request.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -168,7 +169,15 @@ class OrderControllerTest {
 
             OrderRequest orderRequest =
                     new OrderRequest(
-                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
             OrderItemResponse orderItemDto =
                     new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
             OrderResponse orderResponse =
@@ -195,7 +204,17 @@ class OrderControllerTest {
         @Test
         void shouldFailCreatingNewOrder() throws Exception {
 
-            OrderRequest orderRequest = new OrderRequest(1L, new ArrayList<>());
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L,
+                            new ArrayList<>(),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
 
             mockMvc.perform(
                             post("/api/orders")
@@ -222,7 +241,16 @@ class OrderControllerTest {
         @Test
         void shouldReturn400WhenCreateNewOrderWithoutCustomerId() throws Exception {
             OrderRequest orderRequest =
-                    new OrderRequest(0L, List.of(new OrderItemRequest("P001", 10, BigDecimal.TEN)));
+                    new OrderRequest(
+                            0L,
+                            List.of(new OrderItemRequest("P001", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
 
             mockMvc.perform(
                             post("/api/orders")
@@ -255,7 +283,15 @@ class OrderControllerTest {
 
             OrderRequest orderRequest =
                     new OrderRequest(
-                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
 
             OrderResponse orderResponse =
                     new OrderResponse(
@@ -286,7 +322,15 @@ class OrderControllerTest {
             given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
             OrderRequest order =
                     new OrderRequest(
-                            1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
 
             mockMvc.perform(
                             put("/api/orders/{id}", orderId)

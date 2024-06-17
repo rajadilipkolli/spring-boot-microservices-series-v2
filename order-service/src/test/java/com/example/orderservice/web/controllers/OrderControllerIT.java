@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -22,6 +22,7 @@ import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.request.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.repositories.OrderRepository;
@@ -50,14 +51,36 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderList = new ArrayList<>();
         Order order1 = TestData.getOrder();
         this.orderList.add(order1);
-        Order order2 = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
+        Order order2 =
+                new Order()
+                        .setCustomerId(1L)
+                        .setStatus(OrderStatus.NEW)
+                        .setDeliveryAddress(
+                                new Address(
+                                        "Junit Address11",
+                                        "AddressLine12",
+                                        "city2",
+                                        "state2",
+                                        "zipCode2",
+                                        "country2"));
         this.orderList.add(order2);
         OrderItem orderItem =
                 new OrderItem()
                         .setProductCode("Product3")
                         .setQuantity(100)
                         .setProductPrice(BigDecimal.ONE);
-        Order order3 = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
+        Order order3 =
+                new Order()
+                        .setCustomerId(1L)
+                        .setStatus(OrderStatus.NEW)
+                        .setDeliveryAddress(
+                                new Address(
+                                        "Junit Address31",
+                                        "AddressLine32",
+                                        "city3",
+                                        "state3",
+                                        "zipCode3",
+                                        "country3"));
         order3.addOrderItem(orderItem);
         this.orderList.add(order3);
 
@@ -123,7 +146,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewOrder() throws Exception {
         OrderRequest orderRequest =
-                new OrderRequest(1L, List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)));
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"));
         mockProductsExistsRequest(true, "Product1");
 
         this.mockMvc
@@ -145,7 +177,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateNewOrderFails() throws Exception {
         OrderRequest orderRequest =
-                new OrderRequest(1L, List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)));
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)),
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"));
         mockProductsExistsRequest(false, "Product2");
 
         this.mockMvc
@@ -169,7 +210,17 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldReturn400WhenCreateNewOrderWithoutItems() throws Exception {
-        OrderRequest orderRequest = new OrderRequest(-1L, new ArrayList<>());
+        OrderRequest orderRequest =
+                new OrderRequest(
+                        -1L,
+                        new ArrayList<>(),
+                        new Address(
+                                "Junit Address1",
+                                "AddressLine2",
+                                "city",
+                                "state",
+                                "zipCode",
+                                "country"));
 
         this.mockMvc
                 .perform(

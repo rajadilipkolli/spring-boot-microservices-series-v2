@@ -33,6 +33,22 @@
             </column>
             <column name="source" type="${string.type}"/>
             <column name="status" type="${string.type}"/>
+            <column name="delivery_address_line1" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delivery_address_line2" type="${string.type}"/>
+            <column name="delivery_address_city" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delivery_address_state" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delivery_address_zip_code" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delivery_address_country" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
             <column name="version" type="tinyint"/>
             <column name="created_by" type="${string.type}"/>
             <column name="created_date" type="timestamptz" />
