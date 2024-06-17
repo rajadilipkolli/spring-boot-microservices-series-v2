@@ -54,6 +54,6 @@ databaseChangeLog:
               type: 'NUMERIC(19,2)'
         tableName: products
       addUniqueConstraint:
-        columnNames: code
-        constraintName: uc_products_code
+        columnNames: product_code
+        constraintName: uc_product_code
         tableName: products
