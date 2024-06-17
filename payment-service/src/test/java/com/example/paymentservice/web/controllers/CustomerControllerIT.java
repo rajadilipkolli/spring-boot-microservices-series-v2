@@ -150,6 +150,31 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
+        Customer customer = customerList.getFirst();
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        customer.getName(),
+                        customer.getEmail(),
+                        customer.getPhone(),
+                        customer.getAddress(),
+                        customer.getAmountAvailable());
+        this.mockMvc
+                .perform(
+                        post("/api/customers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists(HttpHeaders.LOCATION))
+                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
+                .andExpect(jsonPath("$.name", is(customerRequest.name())))
+                .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
+                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+    }
+
+    @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
         CustomerRequest customer = new CustomerRequest(null, null, null, null, 0);
 
