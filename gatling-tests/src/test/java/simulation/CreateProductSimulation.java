@@ -39,7 +39,7 @@ public class CreateProductSimulation extends Simulation {
                             () -> {
                                 Map<String, Object> objectMap = new HashMap<>();
                                 objectMap.put(
-                                        "code", "P000" + new SecureRandom().nextInt(10, 20_000));
+                                        "productCode", "P000" + new SecureRandom().nextInt(10, 20_000));
                                 objectMap.put(
                                         "productName",
                                         "A Random Product" + new SecureRandom().nextInt());
@@ -58,7 +58,7 @@ public class CreateProductSimulation extends Simulation {
                                     .header("Content-Type", "application/json")
                                     .body(
                                             StringBody(
-                                                    "{ \"code\": \"#{code}\",\"productName\":\"#{productName}\",\"price\":#{price}, \"description\": \"A Beautiful Product\" }"))
+                                                    "{ \"productCode\": \"#{productCode}\",\"productName\":\"#{productName}\",\"price\":#{price}, \"description\": \"A Beautiful Product\" }"))
                                     .check(status().is(201))
                                     .check(header("location").saveAs("location")))
                     .exec(
@@ -70,7 +70,7 @@ public class CreateProductSimulation extends Simulation {
                                     .check(status().is(200)))
                     .exec(
                             http("get-inventory-request")
-                                    .get("/inventory-service/api/inventory/#{code}")
+                                    .get("/inventory-service/api/inventory/#{productCode}")
                                     .check(status().is(200))
                                     .check(bodyString().saveAs("inventoryResponseBody")))
                     .exec(
@@ -100,7 +100,7 @@ public class CreateProductSimulation extends Simulation {
                                                       "customerId": #{customerId},
                                                       "items": [
                                                         {
-                                                          "productCode": "#{code}",
+                                                          "productCode": "#{productCode}",
                                                           "quantity": 10,
                                                           "productPrice": 5
                                                         }

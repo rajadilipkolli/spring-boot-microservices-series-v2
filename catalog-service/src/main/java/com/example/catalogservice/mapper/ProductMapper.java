@@ -24,6 +24,7 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
+    @Mapping(target = "code", source = "productCode")
     ProductDto toProductDto(ProductRequest productRequest);
 
     @Mapping(target = "id", ignore = true)

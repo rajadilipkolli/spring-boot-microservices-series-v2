@@ -92,7 +92,7 @@ public class ProductService {
 
                             List<String> productCodeList =
                                     productResponseList.stream()
-                                            .map(ProductResponse::code)
+                                            .map(ProductResponse::productCode)
                                             .toList();
 
                             return getInventoryByProductCodes(productCodeList)
@@ -118,7 +118,7 @@ public class ProductService {
                 .map(
                         productResponse -> {
                             int availableQuantity =
-                                    inventoriesMap.getOrDefault(productResponse.code(), 0);
+                                    inventoriesMap.getOrDefault(productResponse.productCode(), 0);
                             return productResponse.withInStock(availableQuantity > 0);
                         })
                 .toList();
@@ -136,7 +136,7 @@ public class ProductService {
                 .map(productMapper::toProductResponse)
                 .flatMap(
                         productResponse ->
-                                getInventoryByProductCode(productResponse.code())
+                                getInventoryByProductCode(productResponse.productCode())
                                         .map(
                                                 inventoryDto ->
                                                         productResponse.withInStock(
@@ -165,7 +165,7 @@ public class ProductService {
 
     private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
             ProductResponse productResponse) {
-        return getInventoryByProductCode(productResponse.code())
+        return getInventoryByProductCode(productResponse.productCode())
                 .map(
                         inventoryResponse ->
                                 productResponse.withInStock(
@@ -191,7 +191,8 @@ public class ProductService {
                         e ->
                                 // Handle unique key constraint violation here
                                 Mono.error(
-                                        new ProductAlreadyExistsException(productRequest.code())))
+                                        new ProductAlreadyExistsException(
+                                                productRequest.productCode())))
                 .map(productMapper::toProductResponse);
     }
 

@@ -55,7 +55,7 @@ class ProductServiceTest {
                             int randomPrice = ThreadLocalRandom.current().nextInt(1, 101);
                             return new Product()
                                     .setId(1L)
-                                    .setCode(request.code())
+                                    .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
                                     .setPrice(randomPrice);
@@ -68,7 +68,7 @@ class ProductServiceTest {
                             ProductRequest request = invocation.getArgument(0);
                             int randomPrice = ThreadLocalRandom.current().nextInt(1, 101);
                             return new ProductDto(
-                                    request.code(),
+                                    request.productCode(),
                                     request.productName(),
                                     request.description(),
                                     (double) randomPrice);
@@ -81,7 +81,7 @@ class ProductServiceTest {
                             Product product = invocationOnMock.getArgument(0);
                             return new ProductResponse(
                                     product.getId(),
-                                    product.getCode(),
+                                    product.getProductCode(),
                                     product.getProductName(),
                                     product.getDescription(),
                                     null,

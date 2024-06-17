@@ -69,17 +69,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         List<Product> productList =
                 List.of(
                         new Product()
-                                .setCode("P001")
+                                .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
                                 .setPrice(9.0),
                         new Product()
-                                .setCode("P002")
+                                .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
                                 .setPrice(10.0),
                         new Product()
-                                .setCode("P003")
+                                .setProductCode("P003")
                                 .setProductName("name 3")
                                 .setDescription("description 3")
                                 .setPrice(11.0));
@@ -213,7 +213,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 0)));
+                200,
+                objectMapper.writeValueAsString(
+                        new InventoryResponse(product.getProductCode(), 0)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -225,8 +227,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
@@ -256,7 +258,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+                200,
+                objectMapper.writeValueAsString(
+                        new InventoryResponse(product.getProductCode(), 10)));
 
         webTestClient
                 .get()
@@ -269,8 +273,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
@@ -309,7 +313,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+                200,
+                objectMapper.writeValueAsString(
+                        new InventoryResponse(product.getProductCode(), 10)));
 
         webTestClient
                 .get()
@@ -344,7 +350,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+                200,
+                objectMapper.writeValueAsString(
+                        new InventoryResponse(product.getProductCode(), 10)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -372,8 +380,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
@@ -423,7 +431,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", product.getCode())
+                .uri("/api/catalog/productCode/{productCode}", product.getProductCode())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -432,8 +440,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
@@ -449,7 +457,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Product product = savedProductList.getFirst();
 
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(new InventoryResponse(product.getCode(), 10)));
+                200,
+                objectMapper.writeValueAsString(
+                        new InventoryResponse(product.getProductCode(), 10)));
         webTestClient
                 .get()
                 .uri(
@@ -457,7 +467,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 uriBuilder
                                         .path("/api/catalog/productCode/{productCode}")
                                         .queryParam("fetchInStock", true)
-                                        .build(product.getCode()))
+                                        .build(product.getProductCode()))
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -466,8 +476,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
@@ -480,7 +490,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void productsShouldExistsByProductCodes() {
-        List<String> productCodeList = savedProductList.stream().map(Product::getCode).toList();
+        List<String> productCodeList =
+                savedProductList.stream().map(Product::getProductCode).toList();
 
         webTestClient
                 .get()
@@ -539,8 +550,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isNotEmpty()
-                .jsonPath("$.code")
-                .isEqualTo(productRequest.code())
+                .jsonPath("$.productCode")
+                .isEqualTo(productRequest.productCode())
                 .jsonPath("$.productName")
                 .isEqualTo(productRequest.productName())
                 .jsonPath("$.description")
@@ -622,7 +633,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         ProductRequest productRequest =
                 new ProductRequest(
-                        product.getCode(), product.getProductName(), "Updated Catalog", null, 100D);
+                        product.getProductCode(),
+                        product.getProductName(),
+                        "Updated Catalog",
+                        null,
+                        100D);
 
         webTestClient
                 .put()
@@ -637,8 +652,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .value(is(product.getId().intValue()))
-                .jsonPath("$.code")
-                .value(is(product.getCode()))
+                .jsonPath("$.productCode")
+                .value(is(product.getProductCode()))
                 .jsonPath("$.productName")
                 .value(is(product.getProductName()))
                 .jsonPath("$.description")
@@ -662,8 +677,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")

@@ -36,7 +36,7 @@ databaseChangeLog:
           - column:
               constraints:
                 nullable: 'false'
-              name: code
+              name: product_code
               type: ${string.type}
           - column:
               constraints:
