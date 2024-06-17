@@ -38,18 +38,21 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         new Customer()
                                 .setName("First Customer")
                                 .setEmail("first@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("First Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Second Customer")
                                 .setEmail("second@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("Second Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Third Customer")
                                 .setEmail("third@customer.email")
+                                .setPhone("9876543210")
                                 .setAddress("Third Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0));

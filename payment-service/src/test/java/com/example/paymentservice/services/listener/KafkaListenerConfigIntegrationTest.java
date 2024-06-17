@@ -37,6 +37,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         new Customer()
                                 .setName("First Customer")
                                 .setEmail("first@customer.email")
+                                .setPhone("1234567890")
                                 .setAddress("First Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(10));
