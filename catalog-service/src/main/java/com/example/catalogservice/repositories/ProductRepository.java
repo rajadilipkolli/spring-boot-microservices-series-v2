@@ -17,9 +17,9 @@ import reactor.core.publisher.Mono;
 public interface ProductRepository
         extends ReactiveCrudRepository<Product, Long>, ReactiveSortingRepository<Product, Long> {
 
-    Mono<Long> countDistinctByCodeAllIgnoreCaseIn(List<String> code);
+    Mono<Long> countDistinctByProductCodeAllIgnoreCaseIn(List<String> productCodeList);
 
-    Mono<Product> findByCodeAllIgnoreCase(String code);
+    Mono<Product> findByProductCodeAllIgnoreCase(String productCode);
 
     Flux<Product> findAllBy(Pageable pageable);
 }

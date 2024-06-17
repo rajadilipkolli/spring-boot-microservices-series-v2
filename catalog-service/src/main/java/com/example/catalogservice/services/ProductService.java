@@ -153,7 +153,7 @@ public class ProductService {
             String productCode, boolean fetchInStock) {
         Mono<ProductResponse> productResponseMono =
                 productRepository
-                        .findByCodeAllIgnoreCase(productCode)
+                        .findByProductCodeAllIgnoreCase(productCode)
                         .map(productMapper::toProductResponse)
                         .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
 
@@ -205,7 +205,7 @@ public class ProductService {
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
         log.info("checking if products Exists :{}", productCodes);
         return productRepository
-                .countDistinctByCodeAllIgnoreCaseIn(productCodes)
+                .countDistinctByProductCodeAllIgnoreCaseIn(productCodes)
                 .map(count -> count == productCodes.size());
     }
 

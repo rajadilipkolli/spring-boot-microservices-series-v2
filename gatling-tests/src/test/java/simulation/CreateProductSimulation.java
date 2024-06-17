@@ -39,7 +39,8 @@ public class CreateProductSimulation extends Simulation {
                             () -> {
                                 Map<String, Object> objectMap = new HashMap<>();
                                 objectMap.put(
-                                        "productCode", "P000" + new SecureRandom().nextInt(10, 20_000));
+                                        "productCode",
+                                        "P000" + new SecureRandom().nextInt(10, 20_000));
                                 objectMap.put(
                                         "productName",
                                         "A Random Product" + new SecureRandom().nextInt());
