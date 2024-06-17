@@ -92,7 +92,7 @@ public class ProductService {
 
                             List<String> productCodeList =
                                     productResponseList.stream()
-                                            .map(ProductResponse::code)
+                                            .map(ProductResponse::productCode)
                                             .toList();
 
                             return getInventoryByProductCodes(productCodeList)
@@ -118,7 +118,7 @@ public class ProductService {
                 .map(
                         productResponse -> {
                             int availableQuantity =
-                                    inventoriesMap.getOrDefault(productResponse.code(), 0);
+                                    inventoriesMap.getOrDefault(productResponse.productCode(), 0);
                             return productResponse.withInStock(availableQuantity > 0);
                         })
                 .toList();
@@ -136,7 +136,7 @@ public class ProductService {
                 .map(productMapper::toProductResponse)
                 .flatMap(
                         productResponse ->
-                                getInventoryByProductCode(productResponse.code())
+                                getInventoryByProductCode(productResponse.productCode())
                                         .map(
                                                 inventoryDto ->
                                                         productResponse.withInStock(
@@ -153,7 +153,7 @@ public class ProductService {
             String productCode, boolean fetchInStock) {
         Mono<ProductResponse> productResponseMono =
                 productRepository
-                        .findByCodeAllIgnoreCase(productCode)
+                        .findByProductCodeAllIgnoreCase(productCode)
                         .map(productMapper::toProductResponse)
                         .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
 
@@ -165,7 +165,7 @@ public class ProductService {
 
     private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
             ProductResponse productResponse) {
-        return getInventoryByProductCode(productResponse.code())
+        return getInventoryByProductCode(productResponse.productCode())
                 .map(
                         inventoryResponse ->
                                 productResponse.withInStock(
@@ -191,7 +191,8 @@ public class ProductService {
                         e ->
                                 // Handle unique key constraint violation here
                                 Mono.error(
-                                        new ProductAlreadyExistsException(productRequest.code())))
+                                        new ProductAlreadyExistsException(
+                                                productRequest.productCode())))
                 .map(productMapper::toProductResponse);
     }
 
@@ -204,7 +205,7 @@ public class ProductService {
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
         log.info("checking if products Exists :{}", productCodes);
         return productRepository
-                .countDistinctByCodeAllIgnoreCaseIn(productCodes)
+                .countDistinctByProductCodeAllIgnoreCaseIn(productCodes)
                 .map(count -> count == productCodes.size());
     }
 

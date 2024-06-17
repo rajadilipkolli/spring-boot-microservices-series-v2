@@ -103,8 +103,8 @@ class ProductControllerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(productResponse.id())
-                .jsonPath("$.code")
-                .isEqualTo(productResponse.code())
+                .jsonPath("$.productCode")
+                .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
                 .isEqualTo(productResponse.productName())
                 .jsonPath("$.description")
@@ -134,12 +134,13 @@ class ProductControllerTest {
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
-        ProductDto productDto = new ProductDto("code 1", "name 1", "description 1", 9.0);
+        ProductRequest productRequest =
+                new ProductRequest("code 1", "name 1", "description 1", null, 9.0);
         webTestClient
                 .post()
                 .uri("/api/catalog")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Mono.just(productDto), ProductDto.class)
+                .body(Mono.just(productRequest), ProductRequest.class)
                 .exchange()
                 .expectStatus()
                 .isCreated()
@@ -150,14 +151,14 @@ class ProductControllerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isNotEmpty()
-                .jsonPath("$.code")
-                .isEqualTo(productDto.code())
+                .jsonPath("$.productCode")
+                .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
-                .isEqualTo(productDto.productName())
+                .isEqualTo(productResponse.productName())
                 .jsonPath("$.description")
-                .isEqualTo(productDto.description())
+                .isEqualTo(productResponse.description())
                 .jsonPath("$.price")
-                .isEqualTo(productDto.price());
+                .isEqualTo(productResponse.price());
     }
 
     @Test
@@ -193,7 +194,7 @@ class ProductControllerTest {
         Product product =
                 new Product()
                         .setId(productId)
-                        .setCode("code 1")
+                        .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
                         .setPrice(9.0);
@@ -217,8 +218,8 @@ class ProductControllerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .value(is(1))
-                .jsonPath("$.code")
-                .value(is(product.getCode()))
+                .jsonPath("$.productCode")
+                .value(is(product.getProductCode()))
                 .jsonPath("$.productName")
                 .value(is(product.getProductName()))
                 .jsonPath("$.description")
@@ -250,7 +251,7 @@ class ProductControllerTest {
         Product product =
                 new Product()
                         .setId(productId)
-                        .setCode("code 1")
+                        .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
                         .setPrice(9.0);
@@ -268,8 +269,8 @@ class ProductControllerTest {
                 .expectBody()
                 .jsonPath("$.id")
                 .isEqualTo(product.getId())
-                .jsonPath("$.code")
-                .isEqualTo(product.getCode())
+                .jsonPath("$.productCode")
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
                 .isEqualTo(product.getProductName())
                 .jsonPath("$.description")

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public record ProductResponse(
         Long id,
-        String code,
+        String productCode,
         String productName,
         String description,
         String imageUrl,
@@ -24,7 +24,7 @@ public record ProductResponse(
                 ? this
                 : new ProductResponse(
                         this.id,
-                        this.code,
+                        this.productCode,
                         this.productName,
                         this.description,
                         this.imageUrl,

@@ -100,7 +100,7 @@ function recreateComposite() {
 
 function setupTestData() {
 
-    body="{\"code\":\"$PROD_CODE"
+    body="{\"productCode\":\"$PROD_CODE"
     body+=\
 '","productName":"product name A","price":100, "imageUrl":"https://www.ikea.com/in/en/images/products/saellskaplig-jug-patterned-green__0941744_pe795674_s5.jpg?f=xl","description": "A Beautiful Product"}'
 
@@ -108,7 +108,7 @@ function setupTestData() {
     echo "creating product with code - " $PROD_CODE
     recreateComposite "$PROD_CODE" "$body" "catalog-service/api/catalog" "POST"
 
-    body="{\"code\":\"$PROD_CODE_1"
+    body="{\"productCode\":\"$PROD_CODE_1"
     body+=\
 '","productName":"product name B","price":9.99, "imageUrl":"https://cdn.igp.com/f_auto,q_auto,t_pnopt12prodlp/products/p-you-are-my-penguin-personalized-magic-mug-265224-m.jpg","description": "Nice Product"}'
 

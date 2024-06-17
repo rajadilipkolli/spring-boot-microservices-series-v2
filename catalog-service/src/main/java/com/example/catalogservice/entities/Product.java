@@ -18,7 +18,7 @@ public class Product implements Serializable {
 
     @Id private Long id;
 
-    private String code;
+    private String productCode;
 
     private String productName;
 
@@ -39,12 +39,12 @@ public class Product implements Serializable {
         return this;
     }
 
-    public String getCode() {
-        return code;
+    public String getProductCode() {
+        return productCode;
     }
 
-    public Product setCode(String code) {
-        this.code = code;
+    public Product setProductCode(String productCode) {
+        this.productCode = productCode;
         return this;
     }
 
