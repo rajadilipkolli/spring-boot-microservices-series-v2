@@ -1,12 +1,17 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.entities;
 
+import com.example.orderservice.model.Address;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -34,6 +39,28 @@ public class Order extends Auditable<String> implements Serializable {
     private OrderStatus status = OrderStatus.NEW;
 
     private String source;
+
+    @Embedded
+    @AttributeOverrides(
+            value = {
+                @AttributeOverride(
+                        name = "addressLine1",
+                        column = @Column(name = "delivery_address_line1")),
+                @AttributeOverride(
+                        name = "addressLine2",
+                        column = @Column(name = "delivery_address_line2")),
+                @AttributeOverride(name = "city", column = @Column(name = "delivery_address_city")),
+                @AttributeOverride(
+                        name = "state",
+                        column = @Column(name = "delivery_address_state")),
+                @AttributeOverride(
+                        name = "zipCode",
+                        column = @Column(name = "delivery_address_zip_code")),
+                @AttributeOverride(
+                        name = "country",
+                        column = @Column(name = "delivery_address_country")),
+            })
+    private Address deliveryAddress;
 
     @Version private Short version;
 
@@ -74,6 +101,15 @@ public class Order extends Auditable<String> implements Serializable {
 
     public String getSource() {
         return source;
+    }
+
+    public Address getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public Order setDeliveryAddress(Address deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
+        return this;
     }
 
     public Order setVersion(Short version) {

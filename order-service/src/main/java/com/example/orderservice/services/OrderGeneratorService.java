@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
@@ -40,7 +41,17 @@ public class OrderGeneratorService {
                             if (customerId == 0) {
                                 customerId = 1;
                             }
-                            OrderRequest orderRequest = new OrderRequest(customerId, orderItems);
+                            OrderRequest orderRequest =
+                                    new OrderRequest(
+                                            customerId,
+                                            orderItems,
+                                            new Address(
+                                                    "Junit Address1" + customerId,
+                                                    "AddressLine2" + customerId,
+                                                    "city" + customerId,
+                                                    "state" + customerId,
+                                                    "zipCode" + customerId,
+                                                    "country" + customerId));
                             orderService.saveOrder(orderRequest);
                         });
     }

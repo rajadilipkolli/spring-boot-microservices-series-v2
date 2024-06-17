@@ -164,7 +164,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 10,"productPrice": 5}]}'
+'","quantity": 10,"productPrice": 5}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating Order
@@ -192,7 +192,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 100,"productPrice": 5}]}'
+'","quantity": 100,"productPrice": 5}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating 2nd Order, this should ROLLBACK as Inventory is not available
@@ -220,7 +220,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 80,"productPrice": 10}]}'
+'","quantity": 80,"productPrice": 10}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating 3rd Order, this should CONFIRMED as Inventory is available
@@ -248,7 +248,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 8,"productPrice": 20}]}'
+'","quantity": 8,"productPrice": 20}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating 4th Order, this should ROLLBACK as amount is not available for customer
@@ -276,7 +276,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 20,"productPrice": 20}]}'
+'","quantity": 20,"productPrice": 20}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating 5th Order, this should Reject as amount is not available for customer & inventory not available
@@ -309,7 +309,7 @@ function verifyAPIs() {
 '","quantity": 1,"productPrice": 10},{"productCode": '
       body+="\"$PROD_CODE_1"
       body+=\
-'","quantity": 5,"productPrice": 10}]}'
+'","quantity": 5,"productPrice": 10}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating Order
@@ -342,7 +342,7 @@ function verifyAPIs() {
 '","quantity": 1,"productPrice": 10},{"productCode": '
       body+="\"$PROD_CODE_1"
       body+=\
-'","quantity": 500,"productPrice": 9.99}]}'
+'","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
 
     echo " "
     # Creating Order

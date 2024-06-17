@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
@@ -11,6 +11,7 @@ import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
@@ -19,7 +20,18 @@ import java.util.List;
 public class TestData {
 
     public static Order getOrder() {
-        Order order = new Order().setCustomerId(1L).setStatus(OrderStatus.NEW);
+        Order order =
+                new Order()
+                        .setCustomerId(1L)
+                        .setStatus(OrderStatus.NEW)
+                        .setDeliveryAddress(
+                                new Address(
+                                        "Junit Address1",
+                                        "AddressLine2",
+                                        "city",
+                                        "state",
+                                        "zipCode",
+                                        "country"));
         OrderItem orderItem =
                 new OrderItem()
                         .setProductCode("Product1")
@@ -48,7 +60,9 @@ public class TestData {
                         new OrderItemRequest(
                                 "product4",
                                 orderItem1.getQuantity(),
-                                orderItem1.getProductPrice())));
+                                orderItem1.getProductPrice())),
+                new Address(
+                        "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country"));
     }
 
     public static OrderDto getOrderDto(String source) {
