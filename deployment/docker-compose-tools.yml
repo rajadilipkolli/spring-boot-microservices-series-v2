@@ -111,7 +111,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0.0
+    image: quay.io/keycloak/keycloak:25.0.1
     command: [ 'start-dev', '--http-port=9191' ]
     container_name: keycloak
     hostname: keycloak
