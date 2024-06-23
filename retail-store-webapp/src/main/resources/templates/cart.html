@@ -16,6 +16,7 @@
                 <table class="table">
                     <thead>
                     <tr>
+                        <th th:if="${false}" scope="col">Product Code</th>
                         <th scope="col">Product Name</th>
                         <th scope="col">Price</th>
                         <th scope="col">Quantity</th>
@@ -25,11 +26,12 @@
                     <tbody>
                     <template x-for="item in cart.items">
                         <tr>
+                            <td th:if="${false}" x-text="item.productCode">code</td>
                             <td x-text="item.productName">name</td>
                             <td x-text="item.price">price</td>
                             <td>
                                 <input type="number" min="0" x-model="item.quantity"
-                                       @change="updateItemQuantity(item.code, $event.target.value)"/>
+                                       @change="updateItemQuantity(item.productCode, $event.target.value)"/>
                             </td>
                             <td x-text="item.quantity * item.price">subTotal</td>
                         </tr>
@@ -64,7 +66,7 @@
                     </div>
                     <div class="col-md-6">
                         <label for="customerPhone" class="form-label">Customer Phone</label>
-                        <input type="email" class="form-control"
+                        <input type="text" class="form-control"
                                id="customerPhone"
                                name="customerPhone"
                                x-model="orderForm.customer.phone"

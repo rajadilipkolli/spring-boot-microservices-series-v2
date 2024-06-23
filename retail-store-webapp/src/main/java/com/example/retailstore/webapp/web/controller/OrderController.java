@@ -1,8 +1,12 @@
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.retailstore.webapp.clients.customer.CustomerRequest;
+import com.example.retailstore.webapp.clients.customer.CustomerResponse;
+import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
 import com.example.retailstore.webapp.clients.order.OrderConfirmationDTO;
+import com.example.retailstore.webapp.clients.order.OrderRequestExternal;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.services.SecurityHelper;
@@ -24,10 +28,15 @@ class OrderController {
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     private final OrderServiceClient orderServiceClient;
+    private final CustomerServiceClient customerServiceClient;
     private final SecurityHelper securityHelper;
 
-    OrderController(OrderServiceClient orderServiceClient, SecurityHelper securityHelper) {
+    OrderController(
+            OrderServiceClient orderServiceClient,
+            SecurityHelper securityHelper,
+            CustomerServiceClient customerServiceClient) {
         this.orderServiceClient = orderServiceClient;
+        this.customerServiceClient = customerServiceClient;
         this.securityHelper = securityHelper;
     }
 
@@ -70,6 +79,12 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        return orderServiceClient.createOrder(getHeaders(), orderRequest);
+        Map<String, ?> headers = getHeaders();
+        String email = securityHelper.getLoggedInUserEmail();
+        CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
+        CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+
+        OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
+        return orderServiceClient.createOrder(headers, orderRequestExternal);
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,5 +25,14 @@ public class SecurityHelper {
                 oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
 
         return client.getAccessToken().getTokenValue();
+    }
+
+    public String getLoggedInUserEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof OAuth2AuthenticationToken)) {
+            return null;
+        }
+        DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
+        return principal.getEmail();
     }
 }

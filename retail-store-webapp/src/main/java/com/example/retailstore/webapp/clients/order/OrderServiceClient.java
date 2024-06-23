@@ -4,6 +4,7 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.PostExchange;
@@ -17,5 +18,6 @@ public interface OrderServiceClient {
     OrderResponse getOrder(@RequestHeader Map<String, ?> headers, @PathVariable String id);
 
     @PostExchange("/api/orders")
-    OrderConfirmationDTO createOrder(Map<String, ?> headers, @Valid CreateOrderRequest orderRequest);
+    OrderConfirmationDTO createOrder(
+            @RequestHeader Map<String, ?> headers, @Valid @RequestBody OrderRequestExternal orderRequestExternal);
 }
