@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 public record ProductResponse(
         Long id,
-        String code,
+        String productCode,
         String productName,
         String description,
         String imageUrl,
