@@ -26,6 +26,11 @@ class ProductController {
         return "redirect:/products";
     }
 
+    @GetMapping("/catalog")
+    String catalog() {
+        return "catalog";
+    }
+
     @GetMapping("/products")
     String showProductsPage(@RequestParam(name = "page", defaultValue = "1") int page, Model model) {
         model.addAttribute("pageNo", page);
