@@ -15,7 +15,7 @@ import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -26,7 +26,8 @@ public class TestOrderServiceApplication {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka").withTag("3.7.0"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
+                .withKraft()
                 .withReuse(true);
     }
 
