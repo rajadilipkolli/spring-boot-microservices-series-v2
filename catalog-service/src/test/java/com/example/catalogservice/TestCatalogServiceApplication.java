@@ -12,8 +12,8 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -37,8 +37,7 @@ public class TestCatalogServiceApplication {
     @ServiceConnection
     KafkaContainer kafkaContainer(DynamicPropertyRegistry dynamicPropertyRegistry) {
         KafkaContainer kafkaContainer =
-                new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
-                        .withKraft()
+                new KafkaContainer(DockerImageName.parse("apache/kafka").withTag("3.7.0"))
                         .withReuse(true);
         dynamicPropertyRegistry.add(
                 "spring.cloud.stream.kafka.binder.brokers", kafkaContainer::getBootstrapServers);

@@ -13,7 +13,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -31,8 +31,7 @@ public class TestInventoryApplication {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
-                .withKraft()
+        return new KafkaContainer(DockerImageName.parse("apache/kafka").withTag("3.7.0"))
                 .withReuse(true);
     }
 
