@@ -3,7 +3,7 @@ package com.example.retailstore.webapp.clients.order;
 import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 
-public record Address(
+record Address(
         @NotBlank(message = "AddressLine1 is required") String addressLine1,
         String addressLine2,
         @NotBlank(message = "City is required") String city,
