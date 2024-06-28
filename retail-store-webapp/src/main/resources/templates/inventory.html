@@ -14,7 +14,7 @@
             <template x-for="inventory in catalogs.data">
                 <div class="col mb-3">
                     <div class="card h-100 inventory">
-                        <form class="row g-3" method="post" @submit.prevent="updateInventory">
+                        <form class="row g-3" @submit.prevent="updateInventory(inventory)"></form>
                             <div class="card-body">
                                 <h5 class="card-title"
                                     data-toggle="tooltip"
@@ -30,7 +30,7 @@
                         </form>
                         <div class="card-footer" style="background: transparent; border-top: 0;">
                             <div class="d-grid gap-2">
-                                <button class="btn btn-primary" @click="updateInventory(inventory)">
+                                <button type="button" class="btn btn-primary" @click="updateInventory(inventory)"></button>
                                     Update
                                 </button>
                             </div>

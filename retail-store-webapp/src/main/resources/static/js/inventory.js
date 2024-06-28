@@ -24,11 +24,17 @@ document.addEventListener('alpine:init', () => {
                 data : JSON.stringify(inventoryForm),
                 success: (resp) => {
 //                     console.log("InventoryUpdate Resp:", resp)
-                     alert("Inventory Updated successfully")
+                    alert("Inventory Updated successfully")
                 },
                 error: (err) => {
-                     console.log("Inventory Update Error:", err)
-                     alert("Inventory Update failed")
+                    console.log("Inventory Update Error:", err)
+                    if (err.status === 404) {
+                        alert("Inventory item not found.");
+                    } else if (err.status === 500) {
+                        alert("Server error, please try again later.");
+                    } else {
+                        alert("Failed to update inventory. Please check your input and try again.");
+                    }
                 }
             });
         }
