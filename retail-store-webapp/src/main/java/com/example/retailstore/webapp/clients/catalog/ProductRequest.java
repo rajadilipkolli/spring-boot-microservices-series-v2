@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Positive;
 
 public record ProductRequest(
         @NotBlank(message = "Product code can't be blank") String productCode,
-        String productName,
+        @NotBlank(message = "Product name can't be blank") String productName,
         String description,
         String imageUrl,
         @Positive Double price) {}
