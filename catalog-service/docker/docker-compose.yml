@@ -36,7 +36,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka:3.7.0
+    image: apache/kafka:3.7.1
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: broker
     ports:
