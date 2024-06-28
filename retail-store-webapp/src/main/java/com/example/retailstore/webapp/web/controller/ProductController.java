@@ -26,21 +26,16 @@ class ProductController {
         return "redirect:/products";
     }
 
-    @GetMapping("/catalog")
-    String catalog() {
-        return "catalog";
-    }
-
     @GetMapping("/products")
-    String showProductsPage(@RequestParam(name = "page", defaultValue = "1") int page, Model model) {
+    String showProductsPage(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
         model.addAttribute("pageNo", page);
         return "products";
     }
 
     @GetMapping("/api/products")
     @ResponseBody
-    PagedResult<ProductResponse> products(@RequestParam(name = "page", defaultValue = "1") int page, Model model) {
-        log.info("Fetching products for page: {}", page - 1);
-        return catalogService.getProducts(page - 1);
+    PagedResult<ProductResponse> products(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
+        log.info("Fetching products for page: {}", page);
+        return catalogService.getProducts(page);
     }
 }

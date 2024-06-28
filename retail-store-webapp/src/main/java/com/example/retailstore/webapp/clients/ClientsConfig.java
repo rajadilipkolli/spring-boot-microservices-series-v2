@@ -2,6 +2,7 @@ package com.example.retailstore.webapp.clients;
 
 import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
+import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.config.ApplicationProperties;
 import java.time.Duration;
@@ -55,5 +56,14 @@ class ClientsConfig {
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
                 .build();
         return factory.createClient(CustomerServiceClient.class);
+    }
+
+    @Bean
+    InventoryServiceClient inventoryServiceClient(RestClient.Builder builder) {
+        RestClient restClient = builder.baseUrl(properties.apiGatewayUrl() + "/inventory-service")
+                .build();
+        HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
+                .build();
+        return factory.createClient(InventoryServiceClient.class);
     }
 }
