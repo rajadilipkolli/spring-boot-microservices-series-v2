@@ -79,12 +79,11 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        Map<String, ?> headers = getHeaders();
         String email = securityHelper.getLoggedInUserEmail();
         CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
         CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
         OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
-        return orderServiceClient.createOrder(headers, orderRequestExternal);
+        return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
     }
 }
