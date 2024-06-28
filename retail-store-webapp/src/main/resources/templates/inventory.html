@@ -7,24 +7,30 @@
 <body>
 <div layout:fragment="content">
     <div th:x-data="|initData('${pageNo}')|">
+        Available Inventory
+        <br/>
         <div th:replace="~{fragments/inventoryPagination :: pagination}"> </div>
         <div class="row row-cols-1 row-cols-md-5">
             <template x-for="inventory in catalogs.data">
                 <div class="col mb-3">
                     <div class="card h-100 inventory">
-                        <div class="card-body">
-                            <h5 class="card-title"
-                                data-toggle="tooltip"
-                                data-placement="top"
-                                x-text="inventory.productCode">inventory.productCode</h5>
-                            <p class="card-text"
-                               data-toggle="tooltip"
-                               data-placement="top"
-                               x-text="inventory.availableQuantity">inventory.availableQuantity</p>
-                        </div>
+                        <form class="row g-3" @submit.prevent="updateInventory(inventory)"></form>
+                            <div class="card-body">
+                                <h5 class="card-title"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    x-text="inventory.productCode">inventory.productCode</h5>
+                                <label for="availableQuantity" class="form-label">Available Quantity</label>
+                                <input type="number" min="1" class="form-control"
+                                       id="availableQuantity"
+                                       name="availableQuantity"
+                                       x-model="inventory.availableQuantity"
+                                       value=""/>
+                            </div>
+                        </form>
                         <div class="card-footer" style="background: transparent; border-top: 0;">
                             <div class="d-grid gap-2">
-                                <button class="btn btn-primary" @click="update(inventory)">
+                                <button type="button" class="btn btn-primary" @click="updateInventory(inventory)"></button>
                                     Update
                                 </button>
                             </div>
