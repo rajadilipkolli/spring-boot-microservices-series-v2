@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -33,5 +35,13 @@ class InventoryController {
     PagedResult<InventoryResponse> inventories(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
         log.info("Fetching inventories for page: {}", page);
         return inventoryServiceClient.getInventories(page);
+    }
+
+    @PutMapping("/inventory")
+    @ResponseBody
+    InventoryResponse updateInventory(@RequestBody InventoryResponse inventoryResponse) {
+        log.debug("Input Received :{}", inventoryResponse);
+        return inventoryServiceClient.updateInventory(
+                inventoryResponse.id(), inventoryResponse.inventoryUpdateRequest());
     }
 }
