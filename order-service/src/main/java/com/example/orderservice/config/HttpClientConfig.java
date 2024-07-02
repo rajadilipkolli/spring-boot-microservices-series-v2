@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.orderservice.config;
 
 import com.example.orderservice.services.CatalogServiceProxy;
 import io.micrometer.observation.ObservationRegistry;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -26,14 +27,24 @@ public class HttpClientConfig {
     }
 
     @Bean
-    HttpServiceProxyFactory httpServiceProxyFactory(
-            RestClient.Builder builder, ObservationRegistry observationRegistry) {
-        RestClient restClient =
-                builder.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+    RestClientCustomizer restClientCustomizer(ObservationRegistry observationRegistry) {
+        return restClientBuilder ->
+                restClientBuilder
+                        .defaultHeaders(
+                                httpHeaders -> {
+                                    httpHeaders.add(
+                                            HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                                    httpHeaders.add(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            MediaType.APPLICATION_JSON_VALUE);
+                                })
                         .baseUrl(applicationProperties.catalogServiceUrl())
-                        .observationRegistry(observationRegistry)
-                        .build();
+                        .observationRegistry(observationRegistry);
+    }
+
+    @Bean
+    HttpServiceProxyFactory httpServiceProxyFactory(RestClient.Builder builder) {
+        RestClient restClient = builder.build();
         return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
     }
 
