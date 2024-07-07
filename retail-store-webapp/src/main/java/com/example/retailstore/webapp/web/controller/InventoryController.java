@@ -42,6 +42,6 @@ class InventoryController {
     InventoryResponse updateInventory(@RequestBody InventoryResponse inventoryResponse) {
         log.debug("Input Received :{}", inventoryResponse);
         return inventoryServiceClient.updateInventory(
-                inventoryResponse.id(), inventoryResponse.inventoryUpdateRequest());
+                inventoryResponse.id(), inventoryResponse.createInventoryUpdateRequest());
     }
 }
