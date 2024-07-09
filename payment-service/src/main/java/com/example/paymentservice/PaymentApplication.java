@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
-public class PaymentApplication {
+class PaymentApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(PaymentApplication.class, args);

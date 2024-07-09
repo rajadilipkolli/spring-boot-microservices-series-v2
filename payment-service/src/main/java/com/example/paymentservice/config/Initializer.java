@@ -13,7 +13,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
-public class Initializer implements CommandLineRunner {
+class Initializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(Initializer.class);
 

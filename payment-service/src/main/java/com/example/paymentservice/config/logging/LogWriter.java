@@ -5,7 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 
-public class LogWriter {
+class LogWriter {
 
     public static void write(Class<?> originClass, LogLevel logLevel, String message) {
         Logger logger = LoggerFactory.getLogger(originClass);

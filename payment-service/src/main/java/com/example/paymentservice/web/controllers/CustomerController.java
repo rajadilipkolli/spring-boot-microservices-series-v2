@@ -26,16 +26,16 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 @RequestMapping("/api/customers")
 @Loggable
-public class CustomerController {
+class CustomerController {
 
     private final CustomerService customerService;
 
-    public CustomerController(CustomerService customerService) {
+    CustomerController(CustomerService customerService) {
         this.customerService = customerService;
     }
 
     @GetMapping
-    public PagedResult<CustomerResponse> getAllCustomers(
+    PagedResult<CustomerResponse> getAllCustomers(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -50,7 +50,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
+    ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(ResponseEntity::ok)
@@ -58,7 +58,7 @@ public class CustomerController {
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name) {
+    ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name) {
         return customerService
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
@@ -66,7 +66,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<CustomerResponse> createCustomer(
+    ResponseEntity<CustomerResponse> createCustomer(
             @RequestBody @Valid CustomerRequest customerRequest) {
         CustomerResponse response = customerService.saveCustomer(customerRequest);
         URI location =
@@ -78,13 +78,13 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponse> updateCustomer(
+    ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable Long id, @RequestBody @Valid CustomerRequest customerRequest) {
         return ResponseEntity.ok(customerService.updateCustomer(id, customerRequest));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
+    ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(
