@@ -47,13 +47,13 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafkaStreams
-public class KafkaStreamsConfig {
+class KafkaStreamsConfig {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final OrderManageService orderManageService;
 
-    public KafkaStreamsConfig(OrderManageService orderManageService) {
+    KafkaStreamsConfig(OrderManageService orderManageService) {
         this.orderManageService = orderManageService;
     }
 

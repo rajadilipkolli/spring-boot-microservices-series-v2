@@ -20,7 +20,7 @@ import org.springframework.kafka.core.KafkaAdmin;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafka
-public class KafkaConfig {
+class KafkaConfig {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 

@@ -29,7 +29,7 @@ import org.springframework.util.ObjectUtils;
 
 @Aspect
 @Component
-public class LoggingAspect {
+class LoggingAspect {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
 

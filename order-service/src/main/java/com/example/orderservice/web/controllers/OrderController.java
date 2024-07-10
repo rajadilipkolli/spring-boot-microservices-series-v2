@@ -42,14 +42,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @Validated
 @Loggable
-public class OrderController implements OrderApi {
+class OrderController implements OrderApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
     private final OrderKafkaStreamService orderKafkaStreamService;
 
-    public OrderController(
+    OrderController(
             OrderService orderService,
             OrderGeneratorService orderGeneratorService,
             OrderKafkaStreamService orderKafkaStreamService) {
@@ -59,7 +59,7 @@ public class OrderController implements OrderApi {
     }
 
     @GetMapping
-    public PagedResult<OrderResponse> getAllOrders(
+    PagedResult<OrderResponse> getAllOrders(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -76,14 +76,14 @@ public class OrderController implements OrderApi {
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     @RateLimiter(name = "default")
     @Bulkhead(name = "order-api")
-    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
+    ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
         return orderService
                 .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
-    public ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+    ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
         if (ex instanceof ProductNotFoundException productNotFoundException) {
             throw productNotFoundException;
         }
@@ -92,15 +92,14 @@ public class OrderController implements OrderApi {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponse> createOrder(
-            @RequestBody @Valid OrderRequest orderRequest) {
+    ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
                 .body(orderResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrderResponse> updateOrder(
+    ResponseEntity<OrderResponse> updateOrder(
             @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
@@ -111,7 +110,7 @@ public class OrderController implements OrderApi {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
+    ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
         return orderService
                 .findById(id)
                 .map(
@@ -123,7 +122,7 @@ public class OrderController implements OrderApi {
     }
 
     @GetMapping("/generate")
-    public boolean createMockOrders() {
+    boolean createMockOrders() {
         orderGeneratorService.generateOrders();
         return true;
     }
@@ -139,7 +138,7 @@ public class OrderController implements OrderApi {
     }
 
     @GetMapping("/customer/{id}")
-    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }

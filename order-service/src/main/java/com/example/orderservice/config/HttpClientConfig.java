@@ -18,11 +18,11 @@ import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 @Configuration(proxyBeanMethods = false)
-public class HttpClientConfig {
+class HttpClientConfig {
 
     private final ApplicationProperties applicationProperties;
 
-    public HttpClientConfig(ApplicationProperties applicationProperties) {
+    HttpClientConfig(ApplicationProperties applicationProperties) {
         this.applicationProperties = applicationProperties;
     }
 
