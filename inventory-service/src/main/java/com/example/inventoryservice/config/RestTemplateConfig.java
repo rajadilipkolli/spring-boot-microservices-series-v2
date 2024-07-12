@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration(proxyBeanMethods = false)
-public class RestTemplateConfig {
+class RestTemplateConfig {
 
     // IMPORTANT! To instrument RestTemplate you must inject the RestTemplateBuilder
     @Bean
