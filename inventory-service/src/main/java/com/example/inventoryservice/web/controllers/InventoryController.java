@@ -30,16 +30,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/inventory")
 @Loggable
-public class InventoryController {
+class InventoryController {
 
     private final InventoryService inventoryService;
 
-    public InventoryController(InventoryService inventoryService) {
+    InventoryController(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
     }
 
     @GetMapping
-    public PagedResult<Inventory> getAllInventories(
+    PagedResult<Inventory> getAllInventories(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -56,7 +56,7 @@ public class InventoryController {
     // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     // @RateLimiter(name = "default")
     // @Bulkhead(name = "inventory-api")
-    public ResponseEntity<Inventory> getInventoryByProductCode(@PathVariable String productCode) {
+    ResponseEntity<Inventory> getInventoryByProductCode(@PathVariable String productCode) {
         return inventoryService
                 .findInventoryByProductCode(productCode)
                 .map(ResponseEntity::ok)
@@ -64,25 +64,24 @@ public class InventoryController {
     }
 
     @GetMapping("/product")
-    public ResponseEntity<List<Inventory>> getInventoryByProductCodes(
-            @RequestParam List<String> codes) {
+    ResponseEntity<List<Inventory>> getInventoryByProductCodes(@RequestParam List<String> codes) {
         return ResponseEntity.ok(inventoryService.getInventoryByProductCodes(codes));
     }
 
     @GetMapping("/generate")
-    public boolean updateInventoryWithRandomValue() {
+    boolean updateInventoryWithRandomValue() {
         inventoryService.updateGeneratedInventory();
         return true;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Inventory createInventory(@RequestBody @Validated InventoryRequest inventoryRequest) {
+    Inventory createInventory(@RequestBody @Validated InventoryRequest inventoryRequest) {
         return inventoryService.saveInventory(inventoryRequest);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Inventory> updateInventory(
+    ResponseEntity<Inventory> updateInventory(
             @PathVariable Long id, @RequestBody @Validated InventoryRequest inventoryRequest) {
         return inventoryService
                 .updateInventoryById(id, inventoryRequest)
@@ -91,7 +90,7 @@ public class InventoryController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Inventory> deleteInventory(@PathVariable Long id) {
+    ResponseEntity<Inventory> deleteInventory(@PathVariable Long id) {
         return inventoryService
                 .findInventoryById(id)
                 .map(

@@ -19,13 +19,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Profile("local")
-public class Initializer implements CommandLineRunner {
+class Initializer implements CommandLineRunner {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryRepository inventoryRepository;
 
-    public Initializer(InventoryRepository inventoryRepository) {
+    Initializer(InventoryRepository inventoryRepository) {
         this.inventoryRepository = inventoryRepository;
     }
 

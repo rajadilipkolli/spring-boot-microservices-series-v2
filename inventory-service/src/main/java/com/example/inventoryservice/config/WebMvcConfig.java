@@ -8,20 +8,21 @@ package com.example.inventoryservice.config;
 
 import com.example.inventoryservice.config.ApplicationProperties.Cors;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration(proxyBeanMethods = false)
-public class WebMvcConfig implements WebMvcConfigurer {
+class WebMvcConfig implements WebMvcConfigurer {
 
     private final ApplicationProperties properties;
 
-    public WebMvcConfig(ApplicationProperties properties) {
+    WebMvcConfig(ApplicationProperties properties) {
         this.properties = properties;
     }
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         Cors cors = properties.getCors();
         registry.addMapping(cors.getPathPattern())
                 .allowedMethods(cors.getAllowedHeaders())

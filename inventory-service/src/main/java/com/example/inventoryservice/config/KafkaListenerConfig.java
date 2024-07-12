@@ -27,14 +27,14 @@ import org.springframework.retry.annotation.Backoff;
 
 @EnableKafka
 @Configuration(proxyBeanMethods = false)
-public class KafkaListenerConfig {
+class KafkaListenerConfig {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
 
-    public KafkaListenerConfig(
+    KafkaListenerConfig(
             InventoryOrderManageService orderManageService,
             ProductManageService productManageService) {
         this.orderManageService = orderManageService;

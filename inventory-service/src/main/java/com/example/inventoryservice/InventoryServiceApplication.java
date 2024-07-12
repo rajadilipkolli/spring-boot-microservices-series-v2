@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
-public class InventoryServiceApplication {
+class InventoryServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(InventoryServiceApplication.class, args);
