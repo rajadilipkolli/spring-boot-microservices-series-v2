@@ -46,7 +46,7 @@ jobs:
 
       - name: Start up softwares via Docker Compose
         run: |
-          cd deployment
+          cd ..\deployment
           docker compose up config-server naming-server -d
           sleep 10
           docker ps -a
