@@ -17,6 +17,7 @@ spring:
   application:
     name: api-gateway
   cloud:
+    refresh.enabled: false
     gateway:
       discovery:
         locator:
