@@ -44,6 +44,13 @@ jobs:
       - name: Build and analyze
         run: ./mvnw clean verify
 
+      - name: Start up softwares via Docker Compose
+        run: |
+          cd deployment
+          docker compose up config-server naming-server -d
+          sleep 10
+          docker ps -a
+
       - name: Build Image and push to docker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
