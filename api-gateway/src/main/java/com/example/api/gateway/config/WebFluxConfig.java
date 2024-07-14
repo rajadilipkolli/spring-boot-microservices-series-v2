@@ -11,7 +11,7 @@ import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 @Configuration(proxyBeanMethods = false)
-public class WebFluxConfig implements WebFluxConfigurer {
+class WebFluxConfig implements WebFluxConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
