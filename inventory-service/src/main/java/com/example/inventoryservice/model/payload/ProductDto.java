@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.common.dtos;
+package com.example.inventoryservice.model.payload;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;

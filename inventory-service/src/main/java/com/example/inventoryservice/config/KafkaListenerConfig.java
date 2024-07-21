@@ -7,11 +7,13 @@
 package com.example.inventoryservice.config;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.ProductDto;
+import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
-import jakarta.validation.Valid;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -33,12 +35,15 @@ class KafkaListenerConfig {
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
+    private final ObjectMapper objectMapper;
 
     KafkaListenerConfig(
             InventoryOrderManageService orderManageService,
-            ProductManageService productManageService) {
+            ProductManageService productManageService,
+            ObjectMapper objectMapper) {
         this.orderManageService = orderManageService;
         this.productManageService = productManageService;
+        this.objectMapper = objectMapper;
     }
 
     // retries if processing of event fails
@@ -56,9 +61,10 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload @Valid ProductDto productDto) {
+    public void onSaveProductEvent(@Payload String productDto)
+            throws JsonMappingException, JsonProcessingException {
         log.info("Received Product: {}", productDto);
-        productManageService.manage(productDto);
+        productManageService.manage(objectMapper.readValue(productDto, ProductDto.class));
     }
 
     @DltHandler

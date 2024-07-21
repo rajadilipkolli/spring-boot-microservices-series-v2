@@ -8,15 +8,14 @@ package com.example.catalogservice.services;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
-import com.example.common.dtos.ProductDto;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
@@ -26,8 +25,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.http.MediaType;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -38,7 +35,7 @@ class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
 
-    @Mock private StreamBridge streamBridge;
+    @Mock private CatalogKafkaProducer catalogKafkaProducer;
 
     @InjectMocks private ProductService productService;
 
@@ -61,19 +58,6 @@ class ProductServiceTest {
                                     .setPrice(randomPrice);
                         });
 
-        // Stubbing productMapper.toProductDto()
-        given(productMapper.toProductDto(any(ProductRequest.class)))
-                .willAnswer(
-                        invocation -> {
-                            ProductRequest request = invocation.getArgument(0);
-                            int randomPrice = ThreadLocalRandom.current().nextInt(1, 101);
-                            return new ProductDto(
-                                    request.productCode(),
-                                    request.productName(),
-                                    request.description(),
-                                    (double) randomPrice);
-                        });
-
         // Stubbing productMapper.toProductResponse()
         given(productMapper.toProductResponse(any(Product.class)))
                 .willAnswer(
@@ -89,12 +73,7 @@ class ProductServiceTest {
                                     true);
                         });
 
-        given(
-                        streamBridge.send(
-                                eq("inventory-out-0"),
-                                any(ProductDto.class),
-                                eq(MediaType.APPLICATION_JSON)))
-                .willReturn(true);
+        given(catalogKafkaProducer.send(any(ProductRequest.class))).willReturn(Mono.just(true));
 
         // Stubbing productRepository.saveProduct()
         given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));

@@ -6,8 +6,6 @@
 
 package com.example.catalogservice.config;
 
-import com.example.common.dtos.ProductDto;
-import jakarta.validation.Valid;
 import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +21,7 @@ public class TestKafkaListenerConfig {
     private final CountDownLatch latch = new CountDownLatch(10);
 
     @KafkaListener(id = "products", topics = "productTopic", groupId = "product")
-    public void onSaveProductEvent(@Payload @Valid ProductDto productDto) {
+    public void onSaveProductEvent(@Payload String productDto) {
         log.info("Received Product: {}", productDto);
         latch.countDown();
     }
