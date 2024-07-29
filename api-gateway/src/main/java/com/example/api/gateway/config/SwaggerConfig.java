@@ -41,7 +41,7 @@ import org.springframework.context.annotation.Lazy;
         security = @SecurityRequirement(name = "Authorization"))
 @SecurityScheme(type = SecuritySchemeType.HTTP, scheme = "basic", name = "Authorization")
 @AutoConfigureBefore(MultipleOpenApiSupportConfiguration.class)
-public class SwaggerConfig {
+class SwaggerConfig {
 
     @Bean
     @Lazy(value = false)
