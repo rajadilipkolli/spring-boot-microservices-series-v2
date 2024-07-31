@@ -10,6 +10,7 @@ import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
@@ -23,13 +24,11 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -46,17 +45,17 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
-    private final StreamBridge streamBridge;
+    private final CatalogKafkaProducer catalogKafkaProducer;
 
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
-            StreamBridge streamBridge) {
+            CatalogKafkaProducer catalogKafkaProducer) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
-        this.streamBridge = streamBridge;
+        this.catalogKafkaProducer = catalogKafkaProducer;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
@@ -178,14 +177,9 @@ public class ProductService {
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         return Mono.just(this.productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
-                .map(
-                        savedProduct -> {
-                            streamBridge.send(
-                                    "inventory-out-0",
-                                    this.productMapper.toProductDto(productRequest),
-                                    MediaType.APPLICATION_JSON);
-                            return savedProduct;
-                        })
+                .flatMap(
+                        savedProduct ->
+                                catalogKafkaProducer.send(productRequest).thenReturn(savedProduct))
                 .onErrorResume(
                         DuplicateKeyException.class,
                         e ->

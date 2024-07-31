@@ -14,11 +14,11 @@ import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
-import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

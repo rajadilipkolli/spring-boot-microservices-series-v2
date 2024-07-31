@@ -11,8 +11,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.example.common.dtos.ProductDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;

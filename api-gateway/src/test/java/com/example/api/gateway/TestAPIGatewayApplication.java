@@ -28,7 +28,7 @@ public class TestAPIGatewayApplication {
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("7.2.5-alpine"))
+        return new RedisContainer(DockerImageName.parse("redis").withTag("7.4.0-alpine"))
                 .withReuse(true);
     }
 
