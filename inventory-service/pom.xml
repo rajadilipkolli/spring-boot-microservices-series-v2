@@ -23,7 +23,7 @@
         <spring-cloud.version>2023.0.3</spring-cloud.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
 
-        <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
+        <org.mapstruct.version>1.6.0</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
