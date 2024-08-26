@@ -7,9 +7,9 @@
 package com.example.catalogservice.mapper;
 
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
-import com.example.common.dtos.ProductDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
