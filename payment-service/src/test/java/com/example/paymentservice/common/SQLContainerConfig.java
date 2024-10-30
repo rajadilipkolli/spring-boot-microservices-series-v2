@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2024 Raja Kolli. ***/
 package com.example.paymentservice.common;
 
+import java.util.Collections;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,8 @@ public class SQLContainerConfig {
     @ServiceConnection
     PostgreSQLContainer<?> postgreSQLContainer() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("17-alpine"))
-                .withReuse(true);
+                .withReuse(true)
+                .withCommand("postgres -c fsync=off") // Optimize for tests
+                .withTmpFs(Collections.singletonMap("/var/lib/postgresql/data", "rw"));
     }
 }
