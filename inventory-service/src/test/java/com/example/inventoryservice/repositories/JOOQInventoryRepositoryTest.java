@@ -16,11 +16,13 @@ import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jooq.JooqTest;
 import org.springframework.context.annotation.Import;
 
-@JooqTest(properties = {"spring.test.database.replace=none", "spring.cloud.config.enabled=false"})
+@JooqTest(properties = {"spring.cloud.config.enabled=false"})
 @Import(SQLContainersConfig.class)
+@AutoConfigureTestDatabase
 class JOOQInventoryRepositoryTest {
 
     @Autowired private DSLContext dslContext;
