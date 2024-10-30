@@ -9,7 +9,7 @@ package com.example.inventoryservice.repositories;
 import static com.example.inventoryservice.jooq.tables.Inventory.INVENTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.common.ContainersConfig;
+import com.example.inventoryservice.config.SQLContainersConfig;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.jooq.DSLContext;
@@ -20,7 +20,7 @@ import org.springframework.boot.test.autoconfigure.jooq.JooqTest;
 import org.springframework.context.annotation.Import;
 
 @JooqTest(properties = {"spring.test.database.replace=none", "spring.cloud.config.enabled=false"})
-@Import(ContainersConfig.class)
+@Import(SQLContainersConfig.class)
 class JOOQInventoryRepositoryTest {
 
     @Autowired private DSLContext dslContext;

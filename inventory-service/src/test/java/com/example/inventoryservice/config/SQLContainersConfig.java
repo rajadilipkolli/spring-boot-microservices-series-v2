@@ -4,8 +4,9 @@
 </p>
 ***/
 
-package com.example.inventoryservice.common;
+package com.example.inventoryservice.config;
 
+import java.util.Collections;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -13,12 +14,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
-public class ContainersConfig {
+public class SQLContainersConfig {
 
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSQLContainer() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres:17-alpine"))
-                .withReuse(true);
+                .withReuse(true)
+                .withCommand("postgres -c fsync=off") // Optimize for tests
+                .withTmpFs(Collections.singletonMap("/var/lib/postgresql/data", "rw"));
     }
 }
