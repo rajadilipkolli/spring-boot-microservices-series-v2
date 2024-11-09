@@ -17,6 +17,5 @@ public interface PostGreSQLContainer {
     PostgreSQLContainer<?> postgreSQLContainer =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("17-alpine"))
                     .withReuse(true)
-                    .withCommand("postgres -c fsync=off") // Optimize for tests
                     .withTmpFs(Collections.singletonMap("/var/lib/postgresql/data", "rw"));
 }
