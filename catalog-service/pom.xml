@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <version>3.4.0-RC1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.catalogservice</groupId>
@@ -20,8 +20,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>21</java.version>
-        <spring-cloud.version>2023.0.3</spring-cloud.version>
-        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <spring-cloud.version>2024.0.0-RC1</spring-cloud.version>
+        <springdoc-openapi.version>2.7.0-RC1</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
 
@@ -89,11 +89,6 @@
                     <artifactId>commons-logging</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!-- To fix Spring Cloud LoadBalancer is currently working with the default
@@ -229,11 +224,13 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -507,7 +504,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.22.0</version>
+                            <version>1.24.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->
