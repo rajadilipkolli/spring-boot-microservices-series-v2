@@ -74,7 +74,6 @@
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
-                <version>0.9.23</version>
                 <executions>
                     <execution>
                         <goals>
@@ -94,7 +93,7 @@
                         <buildArg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</buildArg>
                     </buildArgs>
                 </configuration>
-            </plugin>            
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
