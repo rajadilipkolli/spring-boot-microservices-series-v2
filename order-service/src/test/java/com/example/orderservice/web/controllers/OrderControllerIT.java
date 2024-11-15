@@ -347,7 +347,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldFindOrdersByCustomersId() throws Exception {
-        OrderItem orderItem = orderList.getFirst().getItems().get(0);
+        OrderItem orderItem = orderList.getFirst().getItems().getFirst();
         mockMvc.perform(
                         get("/api/orders/customer/{id}", orderList.getFirst().getCustomerId())
                                 .queryParam("page", "0")

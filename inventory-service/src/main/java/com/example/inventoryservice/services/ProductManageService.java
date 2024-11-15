@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice.services;
 
-import com.example.common.dtos.ProductDto;
 import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import org.springframework.stereotype.Service;
 

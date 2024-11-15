@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -14,22 +14,22 @@ import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
+import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
-import com.example.common.dtos.ProductDto;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
@@ -39,7 +39,7 @@ class ProductControllerTest {
 
     @Autowired private WebTestClient webTestClient;
 
-    @MockBean private ProductService productService;
+    @MockitoBean private ProductService productService;
 
     private List<ProductResponse> productResponseList;
 

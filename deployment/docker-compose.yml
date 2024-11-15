@@ -3,7 +3,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -32,7 +32,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:7.2.5-alpine'
+    image: 'redis:7.4.1-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -63,7 +63,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka:3.7.1
+    image: apache/kafka:3.9.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -95,7 +95,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0.1
+    image: quay.io/keycloak/keycloak:26.0.5
     command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]

@@ -1,11 +1,12 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway;
 
+import com.redis.testcontainers.RedisContainer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -27,7 +28,7 @@ public class TestAPIGatewayApplication {
     @Bean
     @ServiceConnection(name = "redis")
     GenericContainer<?> redisContainer() {
-        return new GenericContainer<>(DockerImageName.parse("redis").withTag("7.2.5-alpine"))
+        return new GenericContainer<>(DockerImageName.parse("redis").withTag("7.4.0-alpine"))
                 .withExposedPorts(6379)
                 .withReuse(true);
     }

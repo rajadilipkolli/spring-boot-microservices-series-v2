@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -9,7 +9,6 @@ package com.example.catalogservice.common;
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.catalogservice.TestCatalogServiceApplication;
 import com.example.catalogservice.config.TestKafkaListenerConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -24,7 +23,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false"},
-        classes = {TestCatalogServiceApplication.class, TestKafkaListenerConfig.class})
+        classes = {SQLContainerConfig.class, TestKafkaListenerConfig.class, ContainersConfig.class})
 @AutoConfigureWebTestClient
 @AutoConfigureObservability(tracing = false)
 public abstract class AbstractIntegrationTest {

@@ -1,9 +1,8 @@
-version: '3.9'
 services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -33,7 +32,7 @@ services:
       - payment-network
 
   kafka:
-    image: apache/kafka:3.7.1
+    image: apache/kafka-native:3.9.0
     ports:
       - "9092:9092"
     healthcheck:
