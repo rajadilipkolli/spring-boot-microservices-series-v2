@@ -11,8 +11,8 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Configuration
-public class ApiGatewayConfiguration {
+@Configuration(proxyBeanMethods = false)
+class ApiGatewayConfiguration {
 
     @Bean
     RouteLocator gatewayRouter(RouteLocatorBuilder builder) {
