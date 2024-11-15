@@ -7,6 +7,7 @@
 package com.example.api.gateway.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
@@ -14,7 +15,7 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
 class WebFluxConfig implements WebFluxConfigurer {
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedMethods("GET", "POST", "OPTIONS", "HEAD", "PUT")
                 .allowedHeaders("Access-Control-Allow-Origin")
