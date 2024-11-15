@@ -22,7 +22,7 @@ public class ContainersConfig {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("3.9.0"))
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("3.8.1"))
                 .withReuse(true);
     }
 
