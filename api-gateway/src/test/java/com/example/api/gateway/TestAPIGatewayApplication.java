@@ -27,9 +27,8 @@ public class TestAPIGatewayApplication {
 
     @Bean
     @ServiceConnection(name = "redis")
-    GenericContainer<?> redisContainer() {
-        return new GenericContainer<>(DockerImageName.parse("redis").withTag("7.4.0-alpine"))
-                .withExposedPorts(6379)
+    RedisContainer redisContainer() {
+        return new RedisContainer(DockerImageName.parse("redis").withTag("7.4.0-alpine"))
                 .withReuse(true);
     }
 
