@@ -87,6 +87,7 @@
                         <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
                         <buildArg>-H:-AddAllFileSystemProviders</buildArg>
                         <buildArg>--strict-image-heap</buildArg>
+                        <buildArg>--initialize-at-build-time=org.apache.sshd.sftp.client.fs.SftpFileSystemProvider</buildArg>
                         <buildArg>--initialize-at-build-time=org.bouncycastle</buildArg>
                         <buildArg>--initialize-at-build-time=net.i2p.crypto.eddsa.EdDSASecurityProvider</buildArg>
                         <buildArg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default</buildArg>
