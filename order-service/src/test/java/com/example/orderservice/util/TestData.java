@@ -48,7 +48,7 @@ public class TestData {
     }
 
     public static OrderRequest getOrderRequest(Order order) {
-        OrderItem orderItem = order.getItems().get(0);
+        OrderItem orderItem = order.getItems().getFirst();
         OrderItem orderItem1 = order.getItems().get(1);
         return new OrderRequest(
                 order.getCustomerId(),

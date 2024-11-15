@@ -1,8 +1,7 @@
-version: '3.8'
 services:
 
   postgresql:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: postgresql
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
@@ -36,7 +35,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka:3.8.0
+    image: apache/kafka-native:3.9.0
     ports:
       - "9092:9092"
     healthcheck:

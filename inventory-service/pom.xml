@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.3</version>
+        <version>3.3.5</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.inventoryservice</groupId>
@@ -23,15 +23,15 @@
         <spring-cloud.version>2023.0.3</spring-cloud.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
 
-        <org.mapstruct.version>1.6.0</org.mapstruct.version>
+        <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.43.0</spotless.version>
-        <maven-checkstyle-plugin.version>3.5.0</maven-checkstyle-plugin.version>
-        <dependency-check-maven.version>10.0.3</dependency-check-maven.version>
+        <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+        <dependency-check-maven.version>11.1.0</dependency-check-maven.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
         <jacoco.utReportFolder>${project.build.directory}/jacoco/test</jacoco.utReportFolder>
@@ -193,7 +193,7 @@
         <dependency>
             <groupId>org.instancio</groupId>
             <artifactId>instancio-junit</artifactId>
-            <version>5.0.1</version>
+            <version>5.0.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -271,7 +271,7 @@
                 <configuration>
                     <database>
                         <type>POSTGRES</type>
-                        <containerImage>postgres:16-alpine</containerImage>
+                        <containerImage>postgres:17-alpine</containerImage>
                         <username>test</username>
                         <password>test</password>
                         <databaseName>test</databaseName>
@@ -408,7 +408,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.18.0</version>
+                        <version>10.20.1</version>
                     </dependency>
                 </dependencies>
                 <configuration>

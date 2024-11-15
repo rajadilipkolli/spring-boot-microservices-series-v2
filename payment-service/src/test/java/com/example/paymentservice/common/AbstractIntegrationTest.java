@@ -4,7 +4,6 @@ package com.example.paymentservice.common;
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.paymentservice.TestPaymentApplication;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -16,7 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false", "spring.cloud.discovery.enabled=false"},
-        classes = TestPaymentApplication.class)
+        classes = {SQLContainerConfig.class, NonSQLContainerConfig.class})
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
