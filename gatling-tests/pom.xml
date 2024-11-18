@@ -13,7 +13,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.13.1</gatling.version>
-        <gatling-plugin.version>4.10.2</gatling-plugin.version>
+        <gatling-plugin.version>4.11.0</gatling-plugin.version>
         <spotless.version>2.43.0</spotless.version>
     </properties>
 
