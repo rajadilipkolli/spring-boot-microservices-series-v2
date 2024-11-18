@@ -9,9 +9,7 @@ package com.example.inventoryservice.common;
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.inventoryservice.TestInventoryApplication;
 import com.example.inventoryservice.config.NonSQLContainersConfig;
-import com.example.inventoryservice.config.SQLContainersConfig;
 import com.example.inventoryservice.config.TestStockOrderListenerConfig;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,10 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         classes = {
-            TestInventoryApplication.class,
-            TestStockOrderListenerConfig.class,
+            SQLContainersConfig.class,
             NonSQLContainersConfig.class,
-            SQLContainersConfig.class
+            TestStockOrderListenerConfig.class
         })
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {

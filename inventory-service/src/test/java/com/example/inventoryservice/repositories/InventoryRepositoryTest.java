@@ -8,7 +8,7 @@ package com.example.inventoryservice.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.config.SQLContainersConfig;
+import com.example.inventoryservice.common.SQLContainersConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;

@@ -9,7 +9,7 @@ package com.example.inventoryservice.repositories;
 import static com.example.inventoryservice.jooq.tables.Inventory.INVENTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.config.SQLContainersConfig;
+import com.example.inventoryservice.common.SQLContainersConfig;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.jooq.DSLContext;
