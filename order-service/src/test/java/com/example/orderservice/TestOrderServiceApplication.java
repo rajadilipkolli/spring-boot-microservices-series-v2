@@ -16,9 +16,9 @@ import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 public class TestOrderServiceApplication {
 
     public static void main(String[] args) {
+        System.setProperty("spring.profiles.active", AppConstants.PROFILE_LOCAL);
         SpringApplication.from(OrderServiceApplication::main)
                 .with(ContainersConfig.class)
-                .withAdditionalProfiles(AppConstants.PROFILE_LOCAL)
                 .run(args);
     }
 }

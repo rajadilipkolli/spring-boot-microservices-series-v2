@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -21,7 +21,8 @@ public class ContainersConfig {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("3.8.1"))
+        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.7.1"))
+                .withKraft()
                 .withReuse(true);
     }
 
