@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice;
 
-import com.example.inventoryservice.utils.AppConstants;
 import com.example.inventoryservice.common.SQLContainersConfig;
 import com.example.inventoryservice.config.NonSQLContainersConfig;
+import com.example.inventoryservice.utils.AppConstants;
 import org.springframework.boot.SpringApplication;
 
 public class TestInventoryApplication {
