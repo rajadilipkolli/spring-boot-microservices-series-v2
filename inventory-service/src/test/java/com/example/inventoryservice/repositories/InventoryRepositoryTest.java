@@ -8,7 +8,7 @@ package com.example.inventoryservice.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.common.ContainersConfig;
+import com.example.inventoryservice.common.SQLContainersConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
             "spring.test.database.replace=none",
             "spring.cloud.config.enabled=false"
         })
-@Import(ContainersConfig.class)
+@Import(SQLContainersConfig.class)
 class InventoryRepositoryTest {
 
     @Autowired private DataSource datasource;
