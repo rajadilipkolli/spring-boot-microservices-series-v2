@@ -21,7 +21,6 @@ public class SQLContainersConfig {
     PostgreSQLContainer<?> postgreSQLContainer() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres:17-alpine"))
                 .withReuse(true)
-                .withCommand("postgres -c fsync=off") // Optimize for tests
                 .withTmpFs(Collections.singletonMap("/var/lib/postgresql/data", "rw"));
     }
 }

@@ -33,7 +33,6 @@ public class NonSQLContainersConfig {
     @ServiceConnection
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("3.8.1"))
-                .withReuse(true)
-                .waitingFor(Wait.forLogMessage(".*Kafka Server started.*\\n", 1));
+                .withReuse(true);
     }
 }
