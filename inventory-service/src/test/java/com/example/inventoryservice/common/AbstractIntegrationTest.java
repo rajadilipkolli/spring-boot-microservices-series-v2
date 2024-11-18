@@ -11,6 +11,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 import com.example.inventoryservice.config.NonSQLContainersConfig;
 import com.example.inventoryservice.config.TestStockOrderListenerConfig;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected ObjectMapper objectMapper;
 
     @Autowired protected KafkaTemplate<Long, Object> kafkaTemplate;
+
+    @Autowired protected InventoryJOOQRepository inventoryJOOQRepository;
 
     @Autowired protected InventoryRepository inventoryRepository;
 

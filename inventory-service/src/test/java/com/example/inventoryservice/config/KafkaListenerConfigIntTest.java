@@ -20,7 +20,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
     @Test
     void onNewOrderEvent() {
-        inventoryRepository.deleteByProductCode("JUNIT_000");
+        inventoryJOOQRepository.deleteByProductCode("JUNIT_000");
         // Create inventory ensuring quantity is available
         Inventory inventory =
                 inventoryRepository.save(
@@ -34,7 +34,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         await().untilAsserted(
                         () -> {
                             Optional<Inventory> optionalInventory =
-                                    inventoryRepository.findById(inventory.getId());
+                                    inventoryJOOQRepository.findById(inventory.getId());
                             assertThat(optionalInventory).isPresent();
                             Inventory inventoryFromDB = optionalInventory.get();
                             assertThat(inventoryFromDB)
