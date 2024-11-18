@@ -25,9 +25,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         classes = {
-            TestStockOrderListenerConfig.class,
+            SQLContainersConfig.class,
             NonSQLContainersConfig.class,
-            SQLContainersConfig.class
+            TestStockOrderListenerConfig.class
         })
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
