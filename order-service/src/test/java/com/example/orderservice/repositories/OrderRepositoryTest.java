@@ -29,7 +29,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles({PROFILE_TEST})
 @ImportTestcontainers(PostGreSQLContainer.class)
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate"})
-@AutoConfigureTestDatabase
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class OrderRepositoryTest {
 
     @Autowired private OrderRepository orderRepository;

@@ -15,7 +15,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
-public class LoggingFilter implements GlobalFilter {
+class LoggingFilter implements GlobalFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingFilter.class);
 

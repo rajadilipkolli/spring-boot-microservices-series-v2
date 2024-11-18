@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.3.5</version>
+		<version>3.4.0-RC1</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 
@@ -18,9 +18,9 @@
 
 	<properties>
 		<java.version>21</java.version>
-		<spring-cloud.version>2023.0.3</spring-cloud.version>
+		<spring-cloud.version>2024.0.0-RC1</spring-cloud.version>
 		<properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-		<sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
+		<sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
 		<spotless.version>2.43.0</spotless.version>
 		<CI_DOCKER_PASSWORD />
 		<CI_DOCKER_USERNAME />
@@ -139,7 +139,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.22.0</version>
+                            <version>1.24.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>

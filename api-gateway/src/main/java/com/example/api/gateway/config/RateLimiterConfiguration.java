@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Mono;
 
 @Configuration(proxyBeanMethods = false)
-public class RateLimiterConfiguration {
+class RateLimiterConfiguration {
 
     @Bean
     KeyResolver userKeyResolver() {

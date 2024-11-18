@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice;
 
+import com.example.inventoryservice.utils.AppConstants;
 import com.example.inventoryservice.config.NonSQLContainersConfig;
 import com.example.inventoryservice.config.SQLContainersConfig;
 import org.springframework.boot.SpringApplication;
@@ -13,9 +14,9 @@ import org.springframework.boot.SpringApplication;
 public class TestInventoryApplication {
 
     public static void main(String[] args) {
-        System.setProperty("spring.profiles.active", "test");
         SpringApplication.from(InventoryServiceApplication::main)
                 .with(NonSQLContainersConfig.class, SQLContainersConfig.class)
+                .withAdditionalProfiles(AppConstants.PROFILE_TEST)
                 .run(args);
     }
 }

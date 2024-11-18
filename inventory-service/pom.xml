@@ -23,15 +23,15 @@
         <spring-cloud.version>2024.0.0-M2</spring-cloud.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
 
-        <org.mapstruct.version>1.6.2</org.mapstruct.version>
+        <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.43.0</spotless.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <dependency-check-maven.version>11.0.0</dependency-check-maven.version>
+        <dependency-check-maven.version>11.1.0</dependency-check-maven.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
         <jacoco.utReportFolder>${project.build.directory}/jacoco/test</jacoco.utReportFolder>
@@ -144,7 +144,7 @@
         <dependency>
             <groupId>net.ttddyy.observation</groupId>
             <artifactId>datasource-micrometer-spring-boot</artifactId>
-            <version>1.0.5</version>
+            <version>1.0.6</version>
         </dependency>
 
         <!-- For Tracing -->
@@ -408,7 +408,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.19.0</version>
+                        <version>10.20.1</version>
                     </dependency>
                 </dependencies>
                 <configuration>
