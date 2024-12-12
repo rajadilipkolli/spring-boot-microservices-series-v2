@@ -6,9 +6,6 @@ import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.config.ApplicationProperties;
 import io.micrometer.observation.ObservationRegistry;
-import java.time.Duration;
-import org.springframework.boot.web.client.ClientHttpRequestFactories;
-import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,9 +26,6 @@ class ClientsConfig {
     @Bean
     RestClientCustomizer restClientCustomizer(ObservationRegistry observationRegistry) {
         return restClientBuilder -> restClientBuilder
-                .requestFactory(ClientHttpRequestFactories.get(ClientHttpRequestFactorySettings.DEFAULTS
-                        .withConnectTimeout(Duration.ofSeconds(5))
-                        .withReadTimeout(Duration.ofSeconds(5))))
                 .defaultHeaders(httpHeaders -> {
                     httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                     httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
