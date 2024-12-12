@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
 </p>
 ***/
 
@@ -12,7 +12,6 @@ import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,8 +60,7 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload String productDto)
-            throws JsonMappingException, JsonProcessingException {
+    public void onSaveProductEvent(@Payload String productDto) throws JsonProcessingException {
         log.info("Received Product: {}", productDto);
         productManageService.manage(objectMapper.readValue(productDto, ProductDto.class));
     }
