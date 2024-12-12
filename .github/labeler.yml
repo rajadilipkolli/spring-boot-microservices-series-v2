@@ -19,6 +19,9 @@
 "component : service-registry":
   - changed-files:
       - any-glob-to-any-file: 'service-registry/**/*'
+"component : webapp":
+  - changed-files:
+      - any-glob-to-any-file: 'retail-store-webapp/**/*'
 "component : gatling-tests":
   - changed-files:
       - any-glob-to-any-file: 'gatling-tests/**/*'
@@ -36,3 +39,4 @@ Documentation:
           - payment-service/pom.xml
           - service-registry/pom.xml
           - gatling-tests/pom.xml
+          - retail-store-webapp/pom.xml
