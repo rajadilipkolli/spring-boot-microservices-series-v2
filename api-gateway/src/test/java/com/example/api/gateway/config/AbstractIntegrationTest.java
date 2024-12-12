@@ -14,7 +14,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"spring.cloud.discovery.enabled=false", "spring.cloud.config.enabled=false"},
+        properties = {
+            "spring.cloud.discovery.reactive.enabled=false",
+            "spring.cloud.discovery.enabled=false",
+            "spring.cloud.config.enabled=false"
+        },
         classes = ContainerConfig.class)
 @AutoConfigureWebClient
 @ActiveProfiles("test")
