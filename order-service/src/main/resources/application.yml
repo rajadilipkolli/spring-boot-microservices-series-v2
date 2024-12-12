@@ -37,10 +37,10 @@ spring:
           json:
             trusted:
               packages: 'com.example.common.dtos'
+      state-dir: /tmp/kafka-streams/
   threads:
     virtual:
       enabled: true
-#      state-dir: /tmp/kafka-streams/
 
 ### the background-job-server and dashboard are disabled by default
 org:
