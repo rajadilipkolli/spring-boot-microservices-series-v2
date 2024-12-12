@@ -17,10 +17,10 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2024.0.0-RC1</spring-cloud.version>
+        <spring-cloud.version>2024.0.0</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <springdoc-openapi.version>2.7.0-RC1</springdoc-openapi.version>
+        <springdoc-openapi.version>2.7.0</springdoc-openapi.version>
 
         <spotless.version>2.43.0</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
@@ -34,7 +34,7 @@
         <jacoco.itReportFile>${jacoco.itReportFolder}/integrationTest.exec</jacoco.itReportFile>
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
-        <dependency-check-maven.version>11.1.0</dependency-check-maven.version>
+        <dependency-check-maven.version>11.1.1</dependency-check-maven.version>
 
         <CI_DOCKER_USERNAME/>
         <CI_DOCKER_PASSWORD/>
