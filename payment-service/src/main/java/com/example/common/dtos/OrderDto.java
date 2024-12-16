@@ -65,10 +65,9 @@ public class OrderDto implements Serializable {
     public boolean equals(final Object o) {
         if (o == this) {
             return true;
-        } else if (!(o instanceof OrderDto)) {
+        } else if (!(o instanceof OrderDto other)) {
             return false;
         } else {
-            OrderDto other = (OrderDto) o;
             if (!other.canEqual(this)) {
                 return false;
             } else {
@@ -125,14 +124,8 @@ public class OrderDto implements Serializable {
                 Object this$items = this.getItems();
                 Object other$items = other.getItems();
                 if (this$items == null) {
-                    if (other$items == null) {
-                        return true;
-                    }
-                } else if (this$items.equals(other$items)) {
-                    return true;
-                }
-
-                return false;
+                    return other$items == null;
+                } else return this$items.equals(other$items);
             }
         }
     }
@@ -157,9 +150,8 @@ public class OrderDto implements Serializable {
     }
 
     public String toString() {
-        Long var10000 = this.getOrderId();
         return "OrderDto(orderId="
-                + var10000
+                + this.getOrderId()
                 + ", customerId="
                 + this.getCustomerId()
                 + ", status="
@@ -167,7 +159,7 @@ public class OrderDto implements Serializable {
                 + ", source="
                 + this.getSource()
                 + ", items="
-                + String.valueOf(this.getItems())
+                + this.getItems()
                 + ")";
     }
 
@@ -241,9 +233,8 @@ public class OrderDto implements Serializable {
         }
 
         public String toString() {
-            Long var10000 = this.orderId;
             return "OrderDto.OrderDtoBuilder(orderId="
-                    + var10000
+                    + this.orderId
                     + ", customerId="
                     + this.customerId
                     + ", status="
@@ -251,7 +242,7 @@ public class OrderDto implements Serializable {
                     + ", source="
                     + this.source
                     + ", items$value="
-                    + String.valueOf(this.items$value)
+                    + this.items$value
                     + ")";
         }
     }

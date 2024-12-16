@@ -11,7 +11,7 @@ public class OrderItemDto implements Serializable {
     private BigDecimal productPrice;
 
     public BigDecimal getPrice() {
-        return this.productPrice.multiply(BigDecimal.valueOf((long) this.quantity));
+        return this.productPrice.multiply(BigDecimal.valueOf(this.quantity));
     }
 
     public Long getItemId() {
@@ -49,10 +49,9 @@ public class OrderItemDto implements Serializable {
     public boolean equals(final Object o) {
         if (o == this) {
             return true;
-        } else if (!(o instanceof OrderItemDto)) {
+        } else if (!(o instanceof OrderItemDto other)) {
             return false;
         } else {
-            OrderItemDto other = (OrderItemDto) o;
             if (!other.canEqual(this)) {
                 return false;
             } else if (this.getQuantity() != other.getQuantity()) {
@@ -86,14 +85,8 @@ public class OrderItemDto implements Serializable {
                 Object this$productPrice = this.getProductPrice();
                 Object other$productPrice = other.getProductPrice();
                 if (this$productPrice == null) {
-                    if (other$productPrice != null) {
-                        return false;
-                    }
-                } else if (!this$productPrice.equals(other$productPrice)) {
-                    return false;
-                }
-
-                return true;
+                    return other$productPrice == null;
+                } else return this$productPrice.equals(other$productPrice);
             }
         }
     }
@@ -123,7 +116,7 @@ public class OrderItemDto implements Serializable {
                 + ", quantity="
                 + this.getQuantity()
                 + ", productPrice="
-                + String.valueOf(this.getProductPrice())
+                + this.getProductPrice()
                 + ")";
     }
 
