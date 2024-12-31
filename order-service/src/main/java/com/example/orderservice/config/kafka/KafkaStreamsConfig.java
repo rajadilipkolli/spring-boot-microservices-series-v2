@@ -8,6 +8,7 @@ package com.example.orderservice.config.kafka;
 
 import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
+import static com.example.orderservice.utils.AppConstants.RECOVER_DLQ_TOPIC;
 import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 
 import com.example.common.dtos.OrderDto;
@@ -76,7 +77,7 @@ class KafkaStreamsConfig {
             ProducerFactory<byte[], byte[]> producerFactory) {
         return new DeadLetterPublishingRecoverer(
                 new KafkaTemplate<>(producerFactory),
-                (record, ex) -> new TopicPartition("recovererDLQ", -1));
+                (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
     }
 
     @Bean
