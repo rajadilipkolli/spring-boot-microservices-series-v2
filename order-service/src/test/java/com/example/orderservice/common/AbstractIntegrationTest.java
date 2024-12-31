@@ -15,7 +15,6 @@ import org.springframework.boot.test.autoconfigure.actuate.observability.AutoCon
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,8 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false"},
-        classes = ContainersConfig.class)
-@ImportTestcontainers(PostGreSQLContainer.class)
+        classes = {ContainersConfig.class, PostGreSQLContainer.class})
 @AutoConfigureMockMvc
 @AutoConfigureObservability
 public abstract class AbstractIntegrationTest extends ContainerInitializer {

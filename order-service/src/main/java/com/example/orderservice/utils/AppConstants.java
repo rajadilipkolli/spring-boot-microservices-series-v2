@@ -14,6 +14,7 @@ public final class AppConstants {
     public static final String ORDERS_TOPIC = "orders";
     public static final String PAYMENT_ORDERS_TOPIC = "payment-orders";
     public static final String STOCK_ORDERS_TOPIC = "stock-orders";
+    public static final String RECOVER_DLQ_TOPIC = "recovererDLQ";
     public static final String ROLLBACK = "ROLLBACK";
     public static final String DEFAULT_PAGE_NUMBER = "0";
     public static final String DEFAULT_PAGE_SIZE = "10";
