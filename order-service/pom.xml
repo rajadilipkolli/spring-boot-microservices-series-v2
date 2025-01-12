@@ -22,7 +22,7 @@
         <spring-cloud.version>2024.0.0</spring-cloud.version>
 
         <org-mapstruct.version>1.6.3</org-mapstruct.version>
-        <springdoc-openapi.version>2.8.1</springdoc-openapi.version>
+        <springdoc-openapi.version>2.8.2</springdoc-openapi.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>2.44.1</spotless.version>
