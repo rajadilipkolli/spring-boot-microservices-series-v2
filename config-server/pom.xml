@@ -19,7 +19,7 @@
     <properties>
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
-        <spotless.version>2.44.1</spotless.version>
+        <spotless.version>2.44.2</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
         <CI_DOCKER_PASSWORD />
