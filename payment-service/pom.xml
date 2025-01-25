@@ -21,6 +21,7 @@
         <java.version>21</java.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
         <springdoc-openapi.version>2.8.3</springdoc-openapi.version>
+        <jooq.version>3.19.18</jooq.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
@@ -241,6 +242,11 @@
                         <artifactId>postgresql</artifactId>
                         <version>${postgresql.version}</version>
                     </dependency>
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-codegen</artifactId>
+                        <version>${jooq.version}</version>
+                    </dependency>
                 </dependencies>
                 <goals>
                     <goal>generate</goal>
@@ -274,7 +280,7 @@
                         <generator>
                             <database>
                                 <includes>.*</includes>
-                                <excludes>DATABASECHANGELOG</excludes>
+                                <excludes>DATABASECHANGELOG.*</excludes>
                                 <schemata>
                                     <schema>
                                         <inputSchema>custom</inputSchema>
@@ -380,7 +386,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.24.0</version>
+                            <version>1.25.2</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
