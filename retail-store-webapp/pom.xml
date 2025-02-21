@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spotless-maven-plugin.version>2.44.2</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>2.44.3</spotless-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <CI_DOCKER_USERNAME/>
