@@ -351,7 +351,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:11.5.3
+    image: grafana/grafana:11.6.0
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
