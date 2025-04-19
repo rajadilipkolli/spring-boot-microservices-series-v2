@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles({AppConstants.PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"},
         classes = {ContainersConfig.class, PostGreSQLContainer.class})
 @AutoConfigureMockMvc
 @AutoConfigureObservability
