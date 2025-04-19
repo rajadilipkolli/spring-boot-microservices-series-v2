@@ -60,10 +60,10 @@ services:
       - "9411:9411"
     networks:
       - microservice-network
-
+#cant use kafka native as it is causing streams to fail
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka:4.0.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
