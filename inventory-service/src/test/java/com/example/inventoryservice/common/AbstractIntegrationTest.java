@@ -9,7 +9,6 @@ package com.example.inventoryservice.common;
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.inventoryservice.config.NonSQLContainersConfig;
 import com.example.inventoryservice.config.TestStockOrderListenerConfig;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
