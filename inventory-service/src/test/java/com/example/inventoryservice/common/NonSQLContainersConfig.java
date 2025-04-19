@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.inventoryservice.config;
+package com.example.inventoryservice.common;
 
 import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
