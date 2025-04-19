@@ -38,7 +38,7 @@ spring:
             trusted:
               packages: 'com.example.common.dtos'
         processing.guarantee: exactly_once_v2
-        state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
+      state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
   threads:
     virtual:
       enabled: true
