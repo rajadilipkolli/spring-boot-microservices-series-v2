@@ -47,7 +47,6 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    //     @Disabled("until infra for streams is set up")
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining

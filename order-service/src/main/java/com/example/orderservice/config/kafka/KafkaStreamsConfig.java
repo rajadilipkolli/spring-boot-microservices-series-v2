@@ -14,12 +14,14 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
@@ -31,22 +33,23 @@ import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.kafka.KafkaConnectionDetails;
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
 import org.springframework.kafka.support.serializer.JsonSerde;
-import org.springframework.util.Assert;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafkaStreams
 class KafkaStreamsConfig {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(KafkaStreamsConfig.class);
 
     private final OrderManageService orderManageService;
 
@@ -55,21 +58,23 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    StreamsBuilderFactoryBeanConfigurer configurer(
-            DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
-        return factoryBean -> {
-            factoryBean.setStateListener(
-                    (newState, oldState) ->
-                            log.info("State transition from {} to {} ", oldState, newState));
-            Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
-            Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
-            streamsConfiguration.put(
-                    StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-                    RecoveringDeserializationExceptionHandler.class);
-            streamsConfiguration.put(
-                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
-                    deadLetterPublishingRecoverer);
-        };
+    StreamsBuilderFactoryBeanConfigurer configurer() {
+        return factoryBean ->
+                factoryBean.setStateListener(
+                        (newState, oldState) ->
+                                log.info("State transition from {} to {} ", oldState, newState));
+    }
+
+    @Bean
+    ProducerFactory<byte[], byte[]> bytesProducerFactory(
+            KafkaProperties kafkaProperties, KafkaConnectionDetails connectionDetails) {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildProducerProperties());
+        props.put(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                connectionDetails.getStreamsBootstrapServers());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        return new DefaultKafkaProducerFactory<>(props);
     }
 
     @Bean
