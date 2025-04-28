@@ -253,7 +253,7 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <builder>paketobuildpacks/builder:full</builder>
                         <env>
-                            <BP_DOCKERFILE>Dockerfile</BP_DOCKERFILE>
+                            <BP_APT_PACKAGES>libstdc++6 libgcc1 zlib1g libc6-dev libnuma1</BP_APT_PACKAGES>
                         </env>
                     </image>
                 </configuration>
