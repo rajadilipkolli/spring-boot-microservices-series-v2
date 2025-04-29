@@ -253,6 +253,13 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <builder>docker.io/paketobuildpacks/builder-jammy-base</builder>
                     </image>
+		    <pullPolicy>IF_NOT_PRESENT</pullPolicy>
+                    <docker>
+                        <publishRegistry>
+                            <username>${CI_DOCKER_USERNAME}</username>
+                            <password>${CI_DOCKER_PASSWORD}</password>
+                        </publishRegistry>
+                    </docker>
                 </configuration>
                 <executions>
                     <execution>
