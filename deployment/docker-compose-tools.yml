@@ -339,6 +339,13 @@ services:
       - "8080:8080"
     networks:
       - microservice-network
+    depends_on:
+      keycloak:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      api-gateway:
+        condition: service_started
     deploy:
       resources:
         limits:

@@ -251,8 +251,8 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-                        <builder>paketobuildpacks/builder:full</builder>
-                        <env>
+			                  <env>
+                            <!-- Install the gcc library with libstdc++ to support RocksDB -->
                             <BP_APT_PACKAGES>libstdc++6 libgcc1 zlib1g libc6-dev libnuma1</BP_APT_PACKAGES>
                         </env>
                     </image>
@@ -367,7 +367,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.23.0</version>
+                        <version>10.23.1</version>
                     </dependency>
                 </dependencies>
                 <configuration>
