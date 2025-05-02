@@ -402,7 +402,7 @@ services:
       - microservice-network
 
   prometheus:
-    image: prom/prometheus:v3.3.0
+    image: prom/prometheus:v3.3.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
