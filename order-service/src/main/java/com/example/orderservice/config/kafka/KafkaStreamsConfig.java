@@ -83,18 +83,50 @@ class KafkaStreamsConfig {
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<Long, OrderDto> stream =
+        KStream<Long, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-        stream.join(
-                        kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
+
+        // Add debug logs for payment stream
+        paymentStream.peek(
+                (key, value) ->
+                        log.info(
+                                "Received in PAYMENT_ORDERS_TOPIC - key: {}, value: {}, status: {}",
+                                key,
+                                value.getOrderId(),
+                                value.getStatus()));
+
+        KStream<Long, OrderDto> stockStream =
+                kafkaStreamBuilder.stream(
+                        STOCK_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+
+        // Add debug logs for stock stream
+        stockStream.peek(
+                (key, value) ->
+                        log.info(
+                                "Received in STOCK_ORDERS_TOPIC - key: {}, value: {}, status: {}",
+                                key,
+                                value.getOrderId(),
+                                value.getStatus()));
+
+        // Increase join window to 30 seconds to ensure messages have more time to arrive
+        paymentStream
+                .join(
+                        stockStream,
                         orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
+                .peek(
+                        (k, o) ->
+                                log.info(
+                                        "Output of Stream JOIN: {} for key :{}, status: {}",
+                                        o.getOrderId(),
+                                        k,
+                                        o.getStatus()))
                 .to(ORDERS_TOPIC);
-        stream.print(Printed.toSysOut());
-        return stream;
+
+        paymentStream.print(Printed.toSysOut());
+        return paymentStream;
     }
 
     @Bean
