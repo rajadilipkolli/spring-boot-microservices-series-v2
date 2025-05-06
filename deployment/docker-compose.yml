@@ -103,8 +103,8 @@ services:
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
     ports:
       - "9191:9191"
     deploy:
@@ -117,6 +117,38 @@ services:
       timeout: 20s
       retries: 5
       start_period: 120s
+    networks:
+      - microservice-network
+
+  keycloak-export:
+    image: curlimages/curl:latest
+    container_name: keycloak-export
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./realm-config:/export
+      - /var/run/docker.sock:/var/run/docker.sock  # Add Docker socket to allow executing commands on the host
+    entrypoint: >
+      sh -c '
+        echo "Waiting for Keycloak to be fully ready..."
+        sleep 30
+        
+        echo "Exporting realm configuration..."
+        
+        # Execute keycloak container command to export the realm
+        docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
+        
+        # Check if export was successful by checking if the file exists in the shared volume
+        if [ -f "/export/retailstore-realm.json" ]; then
+          echo "Realm export completed! Exported to ./realm-config/retailstore-realm.json"
+          ls -la /export/retailstore-realm.json
+          exit 0
+        else
+          echo "Export may have failed. Please check Keycloak container logs."
+          exit 1
+        fi
+      '
     networks:
       - microservice-network
 
@@ -324,27 +356,6 @@ services:
       resources:
         limits:
           memory: 700m
-
-  keycloak-export:
-    image: curlimages/curl:latest
-    container_name: keycloak-export
-    depends_on:
-      keycloak:
-        condition: service_healthy
-    volumes:
-      - ./realm-config:/export
-    entrypoint: >
-      sh -c '
-        echo "Waiting for Keycloak to be fully ready..."
-        sleep 30
-        echo "Exporting realm configuration from Keycloak..."
-        mkdir -p /tmp/export
-        curl -s -X POST -H "Authorization: Bearer $(curl -s -X POST http://keycloak:9191/realms/master/protocol/openid-connect/token -d "client_id=admin-cli&username=admin&password=admin1234&grant_type=password" | grep -o "access_token\":\"[^\"]*" | cut -d":" -f2 | tr -d \")" -H "Content-Type: application/json" http://keycloak:9191/admin/realms/retailstore/partial-export?exportClients=true&exportGroupsAndRoles=true&exportUsers=true -o /tmp/export/retailstore-realm.json
-        cp /tmp/export/retailstore-realm.json /export/retailstore-realm.json
-        echo "Realm export completed! Exported to ./realm-config/retailstore-realm.json"
-      '
-    networks:
-      - microservice-network
 
 networks:
   microservice-network:
