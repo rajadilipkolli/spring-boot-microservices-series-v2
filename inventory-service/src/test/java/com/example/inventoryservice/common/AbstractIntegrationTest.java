@@ -12,6 +12,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import com.example.inventoryservice.config.TestStockOrderListenerConfig;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -42,4 +43,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected InventoryRepository inventoryRepository;
 
     @Autowired protected TestStockOrderListenerConfig stockOrderListener;
+
+    @Autowired protected InventoryOrderManageService inventoryOrderManageService;
 }
