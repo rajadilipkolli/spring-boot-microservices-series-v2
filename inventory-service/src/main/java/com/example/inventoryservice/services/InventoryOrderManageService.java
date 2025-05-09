@@ -17,8 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -112,32 +110,47 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
-        Map<String, Inventory> inventoryMap =
-                inventoryJOOQRepository.findByProductCodeIn(productCodeList).stream()
-                        .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
+        // First, use the JOOQ repository to fetch all items
+        List<Inventory> inventoryListFromDB =
+                inventoryJOOQRepository.findByProductCodeIn(productCodeList);
 
-        for (OrderItemDto orderItemDto : orderDto.getItems()) {
-            String productId = orderItemDto.getProductId();
-            Inventory inventory = inventoryMap.get(productId);
+        // Group items by product ID for easier processing
+        Map<String, Integer> productQuantityMap = new HashMap<>();
+        for (OrderItemDto item : orderDto.getItems()) {
+            productQuantityMap.put(item.getProductId(), item.getQuantity());
+        }
 
-            if (inventory != null) {
-                Integer productCount = orderItemDto.getQuantity();
+        List<Inventory> updatedInventories = new ArrayList<>();
 
-                if ("CONFIRMED".equals(orderDto.getStatus())) {
-                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
-                } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
-                        && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource())) {
-                    inventory
-                            .setReservedItems(inventory.getReservedItems() - productCount)
-                            .setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
-                }
+        // Process each inventory item individually to avoid optimistic locking issues
+        for (Inventory inventory : inventoryListFromDB) {
+            String productCode = inventory.getProductCode();
+            Integer quantity = productQuantityMap.get(productCode);
+
+            // Apply the appropriate update logic based on status and source
+            if ("CONFIRMED".equals(orderDto.getStatus())) {
+                inventory.setReservedItems(inventory.getReservedItems() - quantity);
+                updatedInventories.add(inventory);
+            } else if (AppConstants.ROLLBACK.equals(orderDto.getStatus())
+                    && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.getSource())) {
+                inventory
+                        .setReservedItems(inventory.getReservedItems() - quantity)
+                        .setAvailableQuantity(inventory.getAvailableQuantity() + quantity);
+                updatedInventories.add(inventory);
             }
         }
 
-        inventoryRepository.saveAll(inventoryMap.values());
+        // Save all updated inventories if there are any changes
+        if (!updatedInventories.isEmpty()) {
+            try {
+                inventoryRepository.saveAll(updatedInventories);
+            } catch (Exception e) {
+                LOGGER.error("Failed to update inventory items: {}", e.getMessage());
+                // For real production code, we might want to implement individual retry logic here
+                throw e;
+            }
+        }
 
-        LOGGER.info(
-                "Saving inventoryIds : {} After Confirmation",
-                inventoryMap.values().stream().map(Inventory::getId).toList());
+        LOGGER.info("Order confirmation completed for order ID: {}", orderDto.getOrderId());
     }
 }
