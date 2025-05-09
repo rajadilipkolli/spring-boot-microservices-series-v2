@@ -25,7 +25,6 @@ import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
@@ -83,49 +82,89 @@ class KafkaStreamsConfig {
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+
+        // Add debug logging for all topics to diagnose message flow
+        KStream<Long, OrderDto> ordersTopic =
+                kafkaStreamBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+        ordersTopic.peek(
+                (key, value) ->
+                        log.info(
+                                "ORDERS_TOPIC Received - key: {}, orderId: {}, status: {}",
+                                key,
+                                value != null ? value.getOrderId() : "null",
+                                value != null ? value.getStatus() : "null"));
+
         KStream<Long, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
 
-        // Add debug logs for payment stream
+        // Enhanced debug logs for payment stream with more details
         paymentStream.peek(
-                (key, value) ->
+                (key, value) -> {
+                    log.info("PAYMENT_ORDERS_TOPIC Received - key: {}, value: {}", key, value);
+                    if (value != null) {
                         log.info(
-                                "Received in PAYMENT_ORDERS_TOPIC - key: {}, value: {}, status: {}",
-                                key,
+                                "PAYMENT_ORDERS_TOPIC Details - orderId: {}, status: {}, source: {}",
                                 value.getOrderId(),
-                                value.getStatus()));
+                                value.getStatus(),
+                                value.getSource());
+                    }
+                });
 
         KStream<Long, OrderDto> stockStream =
                 kafkaStreamBuilder.stream(
                         STOCK_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
 
-        // Add debug logs for stock stream
+        // Enhanced debug logs for stock stream with more details
         stockStream.peek(
-                (key, value) ->
+                (key, value) -> {
+                    log.info("STOCK_ORDERS_TOPIC Received - key: {}, value: {}", key, value);
+                    if (value != null) {
                         log.info(
-                                "Received in STOCK_ORDERS_TOPIC - key: {}, value: {}, status: {}",
-                                key,
+                                "STOCK_ORDERS_TOPIC Details - orderId: {}, status: {}, source: {}",
                                 value.getOrderId(),
-                                value.getStatus()));
+                                value.getStatus(),
+                                value.getSource());
+                    }
+                });
+
+        // Log warning if no messages received in this topic after deployment
+        log.warn(
+                "Setting up join between PAYMENT_ORDERS_TOPIC and STOCK_ORDERS_TOPIC with 30 second window");
 
         // Increase join window to 30 seconds to ensure messages have more time to arrive
-        paymentStream
-                .join(
+        KStream<Long, OrderDto> joinedStream =
+                paymentStream.join(
                         stockStream,
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30)),
-                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
+                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde));
+
+        joinedStream
                 .peek(
                         (k, o) ->
                                 log.info(
-                                        "Output of Stream JOIN: {} for key :{}, status: {}",
-                                        o.getOrderId(),
+                                        "Output of Stream JOIN: {} for key: {}, status: {}",
+                                        o != null ? o.getOrderId() : "null",
                                         k,
-                                        o.getStatus()))
+                                        o != null ? o.getStatus() : "null"))
                 .to(ORDERS_TOPIC);
 
-        paymentStream.print(Printed.toSysOut());
+        // Directly process and log each stream independently to see if they're receiving messages
+        paymentStream.peek(
+                (k, o) ->
+                        log.info(
+                                "PAYMENT stream independently - orderId: {}, status: {}",
+                                o != null ? o.getOrderId() : "null",
+                                o != null ? o.getStatus() : "null"));
+
+        stockStream.peek(
+                (k, o) ->
+                        log.info(
+                                "STOCK stream independently - orderId: {}, status: {}",
+                                o != null ? o.getOrderId() : "null",
+                                o != null ? o.getStatus() : "null"));
+
         return paymentStream;
     }
 
