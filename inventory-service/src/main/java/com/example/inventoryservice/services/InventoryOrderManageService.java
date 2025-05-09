@@ -110,7 +110,7 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
-        // First, use the JOOQ repository to fetch all items
+        // First, use the JOOQ repository to fetch all items - this keeps the test compatibility
         List<Inventory> inventoryListFromDB =
                 inventoryJOOQRepository.findByProductCodeIn(productCodeList);
 
@@ -142,12 +142,31 @@ public class InventoryOrderManageService {
 
         // Save all updated inventories if there are any changes
         if (!updatedInventories.isEmpty()) {
-            try {
-                inventoryRepository.saveAll(updatedInventories);
-            } catch (Exception e) {
-                LOGGER.error("Failed to update inventory items: {}", e.getMessage());
-                // For real production code, we might want to implement individual retry logic here
-                throw e;
+            int maxRetries = 3;
+            int retryCount = 0;
+            boolean success = false;
+            // Retry logic for saving updated inventories
+            while (!success) {
+                try {
+                    inventoryRepository.saveAll(updatedInventories);
+                    success = true;
+                } catch (Exception e) {
+                    retryCount++;
+                    LOGGER.error(
+                            "Failed to update inventory items (attempt {}/{}): {}",
+                            retryCount,
+                            maxRetries,
+                            e.getMessage());
+                    if (retryCount >= maxRetries) {
+                        throw e;
+                    }
+                    try {
+                        Thread.sleep(100L * retryCount); // Exponential backoff
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Interrupted during retry", ie);
+                    }
+                }
             }
         }
 
