@@ -71,7 +71,11 @@ class KafkaStreamsConfig {
                     deadLetterPublishingRecoverer);
 
             // Enhanced logging and configuration
-            log.info("Configuring Kafka Streams with properties: {}", streamsConfiguration);
+            log.info(
+                    "Configuring Kafka Streams with properties (sensitive values redacted): {}",
+                    streamsConfiguration.entrySet().stream()
+                            .filter(e -> !e.getKey().toString().toLowerCase().contains("password"))
+                            .collect(Collectors.toMap(Map.Entry::getKey, e -> "******")));
 
             // Set more aggressive timeouts for stream processing
             streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
