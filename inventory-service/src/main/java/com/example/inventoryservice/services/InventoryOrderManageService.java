@@ -10,7 +10,6 @@ import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
-import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.ArrayList;
@@ -23,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Loggable
@@ -31,18 +31,15 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
-    private final InventoryJOOQRepository inventoryJOOQRepository;
     private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     public InventoryOrderManageService(
-            InventoryRepository inventoryRepository,
-            InventoryJOOQRepository inventoryJOOQRepository,
-            KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+            InventoryRepository inventoryRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
-        this.inventoryJOOQRepository = inventoryJOOQRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    @Transactional
     public void reserve(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
         // Check if order status is not NEW
@@ -54,8 +51,9 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
+        // Using JPA repository instead of JOOQ
         List<Inventory> inventoryListFromDB =
-                inventoryJOOQRepository.findByProductCodeIn(productCodeList);
+                inventoryRepository.findByProductCodeIn(productCodeList);
 
         if (inventoryListFromDB.size() != productCodeList.size()) {
             LOGGER.error(
@@ -107,13 +105,15 @@ public class InventoryOrderManageService {
                 AppConstants.STOCK_ORDERS_TOPIC);
     }
 
+    @Transactional
     public void confirm(OrderDto orderDto) {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
+
         List<String> productCodeList =
                 orderDto.getItems().stream().map(OrderItemDto::getProductId).toList();
 
         Map<String, Inventory> inventoryMap =
-                inventoryJOOQRepository.findByProductCodeIn(productCodeList).stream()
+                inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
         for (OrderItemDto orderItemDto : orderDto.getItems()) {
@@ -136,8 +136,6 @@ public class InventoryOrderManageService {
 
         inventoryRepository.saveAll(inventoryMap.values());
 
-        LOGGER.info(
-                "Saving inventoryIds : {} After Confirmation",
-                inventoryMap.values().stream().map(Inventory::getId).toList());
+        LOGGER.info("Order confirmation completed for order ID: {}", orderDto.getOrderId());
     }
 }

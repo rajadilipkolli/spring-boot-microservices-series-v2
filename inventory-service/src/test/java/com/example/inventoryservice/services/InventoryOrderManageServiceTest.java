@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
-import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
@@ -38,8 +37,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 class InventoryOrderManageServiceTest {
 
     @Mock private InventoryRepository inventoryRepository;
-    @Mock private InventoryJOOQRepository inventoryJOOQRepository;
-
     @Mock private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @Captor ArgumentCaptor<Collection<Inventory>> argumentCaptor;
@@ -59,7 +56,7 @@ class InventoryOrderManageServiceTest {
 
         orderDto.setItems(orderItems);
 
-        given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
+        given(inventoryRepository.findByProductCodeIn(anyList()))
                 .willReturn(
                         List.of(
                                 new Inventory()
@@ -97,7 +94,7 @@ class InventoryOrderManageServiceTest {
 
         orderDto.setItems(orderItems);
 
-        given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
+        given(inventoryRepository.findByProductCodeIn(anyList()))
                 .willReturn(
                         List.of(
                                 new Inventory()
@@ -118,7 +115,7 @@ class InventoryOrderManageServiceTest {
         assertThat(orderDto.getStatus()).isEqualTo("REJECT");
         verify(kafkaTemplate, times(1))
                 .send(AppConstants.STOCK_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
-        verify(inventoryJOOQRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
     }
 
@@ -134,7 +131,7 @@ class InventoryOrderManageServiceTest {
         orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         orderDto.setItems(orderItems);
 
-        given(inventoryJOOQRepository.findByProductCodeIn(anyList()))
+        given(inventoryRepository.findByProductCodeIn(anyList()))
                 .willReturn(
                         new ArrayList<>(
                                 List.of(
@@ -149,9 +146,9 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         assertThat(orderDto.getStatus()).isEqualTo("NEW");
-        verify(inventoryJOOQRepository, times(1)).findByProductCodeIn(anyList());
+        verify(inventoryRepository, times(1)).findByProductCodeIn(anyList());
         verifyNoInteractions(kafkaTemplate);
-        verifyNoMoreInteractions(inventoryJOOQRepository);
+        verifyNoMoreInteractions(inventoryRepository);
     }
 
     @Test
@@ -200,14 +197,13 @@ class InventoryOrderManageServiceTest {
                         .setAvailableQuantity(0)
                         .setReservedItems(0));
 
-        given(inventoryJOOQRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
+        given(inventoryRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
 
         // Act
         inventoryOrderManageService.confirm(orderDto);
 
         // Assert
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(anyCollection());
         assertThat(orderDto.getStatus()).isEqualTo("CONFIRMED");
         verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
@@ -238,7 +234,7 @@ class InventoryOrderManageServiceTest {
                         .setAvailableQuantity(20)
                         .setReservedItems(0));
 
-        given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(inventoryList);
 
         // Act
@@ -246,8 +242,7 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         assertThat(orderDto.getStatus()).isEqualTo("ROLLBACK");
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(argumentCaptor.capture());
         assertThat(argumentCaptor.getValue())
                 .isNotNull()
