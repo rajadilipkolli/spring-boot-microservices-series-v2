@@ -25,6 +25,7 @@ import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
@@ -68,6 +69,17 @@ class KafkaStreamsConfig {
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
                     deadLetterPublishingRecoverer);
+
+            // Enhanced logging and configuration
+            log.info("Configuring Kafka Streams with properties: {}", streamsConfiguration);
+
+            // Set more aggressive timeouts for stream processing
+            streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
+            streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
+
+            // Ensure clean shutdown and startup
+            streamsConfiguration.put(
+                    StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
         };
     }
 
@@ -83,87 +95,24 @@ class KafkaStreamsConfig {
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
 
-        // Add debug logging for all topics to diagnose message flow
-        KStream<Long, OrderDto> ordersTopic =
-                kafkaStreamBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-        ordersTopic.peek(
-                (key, value) ->
-                        log.info(
-                                "ORDERS_TOPIC Received - key: {}, orderId: {}, status: {}",
-                                key,
-                                value != null ? value.getOrderId() : "null",
-                                value != null ? value.getStatus() : "null"));
+        // Log important config information for troubleshooting
+        log.info(
+                "Starting Kafka Stream configuration. This might help diagnose Spring Boot 3.4.0 issues");
 
         KStream<Long, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
 
-        // Enhanced debug logs for payment stream with more details
-        paymentStream.peek(
-                (key, value) -> {
-                    log.info("PAYMENT_ORDERS_TOPIC Received - key: {}, value: {}", key, value);
-                    if (value != null) {
-                        log.info(
-                                "PAYMENT_ORDERS_TOPIC Details - orderId: {}, status: {}, source: {}",
-                                value.getOrderId(),
-                                value.getStatus(),
-                                value.getSource());
-                    }
-                });
-
-        KStream<Long, OrderDto> stockStream =
-                kafkaStreamBuilder.stream(
-                        STOCK_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-
-        // Enhanced debug logs for stock stream with more details
-        stockStream.peek(
-                (key, value) -> {
-                    log.info("STOCK_ORDERS_TOPIC Received - key: {}, value: {}", key, value);
-                    if (value != null) {
-                        log.info(
-                                "STOCK_ORDERS_TOPIC Details - orderId: {}, status: {}, source: {}",
-                                value.getOrderId(),
-                                value.getStatus(),
-                                value.getSource());
-                    }
-                });
-
-        // Log warning if no messages received in this topic after deployment
-        log.warn(
-                "Setting up join between PAYMENT_ORDERS_TOPIC and STOCK_ORDERS_TOPIC with 30 second window");
-
-        // Increase join window to 30 seconds to ensure messages have more time to arrive
-        KStream<Long, OrderDto> joinedStream =
-                paymentStream.join(
-                        stockStream,
+        paymentStream
+                .join(
+                        kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30)),
-                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde));
-
-        joinedStream
-                .peek(
-                        (k, o) ->
-                                log.info(
-                                        "Output of Stream JOIN: {} for key: {}, status: {}",
-                                        o != null ? o.getOrderId() : "null",
-                                        k,
-                                        o != null ? o.getStatus() : "null"))
+                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
+                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC);
 
-        // Directly process and log each stream independently to see if they're receiving messages
-        paymentStream.peek(
-                (k, o) ->
-                        log.info(
-                                "PAYMENT stream independently - orderId: {}, status: {}",
-                                o != null ? o.getOrderId() : "null",
-                                o != null ? o.getStatus() : "null"));
-
-        stockStream.peek(
-                (k, o) ->
-                        log.info(
-                                "STOCK stream independently - orderId: {}, status: {}",
-                                o != null ? o.getOrderId() : "null",
-                                o != null ? o.getStatus() : "null"));
+        paymentStream.print(Printed.toSysOut());
 
         return paymentStream;
     }
