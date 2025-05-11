@@ -40,13 +40,6 @@ jobs:
           echo "JAVA_HOME: $JAVA_HOME"
           java --version
           native-image --version
-      
-      - name: Start up keycloak via Docker Compose
-        run: |
-          cd docker
-          docker compose up -d keycloak
-          sleep 5
-          docker ps -a
 
       - name: Build and analyze
         run: ./mvnw clean verify
