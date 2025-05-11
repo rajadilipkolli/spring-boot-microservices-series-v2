@@ -45,6 +45,7 @@
                 </div>
                 <div class="modal-body">
                     <form id="registrationForm">
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>
@@ -63,7 +64,11 @@
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                    required minlength="8" 
+                                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" 
+                                    title="Must contain at least one number, one uppercase and lowercase letter, and at least 8 characters">
+                            <div class="form-text">Password must be at least 8 characters with numbers, uppercase and lowercase letters.</div>
                         </div>
                         <div class="mb-3">
                             <label for="confirmPassword" class="form-label">Confirm Password</label>
@@ -94,8 +99,19 @@
             const data = {};
             formData.forEach((value, key) => data[key] = value);
 
+            // Basic validation
+            if (!validateEmail(data.email)) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
             if (data.password !== data.confirmPassword) {
                 showError('Passwords do not match');
+                return;
+            }
+
+            if (data.password.length < 8) {
+                showError('Password must be at least 8 characters long');
                 return;
             }
 
@@ -103,12 +119,20 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_csrf"]').value
                 },
                 body: JSON.stringify(data)
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.text().then(text => { throw new Error(text) });
+                    return response.json().catch(() => response.text())
+                    .then(data => {
+                        if (typeof data === 'object' && data.error) {
+                            throw new Error(data.error);
+                        } else {
+                            throw new Error('Registration failed. Please try again later.');
+                        }
+                    });
                 }
                 return response.json();
             })
@@ -124,6 +148,11 @@
             const errorDiv = document.getElementById('registrationError');
             errorDiv.textContent = message;
             errorDiv.classList.remove('d-none');
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
         }
     </script>
 </div>

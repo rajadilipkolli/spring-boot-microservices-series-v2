@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -36,7 +37,7 @@ class RegistrationControllerTest {
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {
         RegistrationRequest request =
-                new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
+                new RegistrationRequest("testuser", "test@example.com", "Test", "User", "AbcXyz@123");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
 
         mockMvc.perform(post("/api/register")
@@ -78,6 +79,10 @@ class RegistrationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Keycloak registration failed"));
+                .andExpect(jsonPath("$.type", is("about:blank")))
+                .andExpect(jsonPath("$.title", is("Bad Request")))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                .andExpect(jsonPath("$.instance", is("/api/register")));
     }
 }

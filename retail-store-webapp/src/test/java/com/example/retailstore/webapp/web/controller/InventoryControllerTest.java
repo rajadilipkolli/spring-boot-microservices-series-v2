@@ -6,6 +6,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -69,7 +71,10 @@ class InventoryControllerTest {
 
         when(inventoryServiceClient.getInventories(eq(0))).thenReturn(pagedResult);
 
-        mockMvc.perform(get("/api/inventory").with(csrf())).andExpect(status().isOk());
+        mockMvc.perform(get("/api/inventory").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(pagedResult)));
+        ;
     }
 
     @Test
@@ -95,5 +100,12 @@ class InventoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inventory)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRedirectUnauthenticatedUserToLoginPage() throws Exception {
+        mockMvc.perform(get("/inventory").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
     }
 }

@@ -28,7 +28,7 @@ public class RegistrationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegistrationRequest request) {
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
         try {
             registrationService.registerUser(request);
             return ResponseEntity.ok(Map.of("message", "User registered successfully"));

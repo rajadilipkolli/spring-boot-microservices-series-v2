@@ -3,6 +3,8 @@ package com.example.retailstore.webapp.services;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,8 @@ import org.springframework.web.client.RestClient;
 
 @Service
 public class KeycloakRegistrationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(KeycloakRegistrationService.class);
 
     private final String keycloakUrl;
     private final String realm;
@@ -46,9 +50,11 @@ public class KeycloakRegistrationService {
 
     public void registerUser(RegistrationRequest request) {
         try {
+            logger.info("Registering new user: {}", request.username());
             // First, get an admin access token
             String adminToken = getAdminToken();
 
+            logger.debug("Admin token obtained successfully");
             // Create the user in Keycloak with USER role
             restClient
                     .post()
@@ -69,7 +75,9 @@ public class KeycloakRegistrationService {
                             ))
                     .retrieve()
                     .toBodilessEntity();
+            logger.info("User {} registered successfully", request.username());
         } catch (Exception e) {
+            logger.error("Failed to register user: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to register user: " + e.getMessage(), e);
         }
     }
