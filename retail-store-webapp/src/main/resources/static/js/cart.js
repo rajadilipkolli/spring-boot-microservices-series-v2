@@ -18,17 +18,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
-            updateCartItemCount();
             this.loadCart();
-            this.cart.totalAmount = getCartTotal();
+            updateCartItemCount();
+            document.addEventListener('cart-updated', (event) => {
+                this.cart = event.detail;
+            });
         },
         loadCart() {
-            this.cart = getCart()
+            this.cart = getCart();
+            this.cart.totalAmount = getCartTotal();
         },
         updateItemQuantity(code, quantity) {
             updateProductQuantity(code, quantity);
             this.loadCart();
-            this.cart.totalAmount = getCartTotal();
         },
         removeCart() {
             deleteCart();

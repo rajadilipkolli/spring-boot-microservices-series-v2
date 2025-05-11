@@ -14,7 +14,7 @@
             <template x-for="inventory in catalogs.data">
                 <div class="col mb-3">
                     <div class="card h-100 inventory">
-                        <form class="row g-3" @submit.prevent="updateInventory(inventory)"></form>
+                        <form class="row g-3" @submit.prevent="updateInventory(inventory)">
                             <div class="card-body">
                                 <h5 class="card-title"
                                     data-toggle="tooltip"
@@ -27,14 +27,12 @@
                                        x-model="inventory.availableQuantity"
                                        value=""/>
                             </div>
-                        </form>
-                        <div class="card-footer" style="background: transparent; border-top: 0;">
-                            <div class="d-grid gap-2">
-                                <button type="button" class="btn btn-primary" @click="updateInventory(inventory)"></button>
-                                    Update
-                                </button>
+                            <div class="card-footer" style="background: transparent; border-top: 0;">
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">Update</button>
+                                </div>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </template>

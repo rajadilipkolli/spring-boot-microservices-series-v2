@@ -4,6 +4,32 @@ Building RetailStore WebApp using Thymeleaf and Alpine.js
 
 Refer :: [YouTube Tutorial](https://www.youtube.com/watch?v=_2e7nfgH-u8)
 
+## Prerequisites and Startup Steps
+
+Before starting the retailstore-webapp, ensure that the following prerequisites are met:
+
+1. Make sure Docker and Docker Compose are installed on your system
+2. Build all services with Maven (if not already built):
+   ```shell
+   ./mvnw clean install -DskipTests
+   ```
+3. Start the entire microservice stack:
+   ```shell
+   cd deployment
+   docker-compose up -d
+   ```
+   This will start all required services with proper dependencies and health checks.
+
+4. Monitor the startup progress:
+   ```shell
+   docker-compose logs -f retailstore-webapp
+   ```
+   Wait until you see the message "Started RetailStoreWebappApplication" in the logs.
+
+5. Access the webapp at [http://localhost:8080](http://localhost:8080)
+
+Note: The docker-compose configuration has been updated to include health checks and proper dependency ordering, ensuring that retailstore-webapp starts only when all required services are ready.
+
 ## Keycloak Admin console
 
 For accessing the Admin Console, hit [Admin Console](http://localhost:9191)
@@ -16,7 +42,19 @@ password : admin1234
 
 ## Export realm
 
-Once the keycloak instance is up and running, we can create the realm, clients and users and then use the following steps to export the realm configuration.
+### Automated Export (Recommended)
+The docker-compose.yml file now includes an automated realm export service called `keycloak-export` that will:
+1. Wait for Keycloak to be fully up and running
+2. Automatically export the realm configuration 
+3. Save it to the `./deployment/realm-config/retailstore-realm.json` file
+
+No manual steps are required - the export happens automatically when you start the services with:
+```shell
+docker-compose up -d
+```
+
+### Manual Export (Alternative)
+If you need to manually export the realm configuration, you can use the following steps:
 
 ```shell
 $ docker ps

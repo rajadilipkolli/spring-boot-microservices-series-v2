@@ -33,7 +33,7 @@
                             Orders
                         </a>
                     </li>
-                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <li class="nav-item" sec:authorize="hasRole('ADMIN')">
                         <a class="nav-link" href="/inventory" th:href="@{/inventory}">
                             Inventory
                         </a>
@@ -70,9 +70,9 @@
 <script defer src="/webjars/alpinejs/dist/cdn.min.js"></script>
 <script src="/js/cartStore.js"></script>
 <script th:inline="javascript">
-/*<![CDATA[*/
-const apiGatewayUrl = /*[[${@environment.getProperty('retailstore.api-gateway-url')}]]*/ '';
-/*]]>*/
+    /*<![CDATA[*/
+    const apiGatewayUrl = /*[[${@environment.getProperty('retailstore.api-gateway-url')}]]*/ '';
+    /*]]>*/
 </script>
 <div layout:fragment="pageScripts">
 </div>
