@@ -49,7 +49,7 @@ public class TestSecurityConfig {
                         .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register", "/inventory/**"))
                 .formLogin(
                         form -> form.loginPage("/login").defaultSuccessUrl("/").permitAll())
                 .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
