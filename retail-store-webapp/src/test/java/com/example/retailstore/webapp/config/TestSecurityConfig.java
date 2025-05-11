@@ -5,12 +5,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 import org.springframework.security.web.SecurityFilterChain;
 
 @TestConfiguration
@@ -19,24 +21,32 @@ public class TestSecurityConfig {
 
     @Bean
     @Primary
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-        UserDetails testUser = User.builder()
-                .username("user")
-                .password(passwordEncoder.encode("password"))
-                .roles("USER")
-                .build();
-        UserDetails testAdmin = User.builder()
-                .username("admin")
-                .password(passwordEncoder.encode("password"))
-                .roles("ADMIN")
-                .build();
-        return new InMemoryUserDetailsManager(testUser, testAdmin);
+    public ClientRegistrationRepository clientRegistrationRepository() {
+        return new InMemoryClientRegistrationRepository(this.testClientRegistration());
     }
 
     @Bean
     @Primary
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public OAuth2AuthorizedClientService authorizedClientService(
+            ClientRegistrationRepository clientRegistrationRepository) {
+        return new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
+    }
+
+    private ClientRegistration testClientRegistration() {
+        return ClientRegistration.withRegistrationId("test-client")
+                .clientId("test-client-id")
+                .clientSecret("test-client-secret")
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("openid", "profile", "email")
+                .authorizationUri("http://test-auth-server/auth")
+                .tokenUri("http://test-auth-server/token")
+                .jwkSetUri("http://test-auth-server/certs")
+                .userInfoUri("http://test-auth-server/userinfo")
+                .userNameAttributeName(IdTokenClaimNames.SUB)
+                .clientName("Test Client")
+                .build();
     }
 
     @Bean
@@ -45,13 +55,12 @@ public class TestSecurityConfig {
         http.authorizeHttpRequests(c -> c.requestMatchers(
                                 "/login", "/", "/api/register", "/js/**", "/css/**", "/images/**", "/webjars/**")
                         .permitAll()
-                        .requestMatchers("/inventory/**")
+                        .requestMatchers("/inventory", "/api/inventory/**")
                         .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register", "/inventory/**"))
-                .formLogin(
-                        form -> form.loginPage("/login").defaultSuccessUrl("/").permitAll())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register", "/api/inventory/**"))
+                .oauth2Login(oauth2 -> oauth2.loginPage("/login").defaultSuccessUrl("/", true))
                 .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
         return http.build();
     }

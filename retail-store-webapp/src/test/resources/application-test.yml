@@ -1,0 +1,16 @@
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://test-auth-server
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope:
+              - openid
+              - profile
+              - email
