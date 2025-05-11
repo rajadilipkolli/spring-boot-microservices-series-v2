@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -24,9 +23,9 @@ class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(c -> c.requestMatchers(
-                                "/static/js/*",
-                                "/css/*",
-                                "/images/*",
+                                "/js/**",
+                                "/css/**",
+                                "/images/**",
                                 "/error",
                                 "/webjars/**",
                                 "/",
@@ -36,9 +35,9 @@ class SecurityConfig {
                         .permitAll()
                         .anyRequest()
                         .authenticated())
-                .cors(CorsConfigurer::disable)
+                .cors(Customizer.withDefaults())
                 .csrf(CsrfConfigurer::disable)
-                .oauth2Login(Customizer.withDefaults())
+                .oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/", true))
                 .logout(logout -> logout.clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .logoutSuccessHandler(oidcLogoutSuccessHandler()));
