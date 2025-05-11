@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Login - RetailStore</title>
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="login-container">
+        <h2 class="text-center mb-4">Login to RetailStore</h2>
+        <div class="d-grid gap-2">
+            <a href="/oauth2/authorization/retailstore-webapp" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Login with Keycloak
+            </a>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account? <a href="#" onclick="showRegistrationModal()">Register here</a></p>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registrationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register New Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registrationForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" name="lastName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+                        <div id="registrationError" class="alert alert-danger d-none"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="registerUser()">Register</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="pageScripts">
+    <script>
+        function showRegistrationModal() {
+            const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
+            modal.show();
+        }
+
+        function registerUser() {
+            const form = document.getElementById('registrationForm');
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => data[key] = value);
+
+            if (data.password !== data.confirmPassword) {
+                showError('Passwords do not match');
+                return;
+            }
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(result => {
+                window.location.href = '/oauth2/authorization/retailstore-webapp';
+            })
+            .catch(error => {
+                showError(error.message);
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('registrationError');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('d-none');
+        }
+    </script>
+</div>
+</body>
+</html>

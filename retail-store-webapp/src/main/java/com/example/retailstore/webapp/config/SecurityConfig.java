@@ -31,13 +31,15 @@ class SecurityConfig {
                                 "/",
                                 "/actuator/**",
                                 "/products/**",
-                                "/api/products/**")
+                                "/api/products/**",
+                                "/api/register",
+                                "/login")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())
                 .csrf(CsrfConfigurer::disable)
-                .oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/", true))
+                .oauth2Login(oauth2 -> oauth2.loginPage("/login").defaultSuccessUrl("/", true))
                 .logout(logout -> logout.clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .logoutSuccessHandler(oidcLogoutSuccessHandler()));
