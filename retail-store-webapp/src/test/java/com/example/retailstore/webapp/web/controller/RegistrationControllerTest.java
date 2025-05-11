@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.retailstore.webapp.config.KeycloakTestContainer;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
@@ -22,7 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(RegistrationController.class)
-@Import({TestSecurityConfig.class, KeycloakTestContainer.class})
+@Import({TestSecurityConfig.class})
 class RegistrationControllerTest {
 
     @Autowired
