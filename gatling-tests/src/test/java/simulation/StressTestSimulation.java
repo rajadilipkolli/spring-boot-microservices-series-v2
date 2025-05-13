@@ -1,8 +1,20 @@
 package simulation;
 
-import static io.gatling.javaapi.core.CoreDsl.*;
+import static io.gatling.javaapi.core.CoreDsl.StringBody;
+import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
+import static io.gatling.javaapi.core.CoreDsl.bodyString;
+import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.feed;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
-import static io.gatling.javaapi.http.HttpDsl.*;
+import static io.gatling.javaapi.core.CoreDsl.nothingFor;
+import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
+import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.http.HttpDsl.header;
+import static io.gatling.javaapi.http.HttpDsl.http;
+import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
