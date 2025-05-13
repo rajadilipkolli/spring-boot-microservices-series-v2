@@ -64,6 +64,8 @@ class WebFluxConfigIntegrationTest extends AbstractIntegrationTest {
                 .header("Access-Control-Request-Method", HttpMethod.DELETE.name())
                 .exchange()
                 .expectStatus()
-                .isForbidden();
+                .isForbidden()
+                .expectHeader()
+                .doesNotExist(ACCESS_CONTROL_ALLOW_ORIGIN);
     }
 }

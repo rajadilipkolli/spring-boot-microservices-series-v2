@@ -30,6 +30,9 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
     void shouldCreateGroupedOpenApis() {
         assertThat(groupedOpenApis).isNotNull();
         assertThat(groupedOpenApis).isNotEmpty();
+        assertThat(groupedOpenApis)
+                .extracting("group")
+                .containsExactlyInAnyOrder("order", "inventory", "catalog", "payment");
     }
 
     @Test

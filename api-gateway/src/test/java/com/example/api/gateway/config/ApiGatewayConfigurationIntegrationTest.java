@@ -86,4 +86,18 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .jsonPath("$.args.Param")
                 .isEqualTo("MyValue");
     }
+
+    @Test
+    void shouldNotAddRequestParameterForNonMatchingPath() {
+        webTestClient
+                .get()
+                .uri("/different-path")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody()
+                .jsonPath("$.args.Param")
+                .doesNotExist();
+    }
 }
