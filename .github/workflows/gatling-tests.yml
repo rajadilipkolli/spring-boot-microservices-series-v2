@@ -40,7 +40,7 @@ jobs:
           pwd
           cd ..
           cd deployment
-          docker compose up -d
+          docker compose up -d postgresql redis zipkin-server kafka config-server naming-server api-gateway catalog-service inventory-service order-service payment-service 
           sleep 240
           docker ps -a
 

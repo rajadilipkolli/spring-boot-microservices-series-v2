@@ -49,13 +49,13 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-                    {
-                      "productCode": "#{productCode}",
-                      "productName": "#{productName}",
-                      "price": #{price},
-                      "description": "Performance test product"
-                    }
-                    """))
+            {
+              "productCode": "#{productCode}",
+              "productName": "#{productName}",
+              "price": #{price},
+              "description": "Performance test product"
+            }
+            """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("productLocation")))
@@ -140,25 +140,25 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-                    {
-                      "customerId": #{customerId},
-                      "items": [
-                        {
-                          "productCode": "#{productCode}",
-                          "quantity": #{quantity},
-                          "productPrice": #{price}
-                        }
-                      ],
-                      "deliveryAddress": {
-                        "addressLine1": "123 Performance Test St",
-                        "addressLine2": "Suite 456",
-                        "city": "Test City",
-                        "state": "TS",
-                        "zipCode": "12345",
-                        "country": "Test Country"
-                      }
-                    }
-                    """))
+            {
+              "customerId": #{customerId},
+              "items": [
+                {
+                  "productCode": "#{productCode}",
+                  "quantity": #{quantity},
+                  "productPrice": #{price}
+                }
+              ],
+              "deliveryAddress": {
+                "addressLine1": "123 Performance Test St",
+                "addressLine2": "Suite 456",
+                "city": "Test City",
+                "state": "TS",
+                "zipCode": "12345",
+                "country": "Test Country"
+              }
+            }
+            """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("orderLocation")))
@@ -174,11 +174,11 @@ public class CreateProductSimulation extends BaseSimulation {
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
                     .exec(createProduct)
-                    .pause(1) // Add pause to reduce load
+                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
                     .exec(getProduct)
-                    .pause(1) // Add pause to reduce load
+                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
                     .exec(getInventory)
-                    .pause(2) // More pause before the critical update
+                    .pause(Duration.ofMillis(1000)) // More pause before the critical update
                     .exec(
                             session -> {
                                 // Add safeguard to skip inventory update if inventory info is
@@ -199,7 +199,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 }
                             })
                     .exec(updateInventory)
-                    .pause(1) // Add pause to reduce load
+                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
                     .exec(createOrder);
 
     /**
