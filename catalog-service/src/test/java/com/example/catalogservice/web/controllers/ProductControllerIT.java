@@ -804,6 +804,28 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 assertThat(result.totalElements()).isEqualTo(3);
                             });
         }
+
+        @Test
+        void shouldReturnEmptyResultsWhenNoProductsMatchSearch() throws JsonProcessingException {
+            mockBackendEndpoint(200, objectMapper.writeValueAsString(List.of()));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search?term=nonexistent")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isEmpty();
+                                assertThat(result.totalElements()).isZero();
+                            });
+        }
     }
 
     private void mockBackendEndpoint(int responseCode, String body) {

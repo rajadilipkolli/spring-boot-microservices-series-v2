@@ -61,11 +61,7 @@ public class ProductService {
     @Observed(name = "product.findAll", contextualName = "find-all-products")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
-        Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Mono<Long> totalProductsCountMono = productRepository.count();
         Mono<List<Product>> pagedProductsMono = productRepository.findAllBy(pageable).collectList();
@@ -242,11 +238,7 @@ public class ProductService {
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTerm(
             String term, int pageNo, int pageSize, String sortBy, String sortDir) {
-        Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
                 productRepository
@@ -263,15 +255,19 @@ public class ProductService {
             int pageSize,
             String sortBy,
             String sortDir) {
-        Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
                 productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
         return processSearchResults(productFlux, pageable);
+    }
+
+    private Pageable createPageable(int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        return PageRequest.of(pageNo, pageSize, sort);
     }
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTermAndPriceRange(
@@ -282,11 +278,7 @@ public class ProductService {
             int pageSize,
             String sortBy,
             String sortDir) {
-        Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
                 productRepository
