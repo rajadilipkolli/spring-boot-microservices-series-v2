@@ -216,27 +216,51 @@ public class StressTestSimulation extends BaseSimulation {
     {
         runHealthChecks();
 
-        LOGGER.info("Setting up StressTestSimulation with smoke test: {}", RUN_SMOKE_TEST);
+        LOGGER.info(
+                "Setting up StressTestSimulation with Kafka initialization delay: {} seconds",
+                KAFKA_INIT_DELAY_SECONDS);
+        LOGGER.info("Smoke test enabled: {}", RUN_SMOKE_TEST);
 
         PopulationBuilder smokeTestSetup = null;
         PopulationBuilder stressTestSetup;
 
-        // Single user smoke test to validate all scenarios
+        // Single user for Kafka initialization and smoke test
         if (RUN_SMOKE_TEST) {
             smokeTestSetup = smokeTest.injectOpen(atOnceUsers(1));
-
             LOGGER.info(
-                    "Smoke test setup completed. Will run with a single user to validate all scenarios.");
+                    "Smoke test setup will run with a single user for both Kafka initialization and scenario validation.");
+        } else {
+            // If no smoke test, we still need a single user for Kafka initialization
+            smokeTestSetup =
+                    scenario("Kafka Initializer")
+                            .exec(
+                                    exec(
+                                            http("Init Kafka connection")
+                                                    .post("/catalog-service/api/catalog")
+                                                    .body(
+                                                            StringBody(
+                                                                    """
+                                {
+                                  "productCode": "KAFKA_INIT_PRODUCT",
+                                  "productName": "Kafka Initializer",
+                                  "price": 1.0,
+                                  "description": "Product to initialize Kafka connection"
+                                }
+                                """))
+                                                    .check(status().in(201, 400, 409))))
+                            .injectOpen(atOnceUsers(1));
+            LOGGER.info("Added Kafka initialization step with a single user.");
         }
 
         // Main stress test setup
         stressTestSetup =
                 casualBrowsers
                         .injectOpen(
-                                // Add pause to ensure smoke test finishes first if enabled
-                                RUN_SMOKE_TEST
-                                        ? nothingFor(Duration.ofSeconds(30))
-                                        : nothingFor(Duration.ZERO),
+                                // Add pause to ensure Kafka initialization and smoke test finishes
+                                nothingFor(
+                                        Duration.ofSeconds(
+                                                KAFKA_INIT_DELAY_SECONDS
+                                                        + (RUN_SMOKE_TEST ? 15 : 0))),
                                 rampUsersPerSec(1.0)
                                         .to(MAX_USERS * 0.6)
                                         .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),

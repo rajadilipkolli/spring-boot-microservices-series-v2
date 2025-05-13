@@ -136,13 +136,24 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
     public ApiGatewayResilienceSimulation() {
         runHealthChecks();
 
+        LOGGER.info(
+                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
+                KAFKA_INIT_DELAY_SECONDS);
+
         setUp(
+                        // Initial simulation with single user for Kafka initialization
+                        mixedLoadTest.injectOpen(
+                                atOnceUsers(1),
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS))),
+                        // Other scenarios start after initialization
                         rateLimitingTest.injectOpen(
-                                nothingFor(Duration.ofSeconds(2)), atOnceUsers(BURST_USERS / 2)),
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 2)),
+                                atOnceUsers(BURST_USERS / 2)),
                         circuitBreakerTest.injectOpen(
-                                nothingFor(Duration.ofSeconds(10)),
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 10)),
                                 rampUsers(BURST_USERS / 4).during(Duration.ofSeconds(5))),
                         mixedLoadTest.injectOpen(
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
                                 rampUsers(BURST_USERS).during(Duration.ofSeconds(10)),
                                 constantUsersPerSec((double) BURST_USERS / 10)
                                         .during(Duration.ofSeconds(SUSTAIN_SECONDS))))

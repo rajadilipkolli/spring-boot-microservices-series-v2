@@ -1,11 +1,13 @@
 package simulation;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
+import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
+import static io.gatling.javaapi.core.CoreDsl.nothingFor;
 import static io.gatling.javaapi.core.CoreDsl.rampUsers;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.header;
@@ -13,7 +15,6 @@ import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import java.time.Duration;
@@ -30,8 +31,6 @@ import org.slf4j.LoggerFactory;
 public class CreateProductSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
-    // JSON object mapper for serialization/deserialization
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // Configuration parameters - can be externalized to properties
     private static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "3"));
@@ -50,13 +49,13 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-                            {
-                              "productCode": "#{productCode}",
-                              "productName": "#{productName}",
-                              "price": #{price},
-                              "description": "Performance test product"
-                            }
-                            """))
+                    {
+                      "productCode": "#{productCode}",
+                      "productName": "#{productName}",
+                      "price": #{price},
+                      "description": "Performance test product"
+                    }
+                    """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("productLocation")))
@@ -141,25 +140,25 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-                            {
-                              "customerId": #{customerId},
-                              "items": [
-                                {
-                                  "productCode": "#{productCode}",
-                                  "quantity": #{quantity},
-                                  "productPrice": #{price}
-                                }
-                              ],
-                              "deliveryAddress": {
-                                "addressLine1": "123 Performance Test St",
-                                "addressLine2": "Suite 456",
-                                "city": "Test City",
-                                "state": "TS",
-                                "zipCode": "12345",
-                                "country": "Test Country"
-                              }
-                            }
-                            """))
+                    {
+                      "customerId": #{customerId},
+                      "items": [
+                        {
+                          "productCode": "#{productCode}",
+                          "quantity": #{quantity},
+                          "productPrice": #{price}
+                        }
+                      ],
+                      "deliveryAddress": {
+                        "addressLine1": "123 Performance Test St",
+                        "addressLine2": "Suite 456",
+                        "city": "Test City",
+                        "state": "TS",
+                        "zipCode": "12345",
+                        "country": "Test Country"
+                      }
+                    }
+                    """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("orderLocation")))
@@ -175,11 +174,11 @@ public class CreateProductSimulation extends BaseSimulation {
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
                     .exec(createProduct)
-                    .pause(500) // Add pause to reduce load
+                    .pause(1) // Add pause to reduce load
                     .exec(getProduct)
-                    .pause(500) // Add pause to reduce load
+                    .pause(1) // Add pause to reduce load
                     .exec(getInventory)
-                    .pause(1000) // More pause before the critical update
+                    .pause(2) // More pause before the critical update
                     .exec(
                             session -> {
                                 // Add safeguard to skip inventory update if inventory info is
@@ -200,7 +199,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 }
                             })
                     .exec(updateInventory)
-                    .pause(500) // Add pause to reduce load
+                    .pause(1) // Add pause to reduce load
                     .exec(createOrder);
 
     /**
@@ -314,12 +313,20 @@ public class CreateProductSimulation extends BaseSimulation {
 
         runHealthChecks();
 
+        LOGGER.info(
+                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
+                KAFKA_INIT_DELAY_SECONDS);
+
         // Global assertions to validate overall service performance
         this.setUp(
                         productWorkflow
                                 // Small pause between steps to simulate realistic user behavior
                                 .pause(Duration.ofMillis(500))
                                 .injectOpen(
+                                        // Initial single user for Kafka initialization
+                                        atOnceUsers(1),
+                                        // Wait for Kafka initialization to complete
+                                        nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
                                         // Ramp up users phase for gradual load increase
                                         rampUsers(RAMP_USERS)
                                                 .during(Duration.ofSeconds(RAMP_DURATION_SECONDS)),

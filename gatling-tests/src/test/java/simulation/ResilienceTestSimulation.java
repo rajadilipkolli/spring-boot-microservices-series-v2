@@ -152,14 +152,26 @@ public class ResilienceTestSimulation extends BaseSimulation {
 
     // Setup the simulation with multiple scenarios
     public ResilienceTestSimulation() {
+        LOGGER.info(
+                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
+                KAFKA_INIT_DELAY_SECONDS);
+
         setUp(
+                        // Valid requests with initial Kafka initialization
                         validRequestsScenario.injectOpen(
+                                // Initial single user for Kafka initialization
+                                atOnceUsers(1),
+                                // Wait for Kafka initialization to complete
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
                                 constantUsersPerSec(5)
                                         .during(Duration.ofSeconds(TEST_DURATION_SECONDS))),
+                        // Other scenarios start after Kafka initialization
                         invalidRequestsScenario.injectOpen(
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 5)),
                                 constantUsersPerSec(2)
                                         .during(Duration.ofSeconds(TEST_DURATION_SECONDS))),
                         highConcurrencyScenario.injectOpen(
+                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 5)),
                                 rampUsersPerSec(1.0)
                                         .to(10.0)
                                         .during(
@@ -172,7 +184,12 @@ public class ResilienceTestSimulation extends BaseSimulation {
                         circuitBreakerScenario.injectOpen(
                                 nothingFor(
                                         Duration.ofSeconds(
-                                                60)), // Start this scenario after 1 minute
+                                                Math.max(
+                                                        60,
+                                                        KAFKA_INIT_DELAY_SECONDS
+                                                                + 10))), // Start this scenario
+                                // after initialization + 1
+                                // minute
                                 atOnceUsers(USERS / 5)))
                 .protocols(httpProtocol)
                 .assertions(

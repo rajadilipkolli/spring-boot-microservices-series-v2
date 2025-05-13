@@ -5,6 +5,7 @@ TEST_PROFILE="default"
 BASE_URL="http://localhost:8765"
 USERS=10
 DURATION=60
+KAFKA_INIT_DELAY=15
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

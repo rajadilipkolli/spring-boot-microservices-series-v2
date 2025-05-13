@@ -2,6 +2,7 @@ package simulation;
 
 import static io.gatling.javaapi.http.HttpDsl.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.Simulation;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.io.IOException;
@@ -26,6 +27,13 @@ public abstract class BaseSimulation extends Simulation {
 
     // Common system properties for all simulations
     protected static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8765");
+    // Kafka initialization delay in seconds (Kafka takes 5-8 seconds to initialize on first product
+    // creation)
+    protected static final int KAFKA_INIT_DELAY_SECONDS =
+            Integer.parseInt(System.getProperty("kafkaInitDelay", "15"));
+
+    // JSON object mapper for serialization/deserialization
+    protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // Common HTTP protocol configuration
     protected final HttpProtocolBuilder httpProtocol =

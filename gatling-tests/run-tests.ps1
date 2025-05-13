@@ -5,6 +5,7 @@ param (
     [string]$BaseUrl = "http://localhost:8765",
     [int]$Users = 10,
     [int]$Duration = 60,
+    [int]$KAFKA_INIT_DELAY=15
     [switch]$Help
 )
 
