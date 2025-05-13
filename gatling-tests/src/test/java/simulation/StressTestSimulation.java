@@ -9,12 +9,7 @@ import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,33 +34,6 @@ public class StressTestSimulation extends BaseSimulation {
     private static final boolean RUN_SMOKE_TEST =
             Boolean.parseBoolean(System.getProperty("runSmokeTest", "true"));
 
-    // Enhanced product feeder with address information
-    protected Iterator<Map<String, Object>> enhancedProductFeeder(int max) {
-        return Stream.generate(
-                        () -> {
-                            ThreadLocalRandom random = ThreadLocalRandom.current();
-                            Map<String, Object> data = new HashMap<>();
-                            // Product information
-                            data.put(
-                                    "productCode",
-                                    "P" + String.format("%06d", random.nextInt(1, max)));
-                            data.put("productName", "Product-" + random.nextInt(1, max));
-                            data.put("price", random.nextDouble(10, 1000));
-                            data.put("quantity", random.nextInt(1, 50));
-                            data.put("customerId", random.nextInt(1, 100));
-
-                            // Address information
-                            data.put("street", "Street " + random.nextInt(1, 100));
-                            data.put("city", "City " + random.nextInt(1, 20));
-                            data.put(
-                                    "zipCode", String.format("%05d", random.nextInt(10000, 99999)));
-                            data.put("country", "Country " + random.nextInt(1, 10));
-
-                            return data;
-                        })
-                .iterator();
-    }
-
     // Create a reusable chain for viewing catalog
     private final ChainBuilder browseCatalog =
             exec(http("Browse catalog - page 1")
@@ -80,7 +48,7 @@ public class StressTestSimulation extends BaseSimulation {
 
     // Create a chain for product detail view
     private final ChainBuilder viewProductDetail =
-            feed(productFeeder(100))
+            feed(enhancedProductFeeder())
                     .exec(
                             http("View product detail")
                                     .get("/catalog-service/api/catalog/productCode/#{productCode}")
@@ -121,7 +89,7 @@ public class StressTestSimulation extends BaseSimulation {
 
     // Create a chain for order flow - this is more resource intensive
     private final ChainBuilder orderFlow =
-            feed(enhancedProductFeeder(500))
+            feed(enhancedProductFeeder())
                     .exec(
                             http("Check if product exists")
                                     .get("/catalog-service/api/catalog/productCode/#{productCode}")

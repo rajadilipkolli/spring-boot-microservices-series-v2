@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
             echo "  ./run-tests.sh [-p|--profile <profile>] [-u|--url <url>] [-n|--users <number>] [-d|--duration <seconds>] [-h|--help]"
             echo ""
             echo "Parameters:"
-            echo "  -p, --profile   Test profile to run (default, quick, heavy, resilience, stress, gateway, all)"
+            echo "  -p, --profile   Test profile to run (default, health-check, quick, heavy, resilience, stress, gateway, all)"
             echo "  -u, --url       Base URL for the API Gateway (default: http://localhost:8765)"
             echo "  -n, --users     Number of users for the test (default: 10)"
             echo "  -d, --duration  Duration of the test in seconds (default: 60)"
@@ -60,6 +60,10 @@ done
 
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
+    "health-check")
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -Dgatling.simulations=simulation.ServiceHealthCheckSimulation"
+        echo "Running health check simulation to verify all services are up..."
+        ;;
     "quick")
         MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=5 -DrampDuration=10 -DtestDuration=30"
         echo "Running quick test profile with minimal load..."

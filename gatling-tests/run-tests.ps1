@@ -17,7 +17,7 @@ if ($Help) {
     Write-Host "  .\run-tests.ps1 [-TestProfile <profile>] [-BaseUrl <url>] [-Users <number>] [-Duration <seconds>] [-Help]"
     Write-Host ""
     Write-Host "Parameters:"
-    Write-Host "  -TestProfile  Test profile to run (default, quick, heavy, resilience, stress, gateway, all)"
+    Write-Host "  -TestProfile  Test profile to run (default, health-check, quick, heavy, resilience, stress, gateway, all)"
     Write-Host "  -BaseUrl      Base URL for the API Gateway (default: http://localhost:8765)"
     Write-Host "  -Users        Number of users for the test (default: 10)"
     Write-Host "  -Duration     Duration of the test in seconds (default: 60)"
@@ -32,6 +32,10 @@ if ($Help) {
 
 # Set Maven command based on the selected profile
 switch ($TestProfile) {
+    "health-check" {
+        $MavenParams = "-DbaseUrl=$BaseUrl -Dgatling.simulations=simulation.ServiceHealthCheckSimulation"
+        Write-Host "Running health check simulation to verify all services are up..."
+    }
     "quick" {
         $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=2 -DconstantUsers=5 -DrampDuration=10 -DtestDuration=30"
         Write-Host "Running quick test profile with minimal load..."

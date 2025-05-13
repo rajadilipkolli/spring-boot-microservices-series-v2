@@ -14,6 +14,7 @@ This test suite contains several specialized simulations:
 
 | Simulation                     | Description                 | Use Case                                   |
 |--------------------------------|-----------------------------|--------------------------------------------|
+| ServiceHealthCheckSimulation   | Health check validation     | Verifies all services are up and running   |
 | CreateProductSimulation        | End-to-end workflow testing | Validates core business functionality      |
 | ResilienceTestSimulation       | Error handling & validation | Tests system's response to invalid inputs  |
 | StressTestSimulation           | High load testing           | Tests system under realistic user patterns |

@@ -101,6 +101,12 @@
                 <gatling.simulationClass>simulation.*</gatling.simulationClass>
             </properties>
         </profile>
+        <profile>
+            <id>health</id>
+            <properties>
+                <gatling.simulationClass>simulation.ServiceHealthCheckSimulation</gatling.simulationClass>
+            </properties>
+        </profile>
     </profiles>
 
 </project>

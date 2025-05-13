@@ -17,11 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,25 +40,6 @@ public class CreateProductSimulation extends BaseSimulation {
             Integer.parseInt(System.getProperty("rampDuration", "30"));
     private static final int TEST_DURATION_SECONDS =
             Integer.parseInt(System.getProperty("testDuration", "60"));
-
-    // Using parent class httpProtocol configuration
-
-    // Using ThreadLocalRandom for better performance in concurrent scenarios
-    private final Iterator<Map<String, Object>> feeder =
-            Stream.generate(
-                            () -> {
-                                ThreadLocalRandom random = ThreadLocalRandom.current();
-                                Map<String, Object> data = new HashMap<>();
-                                data.put(
-                                        "productCode",
-                                        "P" + String.format("%06d", random.nextInt(10, 100_000)));
-                                data.put("productName", "Product-" + random.nextInt(1000, 10000));
-                                data.put("price", random.nextInt(5, 500));
-                                data.put("customerId", random.nextInt(1, 1000));
-                                data.put("quantity", random.nextInt(1, 20));
-                                return data;
-                            })
-                    .iterator();
 
     // Breaking down the test flow into reusable components for better readability and
     // maintainability
@@ -171,7 +148,7 @@ public class CreateProductSimulation extends BaseSimulation {
     // Main scenario combining all steps
     private final ScenarioBuilder productWorkflow =
             scenario("E2E Product Creation Workflow")
-                    .feed(feeder)
+                    .feed(enhancedProductFeeder())
                     .exec(createProduct)
                     .exec(getProduct)
                     .exec(getInventory)

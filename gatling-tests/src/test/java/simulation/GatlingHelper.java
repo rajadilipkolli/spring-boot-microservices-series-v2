@@ -25,9 +25,6 @@ public class GatlingHelper {
             // Fall through to default check
         }
 
-        // In Gatling 3.14.1, we need to check the status differently
-        // We'll use the default value of 200 to indicate success when no explicit status is
-        // available
         return false;
     }
 }
