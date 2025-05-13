@@ -79,6 +79,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                               "description": "Performance test product"
                                             }
                                             """))
+                            .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("productLocation")))
                     .exec(
@@ -122,6 +123,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                                     getBodyAsString(
                                                             session.getString(
                                                                     "inventoryResponseBody"))))
+                            .asJson()
                             .check(status().is(200)))
                     .exec(
                             session -> {

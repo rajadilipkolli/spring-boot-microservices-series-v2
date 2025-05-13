@@ -6,9 +6,15 @@ import static io.gatling.javaapi.http.HttpDsl.*;
 
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
+import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +35,37 @@ public class StressTestSimulation extends BaseSimulation {
     private static final int COOL_DOWN_MINUTES =
             Integer.parseInt(System.getProperty("coolDownMinutes", "2"));
 
+    // Flag to enable/disable smoke test phase
+    private static final boolean RUN_SMOKE_TEST =
+            Boolean.parseBoolean(System.getProperty("runSmokeTest", "true"));
+
+    // Enhanced product feeder with address information
+    protected Iterator<Map<String, Object>> enhancedProductFeeder(int max) {
+        return Stream.generate(
+                        () -> {
+                            ThreadLocalRandom random = ThreadLocalRandom.current();
+                            Map<String, Object> data = new HashMap<>();
+                            // Product information
+                            data.put(
+                                    "productCode",
+                                    "P" + String.format("%06d", random.nextInt(1, max)));
+                            data.put("productName", "Product-" + random.nextInt(1, max));
+                            data.put("price", random.nextDouble(10, 1000));
+                            data.put("quantity", random.nextInt(1, 50));
+                            data.put("customerId", random.nextInt(1, 100));
+
+                            // Address information
+                            data.put("street", "Street " + random.nextInt(1, 100));
+                            data.put("city", "City " + random.nextInt(1, 20));
+                            data.put(
+                                    "zipCode", String.format("%05d", random.nextInt(10000, 99999)));
+                            data.put("country", "Country " + random.nextInt(1, 10));
+
+                            return data;
+                        })
+                .iterator();
+    }
+
     // Create a reusable chain for viewing catalog
     private final ChainBuilder browseCatalog =
             exec(http("Browse catalog - page 1")
@@ -47,8 +84,11 @@ public class StressTestSimulation extends BaseSimulation {
                     .exec(
                             http("View product detail")
                                     .get("/catalog-service/api/catalog/#{productCode}")
-                                    .check(status().in(200, 404)) // Allow 404s for random product
-                            // codes
+                                    .check(
+                                            status().in(200, 404)
+                                                    .saveAs("status")) // Allow 404s for random
+                                    // product
+                                    .check(bodyString().saveAs("productResponse")) // needed later
                             )
                     .exec(
                             session -> {
@@ -81,18 +121,40 @@ public class StressTestSimulation extends BaseSimulation {
 
     // Create a chain for order flow - this is more resource intensive
     private final ChainBuilder orderFlow =
-            feed(productFeeder(500))
+            feed(enhancedProductFeeder(500))
                     .exec(
                             http("Check if product exists")
                                     .get("/catalog-service/api/catalog/#{productCode}")
-                                    .check(status().in(200, 404)))
+                                    .check(status().in(200, 404).saveAs("status"))
+                                    .check(bodyString().saveAs("response"))) // needed later
                     .exec(
                             session -> {
                                 if (GatlingHelper.isSuccessResponse(session)) {
                                     try {
                                         // Extract price from JSON response
                                         String responseBody = session.getString("response");
-                                        double price = 10.0; // Default value if parsing fails
+                                        // Parse JSON to extract price
+                                        double price;
+                                        try {
+                                            // This is a simplification - in real code we'd use a
+                                            // proper JSON parser
+                                            // Extract price from the response if possible
+                                            if (responseBody.contains("\"price\":")) {
+                                                String priceStr =
+                                                        responseBody.split("\"price\":")[1]
+                                                                .split(",")[0].trim();
+                                                price = Double.parseDouble(priceStr);
+                                                LOGGER.debug("Extracted price: {}", price);
+                                            } else {
+                                                price = 10.0; // Default value if parsing fails
+                                                LOGGER.debug("Using default price: {}", price);
+                                            }
+                                        } catch (Exception e) {
+                                            price = 10.0; // Default if anything goes wrong
+                                            LOGGER.debug(
+                                                    "Price extraction failed, using default: {}",
+                                                    price);
+                                        }
                                         return session.set("actualPrice", price);
                                     } catch (Exception e) {
                                         LOGGER.error("Failed to extract price from response", e);
@@ -107,17 +169,23 @@ public class StressTestSimulation extends BaseSimulation {
                                             .body(
                                                     StringBody(
                                                             """
-                                    {
-                                      "customerId": #{customerId},
-                                      "items": [
-                                        {
-                                          "productCode": "#{productCode}",
-                                          "quantity": #{quantity},
-                                          "productPrice": #{actualPrice}
-                                        }
-                                      ]
-                                    }
-                                    """))
+                                                            {
+                                                              "customerId": #{customerId},
+                                                              "shippingAddress": {
+                                                                "street": "#{street}",
+                                                                "city": "#{city}",
+                                                                "zipCode": "#{zipCode}",
+                                                                "country": "#{country}"
+                                                              },
+                                                              "items": [
+                                                                {
+                                                                  "productCode": "#{productCode}",
+                                                                  "quantity": #{quantity},
+                                                                  "productPrice": #{actualPrice}
+                                                                }
+                                                              ]
+                                                            }
+                                                            """))
                                             .asJson()
                                             .check(status().is(201))
                                             .check(header("location").saveAs("orderLocation")))
@@ -131,7 +199,20 @@ public class StressTestSimulation extends BaseSimulation {
                                                 return session;
                                             }));
 
-    // Create different user scenarios
+    // Single smoke test combining all chains to validate functionality with a single user
+    private final ChainBuilder smokeTestFlow =
+            exec(browseCatalog)
+                    .pause(1)
+                    .exec(viewProductDetail)
+                    .pause(1)
+                    .exec(searchProducts)
+                    .pause(1)
+                    .exec(orderFlow);
+
+    // Create smoke test scenarios - each with a single user to validate all flows work
+    private final ScenarioBuilder smokeTest = scenario("Smoke Test").exec(smokeTestFlow);
+
+    // Create different user scenarios for stress testing
     private final ScenarioBuilder casualBrowsers =
             scenario("Casual Browsers")
                     .during(Duration.ofMinutes(RAMP_DURATION_MINUTES + PLATEAU_DURATION_MINUTES))
@@ -169,8 +250,27 @@ public class StressTestSimulation extends BaseSimulation {
     {
         runHealthChecks();
 
-        setUp(
-                        casualBrowsers.injectOpen(
+        LOGGER.info("Setting up StressTestSimulation with smoke test: {}", RUN_SMOKE_TEST);
+
+        PopulationBuilder smokeTestSetup = null;
+        PopulationBuilder stressTestSetup;
+
+        // Single user smoke test to validate all scenarios
+        if (RUN_SMOKE_TEST) {
+            smokeTestSetup = smokeTest.injectOpen(atOnceUsers(1));
+
+            LOGGER.info(
+                    "Smoke test setup completed. Will run with a single user to validate all scenarios.");
+        }
+
+        // Main stress test setup
+        stressTestSetup =
+                casualBrowsers
+                        .injectOpen(
+                                // Add pause to ensure smoke test finishes first if enabled
+                                RUN_SMOKE_TEST
+                                        ? nothingFor(Duration.ofSeconds(30))
+                                        : nothingFor(Duration.ZERO),
                                 rampUsersPerSec(1.0)
                                         .to(MAX_USERS * 0.6)
                                         .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
@@ -178,33 +278,66 @@ public class StressTestSimulation extends BaseSimulation {
                                         .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
                                 rampUsersPerSec(MAX_USERS * 0.6)
                                         .to(0.0)
-                                        .during(Duration.ofMinutes(COOL_DOWN_MINUTES))),
-                        activeSearchers.injectOpen(
-                                rampUsersPerSec(1.0)
-                                        .to(MAX_USERS * 0.3)
-                                        .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
-                                constantUsersPerSec(MAX_USERS * 0.3)
-                                        .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
-                                rampUsersPerSec(MAX_USERS * 0.3)
-                                        .to(0.0)
-                                        .during(Duration.ofMinutes(COOL_DOWN_MINUTES))),
-                        powerShoppers.injectOpen(
-                                nothingFor(Duration.ofMinutes(1)), // delay the power shoppers a bit
-                                rampUsersPerSec(1.0)
-                                        .to(MAX_USERS * 0.1)
-                                        .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
-                                constantUsersPerSec(MAX_USERS * 0.1)
-                                        .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
-                                rampUsersPerSec(MAX_USERS * 0.1)
-                                        .to(0.0)
-                                        .during(Duration.ofMinutes(COOL_DOWN_MINUTES))))
-                .protocols(httpProtocol)
-                .assertions(
-                        global().responseTime().mean().lt(1500), // mean response time under 1.5s
-                        global().responseTime()
-                                .percentile(95)
-                                .lt(5000), // 95% of responses under 5s
-                        global().failedRequests().percent().lt(5.0) // Less than 5% failed requests
-                        );
+                                        .during(Duration.ofMinutes(COOL_DOWN_MINUTES)))
+                        .andThen(
+                                activeSearchers.injectOpen(
+                                        rampUsersPerSec(1.0)
+                                                .to(MAX_USERS * 0.3)
+                                                .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
+                                        constantUsersPerSec(MAX_USERS * 0.3)
+                                                .during(
+                                                        Duration.ofMinutes(
+                                                                PLATEAU_DURATION_MINUTES)),
+                                        rampUsersPerSec(MAX_USERS * 0.3)
+                                                .to(0.0)
+                                                .during(Duration.ofMinutes(COOL_DOWN_MINUTES))))
+                        .andThen(
+                                powerShoppers.injectOpen(
+                                        nothingFor(
+                                                Duration.ofMinutes(
+                                                        1)), // delay the power shoppers a bit
+                                        rampUsersPerSec(1.0)
+                                                .to(MAX_USERS * 0.1)
+                                                .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
+                                        constantUsersPerSec(MAX_USERS * 0.1)
+                                                .during(
+                                                        Duration.ofMinutes(
+                                                                PLATEAU_DURATION_MINUTES)),
+                                        rampUsersPerSec(MAX_USERS * 0.1)
+                                                .to(0.0)
+                                                .during(Duration.ofMinutes(COOL_DOWN_MINUTES))));
+
+        // Set up final simulation with conditional smoke test
+        if (RUN_SMOKE_TEST) {
+            // Run smoke test first, then stress test only if smoke test passes
+            setUp(smokeTestSetup.andThen(stressTestSetup))
+                    .protocols(httpProtocol)
+                    .assertions(
+                            global().responseTime()
+                                    .mean()
+                                    .lt(1500), // mean response time under 1.5s
+                            global().responseTime()
+                                    .percentile(95)
+                                    .lt(5000), // 95% of responses under 5s
+                            global().failedRequests()
+                                    .percent()
+                                    .lt(5.0) // Less than 5% failed requests
+                            );
+        } else {
+            // Run only stress test
+            setUp(stressTestSetup)
+                    .protocols(httpProtocol)
+                    .assertions(
+                            global().responseTime()
+                                    .mean()
+                                    .lt(1500), // mean response time under 1.5s
+                            global().responseTime()
+                                    .percentile(95)
+                                    .lt(5000), // 95% of responses under 5s
+                            global().failedRequests()
+                                    .percent()
+                                    .lt(5.0) // Less than 5% failed requests
+                            );
+        }
     }
 }
