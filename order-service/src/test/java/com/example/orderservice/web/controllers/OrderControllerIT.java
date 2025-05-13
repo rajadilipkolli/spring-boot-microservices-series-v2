@@ -29,6 +29,7 @@ import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -87,29 +88,29 @@ class OrderControllerIT extends AbstractIntegrationTest {
         orderList = orderRepository.saveAll(orderList);
     }
 
-    @Test
-    void shouldFetchAllOrders() throws Exception {
-        this.mockMvc
-                .perform(get("/api/orders"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(8)))
-                .andExpect(jsonPath("$.data.size()", is(orderList.size())))
-                .andExpect(jsonPath("$.totalElements", is(3)))
-                .andExpect(jsonPath("$.pageNumber", is(1)))
-                .andExpect(jsonPath("$.totalPages", is(1)))
-                .andExpect(jsonPath("$.isFirst", is(true)))
-                .andExpect(jsonPath("$.isLast", is(true)))
-                .andExpect(jsonPath("$.hasNext", is(false)))
-                .andExpect(jsonPath("$.hasPrevious", is(false)))
-                .andExpect(
-                        jsonPath(
-                                "$.data[0].items.size()",
-                                is(orderList.getFirst().getItems().size())));
-    }
-
     @Nested
     @DisplayName("find methods")
     class Find {
+
+        @Test
+        void shouldFetchAllOrders() throws Exception {
+            mockMvc.perform(get("/api/orders"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.size()", is(8)))
+                    .andExpect(jsonPath("$.data.size()", is(orderList.size())))
+                    .andExpect(jsonPath("$.totalElements", is(3)))
+                    .andExpect(jsonPath("$.pageNumber", is(1)))
+                    .andExpect(jsonPath("$.totalPages", is(1)))
+                    .andExpect(jsonPath("$.isFirst", is(true)))
+                    .andExpect(jsonPath("$.isLast", is(true)))
+                    .andExpect(jsonPath("$.hasNext", is(false)))
+                    .andExpect(jsonPath("$.hasPrevious", is(false)))
+                    .andExpect(
+                            jsonPath(
+                                    "$.data[0].items.size()",
+                                    is(orderList.getFirst().getItems().size())));
+        }
+
         @Test
         void shouldFindOrderById() throws Exception {
             Order order = orderList.getFirst();
@@ -167,127 +168,204 @@ class OrderControllerIT extends AbstractIntegrationTest {
         }
     }
 
-    @Test
-    void shouldCreateNewOrder() throws Exception {
-        OrderRequest orderRequest =
-                new OrderRequest(
-                        1L,
-                        List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
-                        new Address(
-                                "Junit Address1",
-                                "AddressLine2",
-                                "city",
-                                "state",
-                                "zipCode",
-                                "country"));
-        mockProductsExistsRequest(true, "Product1");
+    @Nested
+    @DisplayName("save methods")
+    class SaveOrder {
 
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
-                .andExpect(jsonPath("$.orderId", notNullValue()))
-                .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
-                .andExpect(jsonPath("$.status", is("NEW")))
-                .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
-                .andExpect(jsonPath("$.items.size()", is(1)))
-                .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                .andExpect(jsonPath("$.items[0].price", is(100.00)))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.addressLine1",
-                                is(orderRequest.deliveryAddress().addressLine1())))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.addressLine2",
-                                is(orderRequest.deliveryAddress().addressLine2())))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.city",
-                                is(orderRequest.deliveryAddress().city())))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.state",
-                                is(orderRequest.deliveryAddress().state())))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.zipCode",
-                                is(orderRequest.deliveryAddress().zipCode())))
-                .andExpect(
-                        jsonPath(
-                                "$.deliveryAddress.country",
-                                is(orderRequest.deliveryAddress().country())));
-    }
+        @Test
+        void shouldCreateNewOrder() throws Exception {
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
+            mockProductsExistsRequest(true, "Product1");
 
-    @Test
-    void shouldCreateNewOrderFails() throws Exception {
-        OrderRequest orderRequest =
-                new OrderRequest(
-                        1L,
-                        List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)),
-                        new Address(
-                                "Junit Address1",
-                                "AddressLine2",
-                                "city",
-                                "state",
-                                "zipCode",
-                                "country"));
-        mockProductsExistsRequest(false, "Product2");
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(header().exists("Location"))
+                    .andExpect(jsonPath("$.orderId", notNullValue()))
+                    .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
+                    .andExpect(jsonPath("$.status", is("NEW")))
+                    .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
+                    .andExpect(jsonPath("$.items.size()", is(1)))
+                    .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
+                    .andExpect(jsonPath("$.items[0].price", is(100.00)))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.addressLine1",
+                                    is(orderRequest.deliveryAddress().addressLine1())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.addressLine2",
+                                    is(orderRequest.deliveryAddress().addressLine2())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.city",
+                                    is(orderRequest.deliveryAddress().city())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.state",
+                                    is(orderRequest.deliveryAddress().state())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.zipCode",
+                                    is(orderRequest.deliveryAddress().zipCode())))
+                    .andExpect(
+                            jsonPath(
+                                    "$.deliveryAddress.country",
+                                    is(orderRequest.deliveryAddress().country())));
+        }
 
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        header().string(
-                                        HttpHeaders.CONTENT_TYPE,
-                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
-                .andExpect(jsonPath("$.title", is("Product Not Found")))
-                .andExpect(jsonPath("$.status", is(404)))
-                .andExpect(
-                        jsonPath("$.detail", is("One or More products Not found from [PRODUCT2]")))
-                .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.errorCategory").value("Generic"));
-    }
+        @Test
+        void shouldCreateNewOrderFails() throws Exception {
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("Product2", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
+            mockProductsExistsRequest(false, "Product2");
 
-    @Test
-    void shouldReturn400WhenCreateNewOrderWithoutItems() throws Exception {
-        OrderRequest orderRequest =
-                new OrderRequest(
-                        -1L,
-                        new ArrayList<>(),
-                        new Address(
-                                "Junit Address1",
-                                "AddressLine2",
-                                "city",
-                                "state",
-                                "zipCode",
-                                "country"));
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath(
+                                    "$.detail",
+                                    is("One or More products Not found from [PRODUCT2]")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.errorCategory").value("Generic"));
+        }
 
-        this.mockMvc
-                .perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Constraint Violation")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/orders")))
-                .andExpect(jsonPath("$.violations", hasSize(2)))
-                .andExpect(jsonPath("$.violations[0].field", is("customerId")))
-                .andExpect(jsonPath("$.violations[0].message", is("CustomerId should be positive")))
-                .andExpect(jsonPath("$.violations[1].field", is("items")))
-                .andExpect(jsonPath("$.violations[1].message", is("Order without items not valid")))
-                .andReturn();
+        @Test
+        void whenOrderWithInvalidAddress_shouldThrowValidationException() throws Exception {
+            // Arrange
+            OrderItemRequest validItem = new OrderItemRequest("ProductCode1", 1, BigDecimal.TEN);
+            OrderRequest orderRequest =
+                    new OrderRequest(1L, List.of(validItem), new Address("", "", "", "", "", ""));
+
+            // Act & Assert
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.violations", hasSize(5)))
+                    .andExpect(
+                            jsonPath("$.violations[0].field", is("deliveryAddress.addressLine1")))
+                    .andExpect(jsonPath("$.violations[0].message", is("AddressLine1 is required")))
+                    .andExpect(jsonPath("$.violations[1].field", is("deliveryAddress.city")))
+                    .andExpect(jsonPath("$.violations[1].message", is("City is required")))
+                    .andExpect(jsonPath("$.violations[2].field", is("deliveryAddress.country")))
+                    .andExpect(jsonPath("$.violations[2].message", is("Country is required")))
+                    .andExpect(jsonPath("$.violations[3].field", is("deliveryAddress.state")))
+                    .andExpect(jsonPath("$.violations[3].message", is("State is required")))
+                    .andExpect(jsonPath("$.violations[4].field", is("deliveryAddress.zipCode")))
+                    .andExpect(jsonPath("$.violations[4].message", is("ZipCode is required")));
+        }
+
+        @Test
+        void whenOrderWithEmptyItems_shouldThrowValidationException() throws Exception {
+            // Arrange
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L,
+                            Collections.emptyList(),
+                            new Address(
+                                    "123 Street", "Apt 1", "City", "State", "12345", "Country"));
+
+            // Act & Assert
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.violations", hasSize(1)))
+                    .andExpect(jsonPath("$.violations[0].field", is("items")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Order without items not valid")));
+        }
+
+        @Test
+        void shouldReturn400WhenCreateNewOrderWithoutItems() throws Exception {
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            -1L,
+                            new ArrayList<>(),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
+
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(header().string("Content-Type", is("application/problem+json")))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    .andExpect(jsonPath("$.violations", hasSize(2)))
+                    .andExpect(jsonPath("$.violations[0].field", is("customerId")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message", is("CustomerId should be positive")))
+                    .andExpect(jsonPath("$.violations[1].field", is("items")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[1].message", is("Order without items not valid")))
+                    .andReturn();
+        }
     }
 
     @Test

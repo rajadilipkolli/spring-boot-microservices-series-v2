@@ -20,6 +20,17 @@ public class OrderItemDto implements Serializable {
 
     private BigDecimal productPrice;
 
+    public OrderItemDto(Long itemId, String productId, int quantity, BigDecimal productPrice) {
+        this.itemId = itemId;
+        this.productId = productId;
+        this.quantity = quantity;
+        this.productPrice = productPrice;
+    }
+
+    public OrderItemDto() {
+        super();
+    }
+
     public BigDecimal getPrice() {
         return productPrice.multiply(new BigDecimal(quantity));
     }
