@@ -14,7 +14,9 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -69,6 +71,21 @@ class KafkaStreamsConfig {
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
                     deadLetterPublishingRecoverer);
+
+            // Enhanced logging and configuration
+            log.info(
+                    "Configuring Kafka Streams with properties (sensitive values redacted): {}",
+                    streamsConfiguration.entrySet().stream()
+                            .filter(e -> !e.getKey().toString().toLowerCase().contains("password"))
+                            .collect(Collectors.toMap(Map.Entry::getKey, e -> "******")));
+
+            // Set more aggressive timeouts for stream processing
+            streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
+            streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
+
+            // Ensure clean shutdown and startup
+            streamsConfiguration.put(
+                    StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
         };
     }
 
@@ -83,18 +100,27 @@ class KafkaStreamsConfig {
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-        KStream<Long, OrderDto> stream =
+
+        // Log important config information for troubleshooting
+        log.info(
+                "Starting Kafka Stream configuration. This might help diagnose Spring Boot 3.4.0 issues");
+
+        KStream<Long, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-        stream.join(
+
+        paymentStream
+                .join(
                         kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
                 .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC);
-        stream.print(Printed.toSysOut());
-        return stream;
+
+        paymentStream.print(Printed.toSysOut());
+
+        return paymentStream;
     }
 
     @Bean

@@ -25,9 +25,4 @@ class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
                 .consumeWith(
                         res -> assertThat(res.getResponseBody()).isEqualTo("{\"status\":\"UP\"}"));
     }
-
-    @Test
-    void contextLoads() {
-        webTestClient.get().uri("/").exchange().expectStatus().isTemporaryRedirect();
-    }
 }

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -8,7 +8,7 @@ package com.example.orderservice.web.controllers;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
-import com.example.orderservice.exception.ProductNotFoundException;
+import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -80,12 +80,12 @@ class OrderController implements OrderApi {
         return orderService
                 .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ProductNotFoundException(id));
+                .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
     ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
-        if (ex instanceof ProductNotFoundException productNotFoundException) {
-            throw productNotFoundException;
+        if (ex instanceof OrderNotFoundException orderNotFoundException) {
+            throw orderNotFoundException;
         }
         log.error("Exception occurred ", ex);
         return ResponseEntity.ok("fallback-response for id : " + id);
@@ -106,7 +106,7 @@ class OrderController implements OrderApi {
                 .map(
                         orderObj ->
                                 ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
-                .orElseThrow(() -> new ProductNotFoundException(id));
+                .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
     @DeleteMapping("/{id}")
@@ -118,7 +118,7 @@ class OrderController implements OrderApi {
                             orderService.deleteOrderById(id);
                             return ResponseEntity.accepted().build();
                         })
-                .orElseThrow(() -> new ProductNotFoundException(id));
+                .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
     @GetMapping("/generate")
