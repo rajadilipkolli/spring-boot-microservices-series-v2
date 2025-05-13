@@ -71,7 +71,7 @@ public class StressTestSimulation extends BaseSimulation {
             exec(http("Browse catalog - page 1")
                             .get("/catalog-service/api/catalog?page=0&size=10")
                             .check(status().is(200))
-                            .check(jsonPath("$.content[*]").exists()))
+                            .check(jsonPath("$.data[*]").exists()))
                     .pause(Duration.ofMillis(500), Duration.ofSeconds(3))
                     .exec(
                             http("Browse catalog - page 2")
