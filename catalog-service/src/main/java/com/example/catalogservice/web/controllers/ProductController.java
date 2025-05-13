@@ -13,6 +13,7 @@ import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
+import com.example.catalogservice.web.api.ProductApi;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -31,7 +32,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/catalog")
 @Loggable
-public class ProductController {
+public class ProductController implements ProductApi {
 
     private final ProductService productService;
 
@@ -117,5 +118,41 @@ public class ProductController {
                                         .deleteProductById(id)
                                         .then(Mono.just(ResponseEntity.ok(product))))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+    }
+
+    @GetMapping("/search")
+    @Override
+    public Mono<PagedResult<ProductResponse>> searchProducts(
+            @RequestParam(required = false) String term,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+                    int pageNo,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+                    int pageSize,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+                    String sortBy,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+                    String sortDir) {
+
+        // If both term and price range are provided, search by both
+        if (term != null && !term.isEmpty() && minPrice != null && maxPrice != null) {
+            return productService.searchProductsByTermAndPriceRange(
+                    term, minPrice, maxPrice, pageNo, pageSize, sortBy, sortDir);
+        }
+
+        // If only term is provided, search by term
+        if (term != null && !term.isEmpty()) {
+            return productService.searchProductsByTerm(term, pageNo, pageSize, sortBy, sortDir);
+        }
+
+        // If only price range is provided, search by price
+        if (minPrice != null && maxPrice != null) {
+            return productService.searchProductsByPriceRange(
+                    minPrice, maxPrice, pageNo, pageSize, sortBy, sortDir);
+        }
+
+        // If no specific search criteria provided, return all products
+        return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
 }

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -25,10 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -685,6 +682,150 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice());
+    }
+
+    @Nested
+    @DisplayName("product search")
+    class ProductSearch {
+        @Test
+        void shouldSearchProductsByTerm() throws JsonProcessingException {
+            mockBackendEndpoint(
+                    200,
+                    objectMapper.writeValueAsString(List.of(new InventoryResponse("P001", 5))));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search?term=name")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isNotNull();
+                                assertThat(result.data().size())
+                                        .isEqualTo(
+                                                3); // All three products have "name" in their name
+                                assertThat(result.totalElements()).isEqualTo(3);
+                            });
+        }
+
+        @Test
+        void shouldSearchProductsByPriceRange() throws JsonProcessingException {
+            // Setup mock inventory response
+            mockBackendEndpoint(
+                    200,
+                    objectMapper.writeValueAsString(
+                            List.of(
+                                    new InventoryResponse("P002", 3),
+                                    new InventoryResponse("P003", 0))));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search?minPrice=10.0&maxPrice=12.0")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isNotNull();
+                                assertThat(result.data().size())
+                                        .isEqualTo(2); // Products with price between 10.0 and 12.0
+                                assertThat(result.totalElements()).isEqualTo(2);
+                            });
+        }
+
+        @Test
+        void shouldSearchByTermAndPriceRange() throws JsonProcessingException {
+            // Setup mock inventory response
+            mockBackendEndpoint(
+                    200,
+                    objectMapper.writeValueAsString(
+                            List.of(
+                                    new InventoryResponse("P001", 5),
+                                    new InventoryResponse("P002", 3),
+                                    new InventoryResponse("P003", 10))));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search?term=name&minPrice=10.0&maxPrice=12.0")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isNotNull();
+                                assertThat(result.data().size()).isEqualTo(3);
+                                // Products with "name" AND price between 10.0 and 12.0
+                                assertThat(result.totalElements()).isEqualTo(3);
+                            });
+        }
+
+        @Test
+        void shouldReturnAllProductsWhenNoSearchCriteriaProvided() throws JsonProcessingException {
+            mockBackendEndpoint(
+                    200,
+                    objectMapper.writeValueAsString(
+                            List.of(
+                                    new InventoryResponse("P001", 5),
+                                    new InventoryResponse("P002", 3),
+                                    new InventoryResponse("P003", 0))));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isNotNull();
+                                assertThat(result.data().size())
+                                        .isEqualTo(3); // All products returned
+                                assertThat(result.totalElements()).isEqualTo(3);
+                            });
+        }
+
+        @Test
+        void shouldReturnEmptyResultsWhenNoProductsMatchSearch() throws JsonProcessingException {
+            mockBackendEndpoint(200, objectMapper.writeValueAsString(List.of()));
+
+            webTestClient
+                    .get()
+                    .uri("/api/catalog/search?term=nonexistent")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody(PagedResult.class)
+                    .consumeWith(
+                            response -> {
+                                PagedResult<?> result = response.getResponseBody();
+                                assertThat(result).isNotNull();
+                                assertThat(result.data()).isEmpty();
+                                assertThat(result.totalElements()).isZero();
+                            });
+        }
     }
 
     private void mockBackendEndpoint(int responseCode, String body) {

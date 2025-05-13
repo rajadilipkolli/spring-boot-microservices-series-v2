@@ -22,4 +22,20 @@ public interface ProductRepository
     Mono<Product> findByProductCodeAllIgnoreCase(String productCode);
 
     Flux<Product> findAllBy(Pageable pageable);
+
+    // Search by term (in product name or description)
+    Flux<Product> findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+            String productName, String description, Pageable pageable);
+
+    // Search by price range
+    Flux<Product> findByPriceBetween(double minPrice, double maxPrice, Pageable pageable);
+
+    // Search by both term and price range
+    Flux<Product>
+            findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+                    String productName,
+                    String description,
+                    double minPrice,
+                    double maxPrice,
+                    Pageable pageable);
 }
