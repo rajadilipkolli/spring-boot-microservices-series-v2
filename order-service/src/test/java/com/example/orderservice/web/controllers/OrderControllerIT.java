@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -158,12 +158,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
-                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
                             jsonPath("$.detail")
-                                    .value("Product with Id - %d Not found".formatted(orderId)));
+                                    .value("Order with Id %d not found".formatted(orderId)));
         }
     }
 
