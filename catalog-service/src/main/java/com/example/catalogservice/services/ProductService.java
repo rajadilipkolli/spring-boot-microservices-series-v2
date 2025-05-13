@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -238,5 +238,102 @@ public class ProductService {
                                         }))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByTerm(
+            String term, int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        Flux<Product> productFlux =
+                productRepository
+                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                                term, term, pageable);
+
+        return processSearchResults(productFlux, pageable);
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByPriceRange(
+            double minPrice,
+            double maxPrice,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        Flux<Product> productFlux =
+                productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
+        return processSearchResults(productFlux, pageable);
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByTermAndPriceRange(
+            String term,
+            double minPrice,
+            double maxPrice,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        Flux<Product> productFlux =
+                productRepository
+                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+                                term, term, minPrice, maxPrice, pageable);
+
+        return processSearchResults(productFlux, pageable);
+    }
+
+    private Mono<PagedResult<ProductResponse>> processSearchResults(
+            Flux<Product> productFlux, Pageable pageable) {
+        return productFlux
+                .collectList()
+                .flatMap(
+                        products -> {
+                            if (products.isEmpty()) {
+                                return Mono.just(
+                                        new PagedResult<>(
+                                                new PageImpl<>(
+                                                        Collections.emptyList(), pageable, 0)));
+                            }
+
+                            List<ProductResponse> productResponses =
+                                    products.stream()
+                                            .map(productMapper::toProductResponse)
+                                            .toList();
+
+                            List<String> productCodeList =
+                                    productResponses.stream()
+                                            .map(ProductResponse::productCode)
+                                            .toList();
+
+                            return getInventoryByProductCodes(productCodeList)
+                                    .collectMap(
+                                            InventoryResponse::productCode,
+                                            InventoryResponse::availableQuantity)
+                                    .map(
+                                            inventoriesMap -> {
+                                                List<ProductResponse> updatedProducts =
+                                                        updateProductAvailability(
+                                                                productResponses, inventoriesMap);
+                                                return new PagedResult<>(
+                                                        new PageImpl<>(
+                                                                updatedProducts,
+                                                                pageable,
+                                                                products.size()));
+                                            });
+                        });
     }
 }
