@@ -69,13 +69,13 @@ public class StressTestSimulation extends BaseSimulation {
     // Create a reusable chain for viewing catalog
     private final ChainBuilder browseCatalog =
             exec(http("Browse catalog - page 1")
-                            .get("/catalog-service/api/catalog?page=0&size=10")
+                            .get("/catalog-service/api/catalog?pageNo=0&pageSize=10")
                             .check(status().is(200))
                             .check(jsonPath("$.data[*]").exists()))
                     .pause(Duration.ofMillis(500), Duration.ofSeconds(3))
                     .exec(
                             http("Browse catalog - page 2")
-                                    .get("/catalog-service/api/catalog?page=1&size=10")
+                                    .get("/catalog-service/api/catalog?pageNo=1&pageSize=10")
                                     .check(status().is(200)));
 
     // Create a chain for product detail view
@@ -83,7 +83,7 @@ public class StressTestSimulation extends BaseSimulation {
             feed(productFeeder(100))
                     .exec(
                             http("View product detail")
-                                    .get("/catalog-service/api/catalog/#{productCode}")
+                                    .get("/catalog-service/api/catalog/productCode/#{productCode}")
                                     .check(
                                             status().in(200, 404)
                                                     .saveAs("status")) // Allow 404s for random
@@ -124,45 +124,31 @@ public class StressTestSimulation extends BaseSimulation {
             feed(enhancedProductFeeder(500))
                     .exec(
                             http("Check if product exists")
-                                    .get("/catalog-service/api/catalog/#{productCode}")
-                                    .check(status().in(200, 404).saveAs("status"))
-                                    .check(bodyString().saveAs("response"))) // needed later
+                                    .get("/catalog-service/api/catalog/productCode/#{productCode}")
+                                    .check(
+                                            status().in(200, 404).saveAs("status"),
+                                            jsonPath("$.price").optional().saveAs("actualPrice")))
                     .exec(
                             session -> {
                                 if (GatlingHelper.isSuccessResponse(session)) {
-                                    try {
-                                        // Extract price from JSON response
-                                        String responseBody = session.getString("response");
-                                        // Parse JSON to extract price
-                                        double price;
-                                        try {
-                                            // This is a simplification - in real code we'd use a
-                                            // proper JSON parser
-                                            // Extract price from the response if possible
-                                            if (responseBody.contains("\"price\":")) {
-                                                String priceStr =
-                                                        responseBody.split("\"price\":")[1]
-                                                                .split(",")[0].trim();
-                                                price = Double.parseDouble(priceStr);
-                                                LOGGER.debug("Extracted price: {}", price);
-                                            } else {
-                                                price = 10.0; // Default value if parsing fails
-                                                LOGGER.debug("Using default price: {}", price);
-                                            }
-                                        } catch (Exception e) {
-                                            price = 10.0; // Default if anything goes wrong
-                                            LOGGER.debug(
-                                                    "Price extraction failed, using default: {}",
-                                                    price);
-                                        }
-                                        return session.set("actualPrice", price);
-                                    } catch (Exception e) {
-                                        LOGGER.error("Failed to extract price from response", e);
+                                    // Use the extracted price from jsonPath or default
+                                    Object extractedPrice = session.get("actualPrice");
+                                    double price;
+                                    if (extractedPrice != null) {
+                                        price = Double.parseDouble(extractedPrice.toString());
+                                        LOGGER.debug("Using extracted price: {}", price);
+                                    } else {
+                                        price = 10.0; // Default value if extraction failed
+                                        LOGGER.debug("Using default price: {}", price);
                                     }
+                                    return session.set("actualPrice", price);
                                 }
                                 return session;
                             })
-                    .doIf(session -> session.contains("actualPrice"))
+                    .doIf(
+                            session ->
+                                    session.contains("actualPrice")
+                                            && session.get("actualPrice") != null)
                     .then(
                             exec(http("Place order")
                                             .post("/order-service/api/orders")
