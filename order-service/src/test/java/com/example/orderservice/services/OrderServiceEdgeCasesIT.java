@@ -62,6 +62,8 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     void saveBatchOrders_WithConcurrentRequests_ShouldHandleConcurrencyCorrectly()
             throws InterruptedException {
         // Arrange
+        orderRepository.deleteAll(); // Clear existing orders
+
         int numThreads = 5;
         int ordersPerThread = 20;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
@@ -82,12 +84,16 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                     });
         }
 
-        latch.await(30, TimeUnit.SECONDS);
+        boolean completed = latch.await(30, TimeUnit.SECONDS);
         executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
 
         // Assert
+        assertThat(completed).isTrue(); // Verify all threads completed
         long totalOrders = orderRepository.count();
-        assertThat(totalOrders).isEqualTo(numThreads * ordersPerThread);
+        assertThat(totalOrders)
+                .as("Expected exactly %d orders", numThreads * ordersPerThread)
+                .isEqualTo(numThreads * ordersPerThread);
     }
 
     @Test
@@ -128,7 +134,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenUpdateNonExistentOrder_shouldThrowOrderNotFoundException() {
+    void whenUpdateOrderWithNullEntity_shouldThrowNullPointerException() {
         // Arrange
         OrderRequest request =
                 new OrderRequest(

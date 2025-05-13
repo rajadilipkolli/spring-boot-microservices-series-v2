@@ -80,12 +80,14 @@ class OrderGeneratorServiceTest {
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
         // Act
-        for (int i = 0; i < numThreads; i++) {
-            executorService.submit(() -> orderGeneratorService.generateOrders());
+        try {
+            for (int i = 0; i < numThreads; i++) {
+                executorService.submit(() -> orderGeneratorService.generateOrders());
+            }
+        } finally {
+            executorService.shutdown();
+            executorService.awaitTermination(10, TimeUnit.SECONDS);
         }
-
-        executorService.shutdown();
-        executorService.awaitTermination(10, TimeUnit.SECONDS);
 
         // Assert
         // Each thread will generate 10,000 orders in batches of 100
