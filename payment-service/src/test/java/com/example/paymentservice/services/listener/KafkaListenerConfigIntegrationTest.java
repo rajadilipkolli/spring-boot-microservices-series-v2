@@ -47,6 +47,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     void onEventReserveOrder() {
         OrderDto orderDto = getOrderDto("NEW");
 
+        int amountReserved = customer.getAmountReserved();
+        int amountAvailable = customer.getAmountAvailable();
+
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
 
@@ -58,8 +61,10 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         () -> {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved()).isEqualTo(20);
-                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(90);
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualTo(amountReserved + 10);
+                            assertThat(persistedCustomer.getAmountAvailable())
+                                    .isEqualTo(amountAvailable - amountReserved);
                         });
     }
 
@@ -87,6 +92,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
+        int amountReserved = customer.getAmountReserved();
+        int amountAvailable = customer.getAmountAvailable();
+
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
 
@@ -98,8 +106,10 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         () -> {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved()).isZero();
-                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(110);
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualTo(amountReserved - 10);
+                            assertThat(persistedCustomer.getAmountAvailable())
+                                    .isEqualTo(amountAvailable + amountReserved);
                         });
     }
 
