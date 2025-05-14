@@ -67,6 +67,7 @@ public abstract class BaseSimulation extends Simulation {
 
                             return data;
                         })
+                .limit(10_000)
                 .iterator();
     }
 

@@ -41,7 +41,7 @@ jobs:
           cd ..
           cd deployment
           docker compose up -d postgresql redis zipkin-server kafka config-server naming-server api-gateway catalog-service inventory-service order-service payment-service 
-          sleep 240
+          sleep 150
           docker ps -a
 
       - name: Build and analyze

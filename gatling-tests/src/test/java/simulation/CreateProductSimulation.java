@@ -174,11 +174,11 @@ public class CreateProductSimulation extends BaseSimulation {
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
                     .exec(createProduct)
-                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
                     .exec(getProduct)
-                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
                     .exec(getInventory)
-                    .pause(Duration.ofMillis(1000)) // More pause before the critical update
+                    .pause(Duration.ofMillis(200)) // More pause before the critical update
                     .exec(
                             session -> {
                                 // Add safeguard to skip inventory update if inventory info is
@@ -199,7 +199,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 }
                             })
                     .exec(updateInventory)
-                    .pause(Duration.ofMillis(500)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
                     .exec(createOrder);
 
     /**
@@ -268,22 +268,10 @@ public class CreateProductSimulation extends BaseSimulation {
      * @return The inventory ID
      */
     private Long getInventoryId(String inventoryResponseBody) {
-        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
-            LOGGER.error("Empty inventory response body");
-            throw new RuntimeException("Empty inventory response body");
-        }
 
         try {
-            // Log the raw response to help with debugging
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Extracting ID from inventory response: {}", inventoryResponseBody);
-            }
-
-            // Add additional validation before parsing
-            if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
-                LOGGER.error("Invalid empty JSON object or array: {}", inventoryResponseBody);
-                throw new RuntimeException("Empty JSON structure in inventory response");
-            }
+            validateInventoryResponse(
+                    inventoryResponseBody, "Extracting ID from inventory response");
 
             InventoryResponseDTO dto =
                     OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
@@ -305,6 +293,27 @@ public class CreateProductSimulation extends BaseSimulation {
                     e.getMessage(),
                     inventoryResponseBody);
             throw new RuntimeException("Error extracting inventory ID", e);
+        }
+    }
+
+    private void validateInventoryResponse(String inventoryResponseBody, String operation) {
+        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
+            LOGGER.error("Empty inventory response body during {}", operation);
+            throw new IllegalArgumentException("Empty inventory response body");
+        }
+
+        // Log the raw response to help with debugging
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("{}: {}", operation, inventoryResponseBody);
+        }
+
+        // Add additional validation before parsing
+        if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
+            LOGGER.error(
+                    "Invalid empty JSON object or array during {}: {}",
+                    operation,
+                    inventoryResponseBody);
+            throw new IllegalArgumentException("Empty JSON structure in inventory response");
         }
     }
 
