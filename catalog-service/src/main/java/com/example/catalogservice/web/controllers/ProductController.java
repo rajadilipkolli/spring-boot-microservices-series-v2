@@ -88,11 +88,10 @@ public class ProductController implements ProductApi {
         return productService
                 .saveProduct(productRequest)
                 .map(
-                        productResponse ->
-                                ResponseEntity.created(
-                                                URI.create(
-                                                        "/api/catalog/id/" + productResponse.id()))
-                                        .body(productResponse));
+                        productResponse -> {
+                            URI location = URI.create("/api/catalog/id/" + productResponse.id());
+                            return ResponseEntity.created(location).body(productResponse);
+                        });
     }
 
     @PutMapping("/{id}")
