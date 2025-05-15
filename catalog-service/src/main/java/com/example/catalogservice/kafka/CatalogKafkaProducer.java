@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 @Loggable
@@ -33,15 +34,18 @@ public class CatalogKafkaProducer {
         return Mono.just(productRequest)
                 .map(productMapper::toProductDto)
                 .flatMap(
-                        productDto -> {
-                            try {
-                                String productDtoAsString =
-                                        objectMapper.writeValueAsString(productDto);
-                                return Mono.just(productDtoAsString);
-                            } catch (Exception e) {
-                                return Mono.error(e);
-                            }
-                        })
+                        productDto ->
+                                Mono.fromCallable(
+                                                () -> {
+                                                    try {
+                                                        return objectMapper.writeValueAsString(
+                                                                productDto);
+                                                    } catch (Exception e) {
+                                                        throw new RuntimeException(
+                                                                "Error serializing product", e);
+                                                    }
+                                                })
+                                        .subscribeOn(Schedulers.boundedElastic()))
                 .flatMap(
                         productDtoAsString ->
                                 Mono.just(
