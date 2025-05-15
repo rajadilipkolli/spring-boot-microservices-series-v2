@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli.
 </p>
 ***/
 
@@ -30,19 +30,21 @@ public class CatalogKafkaProducer {
     }
 
     public Mono<Boolean> send(ProductRequest productRequest) {
-        return Mono.fromCallable(
-                        () -> {
-                            // Convert ProductRequest to JSON
-                            return this.objectMapper.writeValueAsString(
-                                    this.productMapper.toProductDto(productRequest));
+        return Mono.just(productRequest)
+                .map(productMapper::toProductDto)
+                .flatMap(
+                        productDto -> {
+                            try {
+                                String productDtoAsString =
+                                        objectMapper.writeValueAsString(productDto);
+                                return Mono.just(productDtoAsString);
+                            } catch (Exception e) {
+                                return Mono.error(e);
+                            }
                         })
                 .flatMap(
                         productDtoAsString ->
-                                Mono.fromCallable(
-                                        () -> {
-                                            // Send the message via StreamBridge
-                                            return streamBridge.send(
-                                                    "inventory-out-0", productDtoAsString);
-                                        }));
+                                Mono.just(
+                                        streamBridge.send("inventory-out-0", productDtoAsString)));
     }
 }
