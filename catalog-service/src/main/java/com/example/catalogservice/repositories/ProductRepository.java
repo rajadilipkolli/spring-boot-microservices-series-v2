@@ -19,7 +19,13 @@ public interface ProductRepository
 
     Mono<Long> countDistinctByProductCodeAllIgnoreCaseIn(List<String> productCodeList);
 
+    Mono<Long> countByProductCodeAllIgnoreCase(String productCode);
+
     Mono<Product> findByProductCodeAllIgnoreCase(String productCode);
+
+    Mono<Void> deleteByProductCodeAllIgnoreCase(String productCode);
+
+    Mono<Boolean> existsByProductCodeAllIgnoreCase(String productCode);
 
     Flux<Product> findAllBy(Pageable pageable);
 

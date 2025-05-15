@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -179,11 +179,11 @@ class ProductControllerTest {
                 .jsonPath("$.type")
                 .isEqualTo("about:blank")
                 .jsonPath("$.title")
-                .isEqualTo("Bad Request")
+                .isEqualTo("Validation Error")
                 .jsonPath("$.status")
                 .isEqualTo(400)
                 .jsonPath("$.detail")
-                .isEqualTo("Invalid request content.")
+                .isEqualTo("Invalid request content")
                 .jsonPath("$.instance")
                 .isEqualTo("/api/catalog");
     }

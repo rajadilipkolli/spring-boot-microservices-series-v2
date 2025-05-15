@@ -8,6 +8,7 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -81,39 +83,7 @@ public class ProductService {
                                     Flux.fromIterable(products)
                                             .map(productMapper::toProductResponse);
 
-                            return productResponseFlux
-                                    .collectList()
-                                    .flatMap(
-                                            productResponseList -> {
-                                                Flux<String> productCodeFlux =
-                                                        Flux.fromIterable(productResponseList)
-                                                                .map(ProductResponse::productCode);
-
-                                                return productCodeFlux
-                                                        .collectList()
-                                                        .flatMap(
-                                                                productCodeList ->
-                                                                        getInventoryByProductCodes(
-                                                                                        productCodeList)
-                                                                                .collectMap(
-                                                                                        InventoryResponse
-                                                                                                ::productCode,
-                                                                                        InventoryResponse
-                                                                                                ::availableQuantity)
-                                                                                .flatMap(
-                                                                                        inventoriesMap ->
-                                                                                                updateProductAvailability(
-                                                                                                                productResponseList,
-                                                                                                                inventoriesMap)
-                                                                                                        .collectList()
-                                                                                                        .map(
-                                                                                                                updatedProducts ->
-                                                                                                                        new PagedResult<>(
-                                                                                                                                new PageImpl<>(
-                                                                                                                                        updatedProducts,
-                                                                                                                                        pageable,
-                                                                                                                                        count)))));
-                                            });
+                            return enrichWithAvailability(productResponseFlux, pageable, count);
                         });
     }
 
@@ -184,11 +154,30 @@ public class ProductService {
         return productRepository
                 .findByProductCodeAllIgnoreCase(productRequest.productCode())
                 .map(productMapper::toProductResponse)
-                .switchIfEmpty(createAndSaveProduct(productRequest));
+                .switchIfEmpty(createAndSaveProduct(productRequest))
+                // Catch DuplicateKeyException from unique constraint violation
+                .onErrorResume(
+                        DuplicateKeyException.class,
+                        e -> {
+                            log.info(
+                                    "Concurrent save detected for product code: {}",
+                                    productRequest.productCode());
+                            // Recovery mechanism: fetch the existing product that was concurrently
+                            // saved
+                            return productRepository
+                                    .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                                    .map(productMapper::toProductResponse)
+                                    .switchIfEmpty(
+                                            // This should never happen, but just in case
+                                            Mono.error(
+                                                    new ProductAlreadyExistsException(
+                                                            productRequest.productCode())));
+                        });
     }
 
     /** Helper method to create and save a new product */
-    private Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
+    @Transactional
+    protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
         return Mono.just(productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
                 .flatMap(
@@ -315,53 +304,65 @@ public class ProductService {
                                     Flux.fromIterable(products)
                                             .map(productMapper::toProductResponse);
 
-                            return productResponseFlux
-                                    .collectList()
-                                    .flatMap(
-                                            productResponseList -> {
-                                                Flux<String> productCodeFlux =
-                                                        Flux.fromIterable(productResponseList)
-                                                                .map(ProductResponse::productCode);
-
-                                                return productCodeFlux
-                                                        .collectList()
-                                                        .flatMap(
-                                                                productCodeList ->
-                                                                        getInventoryByProductCodes(
-                                                                                        productCodeList)
-                                                                                .collectMap(
-                                                                                        InventoryResponse
-                                                                                                ::productCode,
-                                                                                        InventoryResponse
-                                                                                                ::availableQuantity)
-                                                                                .flatMap(
-                                                                                        inventoriesMap ->
-                                                                                                updateProductAvailability(
-                                                                                                                productResponseList,
-                                                                                                                inventoriesMap)
-                                                                                                        .collectList()
-                                                                                                        .map(
-                                                                                                                updatedProducts ->
-                                                                                                                        new PagedResult<>(
-                                                                                                                                new PageImpl<>(
-                                                                                                                                        updatedProducts,
-                                                                                                                                        pageable,
-                                                                                                                                        products
-                                                                                                                                                .size())))));
-                                            });
+                            return enrichWithAvailability(
+                                    productResponseFlux, pageable, (long) products.size());
                         });
     }
 
     /**
-     * Find a product by product code if it exists, without throwing an exception Used to make
-     * createProduct idempotent
+     * Helper method to enrich product responses with availability information from the inventory
+     * service. This method centralizes the logic used in both findAllProducts and
+     * processSearchResults.
      *
-     * @param productCode the product code to search for
-     * @return a Mono containing the product if found, empty Mono otherwise
+     * @param productResponseFlux Flux of product responses to be enriched
+     * @param pageable Pagination information
+     * @param totalCount Total count of items for pagination (optional, uses product list size if
+     *     null)
+     * @return Mono of PagedResult with enriched product responses
      */
-    public Mono<ProductResponse> findByProductCodeIfExists(String productCode) {
-        return productRepository
-                .findByProductCodeAllIgnoreCase(productCode)
-                .map(productMapper::toProductResponse);
+    private Mono<PagedResult<ProductResponse>> enrichWithAvailability(
+            Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
+        return productResponseFlux
+                .collectList()
+                .flatMap(
+                        productResponseList -> {
+                            if (productResponseList.isEmpty()) {
+                                return Mono.just(
+                                        new PagedResult<>(
+                                                new PageImpl<>(
+                                                        Collections.emptyList(), pageable, 0)));
+                            }
+
+                            Flux<String> productCodeFlux =
+                                    Flux.fromIterable(productResponseList)
+                                            .map(ProductResponse::productCode);
+
+                            return productCodeFlux
+                                    .collectList()
+                                    .flatMap(
+                                            productCodeList ->
+                                                    getInventoryByProductCodes(productCodeList)
+                                                            .collectMap(
+                                                                    InventoryResponse::productCode,
+                                                                    InventoryResponse
+                                                                            ::availableQuantity)
+                                                            .flatMap(
+                                                                    inventoriesMap ->
+                                                                            updateProductAvailability(
+                                                                                            productResponseList,
+                                                                                            inventoriesMap)
+                                                                                    .collectList()
+                                                                                    .map(
+                                                                                            updatedProducts ->
+                                                                                                    new PagedResult<>(
+                                                                                                            new PageImpl<>(
+                                                                                                                    updatedProducts,
+                                                                                                                    pageable,
+                                                                                                                    totalCount
+                                                                                                                                    != null
+                                                                                                                            ? totalCount
+                                                                                                                            : productResponseList
+                                                                                                                                    .size())))));
+                        });
     }
 }
