@@ -64,7 +64,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualTo(amountReserved + 10);
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable - amountReserved);
+                                    .isEqualTo(amountAvailable - 10);
                         });
     }
 
@@ -109,7 +109,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualTo(amountReserved - 10);
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable + amountReserved);
+                                    .isEqualTo(amountAvailable + 10);
                         });
     }
 
