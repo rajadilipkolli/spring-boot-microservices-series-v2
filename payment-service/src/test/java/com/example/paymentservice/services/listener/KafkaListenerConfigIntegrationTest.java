@@ -8,6 +8,7 @@ import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
@@ -88,7 +89,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         // When
         kafkaTemplate.send(
-                "orders", orderDto.orderId(), orderDto.withCustomerId(nonExistentCustomerId));
+                "orders",
+                orderDto.orderId(),
+                TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -149,12 +152,10 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     }
 
     private OrderDto getOrderDto(String status) {
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderItemDto.setProductId("P0001");
-        orderItemDto.setItemId(1L);
+
         Faker faker = new Faker();
+        OrderItemDto orderItemDto =
+                new OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
         return new OrderDto(
                 faker.number().randomNumber() + 10_000,
                 this.customer.getId(),

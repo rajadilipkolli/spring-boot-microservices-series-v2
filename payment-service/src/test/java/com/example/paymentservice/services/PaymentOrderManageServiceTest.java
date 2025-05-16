@@ -38,9 +38,7 @@ class PaymentOrderManageServiceTest {
     @Test
     void confirmWithValidOrder() {
         // Arrange
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
@@ -58,9 +56,7 @@ class PaymentOrderManageServiceTest {
     @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
     void confirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
         // Arrange
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", source, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
@@ -90,9 +86,7 @@ class PaymentOrderManageServiceTest {
     @Test
     void reserveWithValidOrderAccepted() {
         // Arrange
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
@@ -112,9 +106,7 @@ class PaymentOrderManageServiceTest {
     @Test
     void reserveWithValidOrderRejected() {
         // Arrange
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1000);
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 1000, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));

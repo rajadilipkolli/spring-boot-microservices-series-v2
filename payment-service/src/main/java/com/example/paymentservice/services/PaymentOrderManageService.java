@@ -47,9 +47,9 @@ public class PaymentOrderManageService {
                     orderDto.items().stream()
                             .map(OrderItemDto::getPrice)
                             .reduce(BigDecimal.ZERO, BigDecimal::add)
-                            .intValue();
+                            .doubleValue();
 
-            if (totalOrderPrice < customer.getAmountAvailable()) {
+            if (totalOrderPrice <= customer.getAmountAvailable()) {
                 orderDto = orderDto.withStatus("ACCEPT");
                 customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
                 customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
