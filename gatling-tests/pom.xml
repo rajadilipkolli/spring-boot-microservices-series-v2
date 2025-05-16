@@ -70,15 +70,15 @@
     <profiles>
         <profile>
             <id>default</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <gatling.simulationClass>simulation.CreateProductSimulation</gatling.simulationClass>
             </properties>
         </profile>
         <profile>
             <id>resilience</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <gatling.simulationClass>simulation.ResilienceTestSimulation</gatling.simulationClass>
             </properties>
