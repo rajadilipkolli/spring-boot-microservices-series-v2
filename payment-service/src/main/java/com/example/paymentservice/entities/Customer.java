@@ -13,9 +13,9 @@ public class Customer {
 
     private String phone;
 
-    private int amountAvailable;
+    private double amountAvailable;
 
-    private int amountReserved;
+    private double amountReserved;
 
     public Customer() {}
 
@@ -35,11 +35,11 @@ public class Customer {
         return this.address;
     }
 
-    public int getAmountAvailable() {
+    public double getAmountAvailable() {
         return this.amountAvailable;
     }
 
-    public int getAmountReserved() {
+    public double getAmountReserved() {
         return this.amountReserved;
     }
 
@@ -72,12 +72,12 @@ public class Customer {
         return this;
     }
 
-    public Customer setAmountAvailable(final int amountAvailable) {
+    public Customer setAmountAvailable(final double amountAvailable) {
         this.amountAvailable = amountAvailable;
         return this;
     }
 
-    public Customer setAmountReserved(final int amountReserved) {
+    public Customer setAmountReserved(final double amountReserved) {
         this.amountReserved = amountReserved;
         return this;
     }

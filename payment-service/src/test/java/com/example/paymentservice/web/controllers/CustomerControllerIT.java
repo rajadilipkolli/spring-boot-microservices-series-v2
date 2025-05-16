@@ -15,17 +15,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
-import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 class CustomerControllerIT extends AbstractIntegrationTest {
-
-    @Autowired private CustomerRepository customerRepository;
 
     private List<Customer> customerList = null;
 
