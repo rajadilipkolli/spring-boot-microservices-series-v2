@@ -29,7 +29,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         assertThat(stockOrderListener.getCountDownLatch().getCount()).isEqualTo(1);
         // publish event
         OrderDto orderDto = MockTestData.getOrderDto("ORDER");
-        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         await().untilAsserted(
                         () -> {

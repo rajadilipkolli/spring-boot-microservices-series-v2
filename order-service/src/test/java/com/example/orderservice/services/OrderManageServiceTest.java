@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,82 +27,66 @@ class OrderManageServiceTest {
     @Test
     void confirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
         // Arrange
-        OrderDto orderPayment = new OrderDto();
-        orderPayment.setOrderId(12345L);
-        orderPayment.setCustomerId(67890L);
-        orderPayment.setStatus("ACCEPT");
+        OrderDto orderPayment =
+                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
 
-        OrderDto orderStock = new OrderDto();
-        orderStock.setOrderId(12345L);
-        orderStock.setCustomerId(67890L);
-        orderStock.setStatus("ACCEPT");
+        OrderDto orderStock =
+                new OrderDto(12345L, 67890L, "ACCEPT", "INVENTORY", Collections.emptyList());
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        assertThat(actual.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(actual.status()).isEqualTo("CONFIRMED");
     }
 
     @Test
     void confirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
         // Arrange
-        OrderDto orderPayment = new OrderDto();
-        orderPayment.setOrderId(12345L);
-        orderPayment.setCustomerId(67890L);
-        orderPayment.setStatus("REJECT");
+        OrderDto orderPayment =
+                new OrderDto(12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList());
 
-        OrderDto orderStock = new OrderDto();
-        orderStock.setOrderId(12345L);
-        orderStock.setCustomerId(67890L);
-        orderStock.setStatus("REJECT");
+        OrderDto orderStock =
+                new OrderDto(12345L, 67890L, "REJECT", "INVENTORY", Collections.emptyList());
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        assertThat(actual.getStatus()).isEqualTo("REJECTED");
+        assertThat(actual.status()).isEqualTo("REJECTED");
     }
 
     @Test
     void confirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
         // Arrange
-        OrderDto orderPayment = new OrderDto();
-        orderPayment.setOrderId(12345L);
-        orderPayment.setCustomerId(67890L);
-        orderPayment.setStatus("REJECT");
+        OrderDto orderPayment =
+                new OrderDto(12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList());
 
-        OrderDto orderStock = new OrderDto();
-        orderStock.setOrderId(12345L);
-        orderStock.setCustomerId(67890L);
-        orderStock.setStatus("ACCEPT");
+        OrderDto orderStock =
+                new OrderDto(12345L, 67890L, "ACCEPT", "INVENTORY", Collections.emptyList());
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        assertThat(actual.getStatus()).isEqualTo("ROLLBACK");
-        assertThat(actual.getSource()).isEqualTo("PAYMENT");
+        assertThat(actual.status()).isEqualTo("ROLLBACK");
+        assertThat(actual.source()).isEqualTo("PAYMENT");
     }
 
     @Test
     void confirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
         // Arrange
-        OrderDto orderPayment = new OrderDto();
-        orderPayment.setOrderId(12345L);
-        orderPayment.setCustomerId(67890L);
-        orderPayment.setStatus("ACCEPT");
+        OrderDto orderPayment =
+                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
 
-        OrderDto orderStock = new OrderDto();
-        orderStock.setOrderId(12345L);
-        orderStock.setCustomerId(67890L);
-        orderStock.setStatus("REJECT");
+        OrderDto orderStock =
+                new OrderDto(12345L, 67890L, "REJECT", "INVENTORY", Collections.emptyList());
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
 
         // Assert
-        assertThat(actual.getStatus()).isEqualTo("ROLLBACK");
-        assertThat(actual.getSource()).isEqualTo("INVENTORY");
+        assertThat(actual.status()).isEqualTo("ROLLBACK");
+        assertThat(actual.source()).isEqualTo("INVENTORY");
     }
 }

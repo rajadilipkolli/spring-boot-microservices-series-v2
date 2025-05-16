@@ -47,22 +47,21 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    //     @Disabled("until infra for streams is set up")
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining
         OrderDto orderDto = getOrderDto("ORDER");
 
-        this.kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        this.kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         // Sending events to both payment-orders, stock-orders for streaming to process and confirm
         OrderDto paymentOrderDto = getOrderDto("PAYMENT");
 
-        this.kafkaTemplate.send("payment-orders", paymentOrderDto.getOrderId(), paymentOrderDto);
+        this.kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
 
         OrderDto stockOrderDto = getOrderDto("STOCK");
 
-        this.kafkaTemplate.send("stock-orders", stockOrderDto.getOrderId(), stockOrderDto);
+        this.kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto);
 
         await().atMost(1, TimeUnit.MINUTES)
                 .pollDelay(10, SECONDS)
