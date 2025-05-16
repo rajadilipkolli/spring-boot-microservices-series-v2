@@ -93,19 +93,19 @@ class PaymentOrderManageServiceTest {
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductPrice(BigDecimal.TEN);
         orderItemDto.setQuantity(10);
-        OrderDto orderDto = new OrderDto(1L, 1L, "ACCEPT", "PAYMENT", List.of(orderItemDto));
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         // Act
-        orderManageService.reserve(orderDto);
+        OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(200);
         assertThat(customer.getAmountAvailable()).isEqualTo(900);
-        assertThat(orderDto.source()).isEqualTo("PAYMENT");
-        assertThat(orderDto.status()).isEqualTo("ACCEPT");
+        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
+        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
@@ -115,19 +115,19 @@ class PaymentOrderManageServiceTest {
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setProductPrice(BigDecimal.TEN);
         orderItemDto.setQuantity(1000);
-        OrderDto orderDto = new OrderDto(1L, 1L, "REJECT", "PAYMENT", List.of(orderItemDto));
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         // Act
-        orderManageService.reserve(orderDto);
+        OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(100);
         assertThat(customer.getAmountAvailable()).isEqualTo(1000);
-        assertThat(orderDto.status()).isEqualTo("REJECT");
-        assertThat(orderDto.source()).isEqualTo("PAYMENT");
+        assertThat(reservedOrder.status()).isEqualTo("REJECT");
+        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 }

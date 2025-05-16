@@ -34,7 +34,7 @@ public class PaymentOrderManageService {
     }
 
     @Timed(percentiles = 1.0)
-    public void reserve(OrderDto orderDto) {
+    public OrderDto reserve(OrderDto orderDto) {
         log.debug(
                 "Reserving Order with Id :{} in payment service with payload {}",
                 orderDto.orderId(),
@@ -58,10 +58,8 @@ public class PaymentOrderManageService {
             }
             log.info("Saving customer: {} after reserving", customer);
             customerRepository.save(customer);
-            kafkaTemplate.send(
-                    AppConstants.PAYMENT_ORDERS_TOPIC,
-                    orderDto.orderId(),
-                    orderDto.withSource(AppConstants.SOURCE));
+            orderDto = orderDto.withSource(AppConstants.SOURCE);
+            kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.orderId(), orderDto);
             log.info(
                     "Sent Reserved Order: {} to topic :{}",
                     orderDto,
@@ -70,6 +68,7 @@ public class PaymentOrderManageService {
             log.error("Customer not found for id: {}", orderDto.customerId());
             throw new CustomerNotFoundException(orderDto.customerId());
         }
+        return orderDto;
     }
 
     @Timed(percentiles = 1.0)
