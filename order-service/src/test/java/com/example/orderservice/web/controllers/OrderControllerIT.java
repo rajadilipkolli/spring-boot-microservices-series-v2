@@ -366,6 +366,70 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "$.violations[1].message", is("Order without items not valid")))
                     .andReturn();
         }
+
+        @Test
+        void shouldReturn400WhenOrderItemValidationFails() throws Exception {
+            // Test invalid productCode (blank)
+            OrderRequest invalidProductCodeRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("", 2, new BigDecimal("10.00"))),
+                            new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+            mockProductsExistsRequest(true, "");
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(
+                                            objectMapper.writeValueAsString(
+                                                    invalidProductCodeRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.violations[0].field", is("items[0].productCode")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Product code must be provided")));
+
+            // Test invalid quantity (zero)
+            OrderRequest invalidQuantityRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
+                            new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+            mockProductsExistsRequest(true, "Product1");
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(
+                                            objectMapper.writeValueAsString(
+                                                    invalidQuantityRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.violations[0].field", is("items[0].quantity")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Quantity should be greater than zero")));
+
+            // Test invalid price (zero)
+            OrderRequest invalidPriceRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
+                            new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+            mockProductsExistsRequest(true, "Product1");
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(invalidPriceRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Price should be greater than zero")));
+        }
     }
 
     @Test
