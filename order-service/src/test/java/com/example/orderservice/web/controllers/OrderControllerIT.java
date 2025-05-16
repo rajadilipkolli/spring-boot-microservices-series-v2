@@ -384,6 +384,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                             objectMapper.writeValueAsString(
                                                     invalidProductCodeRequest)))
                     .andExpect(status().isBadRequest())
+                    .andExpect(header().string("Content-Type", is("application/problem+json")))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].productCode")))
                     .andExpect(
                             jsonPath(
@@ -405,6 +411,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                             objectMapper.writeValueAsString(
                                                     invalidQuantityRequest)))
                     .andExpect(status().isBadRequest())
+                    .andExpect(header().string("Content-Type", is("application/problem+json")))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].quantity")))
                     .andExpect(
                             jsonPath(
@@ -424,6 +436,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(invalidPriceRequest)))
                     .andExpect(status().isBadRequest())
+                    .andExpect(header().string("Content-Type", is("application/problem+json")))
+                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")))
                     .andExpect(
                             jsonPath(
