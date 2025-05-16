@@ -8,7 +8,6 @@ import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
-import com.example.paymentservice.repositories.CustomerRepository;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
@@ -16,39 +15,47 @@ import java.util.concurrent.TimeUnit;
 import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 
 class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
-
-    @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
-
-    @Autowired private CustomerRepository customerRepository;
-
-    @Autowired private KafkaListenerConfig kafkaListenerConfig;
 
     private Customer customer;
 
     @BeforeEach
     void setUp() {
         this.customerRepository.deleteAll();
+        // Generate unique data for each test to avoid sequence conflicts
+        Faker faker = new Faker();
+        String uniqueName = "Customer_" + faker.number().randomNumber();
+        String uniqueEmail = "email_" + faker.number().randomNumber() + "@example.com";
+
         customer =
                 this.customerRepository.save(
                         new Customer()
-                                .setName("First Customer")
-                                .setEmail("first@customer.email")
+                                .setName(uniqueName)
+                                .setEmail(uniqueEmail)
                                 .setPhone("1234567890")
                                 .setAddress("First Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(10));
+        // Ensure the customer is saved before running tests
+        assertThat(customer).isNotNull();
+        assertThat(this.customerRepository.findById(customer.getId()))
+                .isPresent()
+                .get()
+                .satisfies(
+                        customer -> {
+                            assertThat(customer.getName()).isEqualTo(uniqueName);
+                            assertThat(customer.getEmail()).isEqualTo(uniqueEmail);
+                            assertThat(customer.getId()).isNotEqualTo(1);
+                        });
     }
 
     @Test
     void onEventReserveOrder() {
         OrderDto orderDto = getOrderDto("NEW");
 
-        int amountReserved = customer.getAmountReserved();
-        int amountAvailable = customer.getAmountAvailable();
+        double amountReserved = customer.getAmountReserved();
+        double amountAvailable = customer.getAmountAvailable();
 
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -71,8 +78,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     @Test
     void onEventReserveOrderDlt() {
         OrderDto orderDto = getOrderDto("NEW");
-        long customerId = orderDto.getCustomerId() + 10_000;
-        orderDto.setCustomerId(customerId);
+        // Use a non-existent customerId by adding a large offset
+        long nonExistentCustomerId = orderDto.getCustomerId() + 10_000;
+        orderDto.setCustomerId(nonExistentCustomerId);
 
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -92,8 +100,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
-        int amountReserved = customer.getAmountReserved();
-        int amountAvailable = customer.getAmountAvailable();
+        double amountReserved = customer.getAmountReserved();
+        double amountAvailable = customer.getAmountAvailable();
 
         // When
         kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
@@ -141,6 +149,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         orderDto.setOrderId(faker.number().randomNumber());
         orderDto.setStatus(status);
         orderDto.setSource("INVENTORY");
+        // Use the exact ID from the customer that was just saved in setUp()
         orderDto.setCustomerId(customer.getId());
 
         OrderItemDto orderItemDto = new OrderItemDto();

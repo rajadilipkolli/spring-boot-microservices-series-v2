@@ -282,10 +282,7 @@
                                 <excludes>DATABASECHANGELOG.*</excludes>
                                 <schemata>
                                     <schema>
-                                        <inputSchema>custom</inputSchema>
-                                    </schema>
-                                    <schema>
-                                        <inputSchema>public</inputSchema>
+                                        <inputSchema>payment</inputSchema>
                                     </schema>
                                 </schemata>
                             </database>
