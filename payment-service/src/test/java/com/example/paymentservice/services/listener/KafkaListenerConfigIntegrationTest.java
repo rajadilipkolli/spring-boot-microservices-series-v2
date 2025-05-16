@@ -8,6 +8,7 @@ import com.example.common.dtos.OrderDto;
 import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
@@ -15,9 +16,13 @@ import java.util.concurrent.TimeUnit;
 import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
+    private static final Logger log =
+            LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
     private Customer customer;
 
     @BeforeEach
@@ -58,7 +63,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         double amountAvailable = customer.getAmountAvailable();
 
         // When
-        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        log.debug("Sending order DTO: {}", orderDto);
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -79,11 +85,13 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     void onEventReserveOrderDlt() {
         OrderDto orderDto = getOrderDto("NEW");
         // Use a non-existent customerId by adding a large offset
-        long nonExistentCustomerId = orderDto.getCustomerId() + 10_000;
-        orderDto.setCustomerId(nonExistentCustomerId);
+        long nonExistentCustomerId = orderDto.customerId() + 10_000;
 
         // When
-        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        kafkaTemplate.send(
+                "orders",
+                orderDto.orderId(),
+                TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -104,7 +112,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         double amountAvailable = customer.getAmountAvailable();
 
         // When
-        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        log.debug("Sending order DTO: {}", orderDto);
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -125,10 +134,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     void onEventConfirmOrderNoRollBack() {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
-        orderDto.setSource("PAYMENT");
 
         // When
-        kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto.withSource("PAYMENT"));
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -144,20 +152,15 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     }
 
     private OrderDto getOrderDto(String status) {
-        Faker faker = new Faker();
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(faker.number().randomNumber());
-        orderDto.setStatus(status);
-        orderDto.setSource("INVENTORY");
-        // Use the exact ID from the customer that was just saved in setUp()
-        orderDto.setCustomerId(customer.getId());
 
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderItemDto.setProductId("P0001");
-        orderItemDto.setItemId(1L);
-        orderDto.setItems(List.of(orderItemDto));
-        return orderDto;
+        Faker faker = new Faker();
+        OrderItemDto orderItemDto =
+                new OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
+        return new OrderDto(
+                faker.number().randomNumber() + 10_000,
+                this.customer.getId(),
+                status,
+                "INVENTORY",
+                List.of(orderItemDto));
     }
 }

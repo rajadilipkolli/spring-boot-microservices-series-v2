@@ -38,16 +38,10 @@ class PaymentOrderManageServiceTest {
     @Test
     void confirmWithValidOrder() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(1L);
-        orderDto.setStatus("CONFIRMED");
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
-        given(customerRepository.findById(orderDto.getCustomerId()))
-                .willReturn(Optional.of(customer));
+        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         // Act
@@ -62,17 +56,10 @@ class PaymentOrderManageServiceTest {
     @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
     void confirmWithRejectedOrder(String source, int amountAvailable, int amountReserved) {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(1L);
-        orderDto.setStatus("ROLLBACK");
-        orderDto.setSource(source);
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", source, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
-        given(customerRepository.findById(orderDto.getCustomerId()))
-                .willReturn(Optional.of(customer));
+        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
@@ -88,9 +75,7 @@ class PaymentOrderManageServiceTest {
     @Test
     void confirmWithInvalidCustomer() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(1L);
-        orderDto.setStatus("CONFIRMED");
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, null);
         given(customerRepository.findById(1L)).willReturn(Optional.empty());
 
         // Assert
@@ -101,52 +86,40 @@ class PaymentOrderManageServiceTest {
     @Test
     void reserveWithValidOrderAccepted() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(1L);
-        orderDto.setStatus("CONFIRMED");
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
-        given(customerRepository.findById(orderDto.getCustomerId()))
-                .willReturn(Optional.of(customer));
+        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         // Act
-        orderManageService.reserve(orderDto);
+        OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(200);
         assertThat(customer.getAmountAvailable()).isEqualTo(900);
-        assertThat(orderDto.getSource()).isEqualTo("PAYMENT");
-        assertThat(orderDto.getStatus()).isEqualTo("ACCEPT");
+        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
+        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
     @Test
     void reserveWithValidOrderRejected() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setCustomerId(1L);
-        orderDto.setStatus("CONFIRMED");
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1000);
-        orderDto.setItems(List.of(orderItemDto));
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "productId", 1000, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
-        given(customerRepository.findById(orderDto.getCustomerId()))
-                .willReturn(Optional.of(customer));
+        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
         given(customerRepository.save(any(Customer.class)))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         // Act
-        orderManageService.reserve(orderDto);
+        OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
         assertThat(customer.getAmountReserved()).isEqualTo(100);
         assertThat(customer.getAmountAvailable()).isEqualTo(1000);
-        assertThat(orderDto.getStatus()).isEqualTo("REJECT");
-        assertThat(orderDto.getSource()).isEqualTo("PAYMENT");
+        assertThat(reservedOrder.status()).isEqualTo("REJECT");
+        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 }
