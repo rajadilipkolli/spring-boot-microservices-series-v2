@@ -48,15 +48,10 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() {
-        // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus("CONFIRMED");
-
+    void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() { // Arrange
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(1L, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
 
         // Initial state verification
         Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
@@ -83,14 +78,10 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatus_ShouldDecreaseReservedItemsAndIncreaseAvailableQuantity() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus(AppConstants.ROLLBACK);
-        orderDto.setSource("OTHER_SOURCE"); // Not inventory source to trigger rollback logic
-
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        // Not inventory source to trigger rollback logic
+        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
 
         // Initial state verification
         Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
@@ -119,15 +110,11 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatusAndInventorySource_ShouldNotChangeInventory() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus(AppConstants.ROLLBACK);
-        orderDto.setSource(
-                AppConstants.SOURCE); // inventory source, should not trigger rollback logic
-
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        // inventory source, should not trigger rollback logic
+        OrderDto orderDto =
+                new OrderDto(1L, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
 
         // Initial state verification
         Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
@@ -151,5 +138,75 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
                 .isEqualTo(initialProduct2.getReservedItems());
         assertThat(updatedProduct2.getAvailableQuantity())
                 .isEqualTo(initialProduct2.getAvailableQuantity());
+    }
+
+    @Test
+    void reserveOrderWithSufficientStock_ShouldReturnAcceptStatus() {
+        // Arrange
+        OrderItemDto item1 = new OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+
+        // Initial state verification
+        Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
+        Inventory initialProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+
+        assertThat(initialProduct1.getAvailableQuantity()).isEqualTo(100);
+        assertThat(initialProduct2.getAvailableQuantity()).isEqualTo(200);
+
+        // Act
+        OrderDto resultOrderDto = inventoryOrderManageService.reserve(orderDto);
+
+        // Assert
+        assertThat(resultOrderDto).isNotNull();
+        assertThat(resultOrderDto.status()).isEqualTo("ACCEPT");
+        assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+
+        // Verify inventory changes
+        Inventory updatedProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
+        Inventory updatedProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+
+        // Available quantity should decrease and reserved items should increase
+        assertThat(updatedProduct1.getAvailableQuantity()).isEqualTo(90); // 100 - 10
+        assertThat(updatedProduct1.getReservedItems()).isEqualTo(60); // 50 + 10
+
+        assertThat(updatedProduct2.getAvailableQuantity()).isEqualTo(180); // 200 - 20
+        assertThat(updatedProduct2.getReservedItems()).isEqualTo(50); // 30 + 20
+    }
+
+    @Test
+    void reserveOrderWithInsufficientStock_ShouldReturnRejectStatus() {
+        // Arrange
+        OrderItemDto item1 =
+                new OrderItemDto(1L, "product1", 120, BigDecimal.TEN); // More than available
+        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+
+        // Initial state verification
+        Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
+        Inventory initialProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+
+        // Act
+        OrderDto resultOrderDto = inventoryOrderManageService.reserve(orderDto);
+
+        // Assert
+        assertThat(resultOrderDto).isNotNull();
+        assertThat(resultOrderDto.status()).isEqualTo("REJECT");
+        assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+
+        // Verify inventory not changed
+        Inventory updatedProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
+        Inventory updatedProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+
+        // Nothing should have changed
+        assertThat(updatedProduct1.getAvailableQuantity())
+                .isEqualTo(initialProduct1.getAvailableQuantity());
+        assertThat(updatedProduct1.getReservedItems())
+                .isEqualTo(initialProduct1.getReservedItems());
+
+        assertThat(updatedProduct2.getAvailableQuantity())
+                .isEqualTo(initialProduct2.getAvailableQuantity());
+        assertThat(updatedProduct2.getReservedItems())
+                .isEqualTo(initialProduct2.getReservedItems());
     }
 }

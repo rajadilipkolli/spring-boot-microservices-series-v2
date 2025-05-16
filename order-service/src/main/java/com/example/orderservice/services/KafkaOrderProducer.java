@@ -30,7 +30,7 @@ public class KafkaOrderProducer {
     @Async
     public void sendOrder(OrderDto persistedOrderDto) {
         kafkaTemplate
-                .send(AppConstants.ORDERS_TOPIC, persistedOrderDto.getOrderId(), persistedOrderDto)
+                .send(AppConstants.ORDERS_TOPIC, persistedOrderDto.orderId(), persistedOrderDto)
                 .whenComplete(
                         (result, ex) -> {
                             if (ex == null) {
