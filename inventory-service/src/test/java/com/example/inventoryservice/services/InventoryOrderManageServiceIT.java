@@ -14,6 +14,7 @@ import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -68,7 +69,9 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
 
         // Capture initial state of all products
         Map<String, Inventory> initialState =
-                inventoryRepository.findAll().stream()
+                inventoryRepository
+                        .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
+                        .stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
         // Perform the operation
@@ -89,10 +92,7 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
                     .isEqualTo(initial.getReservedItems() + reservedItemsChange);
         }
 
-        // Return the operation result for additional assertions if needed
-        if (result != null) {
-            assertThat(result).isEqualTo(result);
-        }
+        assertThat(result).as("Service should return an OrderDto instance").isNotNull();
     }
 
     @Test

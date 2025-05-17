@@ -98,7 +98,7 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         // Ensure that the status, source, and orderId methods are called directly as it's a record
-        //       assertThat(result.status()).isEqualTo("REJECT");
+        assertThat(result.status()).isEqualTo("REJECT");
         assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
         assertThat(result.orderId()).isEqualTo(1L);
         verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
