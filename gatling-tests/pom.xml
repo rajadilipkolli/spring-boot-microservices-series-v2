@@ -76,15 +76,15 @@
         </profile>
         <profile>
             <id>resilience</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <gatling.simulationClass>simulation.ResilienceTestSimulation</gatling.simulationClass>
             </properties>
         </profile>
         <profile>
             <id>stress</id>
+             <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <gatling.simulationClass>simulation.StressTestSimulation</gatling.simulationClass>
             </properties>
