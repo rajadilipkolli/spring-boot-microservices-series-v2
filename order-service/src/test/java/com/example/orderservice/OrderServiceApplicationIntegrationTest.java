@@ -22,13 +22,9 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
-
-    @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @Test
     @Order(1)

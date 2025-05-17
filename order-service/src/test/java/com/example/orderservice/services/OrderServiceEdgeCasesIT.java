@@ -15,8 +15,6 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.repositories.OrderItemRepository;
-import com.example.orderservice.repositories.OrderRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -25,17 +23,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ProblemDetail;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
-
-    @Autowired private OrderService orderService;
-
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private OrderItemRepository orderItemRepository;
 
     @Test
     void saveBatchOrders_WithDuplicateProductCodes_ShouldSaveAllOrders() {

@@ -14,8 +14,6 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.repositories.OrderItemRepository;
-import com.example.orderservice.repositories.OrderRepository;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -24,17 +22,12 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @Tag("performance")
 class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
     private static final int BATCH_SIZE = 1000;
     private static final int TOTAL_ORDERS = 10000;
-
-    @Autowired private OrderService orderService;
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private OrderItemRepository orderItemRepository;
 
     @BeforeEach
     void setUp() {

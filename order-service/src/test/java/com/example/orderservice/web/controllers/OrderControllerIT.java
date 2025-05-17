@@ -27,7 +27,6 @@ import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
-import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -37,13 +36,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 class OrderControllerIT extends AbstractIntegrationTest {
-
-    @Autowired private OrderRepository orderRepository;
 
     private List<Order> orderList = null;
 

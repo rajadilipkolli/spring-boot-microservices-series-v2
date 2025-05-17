@@ -14,17 +14,11 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.util.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 class OrderManageServiceIT extends AbstractIntegrationTest {
-
-    @Autowired private OrderManageService orderManageService;
-
-    @Autowired private OrderRepository orderRepository;
 
     private Order testOrder;
 

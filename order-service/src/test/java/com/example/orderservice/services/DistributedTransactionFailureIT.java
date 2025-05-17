@@ -13,20 +13,14 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.util.TestData;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 
 class DistributedTransactionFailureIT extends AbstractIntegrationTest {
-    @Autowired private OrderManageService orderManageService;
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     private Order testOrder;
 
