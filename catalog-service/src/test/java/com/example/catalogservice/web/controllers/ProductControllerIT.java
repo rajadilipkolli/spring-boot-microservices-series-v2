@@ -11,7 +11,6 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
-import com.example.catalogservice.config.TestKafkaListenerConfig;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
@@ -33,11 +32,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Autowired private ProductRepository productRepository;
-    @Autowired private TestKafkaListenerConfig testKafkaListenerConfig;
 
     public static MockWebServer mockWebServer;
 
@@ -62,7 +61,6 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
-
         List<Product> productList =
                 List.of(
                         new Product()
@@ -80,13 +78,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 .setProductName("name 3")
                                 .setDescription("description 3")
                                 .setPrice(11.0));
-        savedProductList =
-                productRepository
-                        .deleteAll()
-                        .thenMany(productRepository.saveAll(productList))
-                        .thenMany(productRepository.findAll())
-                        .collectList()
-                        .block();
+        // Initialize the product list in a non-blocking way
+        // Use StepVerifier to ensure products are saved before proceeding with tests
+        StepVerifier.create(
+                        productRepository
+                                .deleteAll()
+                                .thenMany(productRepository.saveAll(productList))
+                                .thenMany(productRepository.findAll())
+                                .collectList()
+                                .doOnNext(products -> savedProductList = products))
+                .expectNextCount(1)
+                .verifyComplete();
     }
 
     @Test
@@ -125,8 +127,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldFetchAllProductsAsEmpty() {
+        // Use StepVerifier to wait for deleteAll to complete
+        StepVerifier.create(productRepository.deleteAll()).verifyComplete();
 
-        productRepository.deleteAll().block();
         webTestClient
                 .get()
                 .uri(
@@ -556,19 +559,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.price")
                 .isEqualTo(productRequest.price());
 
-        // Verify product was created in the database instead of relying on Kafka message
-        await().atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofSeconds(1))
-                .pollDelay(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            // Check that product exists in database
-                            Boolean exists =
-                                    productRepository
-                                            .existsByProductCodeAllIgnoreCase("code 4")
-                                            .block();
-                            assertThat(exists).isTrue();
-                        });
+        // Verify product was created in the database instead of relying on Kafka message        //
+        // Use StepVerifier instead of blocking
+        StepVerifier.create(productRepository.existsByProductCodeAllIgnoreCase("code 4"))
+                .expectNext(Boolean.TRUE)
+                .verifyComplete();
     }
 
     @Test
