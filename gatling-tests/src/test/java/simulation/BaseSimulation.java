@@ -67,7 +67,7 @@ public abstract class BaseSimulation extends Simulation {
 
                             return data;
                         })
-                .limit(10_000)
+                .limit(1_000_000) // Increased limit to handle high load stress tests
                 .iterator();
     }
 

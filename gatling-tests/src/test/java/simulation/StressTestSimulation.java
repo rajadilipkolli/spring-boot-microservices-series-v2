@@ -20,6 +20,10 @@ import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import org.slf4j.Logger;
@@ -216,12 +220,44 @@ public class StressTestSimulation extends BaseSimulation {
     {
         runHealthChecks();
 
+        // Manually execute a request to generate catalog data
+        try {
+            LOGGER.info("Generating catalog test data for stress test scenarios");
+
+            // Create a synchronous HTTP client (not using Gatling for this initialization step)
+            HttpResponse<String> response;
+            try (HttpClient client = HttpClient.newHttpClient()) {
+                HttpRequest request =
+                        HttpRequest.newBuilder()
+                                .uri(URI.create(BASE_URL + "/catalog-service/api/catalog/generate"))
+                                .GET()
+                                .header("Content-Type", "application/json")
+                                .build();
+
+                // Send request synchronously
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            }
+
+            // Log result
+            if (response.statusCode() == 200) {
+                LOGGER.info(
+                        "Catalog test data successfully generated. Status: {}",
+                        response.statusCode());
+            } else {
+                LOGGER.warn(
+                        "Catalog data generation request returned status: {}",
+                        response.statusCode());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error generating catalog test data: {}", e.getMessage());
+        }
+
         LOGGER.info(
                 "Setting up StressTestSimulation with Kafka initialization delay: {} seconds",
                 KAFKA_INIT_DELAY_SECONDS);
         LOGGER.info("Smoke test enabled: {}", RUN_SMOKE_TEST);
 
-        PopulationBuilder smokeTestSetup = null;
+        PopulationBuilder smokeTestSetup;
         PopulationBuilder stressTestSetup;
 
         // Single user for Kafka initialization and smoke test
