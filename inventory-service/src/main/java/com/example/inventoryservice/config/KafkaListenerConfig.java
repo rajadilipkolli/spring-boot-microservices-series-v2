@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
 </p>
 ***/
 
@@ -52,7 +52,7 @@ class KafkaListenerConfig {
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(OrderDto orderDto) {
         log.info("Received Order: {}", orderDto);
-        if ("NEW".equals(orderDto.getStatus())) {
+        if ("NEW".equals(orderDto.status())) {
             orderManageService.reserve(orderDto);
         } else {
             orderManageService.confirm(orderDto);

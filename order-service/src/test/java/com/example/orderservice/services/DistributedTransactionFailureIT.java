@@ -10,15 +10,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.util.TestData;
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,23 +39,15 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     @Test
     void whenPaymentFailsButInventorySucceeds_ShouldRollbackBothServices() {
         // Arrange
-        OrderDto paymentOrderDto = new OrderDto();
-        paymentOrderDto.setOrderId(testOrder.getId());
-        paymentOrderDto.setCustomerId(testOrder.getCustomerId());
-        paymentOrderDto.setStatus("REJECT");
-        paymentOrderDto.setSource("PAYMENT");
+        OrderDto paymentOrderDto = TestData.getPaymentOrderDto("REJECT", testOrder);
 
         // Send payment rejection
-        kafkaTemplate.send("payment-orders", paymentOrderDto.getOrderId(), paymentOrderDto);
+        kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
 
         // Send a successful inventory response
-        OrderDto inventoryOrderDto = new OrderDto();
-        inventoryOrderDto.setOrderId(testOrder.getId());
-        inventoryOrderDto.setCustomerId(testOrder.getCustomerId());
-        inventoryOrderDto.setStatus("ACCEPT");
-        inventoryOrderDto.setSource("STOCK");
+        OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
-        kafkaTemplate.send("stock-orders", inventoryOrderDto.getOrderId(), inventoryOrderDto);
+        kafkaTemplate.send("stock-orders", inventoryOrderDto.orderId(), inventoryOrderDto);
 
         // Assert that the order is eventually rejected
         await().atMost(10, TimeUnit.SECONDS)
@@ -94,11 +83,7 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     @Test
     void whenPartialResponsesReceived_ShouldHandleIncompleteState() {
         // Arrange
-        OrderDto paymentOrderDto = new OrderDto();
-        paymentOrderDto.setOrderId(testOrder.getId());
-        paymentOrderDto.setCustomerId(testOrder.getCustomerId());
-        paymentOrderDto.setStatus("ACCEPT");
-        paymentOrderDto.setSource("PAYMENT");
+        OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
         // Act - Only send payment response, missing inventory response
         kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
@@ -117,25 +102,16 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     @Test
     void whenInventoryPartiallyAvailable_ShouldRollbackEntireOrder() {
         // Arrange
-        OrderDto paymentOrderDto = new OrderDto();
-        paymentOrderDto.setOrderId(testOrder.getId());
-        paymentOrderDto.setCustomerId(testOrder.getCustomerId());
-        paymentOrderDto.setStatus("ACCEPT");
-        paymentOrderDto.setSource("PAYMENT");
+        OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
-        OrderDto inventoryOrderDto = new OrderDto();
-        inventoryOrderDto.setOrderId(testOrder.getId());
-        inventoryOrderDto.setCustomerId(testOrder.getCustomerId());
-        inventoryOrderDto.setStatus("REJECT");
-        inventoryOrderDto.setSource("INVENTORY");
-        inventoryOrderDto.setItems(List.of(new OrderItemDto(1L, "Product1", 10, BigDecimal.TEN)));
+        OrderDto inventoryOrderDto = TestData.getStockOrderDto("REJECT", testOrder);
 
         // Act
         OrderDto result = orderManageService.confirm(paymentOrderDto, inventoryOrderDto);
 
         // Assert
-        assertThat(result.getStatus()).isEqualTo("ROLLBACK");
-        assertThat(result.getSource()).isEqualTo("INVENTORY");
+        assertThat(result.status()).isEqualTo("ROLLBACK");
+        assertThat(result.source()).isEqualTo("INVENTORY");
 
         Order savedOrder = orderRepository.findById(testOrder.getId()).orElseThrow();
         assertThat(savedOrder.getStatus()).isEqualTo(OrderStatus.ROLLBACK);
@@ -144,18 +120,9 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     @Test
     void whenKafkaMessagesOutOfOrder_ShouldHandleCorrectly() {
         // Arrange
-        OrderDto inventoryOrderDto = new OrderDto();
-        inventoryOrderDto.setOrderId(testOrder.getId());
-        inventoryOrderDto.setCustomerId(testOrder.getCustomerId());
-        inventoryOrderDto.setStatus("ACCEPT");
-        inventoryOrderDto.setSource("INVENTORY");
-        inventoryOrderDto.setItems(List.of(new OrderItemDto(1L, "Product1", 10, BigDecimal.TEN)));
+        OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
-        OrderDto paymentOrderDto = new OrderDto();
-        paymentOrderDto.setOrderId(testOrder.getId());
-        paymentOrderDto.setCustomerId(testOrder.getCustomerId());
-        paymentOrderDto.setStatus("ACCEPT");
-        paymentOrderDto.setSource("PAYMENT");
+        OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
         // Act - Send messages in reverse order
         kafkaTemplate.send("stock-orders", testOrder.getId(), inventoryOrderDto);

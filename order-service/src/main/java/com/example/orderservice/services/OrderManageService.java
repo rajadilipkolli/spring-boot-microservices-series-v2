@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
 </p>
 ***/
 
@@ -30,33 +30,31 @@ public class OrderManageService {
 
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         log.info("Setting Status for order :{}", orderPayment);
-        OrderDto orderDto = new OrderDto();
-        // need to set all values as the same object will be sent to downstream via kafka
-        orderDto.setOrderId(orderPayment.getOrderId());
-        orderDto.setCustomerId(orderPayment.getCustomerId());
-        if (ACCEPT.equals(orderPayment.getStatus()) && ACCEPT.equals(orderStock.getStatus())) {
-            orderDto.setStatus("CONFIRMED");
-        } else if (REJECT.equals(orderPayment.getStatus())
-                && REJECT.equals(orderStock.getStatus())) {
-            orderDto.setStatus("REJECTED");
-        } else if (REJECT.equals(orderPayment.getStatus())
-                || REJECT.equals(orderStock.getStatus())) {
-            String source = REJECT.equals(orderPayment.getStatus()) ? "PAYMENT" : "INVENTORY";
-            orderDto.setStatus(AppConstants.ROLLBACK);
-            orderDto.setSource(source);
-        }
-        // setting from inventory as it has latest
-        orderDto.setItems(orderStock.getItems());
+        OrderDto orderDto = getOrderDto(orderPayment, orderStock);
         int rows =
                 this.orderRepository.updateOrderStatusAndSourceById(
-                        orderDto.getOrderId(),
-                        OrderStatus.valueOf(orderDto.getStatus()),
-                        orderDto.getSource());
+                        orderDto.orderId(),
+                        OrderStatus.valueOf(orderDto.status()),
+                        orderDto.source());
         log.info(
                 "Updated Status as {} for orderId :{} in {} rows",
-                orderDto.getStatus(),
-                orderDto.getOrderId(),
+                orderDto.status(),
+                orderDto.orderId(),
                 rows);
+        return orderDto;
+    }
+
+    private OrderDto getOrderDto(OrderDto orderPayment, OrderDto orderStock) {
+        OrderDto orderDto = orderStock;
+        if (ACCEPT.equals(orderPayment.status()) && ACCEPT.equals(orderStock.status())) {
+            orderDto = orderDto.withStatus("CONFIRMED");
+        } else if (REJECT.equals(orderPayment.status()) && REJECT.equals(orderStock.status())) {
+            orderDto = orderDto.withStatus("REJECTED");
+        } else if (REJECT.equals(orderPayment.status()) || REJECT.equals(orderStock.status())) {
+            String source = REJECT.equals(orderPayment.status()) ? "PAYMENT" : "INVENTORY";
+            orderDto = orderDto.withStatus(AppConstants.ROLLBACK);
+            orderDto = orderDto.withSource(source);
+        }
         return orderDto;
     }
 }
