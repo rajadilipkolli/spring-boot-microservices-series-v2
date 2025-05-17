@@ -54,61 +54,75 @@ public class InventoryOrderManageService {
         List<Inventory> inventoryListFromDB =
                 inventoryRepository.findByProductCodeIn(productCodeList);
 
+        // Check if all requested products exist in the inventory
         if (inventoryListFromDB.size() != productCodeList.size()) {
             LOGGER.error(
-                    "Not all products requested exist, Hence Ignoring OrderID : {}",
-                    orderDto.orderId());
-            return orderDto;
+                    "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB: {}, Products in Order: {}",
+                    orderDto.orderId(),
+                    inventoryListFromDB.stream().map(Inventory::getProductCode).toList(),
+                    productCodeList);
+            OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
+            kafkaTemplate.send(
+                    AppConstants.STOCK_ORDERS_TOPIC, rejectedOrderDto.orderId(), rejectedOrderDto);
+            LOGGER.info(
+                    "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
+                    rejectedOrderDto,
+                    AppConstants.STOCK_ORDERS_TOPIC);
+            return rejectedOrderDto;
         }
 
         Map<String, Inventory> inventoryMap = new HashMap<>();
         inventoryListFromDB.forEach(
                 inventory -> inventoryMap.put(inventory.getProductCode(), inventory));
 
+        // Phase 1: Validation pass - no mutations
+        boolean allItemsAvailable =
+                orderDto.items().stream()
+                        .allMatch(
+                                itemDto -> {
+                                    Inventory inventory = inventoryMap.get(itemDto.productId());
+                                    return inventory != null
+                                            && itemDto.quantity()
+                                                    <= inventory.getAvailableQuantity();
+                                });
+
+        OrderDto finalOrderDto;
         List<Inventory> updatedInventoryList = new ArrayList<>();
 
-        // Since OrderDto is a record and immutable, we need to create a new instance with modified
-        // status
-        OrderDto updatedOrderDto = orderDto;
-
-        for (OrderItemDto orderItemDto : orderDto.items()) {
-            String productCode = orderItemDto.productId();
-            Inventory inventoryFromDB = inventoryMap.get(productCode);
-
-            int productCount = orderItemDto.quantity();
-            if (productCount <= inventoryFromDB.getAvailableQuantity()) {
-                inventoryFromDB
-                        .setReservedItems(inventoryFromDB.getReservedItems() + productCount)
-                        .setAvailableQuantity(
-                                inventoryFromDB.getAvailableQuantity() - productCount);
-                updatedInventoryList.add(inventoryFromDB);
-            } else {
-                LOGGER.info(
-                        "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
-                        orderDto.orderId());
-                // Create a new OrderDto with updated status
-                updatedOrderDto = orderDto.withStatus("REJECT");
-                break;
-            }
-        }
-
-        if (updatedInventoryList.size() == inventoryListFromDB.size()) {
-            // Create a new OrderDto with updated status
-            updatedOrderDto = orderDto.withStatus("ACCEPT");
+        if (!allItemsAvailable) {
             LOGGER.info(
-                    "Setting status as ACCEPT for inventoryIds : {}",
-                    updatedInventoryList.stream().map(Inventory::getId).toList());
+                    "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
+                    orderDto.orderId());
+            // As per review, sending REJECT status to Kafka if quantity not available
+            finalOrderDto = orderDto.withStatus("REJECT");
+            // No inventory changes are saved as updatedInventoryList is empty and saveAll won't be
+            // called.
+        } else {
+            // Phase 2: Mutation pass - safe to persist
+            for (OrderItemDto orderItemDto : orderDto.items()) {
+                Inventory inventoryFromDB = inventoryMap.get(orderItemDto.productId());
+                int productCount = orderItemDto.quantity();
+                inventoryFromDB.setReservedItems(inventoryFromDB.getReservedItems() + productCount);
+                inventoryFromDB.setAvailableQuantity(
+                        inventoryFromDB.getAvailableQuantity() - productCount);
+                updatedInventoryList.add(inventoryFromDB);
+            }
+            // Persist changes
             inventoryRepository.saveAll(updatedInventoryList);
+            finalOrderDto = orderDto.withStatus("ACCEPT");
+            LOGGER.info(
+                    "Setting status as ACCEPT for OrderId : {}, inventoryIds updated : {}",
+                    orderDto.orderId(),
+                    updatedInventoryList.stream().map(Inventory::getId).toList());
         }
 
-        // Send order to Kafka - we need to create a new instance with the source set
-        // Because records are immutable, we create a new instance
-        OrderDto orderWithSource = updatedOrderDto.withSource(AppConstants.SOURCE);
-
+        // Send order to Kafka
+        OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
         kafkaTemplate.send(
                 AppConstants.STOCK_ORDERS_TOPIC, orderWithSource.orderId(), orderWithSource);
         LOGGER.info(
-                "Sent Order after reserving : {} from inventory service to topic {}",
+                "Sent Order with status {} : {} from inventory service to topic {}",
+                orderWithSource.status(),
                 orderWithSource,
                 AppConstants.STOCK_ORDERS_TOPIC);
         return orderWithSource;

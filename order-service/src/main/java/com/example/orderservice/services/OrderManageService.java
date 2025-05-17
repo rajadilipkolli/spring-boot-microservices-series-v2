@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 @Loggable
 public class OrderManageService {
 
-    private static final String ACCEPT = "ACCEPT";
     private static final String REJECT = "REJECT";
     private static final Logger log = LoggerFactory.getLogger(OrderManageService.class);
     private final OrderRepository orderRepository;
@@ -46,7 +45,8 @@ public class OrderManageService {
 
     private OrderDto getOrderDto(OrderDto orderPayment, OrderDto orderStock) {
         OrderDto orderDto = orderStock;
-        if (ACCEPT.equals(orderPayment.status()) && ACCEPT.equals(orderStock.status())) {
+        if (OrderStatus.ACCEPT.name().equals(orderPayment.status())
+                && OrderStatus.ACCEPT.name().equals(orderStock.status())) {
             orderDto = orderDto.withStatus("CONFIRMED");
         } else if (REJECT.equals(orderPayment.status()) && REJECT.equals(orderStock.status())) {
             orderDto = orderDto.withStatus("REJECTED");
