@@ -201,7 +201,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
                     .andExpect(jsonPath("$.items[0].productId", is("Product1")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
-                    .andExpect(jsonPath("$.items[0].productPrice").value(closeTo(10.00, 0.01)))
+                    .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
                     .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
                     // Verify address fields
@@ -219,7 +219,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .hasSize(orderList.size() + 1); // Original orders plus the new one
 
             // Verify the last order in the database matches our request
-            Order lastOrder = savedOrders.get(savedOrders.size() - 1);
+            Long orderId = savedOrders.get(savedOrders.size() - 1).getId();
+            Order lastOrder = orderRepository.findOrderById(orderId).get();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
             assertThat(lastOrder.getItems()).hasSize(1);
