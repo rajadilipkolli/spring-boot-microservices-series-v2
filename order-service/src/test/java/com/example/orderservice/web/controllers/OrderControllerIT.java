@@ -45,7 +45,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        orderRepository.deleteAll();
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
 
         orderList = new ArrayList<>();
         Order order1 = TestData.getOrder();
