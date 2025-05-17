@@ -7,7 +7,6 @@
 package com.example.orderservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 import com.example.orderservice.model.request.OrderRequest;
@@ -41,7 +40,23 @@ class OrderGeneratorServiceTest {
         orderGeneratorService.generateOrders();
 
         // Assert
-        verify(orderService, times(expectedBatchCount)).saveBatchOrders(anyList());
+        // Capture all batch calls and verify their structure
+        verify(orderService, times(expectedBatchCount))
+                .saveBatchOrders(orderRequestsCaptor.capture());
+        List<List<OrderRequest>> allBatches = orderRequestsCaptor.getAllValues();
+
+        // Verify batch size
+        assertThat(allBatches).hasSize(expectedBatchCount);
+
+        // Verify all batches adhere to expected size
+        assertThat(allBatches)
+                .allSatisfy(
+                        batch ->
+                                assertThat(batch)
+                                        .hasSize(100)); // Each batch should have 100 orders
+
+        // Verify no further interactions with orderService
+        verifyNoMoreInteractions(orderService);
     }
 
     @Test
@@ -58,17 +73,36 @@ class OrderGeneratorServiceTest {
                     .isNotEmpty()
                     .allSatisfy(
                             order -> {
+                                // Customer ID assertions
                                 assertThat(order.customerId()).isPositive();
+                                assertThat(order.customerId())
+                                        .isBetween(1L, 100L); // Based on implementation
+
+                                // Items assertions
                                 assertThat(order.items())
                                         .isNotEmpty()
                                         .hasSize(2)
                                         .allSatisfy(
                                                 item -> {
                                                     assertThat(item.productCode())
+                                                            .isNotNull()
+                                                            .isNotBlank()
                                                             .startsWith("ProductCode");
                                                     assertThat(item.quantity())
+                                                            .isPositive()
                                                             .isBetween(1, 6); // RAND.nextInt(5) + 1
+                                                    assertThat(item.productPrice())
+                                                            .isNotNull()
+                                                            .isPositive();
                                                 });
+
+                                // Delivery address assertions
+                                assertThat(order.deliveryAddress()).isNotNull();
+                                assertThat(order.deliveryAddress().addressLine1()).isNotBlank();
+                                assertThat(order.deliveryAddress().city()).isNotBlank();
+                                assertThat(order.deliveryAddress().state()).isNotBlank();
+                                assertThat(order.deliveryAddress().zipCode()).isNotBlank();
+                                assertThat(order.deliveryAddress().country()).isNotBlank();
                             });
         }
     }
@@ -86,13 +120,37 @@ class OrderGeneratorServiceTest {
             }
         } finally {
             executorService.shutdown();
-            executorService.awaitTermination(10, TimeUnit.SECONDS);
+            boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
+            assertThat(terminated)
+                    .isTrue()
+                    .as("Executor service should terminate within the timeout");
         }
 
         // Assert
         // Each thread will generate 10,000 orders in batches of 100
         int expectedBatchesPerThread = 10_000 / 100;
-        verify(orderService, times(expectedBatchesPerThread * numThreads))
-                .saveBatchOrders(anyList());
+        int totalExpectedBatches = expectedBatchesPerThread * numThreads;
+
+        // Capture all batch calls to verify their structure
+        verify(orderService, times(totalExpectedBatches))
+                .saveBatchOrders(orderRequestsCaptor.capture());
+        List<List<OrderRequest>> allBatches = orderRequestsCaptor.getAllValues();
+
+        // Verify we got the expected number of batches
+        assertThat(allBatches).hasSize(totalExpectedBatches);
+
+        // Verify each batch has the correct size
+        assertThat(allBatches)
+                .allSatisfy(
+                        batch ->
+                                assertThat(batch)
+                                        .hasSize(100)
+                                        .as("Each batch should contain exactly 100 orders"));
+
+        // Verify the total number of orders
+        int totalOrders = allBatches.stream().mapToInt(List::size).sum();
+        assertThat(totalOrders)
+                .isEqualTo(numThreads * 10_000)
+                .as("Total orders should match expectations");
     }
 }

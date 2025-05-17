@@ -47,13 +47,12 @@ public class OrderManageService {
         OrderDto orderDto = orderStock;
         if (OrderStatus.ACCEPT.name().equals(orderPayment.status())
                 && OrderStatus.ACCEPT.name().equals(orderStock.status())) {
-            orderDto = orderDto.withStatus("CONFIRMED");
+            orderDto = orderDto.withStatusAndSource("CONFIRMED", null);
         } else if (REJECT.equals(orderPayment.status()) && REJECT.equals(orderStock.status())) {
-            orderDto = orderDto.withStatus("REJECTED");
+            orderDto = orderDto.withStatusAndSource("REJECTED", orderStock.source());
         } else if (REJECT.equals(orderPayment.status()) || REJECT.equals(orderStock.status())) {
             String source = REJECT.equals(orderPayment.status()) ? "PAYMENT" : "INVENTORY";
-            orderDto = orderDto.withStatus(AppConstants.ROLLBACK);
-            orderDto = orderDto.withSource(source);
+            orderDto = orderDto.withStatusAndSource(AppConstants.ROLLBACK, source);
         }
         return orderDto;
     }

@@ -23,17 +23,10 @@ public record OrderDto(
 
     @Serial private static final long serialVersionUID = 1L;
 
-    public OrderDto withSource(String source) {
-        if (Objects.equals(this.source(), source)) {
+    public OrderDto withStatusAndSource(String status, String source) {
+        if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
             return this;
         }
-        return new OrderDto(orderId(), customerId(), status(), source, items());
-    }
-
-    public OrderDto withStatus(String status) {
-        if (Objects.equals(this.status(), status)) {
-            return this;
-        }
-        return new OrderDto(orderId(), customerId(), status, source(), items());
+        return new OrderDto(orderId(), customerId(), status, source, items());
     }
 }
