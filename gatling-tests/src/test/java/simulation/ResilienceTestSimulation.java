@@ -152,11 +152,12 @@ public class ResilienceTestSimulation extends BaseSimulation {
 
     // Setup the simulation with multiple scenarios
     public ResilienceTestSimulation() {
+        runHealthChecks();
         LOGGER.info(
                 "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
                 KAFKA_INIT_DELAY_SECONDS);
 
-        setUp(
+        this.setUp(
                         // Valid requests with initial Kafka initialization
                         validRequestsScenario.injectOpen(
                                 // Initial single user for Kafka initialization
