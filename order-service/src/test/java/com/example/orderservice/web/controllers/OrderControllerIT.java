@@ -6,6 +6,7 @@
 
 package com.example.orderservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.closeTo;
@@ -196,34 +197,36 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.orderId", notNullValue()))
                     .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
                     .andExpect(jsonPath("$.status", is("NEW")))
+                    .andExpect(jsonPath("$.source", is(""))) // Verify source is empty string
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                    .andExpect(jsonPath("$.items[0].price", is(100.00)))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.addressLine1",
-                                    is(orderRequest.deliveryAddress().addressLine1())))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.addressLine2",
-                                    is(orderRequest.deliveryAddress().addressLine2())))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.city",
-                                    is(orderRequest.deliveryAddress().city())))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.state",
-                                    is(orderRequest.deliveryAddress().state())))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.zipCode",
-                                    is(orderRequest.deliveryAddress().zipCode())))
-                    .andExpect(
-                            jsonPath(
-                                    "$.deliveryAddress.country",
-                                    is(orderRequest.deliveryAddress().country())));
+                    .andExpect(jsonPath("$.items[0].productCode", is("Product1")))
+                    .andExpect(jsonPath("$.items[0].quantity", is(10)))
+                    .andExpect(jsonPath("$.items[0].price").value(closeTo(10.00, 0.01)))
+                    .andExpect(jsonPath("$.items[0].subTotal").value(closeTo(100.00, 0.01)))
+                    .andExpect(jsonPath("$.createdDate", notNullValue()))
+                    // Verify address fields
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")));
+
+            // Verify the order was actually saved in the database
+            List<Order> savedOrders = orderRepository.findAll();
+            assertThat(savedOrders)
+                    .isNotEmpty()
+                    .hasSize(orderList.size() + 1); // Original orders plus the new one
+
+            // Verify the last order in the database matches our request
+            Order lastOrder = savedOrders.get(savedOrders.size() - 1);
+            assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
+            assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
+            assertThat(lastOrder.getItems()).hasSize(1);
+            assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product1");
+            assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
         }
 
         @Test
@@ -527,5 +530,82 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                                 .getProductPrice()
                                                 .multiply(new BigDecimal(orderItem.getQuantity()))),
                                 BigDecimal.class));
+    }
+
+    @Test
+    void shouldPreserveOrderStructureAfterUpdate() throws Exception {
+        // Get an order from the existing list
+        Order order = orderList.getFirst();
+        Long orderId = order.getId();
+
+        // Create a new request for update with modified data
+        OrderRequest updateRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(
+                                new OrderItemRequest(
+                                        "UpdatedProduct", 15, BigDecimal.valueOf(12.99)),
+                                new OrderItemRequest("SecondProduct", 5, BigDecimal.valueOf(7.50))),
+                        new Address(
+                                "Updated Address",
+                                "Suite 123",
+                                "New City",
+                                "New State",
+                                "54321",
+                                "New Country"));
+
+        mockProductsExistsRequest(true, "UpdatedProduct", "SecondProduct");
+
+        // Perform the update
+        mockMvc.perform(
+                        put("/api/orders/{id}", orderId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
+                .andExpect(jsonPath("$.customerId", is(1)))
+                .andExpect(jsonPath("$.status", is("NEW")))
+                .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Updated Address")))
+                .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("Suite 123")))
+                .andExpect(jsonPath("$.deliveryAddress.city", is("New City")))
+                .andExpect(jsonPath("$.deliveryAddress.state", is("New State")))
+                .andExpect(jsonPath("$.deliveryAddress.zipCode", is("54321")))
+                .andExpect(jsonPath("$.deliveryAddress.country", is("New Country")))
+                .andExpect(jsonPath("$.items", hasSize(2)))
+                .andExpect(jsonPath("$.items[0].productCode", is("UpdatedProduct")))
+                .andExpect(jsonPath("$.items[0].quantity", is(15)))
+                .andExpect(jsonPath("$.items[0].price").value(closeTo(12.99, 0.01)))
+                .andExpect(jsonPath("$.items[0].subTotal").value(closeTo(194.85, 0.01)))
+                .andExpect(jsonPath("$.items[1].productCode", is("SecondProduct")))
+                .andExpect(jsonPath("$.items[1].quantity", is(5)))
+                .andExpect(jsonPath("$.items[1].price").value(closeTo(7.50, 0.01)))
+                .andExpect(jsonPath("$.items[1].subTotal").value(closeTo(37.50, 0.01)))
+                .andExpect(jsonPath("$.totalPrice").value(closeTo(232.35, 0.01)))
+                .andExpect(jsonPath("$.createdDate", notNullValue()));
+
+        // Verify that the database was updated properly
+        Order updatedOrder = orderRepository.findById(orderId).orElseThrow();
+        assertThat(updatedOrder.getDeliveryAddress().addressLine1()).isEqualTo("Updated Address");
+        assertThat(updatedOrder.getDeliveryAddress().city()).isEqualTo("New City");
+        assertThat(updatedOrder.getItems()).hasSize(2);
+
+        // Verify items are updated properly
+        boolean foundUpdatedProduct = false;
+        boolean foundSecondProduct = false;
+
+        for (OrderItem item : updatedOrder.getItems()) {
+            if (item.getProductCode().equals("UpdatedProduct")) {
+                foundUpdatedProduct = true;
+                assertThat(item.getQuantity()).isEqualTo(15);
+                assertThat(item.getProductPrice()).isEqualByComparingTo(BigDecimal.valueOf(12.99));
+            } else if (item.getProductCode().equals("SecondProduct")) {
+                foundSecondProduct = true;
+                assertThat(item.getQuantity()).isEqualTo(5);
+                assertThat(item.getProductPrice()).isEqualByComparingTo(BigDecimal.valueOf(7.50));
+            }
+        }
+
+        assertThat(foundUpdatedProduct).isTrue();
+        assertThat(foundSecondProduct).isTrue();
     }
 }

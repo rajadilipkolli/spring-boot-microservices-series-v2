@@ -47,10 +47,9 @@ public class OrderGeneratorService {
                                                     value -> {
                                                         List<OrderItemRequest> orderItems =
                                                                 generateOrderItems();
-                                                        long customerId = RAND.nextLong(100);
-                                                        if (customerId == 0) {
-                                                            customerId = 1;
-                                                        }
+                                                        long customerId =
+                                                                RAND.nextLong(100)
+                                                                        + 1; // Range 1-100
                                                         return new OrderRequest(
                                                                 customerId,
                                                                 orderItems,
