@@ -7,7 +7,6 @@
 package com.example.orderservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 import com.example.orderservice.model.request.OrderRequest;
@@ -41,10 +40,9 @@ class OrderGeneratorServiceTest {
         orderGeneratorService.generateOrders();
 
         // Assert
-        verify(orderService, times(expectedBatchCount)).saveBatchOrders(anyList());
-
         // Capture all batch calls and verify their structure
-        verify(orderService, atLeastOnce()).saveBatchOrders(orderRequestsCaptor.capture());
+        verify(orderService, times(expectedBatchCount))
+                .saveBatchOrders(orderRequestsCaptor.capture());
         List<List<OrderRequest>> allBatches = orderRequestsCaptor.getAllValues();
 
         // Verify batch size
@@ -133,11 +131,9 @@ class OrderGeneratorServiceTest {
         int expectedBatchesPerThread = 10_000 / 100;
         int totalExpectedBatches = expectedBatchesPerThread * numThreads;
 
-        // Verify the exact number of batch calls
-        verify(orderService, times(totalExpectedBatches)).saveBatchOrders(anyList());
-
         // Capture all batch calls to verify their structure
-        verify(orderService, atLeastOnce()).saveBatchOrders(orderRequestsCaptor.capture());
+        verify(orderService, times(totalExpectedBatches))
+                .saveBatchOrders(orderRequestsCaptor.capture());
         List<List<OrderRequest>> allBatches = orderRequestsCaptor.getAllValues();
 
         // Verify we got the expected number of batches

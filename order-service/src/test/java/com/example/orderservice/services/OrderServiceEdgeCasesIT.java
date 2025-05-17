@@ -15,6 +15,7 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,6 +35,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     @Autowired private OrderService orderService;
 
     @Autowired private OrderRepository orderRepository;
+    @Autowired private OrderItemRepository orderItemRepository;
 
     @Test
     void saveBatchOrders_WithDuplicateProductCodes_ShouldSaveAllOrders() {
@@ -89,6 +91,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     void saveBatchOrders_WithConcurrentRequests_ShouldHandleConcurrencyCorrectly()
             throws InterruptedException {
         // Arrange
+        orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch(); // Clear existing orders
 
         int numThreads = 5;

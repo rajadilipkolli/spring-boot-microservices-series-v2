@@ -202,7 +202,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                    .andExpect(jsonPath("$.items[0].productCode", is("Product1")))
+                    .andExpect(jsonPath("$.items[0].productId", is("Product1")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
                     .andExpect(jsonPath("$.items[0].price").value(closeTo(10.00, 0.01)))
                     .andExpect(jsonPath("$.items[0].subTotal").value(closeTo(100.00, 0.01)))
