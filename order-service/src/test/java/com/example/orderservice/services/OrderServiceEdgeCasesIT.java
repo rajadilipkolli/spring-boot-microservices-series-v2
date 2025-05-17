@@ -196,6 +196,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     @Test
     void whenOrderWithNonExistentProduct_shouldThrowProductNotFoundException() {
         // Arrange
+        long initialCount = orderRepository.count();
         OrderItemRequest invalidItem =
                 new OrderItemRequest("NonExistentProduct", 1, BigDecimal.TEN);
         OrderRequest request =
@@ -221,11 +222,12 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                         });
 
         // Verify no order was saved
-        assertThat(orderRepository.count()).isZero();
+        assertThat(orderRepository.count() - initialCount).isZero();
     }
 
     @Test
     void whenUpdateOrderWithNullEntity_shouldThrowNullPointerException() {
+        long initialCount = orderRepository.count();
         // Arrange
         OrderRequest request =
                 new OrderRequest(
@@ -241,7 +243,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                 .hasMessageContaining("\"order\" is null");
 
         // Verify no order was saved
-        assertThat(orderRepository.count()).isZero();
+        assertThat(orderRepository.count() - initialCount).isZero();
     }
 
     @Test
