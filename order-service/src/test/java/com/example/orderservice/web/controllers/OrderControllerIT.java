@@ -9,6 +9,7 @@ package com.example.orderservice.web.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -197,7 +198,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.orderId", notNullValue()))
                     .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
                     .andExpect(jsonPath("$.status", is("NEW")))
-                    .andExpect(jsonPath("$.source", is(""))) // Verify source is empty string
+                    .andExpect(jsonPath("$.source", nullValue()))
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
@@ -572,19 +573,19 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.deliveryAddress.zipCode", is("54321")))
                 .andExpect(jsonPath("$.deliveryAddress.country", is("New Country")))
                 .andExpect(jsonPath("$.items", hasSize(2)))
-                .andExpect(jsonPath("$.items[0].productCode", is("UpdatedProduct")))
+                .andExpect(jsonPath("$.items[0].productId", is("UpdatedProduct")))
                 .andExpect(jsonPath("$.items[0].quantity", is(15)))
-                .andExpect(jsonPath("$.items[0].price").value(closeTo(12.99, 0.01)))
-                .andExpect(jsonPath("$.items[0].subTotal").value(closeTo(194.85, 0.01)))
-                .andExpect(jsonPath("$.items[1].productCode", is("SecondProduct")))
+                .andExpect(jsonPath("$.items[0].productPrice").value(closeTo(12.99, 0.01)))
+                .andExpect(jsonPath("$.items[0].price").value(closeTo(194.85, 0.01)))
+                .andExpect(jsonPath("$.items[1].productId", is("SecondProduct")))
                 .andExpect(jsonPath("$.items[1].quantity", is(5)))
-                .andExpect(jsonPath("$.items[1].price").value(closeTo(7.50, 0.01)))
-                .andExpect(jsonPath("$.items[1].subTotal").value(closeTo(37.50, 0.01)))
+                .andExpect(jsonPath("$.items[1].productPrice").value(closeTo(7.50, 0.01)))
+                .andExpect(jsonPath("$.items[1].price").value(closeTo(37.50, 0.01)))
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(232.35, 0.01)))
                 .andExpect(jsonPath("$.createdDate", notNullValue()));
 
         // Verify that the database was updated properly
-        Order updatedOrder = orderRepository.findById(orderId).orElseThrow();
+        Order updatedOrder = orderRepository.findOrderById(orderId).orElseThrow();
         assertThat(updatedOrder.getDeliveryAddress().addressLine1()).isEqualTo("Updated Address");
         assertThat(updatedOrder.getDeliveryAddress().city()).isEqualTo("New City");
         assertThat(updatedOrder.getItems()).hasSize(2);

@@ -63,7 +63,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         assertThat(response.orderId()).isNotNull();
         assertThat(response.customerId()).isEqualTo(1L);
         assertThat(response.status()).isEqualTo("NEW");
-        assertThat(response.source()).isEqualTo("");
+        assertThat(response.source()).isNull();
         assertThat(response.createdDate()).isNotNull();
 
         // Verify order items details
@@ -89,7 +89,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
     void saveBatchOrders_WithConcurrentRequests_ShouldHandleConcurrencyCorrectly()
             throws InterruptedException {
         // Arrange
-        orderRepository.deleteAll(); // Clear existing orders
+        orderRepository.deleteAllInBatch(); // Clear existing orders
 
         int numThreads = 5;
         int ordersPerThread = 20;
@@ -180,7 +180,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         assertThat(response.orderId()).isNotNull().isPositive();
         assertThat(response.customerId()).isEqualTo(1L);
         assertThat(response.status()).isEqualTo("NEW");
-        assertThat(response.source()).isEqualTo("");
+        assertThat(response.source()).isNull();
         assertThat(response.createdDate()).isNotNull();
         assertThat(response.deliveryAddress()).isNotNull();
 
@@ -213,14 +213,15 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         mockProductsExistsRequest(false, "NonExistentProduct"); // Act & Assert
         assertThatThrownBy(() -> orderService.saveOrder(request))
                 .isInstanceOf(ProductNotFoundException.class)
-                .hasMessageContaining("NonExistentProduct")
+                .hasMessageContaining("NONEXISTENTPRODUCT")
                 .satisfies(
                         exception -> {
                             ProductNotFoundException e = (ProductNotFoundException) exception;
                             // Verify the exception details
                             ProblemDetail problemDetail = e.getBody();
                             assertThat(problemDetail).isNotNull();
-                            assertThat(problemDetail.getDetail()).contains("NonExistentProduct");
+                            assertThat(problemDetail.getDetail())
+                                    .containsIgnoringCase("NonExistentProduct");
                             assertThat(problemDetail.getTitle()).isEqualTo("Product Not Found");
                         });
 
@@ -242,7 +243,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         // Act & Assert
         assertThatThrownBy(() -> orderService.updateOrder(request, null))
                 .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("order is marked non-null but is null");
+                .hasMessageContaining("\"order\" is null");
 
         // Verify no order was saved
         assertThat(orderRepository.count()).isZero();

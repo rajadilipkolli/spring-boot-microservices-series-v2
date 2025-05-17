@@ -14,6 +14,7 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -33,10 +34,12 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
     @Autowired private OrderService orderService;
     @Autowired private OrderRepository orderRepository;
+    @Autowired private OrderItemRepository orderItemRepository;
 
     @BeforeEach
     void setUp() {
-        orderRepository.deleteAll();
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
     }
 
     @Test
