@@ -45,7 +45,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch();
 
         orderList = new ArrayList<>();
@@ -201,8 +200,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
                     .andExpect(jsonPath("$.items[0].productId", is("Product1")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
-                    .andExpect(jsonPath("$.items[0].price").value(closeTo(10.00, 0.01)))
-                    .andExpect(jsonPath("$.items[0].subTotal").value(closeTo(100.00, 0.01)))
+                    .andExpect(jsonPath("$.items[0].productPrice").value(closeTo(10.00, 0.01)))
+                    .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
                     // Verify address fields
                     .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
