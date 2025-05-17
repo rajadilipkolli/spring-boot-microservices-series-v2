@@ -5,7 +5,6 @@ import static io.gatling.javaapi.http.HttpDsl.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.Simulation;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.HashMap;
@@ -41,7 +40,12 @@ public abstract class BaseSimulation extends Simulation {
                     .acceptHeader("application/json")
                     .contentTypeHeader("application/json")
                     .userAgentHeader("Gatling/Performance Test")
-                    .disableCaching();
+                    .disableCaching()
+                    .shareConnections() // Enable connection sharing for better resource usage
+                    .maxConnectionsPerHost(100) // Increase max connections
+                    .connectionHeader("keep-alive")
+                    .acceptEncodingHeader("gzip, deflate")
+                    .enableHttp2(); // Enable HTTP/2 for better performance
 
     // Common data feeder for product data with address information
     protected Iterator<Map<String, Object>> enhancedProductFeeder() {
@@ -67,7 +71,6 @@ public abstract class BaseSimulation extends Simulation {
 
                             return data;
                         })
-                .limit(1_000_000) // Increased limit to handle high load stress tests
                 .iterator();
     }
 
@@ -75,140 +78,130 @@ public abstract class BaseSimulation extends Simulation {
     protected void runHealthChecks() {
         LOGGER.info("Running health checks for services at {}", BASE_URL);
 
-        // List of all service health endpoints to check
-        String[] serviceEndpoints = {
-            "/actuator/health", // API Gateway
-            "/CATALOG-SERVICE/catalog-service/actuator/health", // Catalog Service
-            "/INVENTORY-SERVICE/inventory-service/actuator/health", // Inventory Service
-            "/ORDER-SERVICE/order-service/actuator/health", // Order Service
-            "/PAYMENT-SERVICE/payment-service/actuator/health" // Payment Service
+        // Define health check configurations for each service
+        ServiceHealthCheck[] serviceChecks = {
+            new ServiceHealthCheck("/actuator/health", "API Gateway", 15, 5000),
+            new ServiceHealthCheck(
+                    "/CATALOG-SERVICE/catalog-service/actuator/health",
+                    "Catalog Service",
+                    10,
+                    3000),
+            new ServiceHealthCheck(
+                    "/INVENTORY-SERVICE/inventory-service/actuator/health",
+                    "Inventory Service",
+                    10,
+                    3000),
+            new ServiceHealthCheck(
+                    "/ORDER-SERVICE/order-service/actuator/health", "Order Service", 10, 3000),
+            new ServiceHealthCheck(
+                    "/PAYMENT-SERVICE/payment-service/actuator/health", "Payment Service", 10, 3000)
         };
 
-        // First check API Gateway with retries
-        int maxGatewayRetries = 15; // More retries for gateway as it's critical
-        int gatewayRetryCount = 0;
-        boolean apiGatewayUp = false;
-
-        while (!apiGatewayUp && gatewayRetryCount < maxGatewayRetries) {
-            try {
-                LOGGER.info(
-                        "Checking API Gateway health, attempt {}/{}",
-                        gatewayRetryCount + 1,
-                        maxGatewayRetries);
-                apiGatewayUp = checkServiceHealth(serviceEndpoints[0], "API Gateway");
-
-                if (apiGatewayUp) {
-                    LOGGER.info("API Gateway is up and running!");
-                } else {
-                    gatewayRetryCount++;
-                    if (gatewayRetryCount < maxGatewayRetries) {
-                        LOGGER.warn(
-                                "API Gateway is not yet available. Waiting 5 seconds before retry...");
-                        try {
-                            TimeUnit.SECONDS.sleep(5);
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                gatewayRetryCount++;
-                if (gatewayRetryCount < maxGatewayRetries) {
-                    LOGGER.warn(
-                            "Error checking API Gateway health: {}. Waiting 5 seconds before retry...",
-                            e.getMessage());
-                    try {
-                        TimeUnit.SECONDS.sleep(5);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    }
-                } else {
-                    LOGGER.error("Error checking API Gateway health: {}", e.getMessage());
-                }
-            }
+        // First check API Gateway as it's critical
+        if (!checkServiceHealth(serviceChecks[0])) {
+            String message =
+                    "API Gateway is not available after "
+                            + serviceChecks[0].maxRetries()
+                            + " attempts. Cannot proceed with tests.";
+            LOGGER.error(message);
+            throw new RuntimeException(message);
         }
+        LOGGER.info("API Gateway is up and running!");
 
-        // If API Gateway is still not up after all retries, throw an exception
-        if (!apiGatewayUp) {
-            LOGGER.error(
-                    "API Gateway is not available after {} attempts. Cannot proceed with tests.",
-                    maxGatewayRetries);
-            throw new RuntimeException(
-                    "API Gateway is not available after multiple attempts. Cannot proceed with tests.");
-        }
-
-        // Wait for services to be ready
+        // Wait for other services to be ready
         LOGGER.info("API Gateway is up. Waiting for all services to be available...");
+        boolean allServicesUp = false;
+        int commonRetryCount = 0;
+        final int maxCommonRetries = 10;
 
-        // Try multiple times with a delay between attempts
-        int maxRetries = 10;
-        int retryCount = 0;
-        boolean allUp = false;
+        while (!allServicesUp) {
+            allServicesUp = true;
 
-        while (!allUp) {
-            allUp = true;
-
-            // Check each service's health
-            for (int i = 1; i < serviceEndpoints.length; i++) {
-                String endpoint = serviceEndpoints[i];
-                String serviceName = endpoint.split("/")[1]; // Extract service name for logging
-
-                try {
-                    boolean serviceUp = checkServiceHealth(endpoint, serviceName);
-                    if (!serviceUp) {
-                        allUp = false;
-                        LOGGER.warn("{} is not yet available", serviceName);
-                    }
-                } catch (Exception e) {
-                    allUp = false;
-                    LOGGER.warn("Error checking {} health: {}", serviceName, e.getMessage());
+            // Check each service's health (skip API Gateway as it's already checked)
+            for (int i = 1; i < serviceChecks.length; i++) {
+                ServiceHealthCheck check = serviceChecks[i];
+                if (!checkServiceHealth(check)) {
+                    allServicesUp = false;
+                    LOGGER.warn("{} is not yet available", check.name());
                 }
             }
 
-            if (!allUp) {
-                retryCount++;
-                if (retryCount < maxRetries) {
+            if (!allServicesUp) {
+                commonRetryCount++;
+                if (commonRetryCount < maxCommonRetries) {
                     LOGGER.info(
                             "Not all services are up. Retry attempt {}/{}. Waiting 10 seconds...",
-                            retryCount,
-                            maxRetries);
+                            commonRetryCount,
+                            maxCommonRetries);
                     try {
-                        TimeUnit.SECONDS.sleep(10); // Wait 10 seconds before retrying
+                        TimeUnit.SECONDS.sleep(10);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
+                        break;
                     }
                 } else {
-                    LOGGER.error(
-                            "Not all services are up after {} attempts. Cannot proceed with tests.",
-                            maxRetries);
-                    throw new RuntimeException(
-                            "Not all services are up after multiple attempts. Cannot proceed with tests.");
+                    String message =
+                            "Not all services are up after " + maxCommonRetries + " attempts.";
+                    LOGGER.error(message);
+                    throw new RuntimeException(message);
                 }
             }
         }
 
-        LOGGER.info("All services are up and running! Proceeding with tests.");
+        if (allServicesUp) {
+            LOGGER.info("All services are up and running! Proceeding with tests.");
+        }
     }
 
-    /**
-     * Helper method to check the health of a specific service
-     *
-     * @param endpoint The health endpoint to check
-     * @param serviceName The name of the service (for logging)
-     * @return true if the service is up and healthy, false otherwise
-     */
-    private boolean checkServiceHealth(String endpoint, String serviceName) throws IOException {
-        HttpURLConnection connection =
-                (HttpURLConnection) URI.create(BASE_URL + endpoint).toURL().openConnection();
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(6000);
-        connection.setReadTimeout(6000);
+    protected boolean checkServiceHealth(ServiceHealthCheck check) {
+        int retryCount = 0;
+        while (retryCount < check.maxRetries()) {
+            try {
+                LOGGER.debug(
+                        "Checking {} health endpoint: {} (Attempt {}/{})",
+                        check.name(),
+                        check.endpoint(),
+                        retryCount + 1,
+                        check.maxRetries());
 
-        int responseCode = connection.getResponseCode();
-        LOGGER.info("{} health check response: {}", serviceName, responseCode);
+                HttpURLConnection connection =
+                        (HttpURLConnection)
+                                URI.create(BASE_URL + check.endpoint()).toURL().openConnection();
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(6000);
+                connection.setReadTimeout(6000);
 
-        return responseCode == 200;
+                int responseCode = connection.getResponseCode();
+                LOGGER.info("{} health check response: {}", check.name(), responseCode);
+
+                if (responseCode == 200) {
+                    return true;
+                }
+
+                retryCount++;
+                if (retryCount < check.maxRetries()) {
+                    LOGGER.warn(
+                            "{} is not available (status: {}). Waiting {} ms before retry...",
+                            check.name(),
+                            responseCode,
+                            check.retryDelayMs());
+                    TimeUnit.MILLISECONDS.sleep(check.retryDelayMs());
+                }
+            } catch (Exception e) {
+                LOGGER.warn("{} health check failed: {}", check.name(), e.getMessage());
+                retryCount++;
+                if (retryCount < check.maxRetries()) {
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(check.retryDelayMs());
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     // Helper method to record timing of a request
@@ -216,4 +209,8 @@ public abstract class BaseSimulation extends Simulation {
         long duration = System.currentTimeMillis() - startTimeMillis;
         LOGGER.debug("Request '{}' completed in {} ms", requestName, duration);
     }
+
+    /** Configuration class for service health check parameters. */
+    public record ServiceHealthCheck(
+            String endpoint, String name, int maxRetries, long retryDelayMs) {}
 }

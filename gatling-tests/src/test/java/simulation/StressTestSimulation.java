@@ -4,11 +4,11 @@ import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.feed;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
-import static io.gatling.javaapi.core.CoreDsl.nothingFor;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
@@ -16,6 +16,7 @@ import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
+import io.gatling.javaapi.core.Assertion;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.PopulationBuilder;
@@ -25,7 +26,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,33 +47,60 @@ public class StressTestSimulation extends BaseSimulation {
     private static final int COOL_DOWN_MINUTES =
             Integer.parseInt(System.getProperty("coolDownMinutes", "2"));
 
-    // Flag to enable/disable smoke test phase
-    private static final boolean RUN_SMOKE_TEST =
-            Boolean.parseBoolean(System.getProperty("runSmokeTest", "true"));
+    // Performance SLAs
+    private static final int MEAN_RESPONSE_TIME_MS = 1500;
+    private static final int P95_RESPONSE_TIME_MS = 3000;
+    private static final int P99_RESPONSE_TIME_MS = 5000;
+    private static final double MAX_ERROR_PERCENT = 5.0;
 
-    // Create a reusable chain for viewing catalog
+    // Think time configurations for more realistic user behavior
+    private static final Duration MIN_THINK_TIME = Duration.ofSeconds(2);
+    private static final Duration MAX_THINK_TIME = Duration.ofSeconds(10);
+    private static final Duration MIN_PAGE_THINK_TIME = Duration.ofMillis(750);
+    private static final Duration MAX_PAGE_THINK_TIME = Duration.ofSeconds(3);
+
+    // Pause duration between smoke test and main load test
+    private static final Duration SMOKE_TEST_PAUSE = Duration.ofSeconds(30);
+
+    // Create a reusable chain for viewing catalog with realistic think times and error recovery
     private final ChainBuilder browseCatalog =
             exec(http("Browse catalog - page 1")
                             .get("/catalog-service/api/catalog?pageNo=0&pageSize=10")
                             .check(status().is(200))
-                            .check(jsonPath("$.data[*]").exists()))
-                    .pause(Duration.ofMillis(500), Duration.ofSeconds(3))
+                            .check(jsonPath("$.data[*]").exists())
+                            .check(jsonPath("$.totalPages").saveAs("totalPages")))
+                    .exitHereIfFailed()
+                    .pause(MIN_PAGE_THINK_TIME, MAX_PAGE_THINK_TIME)
                     .exec(
-                            http("Browse catalog - page 2")
-                                    .get("/catalog-service/api/catalog?pageNo=1&pageSize=10")
-                                    .check(status().is(200)));
-
-    // Create a chain for product detail view
+                            session -> {
+                                // Randomly decide whether to view next page based on total pages
+                                int totalPages = session.getInt("totalPages");
+                                if (totalPages > 1 && ThreadLocalRandom.current().nextBoolean()) {
+                                    return session;
+                                }
+                                return session.markAsFailed();
+                            })
+                    .doIf(session -> !session.isFailed())
+                    .then(
+                            exec(http("Browse catalog - page 2")
+                                            .get(
+                                                    "/catalog-service/api/catalog?pageNo=1&pageSize=10")
+                                            .check(status().is(200)))
+                                    .pause(
+                                            MIN_PAGE_THINK_TIME,
+                                            MAX_PAGE_THINK_TIME)); // Create a chain for product
+    // detail view
     private final ChainBuilder viewProductDetail =
             feed(enhancedProductFeeder())
                     .exec(
                             http("View product detail")
                                     .get("/catalog-service/api/catalog/productCode/#{productCode}")
                                     .check(
-                                            status().in(200, 404)
-                                                    .saveAs("status")) // Allow 404s for random
-                                    // product
-                                    .check(bodyString().saveAs("productResponse")) // needed later
+                                            status().in(200, 404).saveAs("status"),
+                                            bodyString().saveAs("productResponse"),
+                                            status().is(200)
+                                                    .saveAs("foundProduct")) // For smoke test
+                            // validation
                             )
                     .exec(
                             session -> {
@@ -103,7 +131,7 @@ public class StressTestSimulation extends BaseSimulation {
                                             "/catalog-service/api/catalog/search?minPrice=10&maxPrice=100")
                                     .check(status().is(200)));
 
-    // Create a chain for order flow - this is more resource intensive
+    // Create a chain for order flow with proper inventory check
     private final ChainBuilder orderFlow =
             feed(enhancedProductFeeder())
                     .exec(
@@ -114,110 +142,147 @@ public class StressTestSimulation extends BaseSimulation {
                                             jsonPath("$.price").optional().saveAs("actualPrice")))
                     .exec(
                             session -> {
-                                if (GatlingHelper.isSuccessResponse(session)) {
-                                    // Use the extracted price from jsonPath or default
-                                    Object extractedPrice = session.get("actualPrice");
-                                    double price;
-                                    if (extractedPrice != null) {
-                                        price = Double.parseDouble(extractedPrice.toString());
-                                        LOGGER.debug("Using extracted price: {}", price);
-                                    } else {
-                                        price = 10.0; // Default value if extraction failed
-                                        LOGGER.debug("Using default price: {}", price);
-                                    }
-                                    return session.set("actualPrice", price);
+                                // Check if product exists and has price
+                                if (session.contains("actualPrice")
+                                        && session.get("actualPrice") != null) {
+                                    LOGGER.debug(
+                                            "Product found with price: {}",
+                                            (Object) session.get("actualPrice"));
+                                    return session;
                                 }
-                                return session;
+                                LOGGER.debug("Product not found or no price available");
+                                return session.markAsFailed();
                             })
-                    .doIf(
-                            session ->
-                                    session.contains("actualPrice")
-                                            && session.get("actualPrice") != null)
-                    .then(
-                            exec(http("Place order")
-                                            .post("/order-service/api/orders")
-                                            .body(
-                                                    StringBody(
-                                                            """
-                                                            {
-                                                              "customerId": #{customerId},
-                                                              "shippingAddress": {
-                                                                "street": "#{street}",
-                                                                "city": "#{city}",
-                                                                "zipCode": "#{zipCode}",
-                                                                "country": "#{country}"
-                                                              },
-                                                              "items": [
-                                                                {
-                                                                  "productCode": "#{productCode}",
-                                                                  "quantity": #{quantity},
-                                                                  "productPrice": #{actualPrice}
-                                                                }
-                                                              ]
-                                                            }
-                                                            """))
-                                            .asJson()
-                                            .check(status().is(201))
-                                            .check(header("location").saveAs("orderLocation")))
-                                    .exec(
-                                            session -> {
-                                                if (session.contains("orderLocation")) {
-                                                    LOGGER.debug(
-                                                            "Order created at: {}",
-                                                            session.getString("orderLocation"));
-                                                }
-                                                return session;
-                                            }));
+                    .exitHereIfFailed()
+                    .exec(
+                            http("Check product inventory")
+                                    .get("/inventory-service/api/inventory/#{productCode}")
+                                    .check(status().is(200))
+                                    .check(jsonPath("$.quantity").exists()))
+                    .exitHereIfFailed()
+                    .exec(
+                            http("Place order")
+                                    .post("/order-service/api/orders")
+                                    .body(
+                                            StringBody(
+                                                    """
+                                    {
+                                      "customerId": #{customerId},
+                                      "shippingAddress": {
+                                        "street": "#{street}",
+                                        "city": "#{city}",
+                                        "zipCode": "#{zipCode}",
+                                        "country": "#{country}"
+                                      },
+                                      "items": [
+                                        {
+                                          "productCode": "#{productCode}",
+                                          "quantity": #{quantity},
+                                          "productPrice": #{actualPrice}
+                                        }
+                                      ]
+                                    }
+                                    """))
+                                    .asJson()
+                                    .check(status().is(201))
+                                    .check(header("location").saveAs("orderLocation")))
+                    .exec(
+                            session -> {
+                                if (session.contains("orderLocation")) {
+                                    LOGGER.debug(
+                                            "Order created at: {}",
+                                            session.getString("orderLocation"));
+                                    return session;
+                                }
+                                LOGGER.error("Order creation failed - no order location returned");
+                                return session.markAsFailed();
+                            });
 
-    // Single smoke test combining all chains to validate functionality with a single user
-    private final ChainBuilder smokeTestFlow =
-            exec(browseCatalog)
-                    .pause(1)
-                    .exec(viewProductDetail)
-                    .pause(1)
-                    .exec(searchProducts)
-                    .pause(1)
-                    .exec(orderFlow);
+    // Create a smoke test product first
+    private final ChainBuilder createSmokeTestProduct =
+            feed(enhancedProductFeeder())
+                    .exec(
+                            http("Create smoke test product")
+                                    .post("/catalog-service/api/catalog")
+                                    .body(
+                                            StringBody(
+                                                    """
+                                            {
+                                              "productCode": "#{productCode}",
+                                              "productName": "#{productName}",
+                                              "description": "Smoke Test Product",
+                                              "price": #{price},
+                                              "quantity": #{quantity}
+                                            }
+                                            """))
+                                    .asJson()
+                                    .check(status().is(201))
+                                    .check(header("location").saveAs("productLocation")))
+                    .exec(
+                            session -> {
+                                LOGGER.info(
+                                        "Created smoke test product at: {}",
+                                        session.getString("productLocation"));
+                                return session;
+                            });
 
-    // Create smoke test scenarios - each with a single user to validate all flows work
-    private final ScenarioBuilder smokeTest = scenario("Smoke Test").exec(smokeTestFlow);
+    // Add inventory initialization chain
+    private final ChainBuilder initializeInventory =
+            exec(http("Initialize inventory")
+                            .post("/inventory-service/api/inventory")
+                            .body(
+                                    StringBody(
+                                            """
+                            {
+                              "productCode": "#{productCode}",
+                              "quantity": #{quantity}
+                            }
+                            """))
+                            .asJson()
+                            .check(status().is(201))
+                            .check(header("location").saveAs("inventoryLocation")))
+                    .exitHereIfFailed()
+                    .exec(
+                            session -> {
+                                LOGGER.info(
+                                        "Initialized inventory for product: {}",
+                                        session.getString("productCode"));
+                                return session;
+                            });
 
-    // Create different user scenarios for stress testing
-    private final ScenarioBuilder casualBrowsers =
-            scenario("Casual Browsers")
-                    .during(Duration.ofMinutes(RAMP_DURATION_MINUTES + PLATEAU_DURATION_MINUTES))
-                    .on(exec(browseCatalog).pause(2, 5).exec(viewProductDetail).pause(1, 3));
+    // Assertions configuration
+    private Assertion[] getDefaultAssertions() {
+        return new Assertion[] {
+            // Global performance assertions
+            global().responseTime().mean().lt(MEAN_RESPONSE_TIME_MS),
+            global().responseTime().percentile(95).lt(P95_RESPONSE_TIME_MS),
+            global().responseTime().percentile(99).lt(P99_RESPONSE_TIME_MS),
+            global().failedRequests().percent().lt(MAX_ERROR_PERCENT),
 
-    private final ScenarioBuilder activeSearchers =
-            scenario("Active Searchers")
-                    .during(Duration.ofMinutes(RAMP_DURATION_MINUTES + PLATEAU_DURATION_MINUTES))
-                    .on(
-                            exec(searchProducts)
-                                    .pause(1, 2)
-                                    .exec(viewProductDetail)
-                                    .pause(1, 3)
-                                    .exec(
-                                            randomSwitch()
-                                                    .on(
-                                                            List.of(
-                                                                    new Choice.WithWeight(
-                                                                            20.0, orderFlow),
-                                                                    new Choice.WithWeight(
-                                                                            80.0,
-                                                                            browseCatalog)))));
+            // Smoke test assertions (stricter thresholds for single user)
+            details("Smoke Test").successfulRequests().percent().is(100.0),
+            details("Smoke Test").responseTime().percentile(95).lt(1000),
 
-    private final ScenarioBuilder powerShoppers =
-            scenario("Power Shoppers")
-                    .during(Duration.ofMinutes(RAMP_DURATION_MINUTES + PLATEAU_DURATION_MINUTES))
-                    .on(
-                            exec(browseCatalog)
-                                    .pause(0, 1)
-                                    .exec(viewProductDetail)
-                                    .pause(0, 1)
-                                    .exec(orderFlow));
+            // Order flow assertions
+            details("Place order").successfulRequests().percent().gt(95.0),
+            details("Place order").responseTime().percentile(95).lt(3000),
+
+            // Catalog and search assertions
+            details("Browse catalog.*").successfulRequests().percent().gt(95.0),
+            details("Browse catalog.*").responseTime().percentile(95).lt(2000),
+            details("Search for product.*").successfulRequests().percent().gt(95.0),
+            details("Search for product.*").responseTime().percentile(95).lt(2000),
+
+            // Product detail and inventory assertions
+            details("View product detail").successfulRequests().percent().gt(95.0),
+            details("View product detail").responseTime().percentile(95).lt(2000),
+            details("Check inventory for product").successfulRequests().percent().gt(95.0),
+            details("Check inventory for product").responseTime().percentile(95).lt(2000)
+        };
+    }
 
     // Set up the simulation
-    {
+    public StressTestSimulation() {
         runHealthChecks();
 
         // Manually execute a request to generate catalog data
@@ -243,6 +308,30 @@ public class StressTestSimulation extends BaseSimulation {
                 LOGGER.info(
                         "Catalog test data successfully generated. Status: {}",
                         response.statusCode());
+                // Create a synchronous HTTP client (not using Gatling for this initialization step)
+                try (HttpClient client = HttpClient.newHttpClient()) {
+                    HttpRequest request =
+                            HttpRequest.newBuilder()
+                                    .uri(
+                                            URI.create(
+                                                    BASE_URL
+                                                            + "/inventory-service/api/inventory/generate"))
+                                    .GET()
+                                    .header("Content-Type", "application/json")
+                                    .build();
+
+                    // Send request synchronously
+                    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                    if (response.statusCode() == 200) {
+                        LOGGER.info(
+                                "Inventory test data successfully generated. Status: {}",
+                                response.statusCode());
+                    } else {
+                        LOGGER.warn(
+                                "Inventory data generation request returned status: {}",
+                                response.statusCode());
+                    }
+                }
             } else {
                 LOGGER.warn(
                         "Catalog data generation request returned status: {}",
@@ -252,118 +341,198 @@ public class StressTestSimulation extends BaseSimulation {
             LOGGER.error("Error generating catalog test data: {}", e.getMessage());
         }
 
-        LOGGER.info(
-                "Setting up StressTestSimulation with Kafka initialization delay: {} seconds",
-                KAFKA_INIT_DELAY_SECONDS);
-        LOGGER.info("Smoke test enabled: {}", RUN_SMOKE_TEST);
+        LOGGER.info("Starting simulation with mandatory smoke test followed by main load test");
 
-        PopulationBuilder smokeTestSetup;
-        PopulationBuilder stressTestSetup;
+        // Initialize scenarios
+        ScenarioBuilder smokeTestScenario =
+                scenario("Smoke Test")
+                        .exec(
+                                session -> {
+                                    LOGGER.info("Starting smoke test with single user...");
+                                    return session;
+                                })
+                        .exec(createSmokeTestProduct)
+                        .exitHereIfFailed()
+                        .exec(
+                                session -> {
+                                    if (!session.contains("productLocation")) {
+                                        LOGGER.error(
+                                                "Smoke Test Failed: Product creation failed - no product location returned");
+                                        return session.markAsFailed();
+                                    }
+                                    LOGGER.info(
+                                            "Created product successfully at: {}",
+                                            session.getString("productLocation"));
+                                    // Store the created product code for later use
+                                    String productCode = session.getString("productCode");
+                                    LOGGER.info("Created product code: {}", productCode);
+                                    return session;
+                                })
+                        .pause(Duration.ofSeconds(2)) // Wait for product to be available
+                        .exec(browseCatalog)
+                        .exitHereIfFailed()
+                        .exec(
+                                session -> {
+                                    LOGGER.info("Browse catalog test passed");
+                                    return session;
+                                })
+                        .exec(
+                                // Use the created product for product detail view
+                                http("View created product detail")
+                                        .get(
+                                                session ->
+                                                        "/catalog-service/api/catalog/productCode/"
+                                                                + session.getString("productCode"))
+                                        .check(status().is(200))
+                                        .check(
+                                                jsonPath("$.productCode")
+                                                        .is(
+                                                                session ->
+                                                                        session.getString(
+                                                                                "productCode"))))
+                        .exitHereIfFailed()
+                        .exec(
+                                session -> {
+                                    LOGGER.info(
+                                            "View product detail test passed for product: {}",
+                                            session.getString("productCode"));
+                                    return session;
+                                })
+                        .exec(searchProducts)
+                        .exitHereIfFailed()
+                        .exec(
+                                session -> {
+                                    LOGGER.info("Search products test passed");
+                                    return session;
+                                })
+                        .exec(
+                                // Use the created product for order flow
+                                exec(http("Check created product exists")
+                                                .get(
+                                                        session ->
+                                                                "/catalog-service/api/catalog/productCode/"
+                                                                        + session.getString(
+                                                                                "productCode"))
+                                                .check(status().is(200))
+                                                .check(jsonPath("$.price").saveAs("actualPrice")))
+                                        .exec(
+                                                http("Place order for created product")
+                                                        .post("/order-service/api/orders")
+                                                        .body(
+                                                                StringBody(
+                                                                        """
+                                    {
+                                      "customerId": #{customerId},
+                                      "shippingAddress": {
+                                        "street": "#{street}",
+                                        "city": "#{city}",
+                                        "zipCode": "#{zipCode}",
+                                        "country": "#{country}"
+                                      },
+                                      "items": [
+                                        {
+                                          "productCode": "#{productCode}",
+                                          "quantity": #{quantity},
+                                          "productPrice": #{actualPrice}
+                                        }
+                                      ]
+                                    }
+                                    """))
+                                                        .asJson()
+                                                        .check(status().is(201))
+                                                        .check(
+                                                                header("location")
+                                                                        .saveAs("orderLocation"))))
+                        .exitHereIfFailed()
+                        .exec(
+                                session -> {
+                                    if (!session.contains("orderLocation")) {
+                                        LOGGER.error(
+                                                "Smoke Test Failed: Order placement failed - no order location returned");
+                                        return session.markAsFailed();
+                                    }
+                                    LOGGER.info(
+                                            "Order placement test passed. Order created at: {}",
+                                            session.getString("orderLocation"));
+                                    return session;
+                                })
+                        .exec(
+                                session -> {
+                                    if (session.isFailed()) {
+                                        LOGGER.error("Smoke test failed - stopping simulation");
+                                        System.exit(1); // Force exit if smoke test failed
+                                    }
+                                    LOGGER.info("All smoke test scenarios passed successfully!");
+                                    LOGGER.info(
+                                            "Waiting {} seconds before starting main load test",
+                                            SMOKE_TEST_PAUSE.toSeconds());
+                                    return session;
+                                })
+                        .pause(SMOKE_TEST_PAUSE);
 
-        // Single user for Kafka initialization and smoke test
-        if (RUN_SMOKE_TEST) {
-            smokeTestSetup = smokeTest.injectOpen(atOnceUsers(1));
-            LOGGER.info(
-                    "Smoke test setup will run with a single user for both Kafka initialization and scenario validation.");
-        } else {
-            // If no smoke test, we still need a single user for Kafka initialization
-            smokeTestSetup =
-                    scenario("Kafka Initializer")
-                            .exec(
-                                    exec(
-                                            http("Init Kafka connection")
-                                                    .post("/catalog-service/api/catalog")
-                                                    .body(
-                                                            StringBody(
-                                                                    """
-                                {
-                                  "productCode": "KAFKA_INIT_PRODUCT",
-                                  "productName": "Kafka Initializer",
-                                  "price": 1.0,
-                                  "description": "Product to initialize Kafka connection"
-                                }
-                                """))
-                                                    .check(status().in(201, 400, 409))))
-                            .injectOpen(atOnceUsers(1));
-            LOGGER.info("Added Kafka initialization step with a single user.");
-        }
+        // Create smoke test injection profile
+        PopulationBuilder smokeTest = smokeTestScenario.injectOpen(atOnceUsers(1));
 
-        // Main stress test setup
-        stressTestSetup =
-                casualBrowsers
-                        .injectOpen(
-                                // Add pause to ensure Kafka initialization and smoke test finishes
-                                nothingFor(
-                                        Duration.ofSeconds(
-                                                KAFKA_INIT_DELAY_SECONDS
-                                                        + (RUN_SMOKE_TEST ? 15 : 0))),
-                                rampUsersPerSec(1.0)
-                                        .to(MAX_USERS * 0.6)
-                                        .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
-                                constantUsersPerSec(MAX_USERS * 0.6)
-                                        .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
-                                rampUsersPerSec(MAX_USERS * 0.6)
-                                        .to(0.0)
-                                        .during(Duration.ofMinutes(COOL_DOWN_MINUTES)))
-                        .andThen(
-                                activeSearchers.injectOpen(
-                                        rampUsersPerSec(1.0)
-                                                .to(MAX_USERS * 0.3)
-                                                .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
-                                        constantUsersPerSec(MAX_USERS * 0.3)
-                                                .during(
-                                                        Duration.ofMinutes(
-                                                                PLATEAU_DURATION_MINUTES)),
-                                        rampUsersPerSec(MAX_USERS * 0.3)
-                                                .to(0.0)
-                                                .during(Duration.ofMinutes(COOL_DOWN_MINUTES))))
-                        .andThen(
-                                powerShoppers.injectOpen(
-                                        nothingFor(
-                                                Duration.ofMinutes(
-                                                        1)), // delay the power shoppers a bit
-                                        rampUsersPerSec(1.0)
-                                                .to(MAX_USERS * 0.1)
-                                                .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
-                                        constantUsersPerSec(MAX_USERS * 0.1)
-                                                .during(
-                                                        Duration.ofMinutes(
-                                                                PLATEAU_DURATION_MINUTES)),
-                                        rampUsersPerSec(MAX_USERS * 0.1)
-                                                .to(0.0)
-                                                .during(Duration.ofMinutes(COOL_DOWN_MINUTES))));
+        // Initialize main load test scenario (only runs if smoke test passes)
+        ScenarioBuilder mainLoadScenario =
+                scenario("Main Load Test")
+                        .exec(
+                                session -> {
+                                    LOGGER.info("Starting main load test...");
+                                    return session;
+                                })
+                        .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES))
+                        .on(
+                                randomSwitch()
+                                        .on(
+                                                // Browse catalog - no product creation needed
+                                                new Choice.WithWeight(30.0, browseCatalog),
+                                                // View product - create product first
+                                                new Choice.WithWeight(
+                                                        30.0,
+                                                        exec(createSmokeTestProduct)
+                                                                .exitHereIfFailed()
+                                                                .exec(initializeInventory)
+                                                                .exitHereIfFailed()
+                                                                .exec(viewProductDetail)),
+                                                // Search - no product creation needed
+                                                new Choice.WithWeight(20.0, searchProducts),
+                                                // Order flow - create product first
+                                                new Choice.WithWeight(
+                                                        20.0,
+                                                        exec(createSmokeTestProduct)
+                                                                .exitHereIfFailed()
+                                                                .exec(initializeInventory)
+                                                                .exitHereIfFailed()
+                                                                .exec(orderFlow))))
+                        .pause(MIN_THINK_TIME, MAX_THINK_TIME)
+                        .exec(
+                                session -> {
+                                    LOGGER.info("Main load test completed");
+                                    return session;
+                                });
 
-        // Set up final simulation with conditional smoke test
-        if (RUN_SMOKE_TEST) {
-            // Run smoke test first, then stress test only if smoke test passes
-            setUp(smokeTestSetup.andThen(stressTestSetup))
-                    .protocols(httpProtocol)
-                    .assertions(
-                            global().responseTime()
-                                    .mean()
-                                    .lt(1500), // mean response time under 1.5s
-                            global().responseTime()
-                                    .percentile(95)
-                                    .lt(5000), // 95% of responses under 5s
-                            global().failedRequests()
-                                    .percent()
-                                    .lt(5.0) // Less than 5% failed requests
-                            );
-        } else {
-            // Run only stress test
-            setUp(stressTestSetup)
-                    .protocols(httpProtocol)
-                    .assertions(
-                            global().responseTime()
-                                    .mean()
-                                    .lt(1500), // mean response time under 1.5s
-                            global().responseTime()
-                                    .percentile(95)
-                                    .lt(5000), // 95% of responses under 5s
-                            global().failedRequests()
-                                    .percent()
-                                    .lt(5.0) // Less than 5% failed requests
-                            );
-        }
+        // Create main load test injection profile
+        PopulationBuilder mainLoad =
+                mainLoadScenario.injectOpen(
+                        // Warm-up phase
+                        rampUsersPerSec(0.1)
+                                .to((double) MAX_USERS / 4)
+                                .during(Duration.ofMinutes(2)),
+                        rampUsersPerSec((double) MAX_USERS / 4)
+                                .to((double) MAX_USERS / 2)
+                                .during(Duration.ofMinutes(2)),
+                        rampUsersPerSec((double) MAX_USERS / 2)
+                                .to(MAX_USERS)
+                                .during(Duration.ofMinutes(RAMP_DURATION_MINUTES)),
+                        constantUsersPerSec(MAX_USERS)
+                                .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
+                        rampUsersPerSec(MAX_USERS)
+                                .to(1.0)
+                                .during(Duration.ofMinutes(COOL_DOWN_MINUTES)));
+
+        this.setUp(smokeTest.andThen(mainLoad))
+                .protocols(httpProtocol)
+                .assertions(getDefaultAssertions());
     }
 }
