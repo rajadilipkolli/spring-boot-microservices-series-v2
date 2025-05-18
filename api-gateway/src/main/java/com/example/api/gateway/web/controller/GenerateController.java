@@ -9,12 +9,16 @@ package com.example.api.gateway.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Objects;
+import java.util.function.Function;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 /** Controller that makes sequential service calls with a delay in between. */
@@ -23,9 +27,13 @@ import reactor.core.publisher.Mono;
 public class GenerateController {
 
     private final WebClient webClient;
+    private final Integer gatewayPort;
 
-    public GenerateController(WebClient.Builder webClientBuilder) {
+    public GenerateController(
+            WebClient.Builder webClientBuilder,
+            @Value("${gateway.port:null}") Integer gatewayPort) {
         this.webClient = webClientBuilder.build();
+        this.gatewayPort = gatewayPort;
     }
 
     /**
@@ -40,15 +48,7 @@ public class GenerateController {
         URI uri = exchange.getRequest().getURI();
         return webClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder
-                                    .scheme(uri.getScheme())
-                                    .host(uri.getHost())
-                                    .port(uri.getPort())
-                                    .path("/catalog-service/api/catalog/generate");
-                            return uriBuilder.build();
-                        })
+                .uri(getURIFunction(uri, "/catalog-service/api/catalog/generate"))
                 .retrieve()
                 .bodyToMono(String.class)
                 .onErrorResume(
@@ -61,15 +61,9 @@ public class GenerateController {
                                 webClient
                                         .get()
                                         .uri(
-                                                uriBuilder -> {
-                                                    uriBuilder
-                                                            .scheme(uri.getScheme())
-                                                            .host(uri.getHost())
-                                                            .port(uri.getPort())
-                                                            .path(
-                                                                    "/inventory-service/api/inventory/generate");
-                                                    return uriBuilder.build();
-                                                })
+                                                getURIFunction(
+                                                        uri,
+                                                        "/inventory-service/api/inventory/generate"))
                                         .retrieve()
                                         .bodyToMono(String.class)
                                         .onErrorResume(
@@ -87,5 +81,13 @@ public class GenerateController {
                                                                         + ", "
                                                                         + "Inventory response: "
                                                                         + inventoryResponse)));
+    }
+
+    private Function<UriBuilder, URI> getURIFunction(URI uri, String path) {
+        return uriBuilder -> {
+            uriBuilder.port(Objects.requireNonNullElseGet(gatewayPort, uri::getPort));
+            uriBuilder.scheme(uri.getScheme()).host(uri.getHost()).path(path);
+            return uriBuilder.build();
+        };
     }
 }
