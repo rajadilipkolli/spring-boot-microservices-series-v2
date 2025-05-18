@@ -1,15 +1,14 @@
 /***
-<p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
-</p>
-***/
+ <p>
+ Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+ </p>
+ ***/
 
 package com.example.api.gateway.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +30,7 @@ public class GenerateController {
 
     public GenerateController(
             WebClient.Builder webClientBuilder,
-            @Value("${gateway.port:null}") Integer gatewayPort) {
+            @Value("${gateway.port:-1}") Integer gatewayPort) {
         this.webClient = webClientBuilder.build();
         this.gatewayPort = gatewayPort;
     }
@@ -85,7 +84,11 @@ public class GenerateController {
 
     private Function<UriBuilder, URI> getURIFunction(URI uri, String path) {
         return uriBuilder -> {
-            uriBuilder.port(Objects.requireNonNullElseGet(gatewayPort, uri::getPort));
+            if (gatewayPort != -1) {
+                uriBuilder.port(gatewayPort);
+            } else {
+                uriBuilder.port(uri.getPort());
+            }
             uriBuilder.scheme(uri.getScheme()).host(uri.getHost()).path(path);
             return uriBuilder.build();
         };
