@@ -1,8 +1,8 @@
 /***
- <p>
- Licensed under MIT License Copyright (c) 2025 Raja Kolli.
- </p>
- ***/
+<p>
+    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+</p>
+***/
 
 package com.example.api.gateway.web.controller;
 
