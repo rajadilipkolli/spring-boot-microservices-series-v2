@@ -51,6 +51,10 @@ public class GenerateController {
                         })
                 .retrieve()
                 .bodyToMono(String.class)
+                .onErrorResume(
+                        e -> {
+                            return Mono.just("Error calling catalog service: " + e.getMessage());
+                        })
                 .delayElement(Duration.ofSeconds(10))
                 .flatMap(
                         catalogResponse ->
@@ -68,6 +72,12 @@ public class GenerateController {
                                                 })
                                         .retrieve()
                                         .bodyToMono(String.class)
+                                        .onErrorResume(
+                                                e -> {
+                                                    return Mono.just(
+                                                            "Error calling inventory service: "
+                                                                    + e.getMessage());
+                                                })
                                         .map(
                                                 inventoryResponse ->
                                                         ResponseEntity.ok(
