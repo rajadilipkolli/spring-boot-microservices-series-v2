@@ -1,8 +1,8 @@
 /***
- <p>
- Licensed under MIT License Copyright (c) 2025 Raja Kolli.
- </p>
- ***/
+<p>
+    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+</p>
+***/
 
 package com.example.api.gateway.web.controller;
 
@@ -29,8 +29,7 @@ public class GenerateController {
     private final Integer gatewayPort;
 
     public GenerateController(
-            WebClient.Builder webClientBuilder,
-            @Value("${gateway.port:-1}") Integer gatewayPort) {
+            WebClient.Builder webClientBuilder, @Value("${gateway.port:-1}") Integer gatewayPort) {
         this.webClient = webClientBuilder.build();
         this.gatewayPort = gatewayPort;
     }
