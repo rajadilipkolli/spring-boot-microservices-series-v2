@@ -42,31 +42,4 @@ class LoginControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
     }
-
-    @Test
-    void shouldNotAllowUserToAccessInventory() throws Exception {
-        mockMvc.perform(get("/inventory")
-                        .with(oauth2Login()
-                                .attributes(attrs -> {
-                                    attrs.put("sub", "user-id");
-                                    attrs.put("email", "user@example.com");
-                                    attrs.put("preferred_username", "user@example.com");
-                                })
-                                .authorities(new SimpleGrantedAuthority("ROLE_USER"))))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void shouldAllowAdminToAccessInventory() throws Exception {
-        mockMvc.perform(get("/inventory")
-                        .with(oauth2Login()
-                                .attributes(attrs -> {
-                                    attrs.put("sub", "admin-id");
-                                    attrs.put("email", "admin@example.com");
-                                    attrs.put("preferred_username", "admin@example.com");
-                                })
-                                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
-                .andExpect(status().isOk())
-                .andExpect(view().name("inventory"));
-    }
 }

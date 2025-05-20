@@ -1,0 +1,35 @@
+{
+    "mappings": [
+        {
+            "request": {
+                "urlPath": "/failing-service",
+                "method": "GET"
+            },
+            "response": {
+                "status": 500,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "jsonBody": {
+                    "error": "Internal Server Error"
+                }
+            }
+        },
+        {
+            "request": {
+                "urlPath": "/slow-service",
+                "method": "GET"
+            },
+            "response": {
+                "status": 200,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "fixedDelayMilliseconds": 6000,
+                "jsonBody": {
+                    "message": "Delayed Response"
+                }
+            }
+        }
+    ]
+}

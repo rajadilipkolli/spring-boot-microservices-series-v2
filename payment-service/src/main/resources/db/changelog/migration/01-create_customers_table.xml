@@ -11,17 +11,21 @@
     <changeSet author="rajakolli" id="createTable-customers">
         <preConditions onFail="MARK_RAN">
             <not>
-                <sequenceExists sequenceName="customers_seq"/>
-                <tableExists tableName="customers"/>
+                <sequenceExists sequenceName="customers_seq" schemaName="payment"/>
+                <tableExists tableName="customers" schemaName="payment"/>
             </not>
         </preConditions>
-        <createSequence
+
+        <!-- Create sequence in the payment schema -->
+        <createSequence schemaName="payment"
                 sequenceName="customers_seq"
                 incrementBy="1"
                 startValue="1"
         />
-        <createTable tableName="customers">
-            <column name="id" type="bigint" defaultValueSequenceNext="customers_seq">
+
+        <!-- Create the table in the payment schema -->
+        <createTable tableName="customers" schemaName="payment">
+            <column name="id" type="bigint">
                 <constraints primaryKey="true" nullable="false" primaryKeyName="customers_pkey"/>
             </column>
             <column name="name" type="${string.type}">
@@ -34,11 +38,16 @@
                 <constraints nullable="false"/>
             </column>
             <column name="address" type="${string.type}"/>
-            <column name="amount_available" type="int"/>
-            <column name="amount_reserved" type="int"/>
+            <column name="amount_available" type="double"/>
+            <column name="amount_reserved" type="double"/>
         </createTable>
-
+        <!-- Add unique constraint -->
         <addUniqueConstraint tableName="customers" columnNames="name, email"
-                             constraintName="uc_customers_name_email_key"/>
+                             constraintName="uc_customers_name_email_key" schemaName="payment"/>
+
+        <!-- Set default value for ID column -->
+        <sql>
+            ALTER TABLE payment.customers ALTER COLUMN id SET DEFAULT nextval('payment.customers_seq');
+        </sql>
     </changeSet>
 </databaseChangeLog>

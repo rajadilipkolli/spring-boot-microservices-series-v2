@@ -1,6 +1,7 @@
 name: gatling-tests
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "gatling-tests/**"
@@ -40,8 +41,8 @@ jobs:
           pwd
           cd ..
           cd deployment
-          docker compose up -d
-          sleep 240
+          docker compose up -d postgresql redis zipkin-server kafka config-server naming-server api-gateway catalog-service inventory-service order-service payment-service 
+          sleep 60
           docker ps -a
 
       - name: Build and analyze

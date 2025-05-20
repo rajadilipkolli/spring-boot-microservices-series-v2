@@ -6,6 +6,11 @@
 
 package com.example.orderservice.common;
 
+import com.example.common.dtos.OrderDto;
+import com.example.orderservice.repositories.OrderItemRepository;
+import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.services.OrderManageService;
+import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.observation.tck.TestObservationRegistry;
@@ -16,6 +21,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,6 +36,14 @@ public abstract class AbstractIntegrationTest extends ContainerInitializer {
     @Autowired protected MockMvc mockMvc;
 
     @Autowired protected ObjectMapper objectMapper;
+
+    @Autowired protected OrderService orderService;
+    @Autowired protected OrderManageService orderManageService;
+
+    @Autowired protected OrderRepository orderRepository;
+    @Autowired protected OrderItemRepository orderItemRepository;
+
+    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @TestConfiguration
     static class ObservationTestConfiguration {

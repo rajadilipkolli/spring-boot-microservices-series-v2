@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -8,73 +8,25 @@ package com.example.common.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
+import java.io.Serial;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.Objects;
 
-public class OrderDto implements Serializable {
+public record OrderDto(
+        Long orderId,
+        @Positive(message = "CustomerId should be positive") Long customerId,
+        String status,
+        String source,
+        @NotEmpty(message = "Order without items not valid") List<OrderItemDto> items)
+        implements Serializable {
 
-    private Long orderId;
+    @Serial private static final long serialVersionUID = 1L;
 
-    @Positive(message = "CustomerId should be positive")
-    private Long customerId;
-
-    private String status = "NEW";
-
-    private String source;
-
-    @NotEmpty(message = "Order without items not valid")
-    private List<OrderItemDto> items = new ArrayList<>();
-
-    public Long getOrderId() {
-        return orderId;
-    }
-
-    public void setOrderId(Long orderId) {
-        this.orderId = orderId;
-    }
-
-    public Long getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(Long customerId) {
-        this.customerId = customerId;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public List<OrderItemDto> getItems() {
-        return items;
-    }
-
-    public void setItems(List<OrderItemDto> items) {
-        this.items = items;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", OrderDto.class.getSimpleName() + "[", "]")
-                .add("orderId=" + orderId)
-                .add("customerId=" + customerId)
-                .add("status='" + status + "'")
-                .add("source='" + source + "'")
-                .add("items=" + items)
-                .toString();
+    public OrderDto withStatusAndSource(String status, String source) {
+        if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
+            return this;
+        }
+        return new OrderDto(orderId(), customerId(), status, source, items());
     }
 }

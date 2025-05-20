@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 declare project_dir=$(dirname $0)
-declare dc_main=${project_dir}/docker-compose.yml
-declare dc_tools=${project_dir}/docker-compose-tools.yml
+declare dc_main=${project_dir}/deployment/docker-compose.yml
+declare dc_tools=${project_dir}/deployment/docker-compose-tools.yml
 
 function restart() {
     stop_all
@@ -12,14 +12,14 @@ function restart() {
 function start() {
     echo "Starting $1...."
     build_api
-    docker-compose -f ${dc_main} up -d $1
-    docker-compose -f ${dc_main} logs -f
+    docker compose -f ${dc_main} up -d $1
+    docker compose -f ${dc_main} logs -f
 }
 
 function stop() {
     echo "Stopping $1...."
-    docker-compose -f ${dc_main} stop
-    docker-compose -f ${dc_main} rm -f
+    docker compose -f ${dc_main} stop
+    docker compose -f ${dc_main} rm -f
 }
 
 function start_infra() {
@@ -43,22 +43,22 @@ function start_services() {
 function start_all() {
     echo "Starting all services...."
     build_api
-    docker-compose -f ${dc_main}  up -d
-    docker-compose -f ${dc_main}  logs -f
+    docker compose -f ${dc_main}  up -d
+    docker compose -f ${dc_main}  logs -f
 }
 
 function stop_all() {
     echo 'Stopping all services....'
-    docker-compose -f ${dc_main} stop
-    docker-compose -f ${dc_main} down
-    docker-compose -f ${dc_main} rm -f
+    docker compose -f ${dc_main} stop
+    docker compose -f ${dc_main} down
+    docker compose -f ${dc_main} rm -f
 }
 
 function stop_all_full() {
     echo 'Stopping all services....'
-    docker-compose -f ${dc_tools} stop
-    docker-compose -f ${dc_tools} down
-    docker-compose -f ${dc_tools} rm -f
+    docker compose -f ${dc_tools} stop
+    docker compose -f ${dc_tools} down
+    docker compose -f ${dc_tools} rm -f
 }
 
 function build_api() {

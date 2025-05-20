@@ -14,9 +14,15 @@ import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
 
@@ -47,109 +53,251 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
         product2 = savedInventories.get(1);
     }
 
-    @Test
-    void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() {
-        // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus("CONFIRMED");
+    /**
+     * Helper method to capture inventory state before an operation and verify changes after
+     * operation.
+     *
+     * @param orderDto The order to process
+     * @param operation The operation to perform on the order (e.g., confirm, reserve)
+     * @param expectedChanges Map of product codes to expected inventory changes
+     *     [availableQtyChange, reservedItemsChange]
+     */
+    private void assertInventoryChanges(
+            OrderDto orderDto,
+            Function<OrderDto, OrderDto> operation,
+            Map<String, int[]> expectedChanges) {
 
+        // Capture initial state of all products
+        Map<String, Inventory> initialState =
+                inventoryRepository
+                        .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
+                        .stream()
+                        .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
+
+        // Perform the operation
+        OrderDto result = operation.apply(orderDto);
+
+        // Verify each product's changes
+        for (String productCode : expectedChanges.keySet()) {
+            Inventory initial = initialState.get(productCode);
+            Inventory updated = inventoryRepository.findById(initial.getId()).orElseThrow();
+
+            int[] changes = expectedChanges.get(productCode);
+            int availableQtyChange = changes[0];
+            int reservedItemsChange = changes[1];
+
+            assertThat(updated.getAvailableQuantity())
+                    .isEqualTo(initial.getAvailableQuantity() + availableQtyChange);
+            assertThat(updated.getReservedItems())
+                    .isEqualTo(initial.getReservedItems() + reservedItemsChange);
+        }
+
+        assertThat(result).as("Service should return an OrderDto instance").isNotNull();
+    }
+
+    @Test
+    void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() { // Arrange
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(1L, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
 
-        // Initial state verification
-        Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory initialProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+        // Define expected changes: [availableQtyChange, reservedItemsChange]
+        Map<String, int[]> expectedChanges =
+                Map.of(
+                        "product1", new int[] {0, -20}, // No change in available, -20 reserved
+                        "product2", new int[] {0, -10} // No change in available, -10 reserved
+                        );
 
-        assertThat(initialProduct1.getReservedItems()).isEqualTo(50);
-        assertThat(initialProduct2.getReservedItems()).isEqualTo(30);
-
-        // Act
-        inventoryOrderManageService.confirm(orderDto);
-
-        // Assert
-        Inventory updatedProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory updatedProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
-
-        // Reserved items should decrease but available quantity should remain unchanged
-        assertThat(updatedProduct1.getReservedItems()).isEqualTo(30); // 50 - 20
-        assertThat(updatedProduct1.getAvailableQuantity()).isEqualTo(100); // unchanged
-
-        assertThat(updatedProduct2.getReservedItems()).isEqualTo(20); // 30 - 10
-        assertThat(updatedProduct2.getAvailableQuantity()).isEqualTo(200); // unchanged
+        // Run operation and assert changes
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    inventoryOrderManageService.confirm(order);
+                    return order;
+                },
+                expectedChanges);
     }
 
     @Test
     void confirmOrderWithRollbackStatus_ShouldDecreaseReservedItemsAndIncreaseAvailableQuantity() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus(AppConstants.ROLLBACK);
-        orderDto.setSource("OTHER_SOURCE"); // Not inventory source to trigger rollback logic
-
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        // Not inventory source to trigger rollback logic
+        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
 
-        // Initial state verification
-        Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory initialProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+        // Define expected changes: [availableQtyChange, reservedItemsChange]
+        Map<String, int[]> expectedChanges =
+                Map.of(
+                        "product1", new int[] {20, -20}, // +20 available, -20 reserved
+                        "product2", new int[] {10, -10} // +10 available, -10 reserved
+                        );
 
-        assertThat(initialProduct1.getReservedItems()).isEqualTo(50);
-        assertThat(initialProduct1.getAvailableQuantity()).isEqualTo(100);
-        assertThat(initialProduct2.getReservedItems()).isEqualTo(30);
-        assertThat(initialProduct2.getAvailableQuantity()).isEqualTo(200);
-
-        // Act
-        inventoryOrderManageService.confirm(orderDto);
-
-        // Assert
-        Inventory updatedProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory updatedProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
-
-        // Reserved items should decrease and available quantity should increase
-        assertThat(updatedProduct1.getReservedItems()).isEqualTo(30); // 50 - 20
-        assertThat(updatedProduct1.getAvailableQuantity()).isEqualTo(120); // 100 + 20
-
-        assertThat(updatedProduct2.getReservedItems()).isEqualTo(20); // 30 - 10
-        assertThat(updatedProduct2.getAvailableQuantity()).isEqualTo(210); // 200 + 10
+        // Run operation and assert changes
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    inventoryOrderManageService.confirm(order);
+                    return order;
+                },
+                expectedChanges);
     }
 
     @Test
     void confirmOrderWithRollbackStatusAndInventorySource_ShouldNotChangeInventory() {
         // Arrange
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(1L);
-        orderDto.setStatus(AppConstants.ROLLBACK);
-        orderDto.setSource(
-                AppConstants.SOURCE); // inventory source, should not trigger rollback logic
-
         OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        orderDto.setItems(List.of(item1, item2));
+        // inventory source, should not trigger rollback logic
+        OrderDto orderDto =
+                new OrderDto(1L, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
 
-        // Initial state verification
-        Inventory initialProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory initialProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+        // Define expected changes: [availableQtyChange, reservedItemsChange]
+        Map<String, int[]> expectedChanges =
+                Map.of(
+                        "product1", new int[] {0, 0}, // No change
+                        "product2", new int[] {0, 0} // No change
+                        );
 
-        // Act
-        inventoryOrderManageService.confirm(orderDto);
+        // Run operation and assert changes
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    inventoryOrderManageService.confirm(order);
+                    return order;
+                },
+                expectedChanges);
+    }
 
-        // Assert
-        Inventory updatedProduct1 = inventoryRepository.findById(product1.getId()).orElseThrow();
-        Inventory updatedProduct2 = inventoryRepository.findById(product2.getId()).orElseThrow();
+    @Test
+    void reserveOrderWithSufficientStock_ShouldReturnAcceptStatus() {
+        // Arrange
+        OrderItemDto item1 = new OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
 
-        // Reserved items and available quantity should remain unchanged for ROLLBACK with INVENTORY
-        // source
-        assertThat(updatedProduct1.getReservedItems())
-                .isEqualTo(initialProduct1.getReservedItems());
-        assertThat(updatedProduct1.getAvailableQuantity())
-                .isEqualTo(initialProduct1.getAvailableQuantity());
+        // Define expected changes: [availableQtyChange, reservedItemsChange]
+        Map<String, int[]> expectedChanges =
+                Map.of(
+                        "product1", new int[] {-10, 10}, // -10 available, +10 reserved
+                        "product2", new int[] {-20, 20} // -20 available, +20 reserved
+                        );
 
-        assertThat(updatedProduct2.getReservedItems())
-                .isEqualTo(initialProduct2.getReservedItems());
-        assertThat(updatedProduct2.getAvailableQuantity())
-                .isEqualTo(initialProduct2.getAvailableQuantity());
+        // Run operation and verify changes
+        OrderDto resultOrderDto = null;
+
+        // Save the result from the operation
+        final OrderDto[] resultHolder = new OrderDto[1];
+
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    OrderDto result = inventoryOrderManageService.reserve(order);
+                    resultHolder[0] = result;
+                    return result;
+                },
+                expectedChanges);
+
+        resultOrderDto = resultHolder[0];
+
+        // Additional assertions on the result
+        assertThat(resultOrderDto).isNotNull();
+        assertThat(resultOrderDto.status()).isEqualTo("ACCEPT");
+        assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+    }
+
+    @Test
+    void reserveOrderWithInsufficientStock_ShouldReturnRejectStatus() {
+        // Arrange
+        OrderItemDto item1 =
+                new OrderItemDto(1L, "product1", 120, BigDecimal.TEN); // More than available
+        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+
+        // Define expected changes: [availableQtyChange, reservedItemsChange]
+        Map<String, int[]> expectedChanges =
+                Map.of(
+                        "product1", new int[] {0, 0}, // No change expected
+                        "product2", new int[] {0, 0} // No change expected
+                        );
+
+        // Run operation and verify changes
+        final OrderDto[] resultHolder = new OrderDto[1];
+
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    OrderDto result = inventoryOrderManageService.reserve(order);
+                    resultHolder[0] = result;
+                    return result;
+                },
+                expectedChanges);
+
+        OrderDto resultOrderDto = resultHolder[0];
+
+        // Additional assertions on the result
+        assertThat(resultOrderDto).isNotNull();
+        assertThat(resultOrderDto.status()).isEqualTo("REJECT");
+        assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        // format: orderQty, availableQty, expectedStatus
+        // Sufficient stock scenarios
+        "10, 100, ACCEPT", // Normal case with plenty of stock
+        "100, 100, ACCEPT", // Edge case - exactly available quantity
+        "5, 100, ACCEPT", // Small order quantity
+
+        // Insufficient stock scenarios
+        "120, 100, REJECT", // Clearly insufficient
+        "101, 100, REJECT", // Just over the limit
+        "200, 100, REJECT" // Way over the limit
+    })
+    void parameterizedReserveOrderTest(
+            int orderQuantity, int availableQuantity, String expectedStatus) {
+        // Setup - set available quantity for product1 to the parameterized value
+        product1.setAvailableQuantity(availableQuantity);
+        inventoryRepository.save(product1);
+
+        // Arrange the order with the parameterized quantity
+        OrderItemDto item1 = new OrderItemDto(1L, "product1", orderQuantity, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1));
+
+        // Define expected changes based on expected status
+        Map<String, int[]> expectedChanges;
+        if ("ACCEPT".equals(expectedStatus)) {
+            expectedChanges =
+                    Map.of(
+                            "product1",
+                            new int[] {
+                                -orderQuantity, orderQuantity
+                            } // If accepted: decrease available, increase reserved
+                            );
+        } else {
+            expectedChanges =
+                    Map.of(
+                            "product1", new int[] {0, 0} // If rejected: no changes
+                            );
+        }
+
+        // Run operation and verify changes
+        final OrderDto[] resultHolder = new OrderDto[1];
+
+        assertInventoryChanges(
+                orderDto,
+                (order) -> {
+                    OrderDto result = inventoryOrderManageService.reserve(order);
+                    resultHolder[0] = result;
+                    return result;
+                },
+                expectedChanges);
+
+        OrderDto resultOrderDto = resultHolder[0];
+
+        // Additional assertions on the result
+        assertThat(resultOrderDto).isNotNull();
+        assertThat(resultOrderDto.status()).isEqualTo(expectedStatus);
+        assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
     }
 }

@@ -179,13 +179,68 @@ class ProductControllerTest {
                 .jsonPath("$.type")
                 .isEqualTo("about:blank")
                 .jsonPath("$.title")
-                .isEqualTo("Bad Request")
+                .isEqualTo("Validation Error")
                 .jsonPath("$.status")
                 .isEqualTo(400)
                 .jsonPath("$.detail")
-                .isEqualTo("Invalid request content.")
+                .isEqualTo("Invalid request content")
                 .jsonPath("$.instance")
                 .isEqualTo("/api/catalog");
+    }
+
+    @Test
+    void shouldHandleIdempotentProductCreation() {
+        ProductResponse existingProductResponse =
+                new ProductResponse(
+                        1L,
+                        "code-123",
+                        "Existing Product",
+                        "This product already exists",
+                        null,
+                        19.99,
+                        true);
+        ProductRequest productRequest =
+                new ProductRequest(
+                        "code-123", "Existing Product", "This product already exists", null, 19.99);
+
+        // Mock the service to return the existing product when trying to save with the same product
+        // code
+        given(productService.saveProduct(any(ProductRequest.class)))
+                .willReturn(Mono.just(existingProductResponse));
+
+        // First request - should create normally
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productRequest), ProductRequest.class)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(existingProductResponse.id())
+                .jsonPath("$.productCode")
+                .isEqualTo(existingProductResponse.productCode());
+
+        // Second request with same product code - should be idempotent and return the same product
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(productRequest), ProductRequest.class)
+                .exchange()
+                .expectStatus()
+                .isCreated() // We're returning 201 Created in both cases for consistency
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(existingProductResponse.id())
+                .jsonPath("$.productCode")
+                .isEqualTo(existingProductResponse.productCode());
     }
 
     @Test

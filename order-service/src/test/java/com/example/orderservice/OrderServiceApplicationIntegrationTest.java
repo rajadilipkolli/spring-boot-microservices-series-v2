@@ -22,13 +22,9 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
-
-    @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
     @Test
     @Order(1)
@@ -52,16 +48,16 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
         // Sending event to OrderTopic for joining
         OrderDto orderDto = getOrderDto("ORDER");
 
-        this.kafkaTemplate.send("orders", orderDto.getOrderId(), orderDto);
+        this.kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         // Sending events to both payment-orders, stock-orders for streaming to process and confirm
         OrderDto paymentOrderDto = getOrderDto("PAYMENT");
 
-        this.kafkaTemplate.send("payment-orders", paymentOrderDto.getOrderId(), paymentOrderDto);
+        this.kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
 
         OrderDto stockOrderDto = getOrderDto("STOCK");
 
-        this.kafkaTemplate.send("stock-orders", stockOrderDto.getOrderId(), stockOrderDto);
+        this.kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto);
 
         await().atMost(1, TimeUnit.MINUTES)
                 .pollDelay(10, SECONDS)

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -96,6 +96,36 @@ public class OrderService {
         } else {
             log.debug("one or more of product codes :{} does not exists in db", productCodes);
             throw new ProductNotFoundException(productCodes);
+        }
+    }
+
+    @Transactional
+    public List<OrderResponse> saveBatchOrders(List<OrderRequest> orderRequests) {
+        // Collect all product codes to validate
+        List<String> allProductCodes =
+                orderRequests.stream()
+                        .flatMap(order -> order.items().stream())
+                        .map(OrderItemRequest::productCode)
+                        .map(String::toUpperCase)
+                        .distinct()
+                        .toList();
+
+        if (productsExistsAndInStock(allProductCodes)) {
+            log.debug("All ProductCodes exist in db, proceeding with batch save");
+            List<Order> orderEntities =
+                    orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
+
+            List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
+
+            // Send messages to Kafka in parallel
+            savedOrders.parallelStream()
+                    .map(this.orderMapper::toDto)
+                    .forEach(kafkaOrderProducer::sendOrder);
+
+            return savedOrders.stream().map(this.orderMapper::toResponse).toList();
+        } else {
+            log.debug("One or more product codes do not exist in db");
+            throw new ProductNotFoundException(allProductCodes);
         }
     }
 

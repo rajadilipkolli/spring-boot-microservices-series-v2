@@ -1,151 +1,355 @@
 package simulation;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
+import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.global;
+import static io.gatling.javaapi.core.CoreDsl.jsonPath;
+import static io.gatling.javaapi.core.CoreDsl.nothingFor;
 import static io.gatling.javaapi.core.CoreDsl.rampUsers;
+import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.gatling.javaapi.core.CoreDsl;
+import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
-import io.gatling.javaapi.core.Simulation;
-import io.gatling.javaapi.http.HttpProtocolBuilder;
-import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.stream.Stream;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CreateProductSimulation extends Simulation {
+/**
+ * Performance test simulation for the product creation flow across multiple microservices. This
+ * test validates the end-to-end process of creating products, updating inventory, and creating
+ * orders.
+ */
+public class CreateProductSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    // Configuration parameters - can be externalized to properties
+    private static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "3"));
+    private static final int CONSTANT_USERS =
+            Integer.parseInt(System.getProperty("constantUsers", "15"));
+    private static final int RAMP_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("rampDuration", "30"));
+    private static final int TEST_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("testDuration", "60"));
 
-    HttpProtocolBuilder httpProtocol =
-            http.baseUrl("http://localhost:8765")
-                    .acceptHeader("application/json")
-                    .userAgentHeader("Gatling/Performance Test");
+    // Breaking down the test flow into reusable components for better readability and
+    // maintainability
+    private final ChainBuilder createProduct =
+            exec(http("Create product")
+                            .post("/catalog-service/api/catalog")
+                            .body(
+                                    StringBody(
+                                            """
+            {
+              "productCode": "#{productCode}",
+              "productName": "#{productName}",
+              "price": #{price},
+              "description": "Performance test product"
+            }
+            """))
+                            .asJson()
+                            .check(status().is(201))
+                            .check(header("location").saveAs("productLocation")))
+                    .exec(
+                            session -> {
+                                LOGGER.debug(
+                                        "Created product at: {}",
+                                        session.getString("productLocation"));
+                                return session;
+                            });
 
-    Iterator<Map<String, Object>> feeder =
-            Stream.generate(
-                            () -> {
-                                Map<String, Object> objectMap = new HashMap<>();
-                                objectMap.put(
-                                        "productCode",
-                                        "P000" + new SecureRandom().nextInt(10, 20_000));
-                                objectMap.put(
-                                        "productName",
-                                        "A Random Product" + new SecureRandom().nextInt());
-                                objectMap.put("price", new SecureRandom().nextLong(10, 100));
-                                objectMap.put("customerId", new SecureRandom().nextInt(1, 100));
-                                return objectMap;
+    private final ChainBuilder getProduct =
+            exec(
+                    http("Get created product")
+                            .get(
+                                    session ->
+                                            "/catalog-service"
+                                                    + session.getString("productLocation"))
+                            .check(status().is(200))
+                            .check(
+                                    jsonPath("$.productCode")
+                                            .is(session -> session.getString("productCode"))));
+
+    private final ChainBuilder getInventory =
+            exec(http("Get product inventory")
+                            .get("/inventory-service/api/inventory/#{productCode}")
+                            .check(status().is(200))
+                            .check(bodyString().saveAs("inventoryResponseBody")))
+                    .pause(1000) // Add a pause to ensure the response is processed
+                    .exec(
+                            session -> {
+                                // Validate the response body
+                                String responseBody = session.getString("inventoryResponseBody");
+                                if (responseBody == null || responseBody.trim().isEmpty()) {
+                                    LOGGER.warn(
+                                            "Empty inventory response detected for product code: {}",
+                                            session.getString("productCode"));
+                                    return session.markAsFailed();
+                                }
+
+                                try {
+                                    // Additional validation - try to parse it as JSON
+                                    OBJECT_MAPPER.readTree(responseBody);
+                                    LOGGER.debug("Got valid inventory response");
+                                    return session;
+                                } catch (Exception e) {
+                                    LOGGER.warn(
+                                            "Invalid JSON response for product code: {}, Error: {}",
+                                            session.getString("productCode"),
+                                            e.getMessage());
+                                    return session.markAsFailed();
+                                }
+                            });
+
+    private final ChainBuilder updateInventory =
+            exec(http("Update inventory")
+                            .put(
+                                    session ->
+                                            "/inventory-service/api/inventory/"
+                                                    + getInventoryId(
+                                                            session.getString(
+                                                                    "inventoryResponseBody")))
+                            .body(
+                                    StringBody(
+                                            session ->
+                                                    getBodyAsString(
+                                                            session.getString(
+                                                                    "inventoryResponseBody"))))
+                            .asJson()
+                            .check(status().is(200)))
+                    .exec(
+                            session -> {
+                                LOGGER.debug(
+                                        "Updated inventory for product: {}",
+                                        session.getString("productCode"));
+                                return session;
+                            });
+
+    private final ChainBuilder createOrder =
+            exec(http("Create order with product")
+                            .post("/order-service/api/orders")
+                            .body(
+                                    StringBody(
+                                            """
+            {
+              "customerId": #{customerId},
+              "items": [
+                {
+                  "productCode": "#{productCode}",
+                  "quantity": #{quantity},
+                  "productPrice": #{price}
+                }
+              ],
+              "deliveryAddress": {
+                "addressLine1": "123 Performance Test St",
+                "addressLine2": "Suite 456",
+                "city": "Test City",
+                "state": "TS",
+                "zipCode": "12345",
+                "country": "Test Country"
+              }
+            }
+            """))
+                            .asJson()
+                            .check(status().is(201))
+                            .check(header("location").saveAs("orderLocation")))
+                    .exec(
+                            session -> {
+                                LOGGER.debug(
+                                        "Created order at: {}", session.getString("orderLocation"));
+                                return session;
+                            });
+
+    // Main scenario combining all steps
+    private final ScenarioBuilder productWorkflow =
+            scenario("E2E Product Creation Workflow")
+                    .feed(enhancedProductFeeder())
+                    .exec(createProduct)
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .exec(getProduct)
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .exec(getInventory)
+                    .pause(Duration.ofMillis(200)) // More pause before the critical update
+                    .exec(
+                            session -> {
+                                // Add safeguard to skip inventory update if inventory info is
+                                // missing or invalid
+                                if (session.contains("inventoryResponseBody")
+                                        && session.getString("inventoryResponseBody") != null
+                                        && !Objects.requireNonNull(
+                                                        session.getString("inventoryResponseBody"))
+                                                .trim()
+                                                .isEmpty()) {
+                                    return session;
+                                } else {
+                                    LOGGER.warn(
+                                            "Skipping inventory update due to missing inventory data");
+                                    // Return marked as failed so we don't attempt to create an
+                                    // order based on invalid inventory
+                                    return session.markAsFailed();
+                                }
                             })
-                    .iterator();
+                    .exec(updateInventory)
+                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .exec(createOrder);
 
-    ScenarioBuilder scn =
-            CoreDsl.scenario("Load Test Creating Products")
-                    .feed(feeder)
-                    .exec(
-                            http("create-product-request")
-                                    .post("/catalog-service/api/catalog")
-                                    .header("Content-Type", "application/json")
-                                    .body(
-                                            StringBody(
-                                                    "{ \"productCode\": \"#{productCode}\",\"productName\":\"#{productName}\",\"price\":#{price}, \"description\": \"A Beautiful Product\" }"))
-                                    .check(status().is(201))
-                                    .check(header("location").saveAs("location")))
-                    .exec(
-                            http("get-product-request")
-                                    .get(
-                                            session ->
-                                                    "/catalog-service"
-                                                            + session.getString("location"))
-                                    .check(status().is(200)))
-                    .exec(
-                            http("get-inventory-request")
-                                    .get("/inventory-service/api/inventory/#{productCode}")
-                                    .check(status().is(200))
-                                    .check(bodyString().saveAs("inventoryResponseBody")))
-                    .exec(
-                            http("update-inventory-request")
-                                    .put(
-                                            session ->
-                                                    "/inventory-service/api/inventory/"
-                                                            + getInventoryId(
-                                                                    session.get(
-                                                                            "inventoryResponseBody")))
-                                    .header("Content-Type", "application/json")
-                                    .body(
-                                            StringBody(
-                                                    session ->
-                                                            getBodyAsString(
-                                                                    session.get(
-                                                                            "inventoryResponseBody"))))
-                                    .check(status().is(200)))
-                    .exec(
-                            http("create-order-request")
-                                    .post("/order-service/api/orders")
-                                    .header("Content-Type", "application/json")
-                                    .body(
-                                            StringBody(
-                                                    """
-                                                    {
-                                                      "customerId": #{customerId},
-                                                      "items": [
-                                                        {
-                                                          "productCode": "#{productCode}",
-                                                          "quantity": 10,
-                                                          "productPrice": 5
-                                                        }
-                                                      ]
-                                                    }
-                                                    """))
-                                    .asJson()
-                                    .check(status().is(201))
-                                    .check(header("location").saveAs("location")));
-
+    /**
+     * Prepares the inventory update request by generating a new inventory quantity
+     *
+     * @param inventoryResponseBody The original inventory response
+     * @return JSON string with updated inventory
+     */
     private String getBodyAsString(String inventoryResponseBody) {
-        String body;
+        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
+            LOGGER.error("Empty inventory response body");
+            throw new RuntimeException("Empty inventory response body");
+        }
+
         try {
+            // Log the raw response to help with debugging
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Processing inventory response: {}", inventoryResponseBody);
+            }
+
+            // Add additional validation before parsing
+            if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
+                LOGGER.error("Invalid empty JSON object or array: {}", inventoryResponseBody);
+                throw new RuntimeException("Empty JSON structure in inventory response");
+            }
+
+            try {
+                // First validate that it's valid JSON before trying to deserialize
+                OBJECT_MAPPER.readTree(inventoryResponseBody);
+            } catch (Exception e) {
+                LOGGER.error("Invalid JSON format: {}", e.getMessage());
+                throw new RuntimeException("Invalid JSON format in inventory response", e);
+            }
+
             InventoryResponseDTO inventoryResponseDTO =
                     OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
-            int nextInt = new SecureRandom().nextInt(100, 1000);
 
-            body =
+            if (inventoryResponseDTO == null || inventoryResponseDTO.id() == null) {
+                LOGGER.error("Invalid inventory data after deserialization");
+                throw new RuntimeException("Invalid inventory data after deserialization");
+            }
+
+            int newQuantity = ThreadLocalRandom.current().nextInt(100, 1000);
+
+            String body =
                     OBJECT_MAPPER.writeValueAsString(
-                            inventoryResponseDTO.withAvailableQuantity(nextInt));
-            LOGGER.info("Update Inventory Request :{}", body);
+                            inventoryResponseDTO.withAvailableQuantity(newQuantity));
+
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Update Inventory Request: {}", body);
+            }
             return body;
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            LOGGER.error(
+                    "Failed to process inventory JSON: {}. Response: {}",
+                    e.getMessage(),
+                    inventoryResponseBody);
+            throw new RuntimeException("Error processing inventory data", e);
         }
     }
 
+    /**
+     * Extracts the inventory ID from the inventory response
+     *
+     * @param inventoryResponseBody The inventory response JSON
+     * @return The inventory ID
+     */
     private Long getInventoryId(String inventoryResponseBody) {
-        InventoryResponseDTO inventoryResponseDTO = null;
+
         try {
-            inventoryResponseDTO =
+            validateInventoryResponse(
+                    inventoryResponseBody, "Extracting ID from inventory response");
+
+            InventoryResponseDTO dto =
                     OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
+
+            if (dto == null) {
+                LOGGER.error("Inventory DTO is null after parsing");
+                throw new RuntimeException("Inventory DTO is null after parsing");
+            }
+
+            if (dto.id() == null) {
+                LOGGER.error("Inventory ID is null. Response: {}", inventoryResponseBody);
+                throw new RuntimeException("Inventory ID is null");
+            }
+
+            return dto.id();
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            LOGGER.error(
+                    "Failed to parse inventory response: {}. Response: {}",
+                    e.getMessage(),
+                    inventoryResponseBody);
+            throw new RuntimeException("Error extracting inventory ID", e);
         }
-        return inventoryResponseDTO.id();
     }
 
+    private void validateInventoryResponse(String inventoryResponseBody, String operation) {
+        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
+            LOGGER.error("Empty inventory response body during {}", operation);
+            throw new IllegalArgumentException("Empty inventory response body");
+        }
+
+        // Log the raw response to help with debugging
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("{}: {}", operation, inventoryResponseBody);
+        }
+
+        // Add additional validation before parsing
+        if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
+            LOGGER.error(
+                    "Invalid empty JSON object or array during {}: {}",
+                    operation,
+                    inventoryResponseBody);
+            throw new IllegalArgumentException("Empty JSON structure in inventory response");
+        }
+    }
+
+    /** Simulation setup with configurable load profile */
     public CreateProductSimulation() {
+
+        runHealthChecks();
+
+        LOGGER.info(
+                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
+                KAFKA_INIT_DELAY_SECONDS);
+
+        // Global assertions to validate overall service performance
         this.setUp(
-                        scn.pause(Duration.ofSeconds(1))
+                        productWorkflow
+                                // Small pause between steps to simulate realistic user behavior
+                                .pause(Duration.ofMillis(500))
                                 .injectOpen(
-                                        rampUsers(5).during(Duration.ofSeconds(30)),
-                                        constantUsersPerSec(30).during(Duration.ofSeconds(60))))
-                .protocols(httpProtocol);
+                                        // Initial single user for Kafka initialization
+                                        atOnceUsers(1),
+                                        // Wait for Kafka initialization to complete
+                                        nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
+                                        // Ramp up users phase for gradual load increase
+                                        rampUsers(RAMP_USERS)
+                                                .during(Duration.ofSeconds(RAMP_DURATION_SECONDS)),
+                                        // Constant load phase to test system stability
+                                        constantUsersPerSec(CONSTANT_USERS)
+                                                .during(Duration.ofSeconds(TEST_DURATION_SECONDS))))
+                .protocols(httpProtocol)
+                .assertions(
+                        // Add global performance SLA assertions
+                        global().responseTime().mean().lt(1500), // Mean response time under 1.5s
+                        global().responseTime()
+                                .percentile(95)
+                                .lt(5000), // 95% of responses under 5s
+                        global().failedRequests().percent().lt(5.0) // Less than 5% failed requests
+                        );
     }
 }

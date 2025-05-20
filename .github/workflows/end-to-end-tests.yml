@@ -1,0 +1,22 @@
+name: End-to-End Tests
+on:
+  workflow_run:
+    workflows: ["SonarCloud"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch: # Allow manual triggering of the workflow
+
+jobs:
+  e2e-tests:
+    name: Run End-to-End Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }} # Run on manual trigger or if SonarCloud workflow succeeded
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for better relevancy
+          
+      - name: Run End to End Tests
+        run: ./test-em-all.sh --detailed-logs start stop
