@@ -26,4 +26,4 @@ jobs:
           cache: 'maven'
           
       - name: Run End to End Tests
-        run: ./test-em-all.sh start stop --detailed-logs
+        run: ./test-em-all.sh start stop

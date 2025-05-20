@@ -199,7 +199,8 @@ function assertCurl() {
       echo -e "${GREEN}Test OK (HTTP Code: $httpCode)${NC}"
     else
       echo -e "${YELLOW}Test OK (HTTP Code: $httpCode, $RESPONSE)${NC}"
-    fi    track_test_result "$testName" "PASS" "Expected: $expectedHttpCode, Got: $httpCode"
+    fi
+    track_test_result "$testName" "PASS" "Expected: $expectedHttpCode, Got: $httpCode"
     return 0
   else
       echo -e "${RED}Test FAILED, EXPECTED HTTP Code: $expectedHttpCode, GOT: $httpCode, WILL ABORT!${NC}"
