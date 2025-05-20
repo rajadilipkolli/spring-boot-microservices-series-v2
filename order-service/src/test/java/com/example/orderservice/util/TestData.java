@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -72,20 +72,19 @@ public class TestData {
 
     public static OrderDto getStockOrderDto(String status, Order testOrder) {
 
-        return new OrderDto(
-                testOrder.getId(),
-                testOrder.getCustomerId(),
-                status,
-                "INVENTORY",
-                getOrderItemDtoList());
+        return buildOrderDto(testOrder, status, "INVENTORY");
     }
 
     public static OrderDto getPaymentOrderDto(String status, Order testOrder) {
+        return buildOrderDto(testOrder, status, "PAYMENT");
+    }
+
+    private static OrderDto buildOrderDto(Order testOrder, String status, String source) {
         return new OrderDto(
                 testOrder.getId(),
                 testOrder.getCustomerId(),
                 status,
-                "PAYMENT",
+                source,
                 getOrderItemDtoList());
     }
 

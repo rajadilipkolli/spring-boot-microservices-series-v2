@@ -36,4 +36,11 @@ public record OrderDto(
         }
         return new OrderDto(orderId(), customerId(), status, source(), items());
     }
+
+    public OrderDto withStatusAndSource(String status, String source) {
+        if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
+            return this;
+        }
+        return new OrderDto(orderId(), customerId(), status, source, items());
+    }
 }
