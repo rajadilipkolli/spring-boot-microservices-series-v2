@@ -70,6 +70,9 @@
     <profiles>
         <profile>
             <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <gatling.simulationClass>simulation.CreateProductSimulation</gatling.simulationClass>
             </properties>
@@ -82,9 +85,6 @@
         </profile>
         <profile>
             <id>stress</id>
-             <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <gatling.simulationClass>simulation.StressTestSimulation</gatling.simulationClass>
             </properties>
