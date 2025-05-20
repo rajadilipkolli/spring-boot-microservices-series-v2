@@ -7,17 +7,19 @@
 package com.example.api.gateway.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import java.net.URI;
 import java.time.Duration;
-import java.util.function.Function;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 /** Controller that makes sequential service calls with a delay in between. */
@@ -25,13 +27,14 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/generate")
 public class GenerateController {
 
+    private static final Logger logger = LoggerFactory.getLogger(GenerateController.class);
     private final WebClient webClient;
-    private final Integer gatewayPort;
+    private final DiscoveryClient discoveryClient;
 
     public GenerateController(
-            WebClient.Builder webClientBuilder, @Value("${gateway.port:-1}") Integer gatewayPort) {
+            @LoadBalanced WebClient.Builder webClientBuilder, DiscoveryClient discoveryClient) {
         this.webClient = webClientBuilder.build();
-        this.gatewayPort = gatewayPort;
+        this.discoveryClient = discoveryClient;
     }
 
     /**
@@ -43,14 +46,41 @@ public class GenerateController {
     @GetMapping
     @Operation(summary = "Generate data by making sequential service calls with delay")
     public Mono<ResponseEntity<String>> generate(ServerWebExchange exchange) {
-        URI uri = exchange.getRequest().getURI();
+        // Log available services from Eureka
+        List<String> services = discoveryClient.getServices();
+        logger.info("Available services: {}", services);
+
+        // Log instances for catalog-service
+        List<ServiceInstance> catalogInstances = discoveryClient.getInstances("catalog-service");
+        logger.info("catalog-service instances: {}", catalogInstances.size());
+        catalogInstances.forEach(
+                instance ->
+                        logger.info(
+                                "Instance - Host: {}, Port: {}, URI: {}",
+                                instance.getHost(),
+                                instance.getPort(),
+                                instance.getUri()));
+
+        // Log instances for inventory-service
+        List<ServiceInstance> inventoryInstances =
+                discoveryClient.getInstances("inventory-service");
+        logger.info("inventory-service instances: {}", inventoryInstances.size());
+        inventoryInstances.forEach(
+                instance ->
+                        logger.info(
+                                "Instance - Host: {}, Port: {}, URI: {}",
+                                instance.getHost(),
+                                instance.getPort(),
+                                instance.getUri()));
+
         return webClient
                 .get()
-                .uri(getURIFunction(uri, "/catalog-service/api/catalog/generate"))
+                .uri("lb://catalog-service/api/catalog/generate")
                 .retrieve()
                 .bodyToMono(String.class)
                 .onErrorResume(
                         e -> {
+                            logger.error("Error calling catalog service", e);
                             return Mono.just("Error calling catalog service: " + e.getMessage());
                         })
                 .delayElement(Duration.ofSeconds(10))
@@ -58,14 +88,13 @@ public class GenerateController {
                         catalogResponse ->
                                 webClient
                                         .get()
-                                        .uri(
-                                                getURIFunction(
-                                                        uri,
-                                                        "/inventory-service/api/inventory/generate"))
+                                        .uri("lb://inventory-service/api/inventory/generate")
                                         .retrieve()
                                         .bodyToMono(String.class)
                                         .onErrorResume(
                                                 e -> {
+                                                    logger.error(
+                                                            "Error calling inventory service", e);
                                                     return Mono.just(
                                                             "Error calling inventory service: "
                                                                     + e.getMessage());
@@ -79,17 +108,5 @@ public class GenerateController {
                                                                         + ", "
                                                                         + "Inventory response: "
                                                                         + inventoryResponse)));
-    }
-
-    private Function<UriBuilder, URI> getURIFunction(URI uri, String path) {
-        return uriBuilder -> {
-            if (gatewayPort != -1) {
-                uriBuilder.port(gatewayPort);
-            } else {
-                uriBuilder.port(uri.getPort());
-            }
-            uriBuilder.scheme(uri.getScheme()).host(uri.getHost()).path(path);
-            return uriBuilder.build();
-        };
     }
 }
