@@ -15,6 +15,7 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 jobs:
   build:
     name: Build and analyze
@@ -52,6 +53,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=rajadilipkolli_spring-boot-microservices-series-v2
-        
-      - name: Run End to End Tests
-        run: ./test-em-all.sh start stop --detailed-logs

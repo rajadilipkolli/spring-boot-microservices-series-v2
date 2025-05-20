@@ -199,8 +199,7 @@ function assertCurl() {
       echo -e "${GREEN}Test OK (HTTP Code: $httpCode)${NC}"
     else
       echo -e "${YELLOW}Test OK (HTTP Code: $httpCode, $RESPONSE)${NC}"
-    fi
-    track_test_result "$testName" "PASS" "Expected: $expectedHttpCode, Got: $httpCode"
+    fi    track_test_result "$testName" "PASS" "Expected: $expectedHttpCode, Got: $httpCode"
     return 0
   else
       echo -e "${RED}Test FAILED, EXPECTED HTTP Code: $expectedHttpCode, GOT: $httpCode, WILL ABORT!${NC}"
@@ -242,7 +241,7 @@ function waitForService() {
     local url=$@
     local service_name=$(echo $url | grep -o -E '[^/]+/actuator/health' || echo "Service")
     
-    echo -n "${CYAN}Wait for: $service_name... ${NC}"
+    echo -e "${CYAN}Wait for: $service_name...${NC}"
     n=0
     until testUrl ${url}
     do
@@ -259,10 +258,10 @@ function waitForService() {
                 current_sleep_time=$((RETRY_SLEEP_TIME * 2))
             fi
             sleep ${current_sleep_time}
-            echo -n "${YELLOW}, retry #$n ${NC}"
+            echo -e "${YELLOW}  - Retry attempt #$n${NC}"
         fi
     done
-    echo -e "\n${GREEN}DONE, service is available.${NC}\n"
+    echo -e "${GREEN}✓ DONE, $service_name is available.${NC}"
     track_test_result "Service availability: $service_name" "PASS"
     return 0
 }
@@ -383,7 +382,7 @@ function verifyAPIs() {
         log_warning "Failed to get valid order ID"
         track_test_result "Order creation" "FAIL" "Invalid order ID returned"
         return 1
-    }
+    fi
 
     log_info "Sleeping for ${KAFKA_STARTUP_SLEEP_TIME} sec as it is first order, letting kafka start in all services. Processing orderId - $ORDER_ID"
     sleep ${KAFKA_STARTUP_SLEEP_TIME}    # Verify that order processing is completed and status is CONFIRMED
