@@ -428,7 +428,7 @@ function verifyAPIs() {
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status) || return 1
-    assertEqual null $(echo ${RESPONSE} | jq .source) || return 1
+    assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
