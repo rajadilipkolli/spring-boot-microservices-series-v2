@@ -40,7 +40,7 @@ echo -e "${BLUE}Starting 'Store μServices' for [end-2-end] testing....${NC}\n"
 : ${PROD_CODE_1=P0002}
 : ${CUSTOMER_NAME=dockerCustomer001}
 : ${SERVICE_WAIT_TIMEOUT=100}
-: ${INITIAL_SLEEP_TIME=60}
+: ${INITIAL_SLEEP_TIME=45}
 : ${RETRY_SLEEP_TIME=3}
 : ${ORDER_PROCESSING_SLEEP_TIME=3}
 : ${KAFKA_STARTUP_SLEEP_TIME=8}
