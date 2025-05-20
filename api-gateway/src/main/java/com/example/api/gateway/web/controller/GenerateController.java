@@ -55,7 +55,7 @@ public class GenerateController {
                 .flatMap(
                         catalogResponse ->
                                 callGetEndpoint(
-                                                "lb://inventory-service/api/inventory/generate",
+                                                "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate",
                                                 "Error calling inventory service")
                                         .map(
                                                 inventoryResponse ->
