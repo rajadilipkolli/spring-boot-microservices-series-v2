@@ -72,14 +72,14 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
         stringKafkaTemplate.send("payment-orders", invalidJson);
 
         // Method 2: Also try with a malformed OrderDto object
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(-1L);
-        orderDto.setCustomerId(-1L);
-        orderDto.setSource("source");
         // Set status to a very long string to cause potential issues
-        orderDto.setStatus(
-                "INVALID_STATUS_THAT_IS_VERY_LONG_AND_SHOULD_CAUSE_PROBLEMS_WITH_DESERIALIZATION");
-        orderDto.setItems(null);
+        OrderDto orderDto =
+                new OrderDto(
+                        -1L,
+                        -1L,
+                        "INVALID_STATUS_THAT_IS_VERY_LONG_AND_SHOULD_CAUSE_PROBLEMS_WITH_DESERIALIZATION",
+                        "source",
+                        null);
 
         kafkaTemplate.send("payment-orders", 1L, orderDto);
 
