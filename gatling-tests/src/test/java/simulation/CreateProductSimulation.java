@@ -174,11 +174,11 @@ public class CreateProductSimulation extends BaseSimulation {
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
                     .exec(createProduct)
-                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(10)) // Add pause to reduce load
                     .exec(getProduct)
-                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(10)) // Add pause to reduce load
                     .exec(getInventory)
-                    .pause(Duration.ofMillis(200)) // More pause before the critical update
+                    .pause(Duration.ofMillis(20)) // More pause before the critical update
                     .exec(
                             session -> {
                                 // Add safeguard to skip inventory update if inventory info is
@@ -199,7 +199,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 }
                             })
                     .exec(updateInventory)
-                    .pause(Duration.ofMillis(100)) // Add pause to reduce load
+                    .pause(Duration.ofMillis(10)) // Add pause to reduce load
                     .exec(createOrder);
 
     /**
