@@ -269,10 +269,6 @@
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>18080</THC_PORT>
                         </env>
-                        <buildpacks>
-                            <buildpack>urn:cnb:builder:paketo-buildpacks/java</buildpack>
-                            <buildpack>paketo-buildpacks/health-checker</buildpack>
-                        </buildpacks>
                     </image>
                     <docker>
                         <publishRegistry>
