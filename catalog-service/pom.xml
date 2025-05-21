@@ -271,7 +271,7 @@
                         </env>
                         <buildpacks>
                             <buildpack>urn:cnb:builder:paketo-buildpacks/java</buildpack>
-                            <buildpack>gcr.io/paketo-buildpacks/health-checker:latest</buildpack>
+                            <buildpack>paketo-buildpacks/health-checker</buildpack>
                         </buildpacks>
                     </image>
                     <docker>
