@@ -13,6 +13,12 @@ Start-Process powershell -ArgumentList "cd config-server; ./mvnw spring-boot:run
 Write-Host "Waiting for Config Server to start..." -ForegroundColor Yellow
 Start-Sleep -Seconds 20
 
+# Start API Gateway
+Write-Host "Starting API Gateway..." -ForegroundColor Green
+Start-Process powershell -ArgumentList "cd api-gateway; ./mvnw spring-boot:run"
+Write-Host "Waiting for API Gateway to start..." -ForegroundColor Yellow
+Start-Sleep -Seconds 20
+
 # Start Catalog Service
 Write-Host "Starting Catalog Service..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "cd catalog-service; ./mvnw spring-boot:run"
@@ -25,11 +31,17 @@ Start-Process powershell -ArgumentList "cd inventory-service; ./mvnw spring-boot
 Write-Host "Waiting for Inventory Service to start..." -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-# Start API Gateway
-Write-Host "Starting API Gateway..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "cd api-gateway; ./mvnw spring-boot:run"
-Write-Host "Waiting for API Gateway to start..." -ForegroundColor Yellow
-Start-Sleep -Seconds 20
+# Start Order Service
+Write-Host "Starting Order Service..." -ForegroundColor Green
+Start-Process powershell -ArgumentList "cd order-service; ./mvnw spring-boot:run"
+Write-Host "Waiting for Order Service to start..." -ForegroundColor Yellow
+Start-Sleep -Seconds 30
+
+# Start Order Service
+Write-Host "Starting Payment Service..." -ForegroundColor Green
+Start-Process powershell -ArgumentList "cd payment-service; ./mvnw spring-boot:run"
+Write-Host "Waiting for Payment Service to start..." -ForegroundColor Yellow
+Start-Sleep -Seconds 30
 
 Write-Host "All services should now be running!" -ForegroundColor Green
 Write-Host "You can access the Eureka dashboard at: http://localhost:8761" -ForegroundColor Cyan
