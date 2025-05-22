@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,19 +34,23 @@ import reactor.util.retry.Retry;
 public class GenerateController implements GenerateAPI {
 
     private static final Logger logger = LoggerFactory.getLogger(GenerateController.class);
+
     private static final String CATALOG_SERVICE_URL =
             "lb://CATALOG-SERVICE/catalog-service/api/catalog/generate";
     private static final String INVENTORY_SERVICE_URL =
             "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate";
-    private static final Duration DELAY_BETWEEN_SERVICES = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final Duration RETRY_BACKOFF = Duration.ofMillis(500);
 
     private final WebClient webClient;
+    private final Duration delayBetweenServices;
 
-    public GenerateController(@LoadBalanced WebClient.Builder webClientBuilder) {
+    public GenerateController(
+            @LoadBalanced WebClient.Builder webClientBuilder,
+            @Value("${gateway.delay-between-services:5s}") Duration delayBetweenServices) {
         this.webClient = webClientBuilder.build();
+        this.delayBetweenServices = delayBetweenServices;
     }
 
     /**
@@ -64,7 +69,7 @@ public class GenerateController implements GenerateAPI {
                             if (catalogResult.status() == HttpStatus.OK.value()) {
                                 // Only call inventory if catalog succeeded with status 200
                                 return Mono.just(catalogResult)
-                                        .delayElement(DELAY_BETWEEN_SERVICES)
+                                        .delayElement(this.delayBetweenServices)
                                         .flatMap(
                                                 catalogData ->
                                                         callMicroservice(

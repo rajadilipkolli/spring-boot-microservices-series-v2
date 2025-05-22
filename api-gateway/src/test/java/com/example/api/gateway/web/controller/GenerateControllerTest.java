@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.example.api.gateway.model.GenerationResponse;
+import java.time.Duration;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,10 +42,14 @@ class GenerateControllerUnitTest {
     @BeforeEach
     void setup() {
         when(webClientBuilder.build()).thenReturn(webClient);
+
+        // Common mocking for webClient.get().uri(...).retrieve()
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        controller = new GenerateController(webClientBuilder);
+
+        // Use Duration.ZERO for tests to avoid unnecessary delays
+        controller = new GenerateController(webClientBuilder, Duration.ZERO);
     }
 
     @Test
