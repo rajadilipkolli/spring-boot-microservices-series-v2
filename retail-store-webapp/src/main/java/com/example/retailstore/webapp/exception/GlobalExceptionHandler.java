@@ -8,9 +8,12 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -53,7 +56,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({HttpClientErrorException.class, HttpServerErrorException.class})
     ProblemDetail handleHttpException(Exception ex) {
         log.error("HTTP error occurred", ex);
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof HttpClientErrorException clientError) {
             status = clientError.getStatusCode();
         } else if (ex instanceof HttpServerErrorException serverError) {
@@ -76,6 +79,35 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
         problemDetail.setDetail("An unexpected error occurred. Please try again later.");
         problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    ProblemDetail handleInvalidRequestException(InvalidRequestException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Bad Request");
+        problemDetail.setType(URI.create("https://api.retailstore.com/errors/bad-request"));
+        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ProblemDetail handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problemDetail.setTitle("Not Found");
+        problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
+        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    ProblemDetail handleAccessDeniedException(AccessDeniedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        problemDetail.setTitle("Access Denied");
+        problemDetail.setDetail("You do not have permission to perform this operation");
         return problemDetail;
     }
 }
