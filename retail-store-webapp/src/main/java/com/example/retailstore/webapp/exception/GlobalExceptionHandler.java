@@ -10,10 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -99,15 +97,6 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
         problemDetail.setDetail(ex.getMessage());
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    ProblemDetail handleAccessDeniedException(AccessDeniedException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
-        problemDetail.setTitle("Access Denied");
-        problemDetail.setDetail("You do not have permission to perform this operation");
         return problemDetail;
     }
 }
