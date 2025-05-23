@@ -3,8 +3,11 @@ package com.example.retailstore.webapp.config;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -17,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @TestConfiguration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class TestSecurityConfig {
 
     @Bean
@@ -52,16 +56,17 @@ public class TestSecurityConfig {
     @Bean
     @Primary
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(c -> c.requestMatchers(
-                                "/login", "/", "/api/register", "/js/**", "/css/**", "/images/**", "/webjars/**")
+        http.authorizeHttpRequests(auth -> auth.requestMatchers(
+                                "/js/**", "/css/**", "/images/**", "/error", "/webjars/**", "/", "/login")
                         .permitAll()
-                        .requestMatchers("/inventory", "/api/inventory/**")
-                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register", "/api/inventory/**"))
-                .oauth2Login(oauth2 -> oauth2.loginPage("/login").defaultSuccessUrl("/", true))
-                .logout(logout -> logout.logoutSuccessUrl("/").permitAll());
+                .oauth2Login(oauth2 -> oauth2.loginPage("/login"))
+                .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                }))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+
         return http.build();
     }
 }
