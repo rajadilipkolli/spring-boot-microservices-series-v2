@@ -29,7 +29,7 @@ import reactor.test.StepVerifier;
 /** Unit tests for the {@link GenerateController} class. */
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings({"rawtypes", "unchecked"})
-class GenerateControllerUnitTest {
+class GenerateControllerTest {
 
     @Mock private WebClient.Builder webClientBuilder;
     @Mock private WebClient webClient;
