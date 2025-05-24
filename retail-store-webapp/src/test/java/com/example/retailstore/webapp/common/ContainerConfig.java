@@ -9,7 +9,7 @@ import org.springframework.test.context.DynamicPropertyRegistrar;
 public class ContainerConfig {
 
     private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.2.4";
-    private static final String REALM_IMPORT_FILE = "./docker/realm-config/retailstore-realm.json";
+    private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 
     @Bean
