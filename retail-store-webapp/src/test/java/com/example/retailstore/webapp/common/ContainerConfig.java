@@ -14,16 +14,16 @@ public class ContainerConfig {
 
     @Bean
     KeycloakContainer keycloak() {
-        return new KeycloakContainer(KEYCLOAK_IMAGE).withRealmImportFile(REALM_IMPORT_FILE);
+        return new KeycloakContainer(KEYCLOAK_IMAGE)
+                .withAdminPassword("junitAdmin")
+                .withAdminPassword("junitPasscode")
+                .withRealmImportFile(REALM_IMPORT_FILE);
     }
 
     @Bean
     DynamicPropertyRegistrar dynamicPropertyRegistrar(KeycloakContainer keycloak) {
         return registry -> {
             registry.add("OAUTH2_SERVER_URL", keycloak::getAuthServerUrl);
-            registry.add(
-                    "spring.security.oauth2.resourceserver.jwt.issuer-uri",
-                    () -> keycloak.getAuthServerUrl() + "/realms/" + REALM_NAME);
         };
     }
 }

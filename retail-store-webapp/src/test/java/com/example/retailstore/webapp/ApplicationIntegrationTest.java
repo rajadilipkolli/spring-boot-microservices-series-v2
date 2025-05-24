@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 public class ApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
-    void context() {
+    void shouldReturnHealthyStatusFromActuatorEndpoint() {
         mockMvcTester
                 .get()
                 .uri("/actuator/health")
