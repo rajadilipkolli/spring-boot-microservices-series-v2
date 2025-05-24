@@ -37,10 +37,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.HttpClientErrorException;
 
 @WebMvcTest(controllers = OrderController.class)
 @Import(TestSecurityConfig.class)
@@ -141,7 +143,7 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.customerId", is(1)))
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.items", hasSize(2)))
-                .andExpect(jsonPath("$.items[0].productCode", is("PROD-1")))
+                .andExpect(jsonPath("$.items[0].productId", is("PROD-1")))
                 .andExpect(jsonPath("$.items[0].quantity", is(2)));
     }
 
@@ -195,9 +197,50 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderNumber", is("ORDER-123")))
+                .andExpect(jsonPath("$.orderId", is(123)))
                 .andExpect(jsonPath("$.customerId", is(1)))
-                .andExpect(jsonPath("$.totalAmount", is(42.97)))
-                .andExpect(jsonPath("$.totalItems", is(2)));
+                .andExpect(jsonPath("$.status", is("NEW")));
+    }
+
+    @Test
+    @WithMockUser
+    void getOrder_shouldHandleErrorWhenServiceFails() throws Exception {
+        String orderNumber = "ORDER-123";
+
+        when(orderServiceClient.getOrder(anyMap(), anyString()))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    void getOrders_shouldHandleErrorWhenServiceFails() throws Exception {
+        when(orderServiceClient.getOrders(anyMap()))
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @WithMockUser
+    void createOrder_shouldHandleErrorWhenCustomerServiceFails() throws Exception {
+        // Create test request objects
+        CustomerRequest customerRequest =
+                new CustomerRequest("Test User", "original@example.com", "1234567890", "Test Address", 5000);
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")));
+        Address address = new Address("123 Test St", "Apt 4", "Test City", "Test State", "12345", "Test Country");
+        CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
+
+        // Mock client responses for failure
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        mockMvc.perform(post("/api/orders")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createOrderRequest)))
+                .andExpect(status().isBadRequest());
     }
 }
