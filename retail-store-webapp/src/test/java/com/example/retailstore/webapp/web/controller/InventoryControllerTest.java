@@ -1,6 +1,5 @@
 package com.example.retailstore.webapp.web.controller;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -80,14 +79,20 @@ class InventoryControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldAllowAdminToUpdateInventory() throws Exception {
-        var inventory = new InventoryResponse(1L, "SKU1", 10, null);
-        when(inventoryServiceClient.updateInventory(eq(1L), any())).thenReturn(inventory);
+        // Arrange
+        var request = new InventoryResponse(1L, "SKU1", 10, null);
+        var response = new InventoryResponse(1L, "SKU1", 10, null);
+        var updateRequest = request.createInventoryUpdateRequest();
 
+        when(inventoryServiceClient.updateInventory(eq(1L), eq(updateRequest))).thenReturn(response);
+
+        // Act & Assert
         mockMvc.perform(put("/inventory")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
-                .andExpect(status().isOk());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
 
     @Test
