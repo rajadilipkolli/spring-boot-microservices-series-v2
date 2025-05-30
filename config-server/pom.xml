@@ -18,7 +18,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2025.0.0-RC1</spring-cloud.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
         <spotless.version>2.44.5</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
