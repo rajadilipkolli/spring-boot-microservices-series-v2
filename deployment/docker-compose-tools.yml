@@ -469,7 +469,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.4.0
+    image: prom/prometheus:v3.4.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
