@@ -155,6 +155,18 @@ class ProductControllerTest {
 
     @Test
     @WithMockUser
+    void createProduct_shouldRejectRequestWithoutCsrfToken() throws Exception {
+        ProductRequest productRequest =
+                new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", 40.99);
+
+        mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(productRequest)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
     void products_shouldHandleErrorWhenServiceFails() throws Exception {
         when(catalogServiceClient.getProducts(anyInt()))
                 .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
