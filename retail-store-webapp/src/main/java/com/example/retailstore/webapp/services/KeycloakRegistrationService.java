@@ -38,8 +38,11 @@ public class KeycloakRegistrationService {
 
     private String getAdminToken() {
         var formData = String.format(
-                "grant_type=password&client_id=%s&client_secret=%s&username=admin&password=admin1234",
-                keycloakProperties.getAdminClientId(), keycloakProperties.getAdminClientSecret());
+                "grant_type=password&client_id=%s&client_secret=%s&username=%s&password=%s",
+                keycloakProperties.getAdminClientId(),
+                keycloakProperties.getAdminClientSecret(),
+                keycloakProperties.getAdminUsername(),
+                keycloakProperties.getAdminPassword());
 
         var response = restClient
                 .post()
