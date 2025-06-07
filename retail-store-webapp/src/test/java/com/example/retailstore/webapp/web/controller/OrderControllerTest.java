@@ -5,7 +5,6 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -33,10 +32,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -70,7 +67,6 @@ class OrderControllerTest {
     private PagedResult<OrderResponse> pagedResult;
     private CustomerResponse customerResponse;
     private OrderConfirmationDTO orderConfirmation;
-    private MockedStatic<SecurityHelper> mockedSecurityHelper;
 
     @BeforeEach
     void setUp() {
@@ -81,18 +77,20 @@ class OrderControllerTest {
                 new OrderItemResponse(1L, "PROD-1", 2, new BigDecimal("10.99"), new BigDecimal("21.98")),
                 new OrderItemResponse(2L, "PROD-2", 1, new BigDecimal("20.99"), new BigDecimal("20.99")));
 
-        orderResponseList = List.of(
-                new OrderResponse(1L, 1L, "NEW", "", address, LocalDateTime.now(), new BigDecimal("42.97"), orderItems),
-                new OrderResponse(
-                        2L,
-                        1L,
-                        "DELIVERED",
-                        "",
-                        address,
-                        LocalDateTime.now().minusDays(1),
-                        new BigDecimal("30.99"),
-                        List.of(new OrderItemResponse(
-                                3L, "PROD-3", 1, new BigDecimal("30.99"), new BigDecimal("30.99")))));
+        // Create OrderResponse instances using the constructor
+        OrderResponse order1 =
+                new OrderResponse(1L, 1L, "NEW", "", address, LocalDateTime.now(), new BigDecimal("42.97"), orderItems);
+        OrderResponse order2 = new OrderResponse(
+                2L,
+                1L,
+                "DELIVERED",
+                "",
+                address,
+                LocalDateTime.now().minusDays(1),
+                new BigDecimal("30.99"),
+                List.of(new OrderItemResponse(3L, "PROD-3", 1, new BigDecimal("30.99"), new BigDecimal("30.99"))));
+
+        orderResponseList = List.of(order1, order2);
 
         pagedResult = new PagedResult<>(
                 orderResponseList,
@@ -117,26 +115,17 @@ class OrderControllerTest {
         when(securityHelper.getLoggedInUserEmail()).thenReturn("test@example.com");
 
         // Mock static SecurityHelper.getUsername()
-        mockedSecurityHelper = mockStatic(SecurityHelper.class);
-        mockedSecurityHelper.when(SecurityHelper::getUsername).thenReturn("test@example.com");
+        when(securityHelper.getUsername()).thenReturn("test-username");
 
         // Mock customer service client for cart
         when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
-    }
-
-    @AfterEach
-    void tearDown() {
-        mockedSecurityHelper.close();
+        when(customerServiceClient.getCustomerById(any(Long.class))).thenReturn(customerResponse); // Added this line
     }
 
     @Test
     @WithMockUser
     void cart_shouldRenderCartPageAndProcessTemplateWithoutErrors() throws Exception {
         // Given
-        // CustomerResponse customerWithAddress = new CustomerResponse(
-        // 1L, "Test User", "test@example.com", "1234567890", "123 Test St,Test City,TS 12345", 5000);
-        // when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerWithAddress);
-
         // Use MockMvc to render the template and check for successful processing
         mockMvc.perform(get("/cart").with(csrf()))
                 .andExpect(status().isOk())
@@ -159,7 +148,9 @@ class OrderControllerTest {
     @WithMockUser
     void getOrder_shouldReturnOrderDetails() throws Exception {
         String orderNumber = "ORDER-123";
-        OrderResponse orderResponse = orderResponseList.get(0);
+        OrderResponse orderResponse = orderResponseList.getFirst();
+        // Manually set the customer for the test case
+        orderResponse.setCustomer(customerResponse);
 
         when(orderServiceClient.getOrder(anyMap(), anyString())).thenReturn(orderResponse);
 
@@ -170,7 +161,9 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andExpect(jsonPath("$.items[0].productId", is("PROD-1")))
-                .andExpect(jsonPath("$.items[0].quantity", is(2)));
+                .andExpect(jsonPath("$.items[0].quantity", is(2)))
+                .andExpect(jsonPath("$.customer.name", is("Test User"))) // Added assertion for customer name
+                .andExpect(jsonPath("$.customer.email", is("test@example.com"))); // Added assertion for customer email
     }
 
     @Test

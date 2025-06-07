@@ -16,7 +16,7 @@ public class SecurityHelper {
         this.authorizedClientService = authorizedClientService;
     }
 
-    public static String getUsername() {
+    public String getUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = null;
         if (authentication != null

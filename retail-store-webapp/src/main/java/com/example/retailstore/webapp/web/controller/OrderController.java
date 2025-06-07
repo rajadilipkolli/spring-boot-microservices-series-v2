@@ -41,7 +41,7 @@ class OrderController {
 
     @GetMapping("/cart")
     String cart(Model model) {
-        String username = SecurityHelper.getUsername();
+        String username = securityHelper.getUsername();
         CustomerResponse customer = customerServiceClient.getCustomerByName(username);
         model.addAttribute("customer", customer);
         return "cart";
@@ -58,7 +58,7 @@ class OrderController {
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", orderNumber);
         OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
-        CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.customerId());
+        CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.getCustomerId());
         orderResponse.updateCustomerDetails(customerResponse);
         return orderResponse;
     }
