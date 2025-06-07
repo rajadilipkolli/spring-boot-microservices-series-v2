@@ -21,7 +21,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.1-alpine'
+    image: 'redis:8.0.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -95,7 +95,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.4
+    image: quay.io/keycloak/keycloak:26.2.5
     command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]

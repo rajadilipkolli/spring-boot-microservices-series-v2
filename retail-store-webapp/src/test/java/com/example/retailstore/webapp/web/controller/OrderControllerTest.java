@@ -114,8 +114,17 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
-    void cart_shouldRenderCartPage() throws Exception {
-        mockMvc.perform(get("/cart").with(csrf())).andExpect(status().isOk()).andExpect(view().name("cart"));
+    void cart_shouldRenderCartPageAndProcessTemplateWithoutErrors() throws Exception {
+        // Use MockMvc to render the template and check for successful processing
+        mockMvc.perform(get("/cart").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("cart"))
+                .andExpect(result -> {
+                    // If we get here without exceptions, template processing was successful
+                    String contentAsString = result.getResponse().getContentAsString();
+                    // Check for expected content to ensure template was actually rendered
+                    assert (contentAsString.contains("Your cart"));
+                });
     }
 
     @Test
