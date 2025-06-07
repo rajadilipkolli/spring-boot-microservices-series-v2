@@ -24,6 +24,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
 class RegistrationControllerTest {
+    private static final String REGISTER_ENDPOINT = "/api/register";
+    private static final String TEST_USERNAME = "testuser";
+    private static final String TEST_EMAIL = "test@example.com";
+    private static final String TEST_PASSWORD = "AbcXyz@123";
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,12 +40,23 @@ class RegistrationControllerTest {
 
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {
-        RegistrationRequest request =
-                new RegistrationRequest("testuser", "test@example.com", "Test", "User", "AbcXyz@123");
+        RegistrationRequest request = new RegistrationRequest(TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD);
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
 
-        mockMvc.perform(post("/api/register")
+        mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("User registered successfully"));
+    }
+
+    @Test
+    void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD);
+        doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
+
+        mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -58,7 +73,7 @@ class RegistrationControllerTest {
                 "pwd" // valid password
                 );
 
-        mockMvc.perform(post("/api/register")
+        mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -67,14 +82,13 @@ class RegistrationControllerTest {
 
     @Test
     void shouldReturn400WhenKeycloakRegistrationFails() throws Exception {
-        RegistrationRequest request =
-                new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
+        RegistrationRequest request = new RegistrationRequest(TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD);
 
         doThrow(new RuntimeException("Keycloak registration failed"))
                 .when(registrationService)
                 .registerUser(any(RegistrationRequest.class));
 
-        mockMvc.perform(post("/api/register")
+        mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -83,6 +97,6 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.title", is("Bad Request")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/register")));
+                .andExpect(jsonPath("$.instance", is(REGISTER_ENDPOINT)));
     }
 }
