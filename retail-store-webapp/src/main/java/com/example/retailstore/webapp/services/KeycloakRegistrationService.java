@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.services;
 
+import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import java.util.List;
@@ -18,23 +19,27 @@ public class KeycloakRegistrationService {
     private static final Logger logger = LoggerFactory.getLogger(KeycloakRegistrationService.class);
 
     private final String keycloakUrl;
-    private final String realm;
     private final RestClient restClient;
+    private final KeycloakProperties keycloakProperties;
 
     @Autowired
-    public KeycloakRegistrationService(@Value("${OAUTH2_SERVER_URL}") String keycloakUrl) {
-        this(keycloakUrl, RestClient.create());
+    public KeycloakRegistrationService(
+            @Value("${OAUTH2_SERVER_URL}") String keycloakUrl, KeycloakProperties keycloakProperties) {
+        this(keycloakUrl, RestClient.create(), keycloakProperties);
     }
 
     // Constructor for testing
-    protected KeycloakRegistrationService(String keycloakUrl, RestClient restClient) {
+    protected KeycloakRegistrationService(
+            String keycloakUrl, RestClient restClient, KeycloakProperties keycloakProperties) {
         this.keycloakUrl = keycloakUrl;
-        this.realm = "retailstore";
         this.restClient = restClient;
+        this.keycloakProperties = keycloakProperties;
     }
 
     private String getAdminToken() {
-        var formData = "grant_type=password&client_id=admin-cli&username=admin&password=admin1234";
+        var formData = String.format(
+                "grant_type=password&client_id=%s&client_secret=%s&username=admin&password=admin1234",
+                keycloakProperties.getAdminClientId(), keycloakProperties.getAdminClientSecret());
 
         var response = restClient
                 .post()
@@ -61,7 +66,7 @@ public class KeycloakRegistrationService {
             // Create the user in Keycloak with USER role
             restClient
                     .post()
-                    .uri(keycloakUrl + "/admin/realms/" + realm + "/users")
+                    .uri(keycloakUrl + "/admin/realms/" + keycloakProperties.getRealm() + "/users")
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + adminToken)
                     .body(Map.of(
