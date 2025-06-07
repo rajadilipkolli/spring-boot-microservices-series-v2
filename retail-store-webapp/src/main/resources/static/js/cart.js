@@ -38,13 +38,20 @@ document.addEventListener('alpine:init', () => {
         createOrder() {
             let order = Object.assign({}, this.orderForm, {items: this.cart.items});
             //console.log("Order ", order);
-
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            
             $.ajax ({
                 url: '/api/orders',
                 type: "POST",
                 dataType: "json",
                 contentType: "application/json",
                 data : JSON.stringify(order),
+                beforeSend: function(xhr) {
+                    if (csrfHeader && csrfToken) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    }
+                },
                 success: (resp) => {
                     //console.log("Order Resp:", resp)
                     this.removeCart();
