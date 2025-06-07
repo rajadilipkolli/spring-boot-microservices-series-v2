@@ -6,6 +6,33 @@
       layout:decorate="~{layout}">
 <body>
 <div layout:fragment="content">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.customerName = /*[[${customer?.name}]]*/ null;
+        window.customerEmail = /*[[${customer?.email}]]*/ null;
+        window.customerPhone = /*[[${customer?.phone}]]*/ null;
+
+        const getAddressPart = (addressStr, index, defaultValue) => {
+            if (addressStr == null) {
+                return defaultValue;
+            }
+            const parts = addressStr.split(',');
+            if (parts.length > index && parts[index] != null) {
+                return parts[index].trim();
+            }
+            return defaultValue;
+        };
+
+        const customerAddress = /*[[${customer?.address}]]*/ null;
+
+        window.customerAddressLine1 = getAddressPart(customerAddress, 0, null);
+        window.customerAddressLine2 = getAddressPart(customerAddress, 1, '');
+        window.customerCity = getAddressPart(customerAddress, 2, '');
+        window.customerState = getAddressPart(customerAddress, 3, '');
+        window.customerZipCode = getAddressPart(customerAddress, 4, '');
+        window.customerCountry = getAddressPart(customerAddress, 5, '');
+        /*]]>*/
+    </script>
     <div x-data="initData()">
         <div class="col-md-8 offset-md-2">
 
@@ -21,6 +48,7 @@
                         <th scope="col">Price</th>
                         <th scope="col">Quantity</th>
                         <th scope="col">Sub Total</th>
+                        <th scope="col">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -34,12 +62,17 @@
                                        @change="updateItemQuantity(item.productCode, $event.target.value)"/>
                             </td>
                             <td x-text="item.quantity * item.price">subTotal</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" @click="removeItemFromCart(item.productCode)">
+                                    Remove
+                                </button>
+                            </td>
                         </tr>
                     </template>
                     </tbody>
                     <tfoot>
                     <tr>
-                        <th colspan="3"></th>
+                        <th colspan="4"></th>
                         <th colspan="1" style="text-align: left">
                             Total Amount: <span x-text="cart.totalAmount">cartTotal</span>
                         </th>

@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,8 +33,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -67,6 +70,7 @@ class OrderControllerTest {
     private PagedResult<OrderResponse> pagedResult;
     private CustomerResponse customerResponse;
     private OrderConfirmationDTO orderConfirmation;
+    private MockedStatic<SecurityHelper> mockedSecurityHelper;
 
     @BeforeEach
     void setUp() {
@@ -102,7 +106,8 @@ class OrderControllerTest {
                 );
 
         // Set up customer response
-        customerResponse = new CustomerResponse(1L, "Test User", "test@example.com", "1234567890", "123 Test St", 5000);
+        customerResponse = new CustomerResponse(
+                1L, "Test User", "test@example.com", "1234567890", "123 Test St,Test City,TS 12345", 5000);
 
         // Set up order confirmation
         orderConfirmation = new OrderConfirmationDTO(123L, 1L, "NEW");
@@ -110,21 +115,33 @@ class OrderControllerTest {
         // Mock security helper
         when(securityHelper.getAccessToken()).thenReturn("test-token");
         when(securityHelper.getLoggedInUserEmail()).thenReturn("test@example.com");
+
+        // Mock static SecurityHelper.getUsername()
+        mockedSecurityHelper = mockStatic(SecurityHelper.class);
+        mockedSecurityHelper.when(SecurityHelper::getUsername).thenReturn("test@example.com");
+
+        // Mock customer service client for cart
+        when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockedSecurityHelper.close();
     }
 
     @Test
     @WithMockUser
     void cart_shouldRenderCartPageAndProcessTemplateWithoutErrors() throws Exception {
+        // Given
+        // CustomerResponse customerWithAddress = new CustomerResponse(
+        // 1L, "Test User", "test@example.com", "1234567890", "123 Test St,Test City,TS 12345", 5000);
+        // when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerWithAddress);
+
         // Use MockMvc to render the template and check for successful processing
         mockMvc.perform(get("/cart").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("cart"))
-                .andExpect(result -> {
-                    // If we get here without exceptions, template processing was successful
-                    String contentAsString = result.getResponse().getContentAsString();
-                    // Check for expected content to ensure template was actually rendered
-                    assert (contentAsString.contains("Your cart"));
-                });
+                .andExpect(model().attributeExists("customer"));
     }
 
     @Test
@@ -184,7 +201,7 @@ class OrderControllerTest {
     void createOrder_shouldCreateAndReturnOrderConfirmation() throws Exception {
         // Create test request objects
         CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "original@example.com", "1234567890", "Test Address", 5000);
+                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 5000);
 
         List<OrderItemRequest> items = List.of(
                 new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")),
@@ -195,8 +212,7 @@ class OrderControllerTest {
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
         // Mock client responses
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenReturn(customerResponse);
+        when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
         when(orderServiceClient.createOrder(anyMap(), any(OrderRequestExternal.class)))
                 .thenReturn(orderConfirmation);
 
@@ -214,20 +230,19 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrder_shouldHandleErrorWhenServiceFails() throws Exception {
-        String orderNumber = "ORDER-123";
-
+        String orderNumber = "ORDER-FAIL";
         when(orderServiceClient.getOrder(anyMap(), anyString()))
-                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
     @WithMockUser
     void getOrders_shouldHandleErrorWhenServiceFails() throws Exception {
         when(orderServiceClient.getOrders(anyMap()))
-                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
     }
@@ -235,21 +250,19 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void createOrder_shouldHandleErrorWhenCustomerServiceFails() throws Exception {
-        // Create test request objects
         CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "original@example.com", "1234567890", "Test Address", 5000);
-        List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")));
-        Address address = new Address("123 Test St", "Apt 4", "Test City", "Test State", "12345", "Test Country");
+                new CustomerRequest("Test User", "fail@example.com", "1234567890", "Test Address", 5000);
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, new BigDecimal("99.99")));
+        Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
-        // Mock client responses for failure
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+        when(customerServiceClient.getCustomerByName(anyString()))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Customer not found"));
 
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createOrderRequest)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 }

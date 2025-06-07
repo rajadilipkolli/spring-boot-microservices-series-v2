@@ -30,128 +30,12 @@
             </a>
         </div>
         <div class="register-link">
-            <p>Don't have an account? <a href="#" onclick="showRegistrationModal()">Register here</a></p>
-        </div>
-    </div>
-
-    <!-- Registration Modal -->
-    <div class="modal fade" id="registrationModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Register New Account</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="registrationForm">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="firstName" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="lastName" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                    required minlength="8" 
-                                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" 
-                                    title="Must contain at least one number, one uppercase and lowercase letter, and at least 8 characters">
-                            <div class="form-text">Password must be at least 8 characters with numbers, uppercase and lowercase letters.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
-                        </div>
-                        <div id="registrationError" class="alert alert-danger d-none"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="registerUser()">Register</button>
-                </div>
-            </div>
+            <p>Don't have an account? <a th:href="@{/registration}">Register here</a></p>
         </div>
     </div>
 </div>
 
 <div layout:fragment="pageScripts">
-    <script>
-        function showRegistrationModal() {
-            const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
-            modal.show();
-        }
-
-        function registerUser() {
-            const form = document.getElementById('registrationForm');
-            const formData = new FormData(form);
-            const data = {};
-            formData.forEach((value, key) => data[key] = value);
-
-            // Basic validation
-            if (!validateEmail(data.email)) {
-                showError('Please enter a valid email address');
-                return;
-            }
-
-            if (data.password !== data.confirmPassword) {
-                showError('Passwords do not match');
-                return;
-            }
-
-            if (data.password.length < 8) {
-                showError('Password must be at least 8 characters long');
-                return;
-            }
-
-            fetch('/api/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().catch(() => response.text())
-                    .then(data => {
-                        if (typeof data === 'object' && data.error) {
-                            throw new Error(data.error);
-                        } else {
-                            throw new Error('Registration failed. Please try again later.');
-                        }
-                    });
-                }
-                return response.json();
-            })
-            .then(result => {
-                window.location.href = '/oauth2/authorization/retailstore-webapp';
-            })
-            .catch(error => {
-                showError(error.message);
-            });
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('registrationError');
-            errorDiv.textContent = message;
-            errorDiv.classList.remove('d-none');
-        }
-
-        function validateEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(email);
-        }
-    </script>
 </div>
 </body>
 </html>

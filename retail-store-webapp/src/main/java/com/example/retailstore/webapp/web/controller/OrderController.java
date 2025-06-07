@@ -1,7 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.clients.PagedResult;
-import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
@@ -36,12 +35,15 @@ class OrderController {
             SecurityHelper securityHelper,
             CustomerServiceClient customerServiceClient) {
         this.orderServiceClient = orderServiceClient;
-        this.customerServiceClient = customerServiceClient;
         this.securityHelper = securityHelper;
+        this.customerServiceClient = customerServiceClient;
     }
 
     @GetMapping("/cart")
-    String cart() {
+    String cart(Model model) {
+        String username = SecurityHelper.getUsername();
+        CustomerResponse customer = customerServiceClient.getCustomerByName(username);
+        model.addAttribute("customer", customer);
         return "cart";
     }
 
@@ -55,7 +57,10 @@ class OrderController {
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", orderNumber);
-        return orderServiceClient.getOrder(getHeaders(), orderNumber);
+        OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
+        CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.customerId());
+        orderResponse.updateCustomerDetails(customerResponse);
+        return orderResponse;
     }
 
     @GetMapping("/orders")
@@ -79,9 +84,8 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        String email = securityHelper.getLoggedInUserEmail();
-        CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
-        CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+        CustomerResponse customerResponse =
+                customerServiceClient.getCustomerByName(orderRequest.customer().name());
 
         OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
         return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
