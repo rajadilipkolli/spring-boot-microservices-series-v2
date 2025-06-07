@@ -4,7 +4,7 @@ import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
-public class ApplicationIntegrationTest extends AbstractIntegrationTest {
+class ApplicationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldReturnHealthyStatusFromActuatorEndpoint() {
