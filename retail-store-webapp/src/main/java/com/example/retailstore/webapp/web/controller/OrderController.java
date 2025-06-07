@@ -9,6 +9,8 @@ import com.example.retailstore.webapp.clients.order.OrderConfirmationDTO;
 import com.example.retailstore.webapp.clients.order.OrderRequestExternal;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
+import com.example.retailstore.webapp.exception.InvalidRequestException;
+import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -55,7 +57,12 @@ class OrderController {
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", orderNumber);
-        return orderServiceClient.getOrder(getHeaders(), orderNumber);
+        try {
+            return orderServiceClient.getOrder(getHeaders(), orderNumber);
+        } catch (Exception e) {
+            log.error("Error fetching order {}: {}", orderNumber, e.getMessage());
+            throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
+        }
     }
 
     @GetMapping("/orders")
@@ -79,11 +86,22 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        String email = securityHelper.getLoggedInUserEmail();
-        CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
-        CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+        try {
+            String email = securityHelper.getLoggedInUserEmail();
+            if (email == null || email.trim().isEmpty()) {
+                throw new InvalidRequestException("User email not available");
+            }
 
-        OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
-        return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+            CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
+            CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+
+            OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
+            return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+        } catch (InvalidRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error creating order: {}", e.getMessage());
+            throw new InvalidRequestException("Failed to create order: " + e.getMessage());
+        }
     }
 }
