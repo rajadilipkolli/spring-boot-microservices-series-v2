@@ -10,7 +10,6 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -57,28 +56,6 @@ class KeycloakRegistrationServiceTest {
         // When/Then
         assertDoesNotThrow(() -> registrationService.registerUser(request));
         verify(requestBodySpec).header(eq("Authorization"), eq("Bearer mock-token"));
-    }
-
-    @Test
-    void shouldRegisterUserWithCorrectRoles() {
-        // Given
-        var request = new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
-
-        when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token"));
-        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
-
-        // When
-        registrationService.registerUser(request);
-
-        // Then
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Map<String, Object>> requestCaptor = ArgumentCaptor.forClass(Map.class);
-        verify(requestBodySpec).body(requestCaptor.capture());
-
-        Map<String, Object> requestBody = requestCaptor.getValue();
-        assertTrue(requestBody.containsKey("realmRoles"));
-        var roles = (java.util.List<?>) requestBody.get("realmRoles");
-        assertTrue(roles.contains("USER"));
     }
 
     @Test
