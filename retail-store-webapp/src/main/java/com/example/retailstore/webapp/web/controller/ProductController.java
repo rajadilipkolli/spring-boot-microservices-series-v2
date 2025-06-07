@@ -6,6 +6,7 @@ import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +36,7 @@ class ProductController {
         return "products";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/products")
     @ResponseBody
     ProductResponse createProduct(@RequestBody ProductRequest productRequest) {

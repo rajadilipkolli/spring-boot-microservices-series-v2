@@ -2,6 +2,7 @@ package com.example.retailstore.webapp.common;
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,6 +20,9 @@ import org.wiremock.spring.InjectWireMock;
     @ConfigureWireMock(name = "gateway-service", port = 0, baseUrlProperties = "retailstore.api-gateway-url")
 })
 public abstract class AbstractIntegrationTest {
+
+    @Autowired
+    protected ObjectMapper objectMapper;
 
     @Autowired
     protected MockMvcTester mockMvcTester;
