@@ -33,6 +33,7 @@ class SecurityConfig {
                                 "/products/**",
                                 "/api/products/**",
                                 "/api/register",
+                                "/registration",
                                 "/login")
                         .permitAll()
                         .anyRequest()

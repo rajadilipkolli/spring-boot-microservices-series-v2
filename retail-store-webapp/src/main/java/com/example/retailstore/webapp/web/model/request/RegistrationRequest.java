@@ -18,4 +18,6 @@ public record RegistrationRequest(
                         regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$",
                         message =
                                 "Password must be at least 8 characters and include uppercase, lowercase, numbers and special characters")
-                String password) {}
+                String password,
+        Long phone,
+        String address) {}

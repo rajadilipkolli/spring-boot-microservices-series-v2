@@ -48,7 +48,8 @@ class KeycloakRegistrationServiceTest {
     @Test
     void shouldRegisterUserSuccessfully() {
         // Given
-        var request = new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
+        var request = new RegistrationRequest(
+                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
 
         when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token"));
         when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
@@ -61,7 +62,8 @@ class KeycloakRegistrationServiceTest {
     @Test
     void shouldThrowExceptionWhenAdminTokenCannotBeObtained() {
         // Given
-        var request = new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
+        var request = new RegistrationRequest(
+                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
 
         when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("error", "unauthorized"));
 
@@ -72,7 +74,8 @@ class KeycloakRegistrationServiceTest {
     @Test
     void shouldThrowExceptionWhenKeycloakRegistrationFails() {
         // Given
-        var request = new RegistrationRequest("testuser", "test@example.com", "Test", "User", "password123");
+        var request = new RegistrationRequest(
+                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
 
         when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token"));
         when(responseSpec.toBodilessEntity()).thenThrow(new RuntimeException("Keycloak registration failed"));
