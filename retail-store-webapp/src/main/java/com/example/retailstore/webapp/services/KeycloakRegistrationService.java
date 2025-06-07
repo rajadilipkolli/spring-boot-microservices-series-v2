@@ -65,22 +65,26 @@ public class KeycloakRegistrationService {
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + adminToken)
                     .body(Map.of(
-                            "username", request.username(),
-                            "email", request.email(),
-                            "enabled", true,
-                            "firstName", request.firstName(),
-                            "lastName", request.lastName(),
+                            "username",
+                            request.username(),
+                            "email",
+                            request.email(),
+                            "enabled",
+                            true,
+                            "firstName",
+                            request.firstName(),
+                            "lastName",
+                            request.lastName(),
                             "credentials",
-                                    List.of(Map.of(
-                                            "type", "password", "value", request.password(), "temporary", false)),
-                            "groups", List.of("Users"), // Adding to Users group
-                            "realmRoles", List.of("USER") // Assigning USER role
+                            List.of(Map.of("type", "password", "value", request.password(), "temporary", false)),
+                            "realmRoles",
+                            List.of("user") // Assigning user role
                             ))
                     .retrieve()
                     .toBodilessEntity();
             logger.info("User {} registered successfully", request.username());
         } catch (Exception e) {
-            logger.error("Failed to register user {} : {}", request.username(), e.getMessage(), e);
+            logger.error("Error registering user: {}", request.username(), e);
             throw new KeyCloakException(e.getMessage());
         }
     }
