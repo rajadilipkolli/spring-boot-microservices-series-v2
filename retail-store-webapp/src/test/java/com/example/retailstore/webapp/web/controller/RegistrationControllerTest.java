@@ -6,10 +6,12 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.retailstore.webapp.config.TestSecurityConfig;
+import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,10 +83,10 @@ class RegistrationControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenKeycloakRegistrationFails() throws Exception {
+    void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {
         RegistrationRequest request = new RegistrationRequest(TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD);
 
-        doThrow(new RuntimeException("Keycloak registration failed"))
+        doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
                 .when(registrationService)
                 .registerUser(any(RegistrationRequest.class));
 
@@ -92,11 +94,12 @@ class RegistrationControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.type", is("about:blank")))
-                .andExpect(jsonPath("$.title", is("Bad Request")))
-                .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type", is("https://api.retailstore.com/errors/keycloak-registration")))
+                .andExpect(jsonPath("$.title", is("Keycloak Registration Error")))
+                .andExpect(jsonPath("$.status", is(500)))
+                .andExpect(jsonPath("$.detail", is("500 Internal server Exception : Keycloak registration failed")))
                 .andExpect(jsonPath("$.instance", is(REGISTER_ENDPOINT)));
     }
 }

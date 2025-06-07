@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.services;
 
+import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import java.util.List;
 import java.util.Map;
@@ -79,8 +80,8 @@ public class KeycloakRegistrationService {
                     .toBodilessEntity();
             logger.info("User {} registered successfully", request.username());
         } catch (Exception e) {
-            logger.error("Failed to register user: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to register user: " + e.getMessage(), e);
+            logger.error("Failed to register user {} : {}", request.username(), e.getMessage(), e);
+            throw new KeyCloakException(e.getMessage());
         }
     }
 }
