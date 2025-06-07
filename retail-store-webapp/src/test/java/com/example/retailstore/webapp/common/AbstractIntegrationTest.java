@@ -2,17 +2,27 @@ package com.example.retailstore.webapp.common;
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.wiremock.spring.ConfigureWireMock;
+import org.wiremock.spring.EnableWireMock;
+import org.wiremock.spring.InjectWireMock;
 
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         classes = {ContainerConfig.class})
 @AutoConfigureMockMvc
+@EnableWireMock({
+    @ConfigureWireMock(name = "gateway-service", port = 0, baseUrlProperties = "retailstore.api-gateway-url")
+})
 public abstract class AbstractIntegrationTest {
 
     @Autowired
     protected MockMvcTester mockMvcTester;
+
+    @InjectWireMock("gateway-service")
+    protected WireMockServer gatewayServiceMock;
 }
