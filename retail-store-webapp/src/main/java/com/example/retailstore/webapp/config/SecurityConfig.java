@@ -33,6 +33,9 @@ class SecurityConfig {
                                 "/",
                                 "/actuator/**",
                                 "/products/**",
+                                "/api/products/**",
+                                "/api/register",
+                                "/registration",
                                 "/login")
                         .permitAll()
                         .anyRequest()

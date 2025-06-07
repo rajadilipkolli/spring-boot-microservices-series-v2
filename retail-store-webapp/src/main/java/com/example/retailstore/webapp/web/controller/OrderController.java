@@ -1,7 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.clients.PagedResult;
-import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
@@ -38,12 +37,15 @@ class OrderController {
             SecurityHelper securityHelper,
             CustomerServiceClient customerServiceClient) {
         this.orderServiceClient = orderServiceClient;
-        this.customerServiceClient = customerServiceClient;
         this.securityHelper = securityHelper;
+        this.customerServiceClient = customerServiceClient;
     }
 
     @GetMapping("/cart")
-    String cart() {
+    String cart(Model model) {
+        String username = securityHelper.getUsername();
+        CustomerResponse customer = customerServiceClient.getCustomerByName(username);
+        model.addAttribute("customer", customer);
         return "cart";
     }
 
@@ -58,7 +60,10 @@ class OrderController {
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", orderNumber);
         try {
-            return orderServiceClient.getOrder(getHeaders(), orderNumber);
+            OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
+            CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.getCustomerId());
+            orderResponse.updateCustomerDetails(customerResponse);
+            return orderResponse;
         } catch (Exception e) {
             log.error("Error fetching order {}: {}", orderNumber, e.getMessage());
             throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
@@ -86,14 +91,9 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        try {
-            String email = securityHelper.getLoggedInUserEmail();
-            if (email == null || email.trim().isEmpty()) {
-                throw new InvalidRequestException("User email not available");
-            }
-
-            CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
-            CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+        try {  
+            CustomerResponse customerResponse =
+                customerServiceClient.getCustomerByName(orderRequest.customer().name());
 
             OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
             return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);

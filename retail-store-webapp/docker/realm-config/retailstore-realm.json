@@ -75,6 +75,14 @@
       "clientRole" : false,
       "containerId" : "34ec12c9-e4e6-4931-9e7a-3bc6e27484b2",
       "attributes" : { }
+    }, {
+      "id" : "user-role-id",
+      "name" : "user",
+      "description" : "User role",
+      "composite" : false,
+      "clientRole" : false,
+      "containerId" : "34ec12c9-e4e6-4931-9e7a-3bc6e27484b2",
+      "attributes" : { }
     } ],
     "client" : {
       "realm-management" : [ {
