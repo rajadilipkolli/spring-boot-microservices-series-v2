@@ -86,7 +86,7 @@ class RegistrationControllerTest {
     void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {
         RegistrationRequest request = new RegistrationRequest(TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD);
 
-        doThrow(new KeyCloakException("Keycloak registration failed"))
+        doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
                 .when(registrationService)
                 .registerUser(any(RegistrationRequest.class));
 
@@ -99,7 +99,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.type", is("https://api.retailstore.com/errors/keycloak-registration")))
                 .andExpect(jsonPath("$.title", is("Keycloak Registration Error")))
                 .andExpect(jsonPath("$.status", is(500)))
-                .andExpect(jsonPath("$.detail", is("Failed to register user: Keycloak registration failed")))
+                .andExpect(jsonPath("$.detail", is("500 Internal server Exception : Keycloak registration failed")))
                 .andExpect(jsonPath("$.instance", is(REGISTER_ENDPOINT)));
     }
 }
