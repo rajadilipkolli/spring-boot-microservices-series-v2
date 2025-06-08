@@ -6,9 +6,7 @@
 
 package com.example.orderservice.config.kafka;
 
-import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
-import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
-import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
+import static com.example.orderservice.utils.AppConstants.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +25,17 @@ class KafkaConfig {
     @Bean
     KafkaAdmin.NewTopics topics() {
         log.info(
-                "Inside creating topics :{}, {}, {}",
+                "Inside creating topics :{}, {}, {}, {}",
                 ORDERS_TOPIC,
                 PAYMENT_ORDERS_TOPIC,
-                STOCK_ORDERS_TOPIC);
-        // streams needs topics to be created before hand, so instead of delegating to kafkaAdmin to
+                STOCK_ORDERS_TOPIC,
+                RECOVER_DLQ_TOPIC);
+        // streams needs topics to be created beforehand, so instead of delegating to kafkaAdmin to
         // create, manually creating
         return new KafkaAdmin.NewTopics(
                 TopicBuilder.name(ORDERS_TOPIC).build(),
                 TopicBuilder.name(PAYMENT_ORDERS_TOPIC).build(),
-                TopicBuilder.name(STOCK_ORDERS_TOPIC).build());
+                TopicBuilder.name(STOCK_ORDERS_TOPIC).build(),
+                TopicBuilder.name(RECOVER_DLQ_TOPIC).build());
     }
 }

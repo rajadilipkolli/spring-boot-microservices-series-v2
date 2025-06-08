@@ -1,6 +1,5 @@
 name: spring-boot-microservices-series-v2
 services:
-
   postgresql:
     container_name: postgresql
     image: postgres:17-alpine
@@ -11,6 +10,8 @@ services:
       - POSTGRES_DB=appdb
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: "pg_isready -U appuser -d appdb"
       interval: 2s
@@ -19,23 +20,12 @@ services:
     networks:
       - microservice-network
 
-  # mongodb:
-  #   container_name: mongodb
-  #   image: mongo:6.0.3
-  #   extra_hosts: ['host.docker.internal:host-gateway']
-  #   volumes:
-  #     - mongo-data:/data/db/mongo
-  #   ports:
-  #     - "27017:27017"
-  #   networks:
-  #     - microservice-network
-
   redis:
     container_name: redis
-    image: 'redis:7.4.1-alpine'
+    image: 'redis:8.0.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
-      - '127.0.0.1:6379:6379/tcp'
+      - '6379:6379'
     volumes:
       - 'redis_data:/data:rw'
     healthcheck:
@@ -60,19 +50,26 @@ services:
       - "9411:9411"
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9411/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   kafka:
     container_name: kafka
-    image: apache/kafka:3.9.0
+    image: apache/kafka-native:4.0.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - "9092:9092"
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 9092" ]
-      interval: 30s
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
+      start_period: 30s
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_CONTROLLER_QUORUM_MODE: 'kraft'
@@ -91,26 +88,54 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      # Additional configurations to ensure state cleanup
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: 'true'
     networks:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.5
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    image: quay.io/keycloak/keycloak:26.2.5
+    command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      # Admin credentials
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # Database configuration for PostgreSQL
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+      - KC_DB_USERNAME=appuser
+      - KC_DB_PASSWORD=secret
+      - KC_DB_SCHEMA=public
+      # Hostname and HTTP configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      # Additional production settings
+      - KC_FEATURES=token-exchange
     ports:
       - "9191:9191"
+    depends_on:
+      postgresql:
+        condition: service_healthy
     deploy:
       resources:
         limits:
           memory: 2gb
+    healthcheck:
+      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 120s
+    networks:
+      - microservice-network
 
   config-server:
     container_name: config-server
@@ -123,7 +148,8 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      - zipkin-server
+      zipkin-server:
+        condition: service_healthy
     networks:
       - microservice-network
     environment:
@@ -147,7 +173,7 @@ services:
       config-server:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
@@ -169,13 +195,11 @@ services:
       naming-server:
         condition: service_started
       zipkin-server:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
-      # - mongodb
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      # - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
     restart: unless-stopped
@@ -197,10 +221,12 @@ services:
         condition: service_healthy
       naming-server:
         condition: service_started
+      config-server:
+        condition: service_started
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
@@ -221,10 +247,12 @@ services:
         condition: service_healthy
       naming-server:
         condition: service_started
+      config-server:
+        condition: service_started
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
@@ -245,10 +273,12 @@ services:
         condition: service_healthy
       naming-server:
         condition: service_started
+      config-server:
+        condition: service_started
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
@@ -269,10 +299,12 @@ services:
         condition: service_healthy
       naming-server:
         condition: service_started
+      config-server:
+        condition: service_started
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
@@ -284,11 +316,27 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411
     ports:
       - "8080:8080"
     networks:
       - microservice-network
-    restart: unless-stopped
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      api-gateway:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    restart: on-failure
     deploy:
       resources:
         limits:
@@ -299,7 +347,6 @@ networks:
 
 
 volumes:
-  # mongo-data:
   redis_data:
   postgres_data:
     driver: local

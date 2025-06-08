@@ -27,7 +27,7 @@
   "oauth2DevicePollingInterval" : 5,
   "enabled" : true,
   "sslRequired" : "external",
-  "registrationAllowed" : false,
+  "registrationAllowed" : true,
   "registrationEmailAsUsername" : false,
   "rememberMe" : false,
   "verifyEmail" : false,
@@ -71,6 +71,14 @@
       "id" : "f6f78c38-43c5-47b3-a18c-1123340fe4f2",
       "name" : "offline_access",
       "description" : "${role_offline-access}",
+      "composite" : false,
+      "clientRole" : false,
+      "containerId" : "34ec12c9-e4e6-4931-9e7a-3bc6e27484b2",
+      "attributes" : { }
+    }, {
+      "id" : "user-role-id",
+      "name" : "user",
+      "description" : "User role",
       "composite" : false,
       "clientRole" : false,
       "containerId" : "34ec12c9-e4e6-4931-9e7a-3bc6e27484b2",

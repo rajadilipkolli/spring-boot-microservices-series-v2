@@ -9,8 +9,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <title>RetailStore</title>
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
-    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.css">
-    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.css">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="/webjars/font-awesome/css/all.css">
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -33,7 +35,7 @@
                             Orders
                         </a>
                     </li>
-                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <li class="nav-item" sec:authorize="hasRole('ADMIN')">
                         <a class="nav-link" href="/inventory" th:href="@{/inventory}">
                             Inventory
                         </a>
@@ -44,14 +46,15 @@
                         </a>
                     </li>
                     <li class="nav-item" sec:authorize="!isAuthenticated()">
-                        <a class="nav-link" href="/oauth2/authorization/retailstore-webapp">
+                        <a class="nav-link" href="/login" th:href="@{/login}">
                             Login
                         </a>
                     </li>
                     <li class="nav-item" sec:authorize="isAuthenticated()">
-                        <a class="nav-link" href="/logout">
-                            Logout
-                        </a>
+                        <form th:action="@{/logout}" method="post" class="d-inline">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <button type="submit" class="nav-link btn btn-link" style="background: none; border: none; padding: 5;">Logout</button>
+                        </form>
                     </li>
                 </ul>
             </div>
@@ -65,14 +68,14 @@
     </div>
 </main>
 
-<script src="/webjars/jquery/3.7.1/jquery.js"></script>
-<script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.js"></script>
+<script src="/webjars/jquery/jquery.js"></script>
+<script src="/webjars/bootstrap/js/bootstrap.bundle.js"></script>
 <script defer src="/webjars/alpinejs/dist/cdn.min.js"></script>
 <script src="/js/cartStore.js"></script>
 <script th:inline="javascript">
-/*<![CDATA[*/
-const apiGatewayUrl = /*[[${@environment.getProperty('retailstore.api-gateway-url')}]]*/ '';
-/*]]>*/
+    /*<![CDATA[*/
+    const apiGatewayUrl = /*[[${@environment.getProperty('retailstore.api-gateway-url')}]]*/ '';
+    /*]]>*/
 </script>
 <div layout:fragment="pageScripts">
 </div>

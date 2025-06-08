@@ -16,7 +16,7 @@ public class ProductAlreadyExistsException extends ErrorResponseException {
     public ProductAlreadyExistsException(String productCode) {
         super(
                 HttpStatus.CONFLICT,
-                asProblemDetail("Product with id " + productCode + " already Exists"),
+                asProblemDetail("Product with code " + productCode + " already exists"),
                 null);
     }
 

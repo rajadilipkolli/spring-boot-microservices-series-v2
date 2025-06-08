@@ -31,20 +31,7 @@ public class Inventory {
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
 
-    @Version private Short version;
-
-    public Inventory(
-            Long id,
-            String productCode,
-            Integer availableQuantity,
-            Integer reservedItems,
-            Short version) {
-        this.id = id;
-        this.productCode = productCode;
-        this.availableQuantity = availableQuantity;
-        this.reservedItems = reservedItems;
-        this.version = version;
-    }
+    @Version private Short version = 0;
 
     public Inventory() {}
 

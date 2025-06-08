@@ -30,3 +30,8 @@ spring:
   threads:
     virtual:
       enabled: true
+  http:
+    client:
+      factory: jdk
+  main:
+    web-application-type: servlet

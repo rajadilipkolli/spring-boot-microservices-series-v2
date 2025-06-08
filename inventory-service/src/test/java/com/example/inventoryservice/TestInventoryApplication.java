@@ -6,40 +6,17 @@
 
 package com.example.inventoryservice;
 
-import com.example.inventoryservice.common.ContainersConfig;
+import com.example.inventoryservice.common.NonSQLContainersConfig;
+import com.example.inventoryservice.common.SQLContainersConfig;
+import com.example.inventoryservice.utils.AppConstants;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@TestConfiguration(proxyBeanMethods = false)
-@Import(ContainersConfig.class)
 public class TestInventoryApplication {
 
-    @Bean
-    @ServiceConnection(name = "openzipkin/zipkin")
-    GenericContainer<?> zipkContainer() {
-        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin"))
-                .withExposedPorts(9411)
-                .withReuse(true);
-    }
-
-    @Bean
-    @ServiceConnection
-    KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("7.6.0"))
-                .withKraft()
-                .withReuse(true);
-    }
-
     public static void main(String[] args) {
-        System.setProperty("spring.profiles.active", "test");
         SpringApplication.from(InventoryServiceApplication::main)
-                .with(TestInventoryApplication.class)
+                .with(NonSQLContainersConfig.class, SQLContainersConfig.class)
+                .withAdditionalProfiles(AppConstants.PROFILE_TEST)
                 .run(args);
     }
 }

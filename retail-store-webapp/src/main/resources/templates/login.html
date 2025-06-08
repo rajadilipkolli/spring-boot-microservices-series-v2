@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Login - RetailStore</title>
+    <style>
+        .login-container {
+            max-width: 400px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 20px auto 0;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="login-container">
+        <h2 class="text-center mb-4">Login to RetailStore</h2>
+        <div class="d-grid gap-2">
+            <a href="/oauth2/authorization/retailstore-webapp" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Login with Keycloak
+            </a>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account? <a th:href="@{/registration}">Register here</a></p>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="pageScripts">
+</div>
+</body>
+</html>

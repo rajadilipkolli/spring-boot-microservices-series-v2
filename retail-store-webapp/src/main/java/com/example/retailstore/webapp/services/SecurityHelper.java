@@ -16,6 +16,17 @@ public class SecurityHelper {
         this.authorizedClientService = authorizedClientService;
     }
 
+    public String getUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = null;
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof DefaultOidcUser principal) {
+            username = principal.getAttribute("preferred_username");
+        }
+        return username;
+    }
+
     public String getAccessToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
@@ -23,6 +34,12 @@ public class SecurityHelper {
         }
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
+
+        if (client == null) {
+            // Log or handle the case where the client is not found
+            // For now, returning null or throwing a specific exception might be appropriate
+            return null;
+        }
 
         return client.getAccessToken().getTokenValue();
     }

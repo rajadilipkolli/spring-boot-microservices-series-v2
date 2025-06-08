@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli.
 </p>
 ***/
 
@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 @Loggable
@@ -30,19 +31,24 @@ public class CatalogKafkaProducer {
     }
 
     public Mono<Boolean> send(ProductRequest productRequest) {
-        return Mono.fromCallable(
-                        () -> {
-                            // Convert ProductRequest to JSON
-                            return this.objectMapper.writeValueAsString(
-                                    this.productMapper.toProductDto(productRequest));
-                        })
+        return Mono.just(productRequest)
+                .map(productMapper::toProductDto)
+                .flatMap(
+                        productDto ->
+                                Mono.fromCallable(
+                                                () -> {
+                                                    try {
+                                                        return objectMapper.writeValueAsString(
+                                                                productDto);
+                                                    } catch (Exception e) {
+                                                        throw new RuntimeException(
+                                                                "Error serializing product", e);
+                                                    }
+                                                })
+                                        .subscribeOn(Schedulers.boundedElastic()))
                 .flatMap(
                         productDtoAsString ->
-                                Mono.fromCallable(
-                                        () -> {
-                                            // Send the message via StreamBridge
-                                            return streamBridge.send(
-                                                    "inventory-out-0", productDtoAsString);
-                                        }));
+                                Mono.just(
+                                        streamBridge.send("inventory-out-0", productDtoAsString)));
     }
 }

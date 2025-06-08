@@ -16,6 +16,8 @@ services:
       retries: 10
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - microservice-network
 
@@ -32,23 +34,18 @@ services:
       postgresql:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:80/misc/ping"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
     networks:
       - microservice-network
 
-  # mongodb:
-  #   container_name: mongodb
-  #   image: mongo:6.0.3
-  #   extra_hosts: ['host.docker.internal:host-gateway']
-  #   volumes:
-  #     - mongo-data:/data/db/mongo
-  #   ports:
-  #     - "27017:27017"
-  #   networks:
-  #     - microservice-network
-
   redis:
     container_name: redis
-    image: 'redis:7.4.1-alpine'
+    image: 'redis:8.0.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -64,16 +61,17 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka:3.9.0
+    image: apache/kafka-native:4.0.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - "9092:9092"
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 9092" ]
-      interval: 30s
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
+      start_period: 30s
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_CONTROLLER_QUORUM_MODE: 'kraft'
@@ -107,28 +105,56 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     networks:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.5
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    image: quay.io/keycloak/keycloak:26.2.5
+    command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
-    hostname: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    hostname: keycloak
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      # Admin credentials
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # Database configuration for PostgreSQL
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+      - KC_DB_USERNAME=appuser
+      - KC_DB_PASSWORD=secret
+      - KC_DB_SCHEMA=public
+      # Hostname and HTTP configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      # Additional production settings
+      - KC_FEATURES=token-exchange
     ports:
       - "9191:9191"
-    networks:
-      - microservice-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
     deploy:
       resources:
         limits:
           memory: 2gb
+    healthcheck:
+      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 120s
+    networks:
+      - microservice-network
 
   config-server:
     container_name: config-server
@@ -141,7 +167,8 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      - tempo
+      tempo:
+        condition: service_healthy
     networks:
       - microservice-network
     environment:
@@ -167,6 +194,8 @@ services:
     depends_on:
       config-server:
         condition: service_started
+      tempo:
+        condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
@@ -185,21 +214,19 @@ services:
           memory: 1050m
     ports:
       - "8765:8765"
-    healthcheck:
-      test: curl -m 5 --silent --fail --request GET http://localhost:8765/actuator/health | jq --exit-status -n 'inputs | if has("status") then .status=="UP" else false end' > /dev/null || exit 1
-      retries: 10
-      interval: 20s
-      timeout: 5s
-      start_period: 40s
     networks:
       - microservice-network
     depends_on:
-      - config-server
-      - naming-server
-      - tempo
-      - loki
-      - redis
-      # - mongodb
+      config-server:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      tempo:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -229,8 +256,8 @@ services:
         condition: service_started
       postgresql:
         condition: service_healthy
-      loki :
-        condition: service_started
+      loki:
+        condition: service_healthy
       api-gateway:
         condition: service_started
     environment:
@@ -261,6 +288,8 @@ services:
         condition: service_started
       postgresql:
         condition: service_healthy
+      loki:
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -288,6 +317,8 @@ services:
       naming-server:
         condition: service_started
       postgresql:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
@@ -317,6 +348,8 @@ services:
         condition: service_started
       postgresql:
         condition: service_healthy
+      loki:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
@@ -339,6 +372,13 @@ services:
       - "8080:8080"
     networks:
       - microservice-network
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      api-gateway:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -348,16 +388,18 @@ services:
       logging_jobname: "containerlogs"
     restart: unless-stopped
 
-
   ## Observability
   grafana:
-    image: grafana/grafana:11.3.0
+    image: grafana/grafana:12.0.1
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
-      - loki
-      - prometheus
-      - tempo
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
@@ -367,11 +409,17 @@ services:
       - ./config/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.2.1
+    image: grafana/loki:3.5.1
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -379,9 +427,15 @@ services:
       - "3100:3100"
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.2.1
+    image: grafana/promtail:3.5.1
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -390,12 +444,18 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: -config.file=/etc/promtail/config.yml
     depends_on:
-      - loki
+      loki:
+        condition: service_healthy
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD", "ls", "/etc/promtail/config.yml"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.0.0
+    image: prom/prometheus:v3.4.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -408,9 +468,15 @@ services:
       - ./config/prometheus/config/alert-rules.yml:/etc/prometheus/alert-rules.yml
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || wget --spider -q http://localhost:9090/-/ready || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.6.1
+    image: grafana/tempo:2.7.2
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -422,9 +488,15 @@ services:
       - ./config/tempo/tempo.yml:/etc/tempo-config.yml
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.28.1
     container_name: alertmanager
     ports:
       - "9093:9093"
@@ -434,13 +506,17 @@ services:
     command: --config.file=/config/alertmanager.yml --log.level=debug
     networks:
       - microservice-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:9093/-/healthy || wget --quiet --tries=3 --spider http://localhost:9093/api/v1/status || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
 
 networks:
   microservice-network:
 
 volumes:
-  # mongo-data:
   redis_data:
   postgres_data:
     driver: local
-

@@ -15,7 +15,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
-public class LoggingFilter implements GlobalFilter {
+class LoggingFilter implements GlobalFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingFilter.class);
 
@@ -24,7 +24,10 @@ public class LoggingFilter implements GlobalFilter {
         if (exchange.getRequest().getURI().getPath().contains("/actuator")) {
             log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
         } else {
-            log.info("Path of the request received -> {}", exchange.getRequest().getPath());
+            log.info(
+                    "Path of the request received -> {} with method {}",
+                    exchange.getRequest().getPath(),
+                    exchange.getRequest().getMethod());
         }
         return chain.filter(exchange);
     }

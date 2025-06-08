@@ -14,5 +14,5 @@ import java.util.List;
 
 public record OrderRequest(
         @Positive(message = "CustomerId should be positive") Long customerId,
-        @NotEmpty(message = "Order without items not valid") List<OrderItemRequest> items,
+        @Valid @NotEmpty(message = "Order without items not valid") List<OrderItemRequest> items,
         @Valid Address deliveryAddress) {}

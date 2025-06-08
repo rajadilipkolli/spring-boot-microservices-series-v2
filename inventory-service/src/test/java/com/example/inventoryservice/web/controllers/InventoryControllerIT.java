@@ -8,6 +8,7 @@ package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.instancio.Select.field;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,8 +41,13 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     void setUp() {
         inventoryRepository.deleteAllInBatch();
 
-        inventoryList =
-                inventoryRepository.saveAll(Instancio.ofList(Inventory.class).size(15).create());
+        List<Inventory> inventories =
+                Instancio.ofList(Inventory.class)
+                        .size(15)
+                        .ignore(field(Inventory::getId))
+                        .set(field(Inventory::getVersion), (short) 0)
+                        .create();
+        inventoryList = inventoryRepository.saveAll(inventories);
     }
 
     @Test

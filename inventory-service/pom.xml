@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <version>3.5.0</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.inventoryservice</groupId>
@@ -20,19 +20,19 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>21</java.version>
-        <spring-cloud.version>2023.0.3</spring-cloud.version>
-        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <springdoc-openapi.version>2.8.8</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
-        <spotless.version>2.43.0</spotless.version>
+        <spotless.version>2.44.5</spotless.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <dependency-check-maven.version>11.1.0</dependency-check-maven.version>
+        <dependency-check-maven.version>12.1.2</dependency-check-maven.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>5.0.0.4389</sonar-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+        <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
         <jacoco.utReportFolder>${project.build.directory}/jacoco/test</jacoco.utReportFolder>
         <jacoco.utReportFile>${jacoco.utReportFolder}/test.exec</jacoco.utReportFile>
@@ -144,7 +144,7 @@
         <dependency>
             <groupId>net.ttddyy.observation</groupId>
             <artifactId>datasource-micrometer-spring-boot</artifactId>
-            <version>1.0.5</version>
+            <version>1.1.1</version>
         </dependency>
 
         <!-- For Tracing -->
@@ -193,7 +193,7 @@
         <dependency>
             <groupId>org.instancio</groupId>
             <artifactId>instancio-junit</artifactId>
-            <version>5.0.2</version>
+            <version>5.4.1</version>
             <scope>test</scope>
         </dependency>
 
@@ -255,6 +255,11 @@
                         <artifactId>postgresql</artifactId>
                         <version>${postgresql.version}</version>
                     </dependency>
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-codegen</artifactId>
+                        <version>${jooq.version}</version>
+                    </dependency>
                 </dependencies>
                 <goals>
                     <goal>generate</goal>
@@ -288,7 +293,7 @@
                         <generator>
                             <database>
                                 <includes>.*</includes>
-                                <excludes>DATABASECHANGELOG</excludes>
+                                <excludes>DATABASECHANGELOG.*</excludes>
                                 <schemata>
                                     <schema>
                                         <inputSchema>custom</inputSchema>
@@ -408,7 +413,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.20.1</version>
+                        <version>10.25.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -534,7 +539,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.22.0</version>
+                            <version>1.25.2</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->

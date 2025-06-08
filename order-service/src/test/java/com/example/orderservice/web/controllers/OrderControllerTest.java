@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,12 +46,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = OrderController.class)
@@ -58,11 +60,11 @@ class OrderControllerTest {
 
     @Autowired private MockMvc mockMvc;
 
-    @MockBean private OrderService orderService;
+    @MockitoBean private OrderService orderService;
 
-    @MockBean private OrderGeneratorService orderGeneratorService;
+    @MockitoBean private OrderGeneratorService orderGeneratorService;
 
-    @MockBean private OrderKafkaStreamService orderKafkaStreamService;
+    @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
     @Autowired private ObjectMapper objectMapper;
 
@@ -134,7 +136,16 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.isFirst", is(true)))
                 .andExpect(jsonPath("$.isLast", is(true)))
                 .andExpect(jsonPath("$.hasNext", is(false)))
-                .andExpect(jsonPath("$.hasPrevious", is(false)));
+                .andExpect(jsonPath("$.hasPrevious", is(false)))
+                // Enhanced assertions for data structure verification
+                .andExpect(jsonPath("$.data[0].customerId", is(1)))
+                .andExpect(jsonPath("$.data[0].status", is("NEW")))
+                .andExpect(jsonPath("$.data[0].source", is("")))
+                .andExpect(jsonPath("$.data[0].deliveryAddress", notNullValue()))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine1", is("Junit Address1")))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.city", is("city")))
+                .andExpect(jsonPath("$.data[0].createdDate", notNullValue()))
+                .andExpect(jsonPath("$.data[0].totalPrice").value(10));
     }
 
     @Nested
@@ -144,6 +155,7 @@ class OrderControllerTest {
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
+            LocalDateTime testDateTime = LocalDateTime.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -151,7 +163,7 @@ class OrderControllerTest {
                             "NEW",
                             "",
                             getDeliveryAddress(),
-                            LocalDateTime.now(),
+                            testDateTime,
                             BigDecimal.TEN,
                             new ArrayList<>());
             given(orderService.findOrderByIdAsResponse(orderId))
@@ -159,8 +171,21 @@ class OrderControllerTest {
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isOk())
-                    .andExpect(
-                            jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+                    .andExpect(jsonPath("$.orderId", is(orderResponse.orderId()), Long.class))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.status", is(orderResponse.status())))
+                    .andExpect(jsonPath("$.source", is(orderResponse.source())))
+                    .andExpect(jsonPath("$.deliveryAddress", notNullValue()))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")))
+                    .andExpect(jsonPath("$.createdDate", notNullValue()))
+                    .andExpect(jsonPath("$.totalPrice").value(is(10)))
+                    .andExpect(jsonPath("$.items", notNullValue()))
+                    .andExpect(jsonPath("$.items", hasSize(0)));
         }
 
         private Address getDeliveryAddress() {
@@ -179,12 +204,12 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
-                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
                             jsonPath("$.detail")
-                                    .value("Product with Id - %d Not found".formatted(orderId)));
+                                    .value("Order with Id %d not found".formatted(orderId)));
         }
     }
 
@@ -232,7 +257,22 @@ class OrderControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId", notNullValue()))
                     .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
-                    .andExpect(jsonPath("$.items.size()", is(1)));
+                    .andExpect(jsonPath("$.status", is("NEW")))
+                    .andExpect(jsonPath("$.source", is("")))
+                    .andExpect(jsonPath("$.createdDate", notNullValue()))
+                    .andExpect(jsonPath("$.totalPrice").value(is(10)))
+                    .andExpect(jsonPath("$.items.size()", is(1)))
+                    .andExpect(jsonPath("$.items[0].itemId", is(2)))
+                    .andExpect(jsonPath("$.items[0].productId", is("Product1")))
+                    .andExpect(jsonPath("$.items[0].quantity", is(10)))
+                    .andExpect(jsonPath("$.items[0].price").value(is(100)))
+                    .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")));
         }
 
         @Test
@@ -327,6 +367,7 @@ class OrderControllerTest {
                                     "zipCode",
                                     "country"));
 
+            LocalDateTime testDateTime = LocalDateTime.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -340,7 +381,7 @@ class OrderControllerTest {
                                     "state",
                                     "zipCode",
                                     "country"),
-                            LocalDateTime.now(),
+                            testDateTime,
                             BigDecimal.TEN,
                             new ArrayList<>());
 
@@ -353,8 +394,18 @@ class OrderControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isOk())
-                    .andExpect(
-                            jsonPath("$.customerId", is(orderResponse.customerId()), Long.class));
+                    .andExpect(jsonPath("$.orderId", is(1)))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.status", is("NEW")))
+                    .andExpect(jsonPath("$.source", is("")))
+                    .andExpect(jsonPath("$.createdDate", notNullValue()))
+                    .andExpect(jsonPath("$.totalPrice").value(is(10)))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
+                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")));
         }
 
         @Test
@@ -382,12 +433,12 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
-                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
                             jsonPath("$.detail")
-                                    .value("Product with Id - %d Not found".formatted(orderId)));
+                                    .value("Order with Id %d not found".formatted(orderId)));
         }
     }
 
@@ -402,6 +453,11 @@ class OrderControllerTest {
             doNothing().when(orderService).deleteOrderById(orderId);
 
             mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
+
+            // Verify that the service method was called with the correct ID
+            verify(orderService).findById(orderId);
+            verify(orderService).deleteOrderById(orderId);
+            verifyNoMoreInteractions(orderService);
         }
 
         @Test
@@ -415,12 +471,12 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
-                    .andExpect(jsonPath("$.title", is("Product Not Found")))
+                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
                             jsonPath("$.detail")
-                                    .value("Product with Id - %d Not found".formatted(orderId)));
+                                    .value("Order with Id %d not found".formatted(orderId)));
         }
     }
 }

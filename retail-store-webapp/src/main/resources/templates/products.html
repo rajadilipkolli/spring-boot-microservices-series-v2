@@ -6,7 +6,7 @@
       layout:decorate="~{layout}">
 <body>
 <div layout:fragment="content">
-    <div th:x-data="|initData('${pageNo}')|">
+    <div x-data="initData()" x-init="pageNo = 0">
         <div th:replace="~{fragments/productsPagination :: pagination}"> </div>
         <div class="row row-cols-1 row-cols-md-5">
             <template x-for="product in products.data">

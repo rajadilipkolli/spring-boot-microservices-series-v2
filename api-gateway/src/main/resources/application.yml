@@ -3,7 +3,7 @@ jwt:
 management:
   endpoint:
     gateway:
-      enabled: true
+      access: READ_ONLY
   endpoints:
     web:
       exposure:
