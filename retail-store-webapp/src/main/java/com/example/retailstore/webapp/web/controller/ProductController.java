@@ -38,6 +38,7 @@ class ProductController {
         return "products";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/products")
     @ResponseBody
     @PreAuthorize("hasRole('ADMIN')")

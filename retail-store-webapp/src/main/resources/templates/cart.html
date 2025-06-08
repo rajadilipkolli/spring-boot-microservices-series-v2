@@ -17,7 +17,7 @@
                 return defaultValue;
             }
             const parts = addressStr.split(',');
-            if (parts.length > index && parts[index] != null) {
+            if (parts.length > index && parts[index] != null && parts[index].trim() !== '') {
                 return parts[index].trim();
             }
             return defaultValue;

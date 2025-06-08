@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"
+      xmlns="http://www.w3.org/1999/xhtml"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
 <head>
     <title>Register - RetailStore</title>
@@ -83,6 +85,11 @@
                 return;
             }
 
+            if (!validatePasswordComplexity(data.password)) {
+                showError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+                return;
+            }
+
             fetch('/api/register', {
                 method: 'POST',
                 headers: {
@@ -109,6 +116,14 @@
             const errorDiv = document.getElementById('registrationError');
             errorDiv.textContent = message;
             errorDiv.classList.remove('d-none');
+        }
+
+        function validatePasswordComplexity(password) {
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            return hasUpper && hasLower && hasNumber && hasSpecial;
         }
 
         function validateEmail(email) {

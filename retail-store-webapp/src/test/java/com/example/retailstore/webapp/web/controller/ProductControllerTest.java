@@ -46,13 +46,12 @@ class ProductControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private List<ProductResponse> productResponseList;
     private PagedResult<ProductResponse> pagedResult;
 
     @BeforeEach
     void setUp() {
         // Set up test data
-        productResponseList = List.of(
+        List<ProductResponse> productResponseList = List.of(
                 new ProductResponse(1L, "PROD-1", "Test Product 1", "Description 1", "image1.jpg", 10.99, true),
                 new ProductResponse(2L, "PROD-2", "Test Product 2", "Description 2", "image2.jpg", 20.99, true),
                 new ProductResponse(3L, "PROD-3", "Test Product 3", "Description 3", "image3.jpg", 30.99, true));
@@ -132,7 +131,7 @@ class ProductControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN") // Ensure the user has ADMIN role
     void createProduct_shouldReturnCreatedProduct() throws Exception {
         ProductRequest productRequest =
                 new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", 40.99);

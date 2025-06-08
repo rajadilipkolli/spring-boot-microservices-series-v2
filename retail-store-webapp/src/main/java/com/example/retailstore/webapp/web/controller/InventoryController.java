@@ -7,6 +7,7 @@ import com.example.retailstore.webapp.exception.InvalidRequestException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -41,7 +42,7 @@ class InventoryController {
         return "inventory";
     }
 
-    @GetMapping("/api/inventory")
+    @GetMapping(value = "/api/inventory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     PagedResult<InventoryResponse> inventories(@RequestParam(defaultValue = "0") int page, Model model) {
         log.info("Fetching inventories for page: {}", page);
