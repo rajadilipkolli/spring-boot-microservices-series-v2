@@ -65,7 +65,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .content(objectMapper.writeValueAsString(registrationRequest))
                 .contentType(MediaType.APPLICATION_JSON)
                 .assertThat()
-                .hasStatus(HttpStatus.OK);
+                .hasStatus(HttpStatus.OK)
+                .bodyJson()
+                .extractingPath("$.message")
+                .isEqualTo("User registered successfully");
 
         // Verify user creation in Keycloak
         Keycloak keycloakAdminClient = keycloakContainer.getKeycloakAdminClient();
