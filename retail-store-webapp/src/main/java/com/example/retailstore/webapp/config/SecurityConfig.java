@@ -12,7 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
 class SecurityConfig {
@@ -24,19 +24,7 @@ class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(c -> c.requestMatchers(
-                                "/js/**",
-                                "/css/**",
-                                "/images/**",
-                                "/error",
-                                "/webjars/**",
-                                "/",
-                                "/actuator/**",
-                                "/products/**",
-                                "/api/products/**",
-                                "/api/register",
-                                "/registration",
-                                "/login")
+        http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
                         .permitAll()
                         .anyRequest()
                         .authenticated())

@@ -17,6 +17,7 @@ public final class SecurityConstants {
         "/products/**",
         "/api/products/**",
         "/api/register",
+        "/registration",
         "/login"
     };
 }
