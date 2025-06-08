@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -69,17 +70,6 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
-    @ExceptionHandler(Exception.class)
-    ProblemDetail handleGenericException(Exception ex) {
-        log.error("Unexpected error occurred", ex);
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        problemDetail.setTitle("Internal Server Error");
-        problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
-        problemDetail.setDetail("An unexpected error occurred. Please try again later.");
-        problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
-    }
-
     @ExceptionHandler(InvalidRequestException.class)
     ProblemDetail handleInvalidRequestException(InvalidRequestException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -96,6 +86,28 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Not Found");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
         problemDetail.setDetail(ex.getMessage());
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleSpringAccessDeniedException(AccessDeniedException ex) {
+        log.warn("Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}", ex.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        problemDetail.setTitle("Forbidden");
+        problemDetail.setType(URI.create("https://api.retailstore.com/errors/forbidden"));
+        problemDetail.setDetail("You do not have the necessary permissions to access this resource.");
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(Exception.class)
+    ProblemDetail handleGenericException(Exception ex) {
+        log.error("Unexpected error occurred", ex);
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problemDetail.setTitle("Internal Server Error");
+        problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
+        problemDetail.setDetail("An unexpected error occurred. Please try again later.");
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
