@@ -101,4 +101,67 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
             }
         }
     }
+
+    @Test
+    void shouldReturnBadRequestForInvalidUsername() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "u", // invalid username (too short)
+                "test@example.com",
+                "Test",
+                "User",
+                "Password123!",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE);
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidPassword() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "test@example.com",
+                "Test",
+                "User",
+                "password",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE); // invalid password (no uppercase, numbers, or special chars)
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidEmail() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "invalid-email", // invalid email format
+                "Test",
+                "User",
+                "Password123!",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE);
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
 }

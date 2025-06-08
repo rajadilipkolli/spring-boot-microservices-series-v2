@@ -91,9 +91,9 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        try {  
-            CustomerResponse customerResponse =
-                customerServiceClient.getCustomerByName(orderRequest.customer().name());
+        try {
+            CustomerResponse customerResponse = customerServiceClient.getCustomerByName(
+                    orderRequest.customer().name());
 
             OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
             return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);

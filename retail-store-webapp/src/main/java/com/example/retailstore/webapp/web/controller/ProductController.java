@@ -41,7 +41,6 @@ class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/products")
     @ResponseBody
-    @PreAuthorize("hasRole('ADMIN')")
     ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
         log.info("Creating new product: {}", productRequest);
         try {

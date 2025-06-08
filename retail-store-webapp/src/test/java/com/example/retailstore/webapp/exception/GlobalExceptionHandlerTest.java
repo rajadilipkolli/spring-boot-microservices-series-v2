@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -54,7 +55,7 @@ class GlobalExceptionHandlerTest {
         // Arrange
         Set<ConstraintViolation<?>> violations = new HashSet<>();
         ConstraintViolation<?> violation = mock(ConstraintViolation.class);
-        when(violation.getPropertyPath()).thenReturn(mock(javax.validation.Path.class));
+        when(violation.getPropertyPath()).thenReturn(mock(Path.class));
         when(violation.getPropertyPath().toString()).thenReturn("property");
         when(violation.getMessage()).thenReturn("constraint message");
         violations.add(violation);
