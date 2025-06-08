@@ -1,9 +1,12 @@
 package com.example.retailstore.webapp.config;
 
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Component
+@Validated
 @ConfigurationProperties(prefix = "keycloak")
 public class KeycloakProperties {
 
@@ -13,6 +16,10 @@ public class KeycloakProperties {
     private String clientSecret;
     private String adminClientId;
     private String adminClientSecret;
+
+    @NotBlank(message = "Keycloak admin username must not be blank") private String adminUsername;
+
+    @NotBlank(message = "Keycloak admin password must not be blank") private String adminPassword;
 
     // Getters and Setters
     public String getServerUrl() {
@@ -61,5 +68,21 @@ public class KeycloakProperties {
 
     public void setAdminClientSecret(String adminClientSecret) {
         this.adminClientSecret = adminClientSecret;
+    }
+
+    public String getAdminUsername() {
+        return adminUsername;
+    }
+
+    public void setAdminUsername(String adminUsername) {
+        this.adminUsername = adminUsername;
+    }
+
+    public String getAdminPassword() {
+        return adminPassword;
+    }
+
+    public void setAdminPassword(String adminPassword) {
+        this.adminPassword = adminPassword;
     }
 }
