@@ -81,15 +81,20 @@ class InventoryControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldAllowAdminToUpdateInventory() throws Exception {
-        var inventory = new InventoryResponse(1L, "SKU1", 10, 0);
-        when(inventoryServiceClient.updateInventory(eq(1L), any())).thenReturn(inventory);
+        // Arrange
+        var request = new InventoryResponse(1L, "SKU1", 10, null);
+        var response = new InventoryResponse(1L, "SKU1", 10, null);
+        var updateRequest = request.createInventoryUpdateRequest();
 
+        when(inventoryServiceClient.updateInventory(eq(1L), eq(updateRequest))).thenReturn(response);
+
+        // Act & Assert
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(inventory)));
+                .andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
 
     @Test
