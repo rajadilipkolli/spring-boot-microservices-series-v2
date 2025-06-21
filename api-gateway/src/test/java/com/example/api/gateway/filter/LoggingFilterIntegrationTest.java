@@ -4,10 +4,11 @@
 </p>
 ***/
 
-package com.example.api.gateway.config;
+package com.example.api.gateway.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.api.gateway.config.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
