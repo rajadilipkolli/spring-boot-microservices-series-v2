@@ -24,6 +24,6 @@ public class Initializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        log.info("Running Initializer.....{}", properties.getInventoryServiceUrl());
+        log.info("Running Initializer.....{}", properties.inventoryServiceUrl());
     }
 }
