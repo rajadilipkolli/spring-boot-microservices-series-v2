@@ -32,15 +32,21 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.cloud.gateway.routes[0].uri", wireMockServer::getBaseUrl);
-        registry.add("spring.cloud.gateway.routes[0].id", () -> "test-service");
-        registry.add("spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/test-service/**");
-        registry.add("spring.cloud.gateway.routes[0].filters[0].name", () -> "RewritePath");
         registry.add(
-                "spring.cloud.gateway.routes[0].filters[0].args.regexp",
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "test-service");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
+                () -> "Path=/test-service/**");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].name",
+                () -> "RewritePath");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.regexp",
                 () -> "/test-service/(?<segment>.*)");
         registry.add(
-                "spring.cloud.gateway.routes[0].filters[0].args.replacement", () -> "/${segment}");
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.replacement",
+                () -> "/${segment}");
     }
 
     @Test

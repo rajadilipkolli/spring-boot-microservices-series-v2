@@ -34,14 +34,18 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("app.cors.pathPattern", () -> "/api/**");
-        registry.add("spring.cloud.gateway.routes[0].id", () -> "correlation-test");
-        registry.add("spring.cloud.gateway.routes[0].uri", () -> wireMockServer.getBaseUrl());
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "correlation-test");
         registry.add(
-                "spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/api/correlation/**");
+                "spring.cloud.gateway.server.webflux.routes[0].uri",
+                () -> wireMockServer.getBaseUrl());
         registry.add(
-                "spring.cloud.gateway.routes[0].filters[0]",
+                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
+                () -> "Path=/api/correlation/**");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0]",
                 () -> "RewritePath=/api/correlation/(?<segment>.*), /${segment}");
-        registry.add("spring.cloud.gateway.routes[0].filters[1]", () -> "CorrelationId");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[1]", () -> "CorrelationId");
     }
 
     @Test
