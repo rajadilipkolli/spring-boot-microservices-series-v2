@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
 class RegistrationControllerTest {
+
     private static final String REGISTER_ENDPOINT = "/api/register";
     private static final String TEST_USERNAME = "testuser";
     private static final String TEST_EMAIL = "test@example.com";
