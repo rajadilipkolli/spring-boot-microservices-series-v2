@@ -103,7 +103,7 @@
                         <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
                         <builder>paketobuildpacks/builder-jammy-base:latest</builder>
                         <env>
-                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--enable-preview</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                             <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--enable-preview --initialize-at-build-time=org.apache.sshd.sftp.client.fs.SftpFileSystemProvider</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                     </image>
                     <docker>
