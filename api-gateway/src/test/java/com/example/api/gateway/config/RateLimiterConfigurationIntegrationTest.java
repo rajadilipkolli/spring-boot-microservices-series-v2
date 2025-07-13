@@ -39,16 +39,20 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.cloud.gateway.routes[0].uri", wireMockServer::getBaseUrl);
-        registry.add("spring.cloud.gateway.routes[0].id", () -> "order-service");
         registry.add(
-                "spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/order-service/**");
-        registry.add("spring.cloud.gateway.routes[0].filters[0].name", () -> "RequestRateLimiter");
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "order-service");
         registry.add(
-                "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.replenishRate",
+                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
+                () -> "Path=/order-service/**");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].name",
+                () -> "RequestRateLimiter");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.redis-rate-limiter.replenishRate",
                 () -> "10");
         registry.add(
-                "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.burstCapacity",
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.redis-rate-limiter.burstCapacity",
                 () -> "20");
     }
 

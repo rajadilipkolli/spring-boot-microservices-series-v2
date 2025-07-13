@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.api.gateway.config;
+package com.example.api.gateway.filter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -45,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.2-alpine'
+    image: 'redis:8.0.3-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.5
+    image: quay.io/keycloak/keycloak:26.3.1
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -390,7 +390,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.0.1
+    image: grafana/grafana:12.0.2
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -419,7 +419,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.5.1
+    image: grafana/loki:3.5.2
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -435,7 +435,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.5.1
+    image: grafana/promtail:3.5.2
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -455,7 +455,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.4.1
+    image: prom/prometheus:v3.4.2
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -476,7 +476,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.7.2
+    image: grafana/tempo:2.8.1
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
