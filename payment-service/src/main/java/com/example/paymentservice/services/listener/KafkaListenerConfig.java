@@ -45,8 +45,8 @@ public class KafkaListenerConfig {
                 "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,
                 AppConstants.ORDERS_TOPIC,
-                orderDto.getSource());
-        if ("NEW".equals(orderDto.getStatus())) {
+                orderDto.source());
+        if ("NEW".equals(orderDto.status())) {
             paymentOrderManageService.reserve(orderDto);
         } else {
             paymentOrderManageService.confirm(orderDto);

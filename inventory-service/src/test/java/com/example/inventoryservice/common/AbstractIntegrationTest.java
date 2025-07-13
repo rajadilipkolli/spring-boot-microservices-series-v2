@@ -9,9 +9,10 @@ package com.example.inventoryservice.common;
 import static com.example.inventoryservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.inventoryservice.TestInventoryApplication;
 import com.example.inventoryservice.config.TestStockOrderListenerConfig;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,7 +24,11 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        classes = {TestInventoryApplication.class, TestStockOrderListenerConfig.class})
+        classes = {
+            SQLContainersConfig.class,
+            NonSQLContainersConfig.class,
+            TestStockOrderListenerConfig.class
+        })
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
@@ -33,7 +38,11 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected KafkaTemplate<Long, Object> kafkaTemplate;
 
+    @Autowired protected InventoryJOOQRepository inventoryJOOQRepository;
+
     @Autowired protected InventoryRepository inventoryRepository;
 
     @Autowired protected TestStockOrderListenerConfig stockOrderListener;
+
+    @Autowired protected InventoryOrderManageService inventoryOrderManageService;
 }

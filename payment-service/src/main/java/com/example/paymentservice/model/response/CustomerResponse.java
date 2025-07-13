@@ -7,4 +7,4 @@ public record CustomerResponse(
         String email,
         String phone,
         String address,
-        int amountAvailable) {}
+        double amountAvailable) {}

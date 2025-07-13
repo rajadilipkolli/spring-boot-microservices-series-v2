@@ -3,7 +3,7 @@ jwt:
 management:
   endpoint:
     gateway:
-      enabled: true
+      access: READ_ONLY
   endpoints:
     web:
       exposure:
@@ -19,53 +19,55 @@ spring:
   cloud:
     refresh.enabled: false
     gateway:
-      discovery:
-        locator:
-          enabled: true
-      metrics:
-        enabled: true
-      httpclient:
-        connect-timeout: 1000
-        response-timeout: 5s
-        wiretap: false
-      routes:
-        - id: order-service
-          predicates:
-            - Path=/order-service/**
-          uri: lb://order-service
-          filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter:
-                  replenishRate: 60
-                  burstCapacity: 10
-        - id: inventory-service
-          predicates:
-            - Path=/inventory-service/**
-          uri: lb://inventory-service
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: exampleSlowCircuitBreaker
-                fallbackUri: forward:/fallback/api/inventory
-        - id: catalog-service
-          predicates:
-            - Path=/catalog-service/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                method: GET
-                backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
-                  factor: 2
-                  basedOnPreviousValue: true
-          uri: lb://catalog-service
-        - id: payment-service
-          predicates:
-            - Path=/payment-service/**
-          uri: lb://payment-service
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+          metrics:
+            enabled: true
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 5s
+            wiretap: false
+          routes:
+            - id: order-service
+              predicates:
+                - Path=/order-service/**
+              uri: lb://order-service
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter:
+                      replenishRate: 60
+                      burstCapacity: 10
+            - id: inventory-service
+              predicates:
+                - Path=/inventory-service/**
+              uri: lb://inventory-service
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: exampleSlowCircuitBreaker
+                    fallbackUri: forward:/fallback/api/inventory
+            - id: catalog-service
+              predicates:
+                - Path=/catalog-service/**
+              filters:
+                - name: Retry
+                  args:
+                    retries: 3
+                    method: GET
+                    backoff:
+                      firstBackoff: 50ms
+                      maxBackoff: 500ms
+                      factor: 2
+                      basedOnPreviousValue: true
+              uri: lb://catalog-service
+            - id: payment-service
+              predicates:
+                - Path=/payment-service/**
+              uri: lb://payment-service
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://docker-dev:docker-pass@localhost:8888}/"
   mustache:

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
 </p>
 ***/
 
@@ -13,6 +13,7 @@ import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 public class OrderGeneratorService {
 
     private static final int NUM_ORDERS = 10_000;
+    private static final int BATCH_SIZE = 100;
     private static final SecureRandom RAND = new SecureRandom();
 
     private final OrderService orderService;
@@ -33,26 +35,35 @@ public class OrderGeneratorService {
     @Async
     public void generateOrders() {
         IntStream.range(0, NUM_ORDERS)
-                .parallel()
+                .boxed()
+                .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))
+                .values()
+                .parallelStream()
                 .forEach(
-                        value -> {
-                            List<OrderItemRequest> orderItems = generateOrderItems();
-                            long customerId = RAND.nextLong(100);
-                            if (customerId == 0) {
-                                customerId = 1;
-                            }
-                            OrderRequest orderRequest =
-                                    new OrderRequest(
-                                            customerId,
-                                            orderItems,
-                                            new Address(
-                                                    "Junit Address1" + customerId,
-                                                    "AddressLine2" + customerId,
-                                                    "city" + customerId,
-                                                    "state" + customerId,
-                                                    "zipCode" + customerId,
-                                                    "country" + customerId));
-                            orderService.saveOrder(orderRequest);
+                        batch -> {
+                            List<OrderRequest> orderRequests =
+                                    batch.stream()
+                                            .map(
+                                                    value -> {
+                                                        List<OrderItemRequest> orderItems =
+                                                                generateOrderItems();
+                                                        long customerId =
+                                                                RAND.nextLong(100)
+                                                                        + 1; // Range 1-100
+                                                        return new OrderRequest(
+                                                                customerId,
+                                                                orderItems,
+                                                                new Address(
+                                                                        "Junit Address1"
+                                                                                + customerId,
+                                                                        "AddressLine2" + customerId,
+                                                                        "city" + customerId,
+                                                                        "state" + customerId,
+                                                                        "zipCode" + customerId,
+                                                                        "country" + customerId));
+                                                    })
+                                            .toList();
+                            orderService.saveBatchOrders(orderRequests);
                         });
     }
 

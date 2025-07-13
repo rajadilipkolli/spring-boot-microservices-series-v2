@@ -16,12 +16,20 @@ document.addEventListener('alpine:init', () => {
         updateInventory(inventory) {
             let inventoryForm = Object.assign({}, this.inventory);
 
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
             $.ajax ({
                 url: '/inventory',
                 type: "PUT",
                 dataType: "json",
                 contentType: "application/json",
                 data : JSON.stringify(inventoryForm),
+                beforeSend: function(xhr) {
+                    if (csrfHeader && csrfToken) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    }
+                },
                 success: (resp) => {
 //                     console.log("InventoryUpdate Resp:", resp)
                     alert("Inventory Updated successfully")

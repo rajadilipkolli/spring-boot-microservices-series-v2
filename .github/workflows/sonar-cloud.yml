@@ -15,11 +15,12 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_dispatch:
 jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +53,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=rajadilipkolli_spring-boot-microservices-series-v2
-        
+
+  e2e-tests:
+    name: End-to-End Tests
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Run End to End Tests
-        run: ./test-em-all.sh start stop
+        run: ./test-em-all.sh --detailed-logs start stop

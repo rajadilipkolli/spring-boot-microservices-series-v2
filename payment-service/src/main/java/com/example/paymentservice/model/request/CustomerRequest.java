@@ -11,4 +11,4 @@ public record CustomerRequest(
                 String email,
         @NotBlank(message = "Customer Phone number is required") String phone,
         String address,
-        @Positive(message = "AmountAvailable must be greater than 0") int amountAvailable) {}
+        @Positive(message = "AmountAvailable must be greater than 0") double amountAvailable) {}

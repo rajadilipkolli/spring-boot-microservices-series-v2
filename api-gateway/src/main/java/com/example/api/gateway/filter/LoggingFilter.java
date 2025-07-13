@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.api.gateway.config;
+package com.example.api.gateway.filter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +24,10 @@ class LoggingFilter implements GlobalFilter {
         if (exchange.getRequest().getURI().getPath().contains("/actuator")) {
             log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
         } else {
-            log.info("Path of the request received -> {}", exchange.getRequest().getPath());
+            log.info(
+                    "Path of the request received -> {} with method {}",
+                    exchange.getRequest().getPath(),
+                    exchange.getRequest().getMethod());
         }
         return chain.filter(exchange);
     }
