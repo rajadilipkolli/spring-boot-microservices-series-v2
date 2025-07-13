@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -61,66 +61,41 @@ public class ProductService {
     @Observed(name = "product.findAll", contextualName = "find-all-products")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
-        Sort sort =
-                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                        ? Sort.by(sortBy).ascending()
-                        : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Mono<Long> totalProductsCountMono = productRepository.count();
-        Mono<List<Product>> pagedProductsMono = productRepository.findAllBy(pageable).collectList();
+        Flux<Product> pagedProductsFlux = productRepository.findAllBy(pageable);
 
-        return Mono.zip(totalProductsCountMono, pagedProductsMono)
+        return Mono.zip(totalProductsCountMono, pagedProductsFlux.collectList())
                 .flatMap(
                         tuple -> {
                             long count = tuple.getT1();
-
-                            List<ProductResponse> productResponseList =
-                                    count == 0
-                                            ? Collections.emptyList()
-                                            : tuple.getT2().stream()
-                                                    .map(productMapper::toProductResponse)
-                                                    .toList();
+                            List<Product> products = tuple.getT2();
 
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
                                                 new PageImpl<>(
-                                                        productResponseList, pageable, count)));
+                                                        Collections.emptyList(), pageable, 0)));
                             }
 
-                            List<String> productCodeList =
-                                    productResponseList.stream()
-                                            .map(ProductResponse::productCode)
-                                            .toList();
+                            Flux<ProductResponse> productResponseFlux =
+                                    Flux.fromIterable(products)
+                                            .map(productMapper::toProductResponse);
 
-                            return getInventoryByProductCodes(productCodeList)
-                                    .collectMap(
-                                            InventoryResponse::productCode,
-                                            InventoryResponse::availableQuantity)
-                                    .map(
-                                            inventoriesMap -> {
-                                                List<ProductResponse> updatedProducts =
-                                                        updateProductAvailability(
-                                                                productResponseList,
-                                                                inventoriesMap);
-                                                return new PagedResult<>(
-                                                        new PageImpl<>(
-                                                                updatedProducts, pageable, count));
-                                            });
+                            return enrichWithAvailability(productResponseFlux, pageable, count);
                         });
     }
 
-    private List<ProductResponse> updateProductAvailability(
+    private Flux<ProductResponse> updateProductAvailability(
             List<ProductResponse> productResponses, Map<String, Integer> inventoriesMap) {
-        return productResponses.stream()
+        return Flux.fromIterable(productResponses)
                 .map(
                         productResponse -> {
                             int availableQuantity =
                                     inventoriesMap.getOrDefault(productResponse.productCode(), 0);
                             return productResponse.withInStock(availableQuantity > 0);
-                        })
-                .toList();
+                        });
     }
 
     private Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
@@ -175,18 +150,39 @@ public class ProductService {
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
-        return Mono.just(this.productMapper.toEntity(productRequest))
+        // First, check if product already exists - idempotent approach
+        return productRepository
+                .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                .map(productMapper::toProductResponse)
+                .switchIfEmpty(createAndSaveProduct(productRequest))
+                // Catch DuplicateKeyException from unique constraint violation
+                .onErrorResume(
+                        DuplicateKeyException.class,
+                        e -> {
+                            log.info(
+                                    "Concurrent save detected for product code: {}",
+                                    productRequest.productCode());
+                            // Recovery mechanism: fetch the existing product that was concurrently
+                            // saved
+                            return productRepository
+                                    .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                                    .map(productMapper::toProductResponse)
+                                    .switchIfEmpty(
+                                            // This should never happen, but just in case
+                                            Mono.error(
+                                                    new ProductAlreadyExistsException(
+                                                            productRequest.productCode())));
+                        });
+    }
+
+    /** Helper method to create and save a new product */
+    @Transactional
+    protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
+        return Mono.just(productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->
                                 catalogKafkaProducer.send(productRequest).thenReturn(savedProduct))
-                .onErrorResume(
-                        DuplicateKeyException.class,
-                        e ->
-                                // Handle unique key constraint violation here
-                                Mono.error(
-                                        new ProductAlreadyExistsException(
-                                                productRequest.productCode())))
                 .map(productMapper::toProductResponse);
     }
 
@@ -226,17 +222,147 @@ public class ProductService {
         return Flux.range(0, 101)
                 .flatMap(
                         i ->
-                                Mono.fromCallable(
-                                        () -> {
-                                            int randomPrice = RAND.nextInt(100) + 1;
-                                            return new ProductRequest(
-                                                    "ProductCode" + i,
-                                                    "Gen Product" + i,
-                                                    "Gen Prod Description" + i,
-                                                    null,
-                                                    (double) randomPrice);
-                                        }))
+                                Mono.just(RAND.nextInt(100) + 1)
+                                        .map(
+                                                randomPrice ->
+                                                        new ProductRequest(
+                                                                "ProductCode" + i,
+                                                                "Gen Product" + i,
+                                                                "Gen Prod Description" + i,
+                                                                null,
+                                                                (double) randomPrice)))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByTerm(
+            String term, int pageNo, int pageSize, String sortBy, String sortDir) {
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
+
+        Flux<Product> productFlux =
+                productRepository
+                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                                term, term, pageable);
+
+        return processSearchResults(productFlux, pageable);
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByPriceRange(
+            double minPrice,
+            double maxPrice,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDir) {
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
+
+        Flux<Product> productFlux =
+                productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
+        return processSearchResults(productFlux, pageable);
+    }
+
+    private Pageable createPageable(int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        return PageRequest.of(pageNo, pageSize, sort);
+    }
+
+    public Mono<PagedResult<ProductResponse>> searchProductsByTermAndPriceRange(
+            String term,
+            double minPrice,
+            double maxPrice,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDir) {
+        Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
+
+        Flux<Product> productFlux =
+                productRepository
+                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+                                term, term, minPrice, maxPrice, pageable);
+
+        return processSearchResults(productFlux, pageable);
+    }
+
+    private Mono<PagedResult<ProductResponse>> processSearchResults(
+            Flux<Product> productFlux, Pageable pageable) {
+        return productFlux
+                .collectList()
+                .flatMap(
+                        products -> {
+                            if (products.isEmpty()) {
+                                return Mono.just(
+                                        new PagedResult<>(
+                                                new PageImpl<>(
+                                                        Collections.emptyList(), pageable, 0)));
+                            }
+
+                            Flux<ProductResponse> productResponseFlux =
+                                    Flux.fromIterable(products)
+                                            .map(productMapper::toProductResponse);
+
+                            return enrichWithAvailability(
+                                    productResponseFlux, pageable, (long) products.size());
+                        });
+    }
+
+    /**
+     * Helper method to enrich product responses with availability information from the inventory
+     * service. This method centralizes the logic used in both findAllProducts and
+     * processSearchResults.
+     *
+     * @param productResponseFlux Flux of product responses to be enriched
+     * @param pageable Pagination information
+     * @param totalCount Total count of items for pagination (optional, uses product list size if
+     *     null)
+     * @return Mono of PagedResult with enriched product responses
+     */
+    private Mono<PagedResult<ProductResponse>> enrichWithAvailability(
+            Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
+        return productResponseFlux
+                .collectList()
+                .flatMap(
+                        productResponseList -> {
+                            if (productResponseList.isEmpty()) {
+                                return Mono.just(
+                                        new PagedResult<>(
+                                                new PageImpl<>(
+                                                        Collections.emptyList(), pageable, 0)));
+                            }
+
+                            Flux<String> productCodeFlux =
+                                    Flux.fromIterable(productResponseList)
+                                            .map(ProductResponse::productCode);
+
+                            return productCodeFlux
+                                    .collectList()
+                                    .flatMap(
+                                            productCodeList ->
+                                                    getInventoryByProductCodes(productCodeList)
+                                                            .collectMap(
+                                                                    InventoryResponse::productCode,
+                                                                    InventoryResponse
+                                                                            ::availableQuantity)
+                                                            .flatMap(
+                                                                    inventoriesMap ->
+                                                                            updateProductAvailability(
+                                                                                            productResponseList,
+                                                                                            inventoriesMap)
+                                                                                    .collectList()
+                                                                                    .map(
+                                                                                            updatedProducts ->
+                                                                                                    new PagedResult<>(
+                                                                                                            new PageImpl<>(
+                                                                                                                    updatedProducts,
+                                                                                                                    pageable,
+                                                                                                                    totalCount
+                                                                                                                                    != null
+                                                                                                                            ? totalCount
+                                                                                                                            : productResponseList
+                                                                                                                                    .size())))));
+                        });
     }
 }

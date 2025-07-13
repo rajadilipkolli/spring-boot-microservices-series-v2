@@ -1,6 +1,5 @@
 name: spring-boot-microservices-series-v2
 services:
-
   postgresql:
     container_name: postgresql
     image: postgres:17-alpine
@@ -11,6 +10,8 @@ services:
       - POSTGRES_DB=appdb
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: "pg_isready -U appuser -d appdb"
       interval: 2s
@@ -21,10 +22,10 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.0-alpine'
+    image: 'redis:8.0.3-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
-      - '127.0.0.1:6379:6379/tcp'
+      - '6379:6379'
     volumes:
       - 'redis_data:/data:rw'
     healthcheck:
@@ -95,18 +96,34 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.4
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    image: quay.io/keycloak/keycloak:26.3.1
+    command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
+      # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # Database configuration for PostgreSQL
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+      - KC_DB_USERNAME=appuser
+      - KC_DB_PASSWORD=secret
+      - KC_DB_SCHEMA=public
+      # Hostname and HTTP configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      # Additional production settings
+      - KC_FEATURES=token-exchange
     ports:
       - "9191:9191"
+    depends_on:
+      postgresql:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -117,38 +134,6 @@ services:
       timeout: 20s
       retries: 5
       start_period: 120s
-    networks:
-      - microservice-network
-
-  keycloak-export:
-    image: curlimages/curl:latest
-    container_name: keycloak-export
-    depends_on:
-      keycloak:
-        condition: service_healthy
-    volumes:
-      - ./realm-config:/export
-      - /var/run/docker.sock:/var/run/docker.sock  # Add Docker socket to allow executing commands on the host
-    entrypoint: >
-      sh -c '
-        echo "Waiting for Keycloak to be fully ready..."
-        sleep 30
-        
-        echo "Exporting realm configuration..."
-        
-        # Execute keycloak container command to export the realm
-        docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
-        
-        # Check if export was successful by checking if the file exists in the shared volume
-        if [ -f "/export/retailstore-realm.json" ]; then
-          echo "Realm export completed! Exported to ./realm-config/retailstore-realm.json"
-          ls -la /export/retailstore-realm.json
-          exit 0
-        else
-          echo "Export may have failed. Please check Keycloak container logs."
-          exit 1
-        fi
-      '
     networks:
       - microservice-network
 

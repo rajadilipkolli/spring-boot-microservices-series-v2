@@ -42,16 +42,10 @@ password : admin1234
 
 ## Export realm
 
-### Automated Export (Recommended)
-The docker-compose.yml file now includes an automated realm export service called `keycloak-export` that will:
-1. Wait for Keycloak to be fully up and running
-2. Automatically export the realm configuration 
-3. Save it to the `./deployment/realm-config/retailstore-realm.json` file
+### Automated Import (Recommended)
+The realm configuration is automatically imported when Keycloak starts up through the volume mount configuration in docker-compose.yml. The existing realm configuration file is located at `./deployment/realm-config/retailstore-realm.json`.
 
-No manual steps are required - the export happens automatically when you start the services with:
-```shell
-docker-compose up -d
-```
+If you need to export an updated realm configuration after making changes in the Keycloak admin console, you can use the manual export method below.
 
 ### Manual Export (Alternative)
 If you need to manually export the realm configuration, you can use the following steps:

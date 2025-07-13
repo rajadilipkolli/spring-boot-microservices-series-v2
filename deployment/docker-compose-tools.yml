@@ -16,6 +16,8 @@ services:
       retries: 10
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - microservice-network
 
@@ -43,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.0-alpine'
+    image: 'redis:8.0.3-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -113,20 +115,34 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.4
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    image: quay.io/keycloak/keycloak:26.3.1
+    command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
-    hostname: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    hostname: keycloak
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      # Admin credentials
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # Database configuration for PostgreSQL
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+      - KC_DB_USERNAME=appuser
+      - KC_DB_PASSWORD=secret
+      - KC_DB_SCHEMA=public
+      # Hostname and HTTP configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      # Additional production settings
+      - KC_FEATURES=token-exchange
     ports:
       - "9191:9191"
-    networks:
-      - microservice-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -137,36 +153,6 @@ services:
       timeout: 20s
       retries: 5
       start_period: 120s
-
-  keycloak-export:
-    image: curlimages/curl:latest
-    container_name: keycloak-export
-    depends_on:
-      keycloak:
-        condition: service_healthy
-    volumes:
-      - ./realm-config:/export
-      - /var/run/docker.sock:/var/run/docker.sock  # Add Docker socket to allow executing commands on the host
-    entrypoint: >
-      sh -c '
-        echo "Waiting for Keycloak to be fully ready..."
-        sleep 30
-        
-        echo "Exporting realm configuration..."
-        
-        # Execute keycloak container command to export the realm
-        docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
-        
-        # Check if export was successful by checking if the file exists in the shared volume
-        if [ -f "/export/retailstore-realm.json" ]; then
-          echo "Realm export completed! Exported to ./realm-config/retailstore-realm.json"
-          ls -la /export/retailstore-realm.json
-          exit 0
-        else
-          echo "Export may have failed. Please check Keycloak container logs."
-          exit 1
-        fi
-      '
     networks:
       - microservice-network
 
@@ -404,7 +390,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.0.0
+    image: grafana/grafana:12.0.2
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -433,7 +419,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.5.0
+    image: grafana/loki:3.5.2
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -449,7 +435,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.5.0
+    image: grafana/promtail:3.5.2
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -469,7 +455,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.3.1
+    image: prom/prometheus:v3.4.2
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -490,7 +476,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.7.2
+    image: grafana/tempo:2.8.1
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml

@@ -6,30 +6,27 @@
 
 package com.example.catalogservice.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties("application")
-public class ApplicationProperties {
+@Validated
+public record ApplicationProperties(
+        @NotBlank(message = "Inventory Service URL cannot be blank") String inventoryServiceUrl,
+        @NestedConfigurationProperty @Valid Cors cors,
+        @Valid Resilience resilience) {
 
-    private String inventoryServiceUrl;
-
-    @NestedConfigurationProperty private Cors cors = new Cors();
-
-    public String getInventoryServiceUrl() {
-        return inventoryServiceUrl;
-    }
-
-    public void setInventoryServiceUrl(String inventoryServiceUrl) {
-        this.inventoryServiceUrl = inventoryServiceUrl;
-    }
-
-    public Cors getCors() {
-        return cors;
-    }
-
-    public void setCors(Cors cors) {
-        this.cors = cors;
+    public ApplicationProperties {
+        // Default values for nested properties
+        if (cors == null) {
+            cors = new Cors();
+        }
+        if (resilience == null) {
+            resilience = new Resilience();
+        }
     }
 
     public static class Cors {
@@ -78,6 +75,55 @@ public class ApplicationProperties {
 
         public void setAllowCredentials(boolean allowCredentials) {
             this.allowCredentials = allowCredentials;
+        }
+    }
+
+    public static class Resilience {
+        private int retryAttempts = 3;
+        private long retryDelayMs = 1000;
+        private double circuitBreakerFailureThreshold = 0.5;
+        private int circuitBreakerMinimumCalls = 10;
+        private long circuitBreakerWaitDurationMs = 30000;
+
+        // Getters and setters
+        public int getRetryAttempts() {
+            return retryAttempts;
+        }
+
+        public void setRetryAttempts(int retryAttempts) {
+            this.retryAttempts = retryAttempts;
+        }
+
+        public long getRetryDelayMs() {
+            return retryDelayMs;
+        }
+
+        public void setRetryDelayMs(long retryDelayMs) {
+            this.retryDelayMs = retryDelayMs;
+        }
+
+        public double getCircuitBreakerFailureThreshold() {
+            return circuitBreakerFailureThreshold;
+        }
+
+        public void setCircuitBreakerFailureThreshold(double circuitBreakerFailureThreshold) {
+            this.circuitBreakerFailureThreshold = circuitBreakerFailureThreshold;
+        }
+
+        public int getCircuitBreakerMinimumCalls() {
+            return circuitBreakerMinimumCalls;
+        }
+
+        public void setCircuitBreakerMinimumCalls(int circuitBreakerMinimumCalls) {
+            this.circuitBreakerMinimumCalls = circuitBreakerMinimumCalls;
+        }
+
+        public long getCircuitBreakerWaitDurationMs() {
+            return circuitBreakerWaitDurationMs;
+        }
+
+        public void setCircuitBreakerWaitDurationMs(long circuitBreakerWaitDurationMs) {
+            this.circuitBreakerWaitDurationMs = circuitBreakerWaitDurationMs;
         }
     }
 }

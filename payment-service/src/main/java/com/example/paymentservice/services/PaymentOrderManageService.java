@@ -10,12 +10,15 @@ import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import io.micrometer.core.annotation.Timed;
 import java.math.BigDecimal;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 @Loggable
 public class PaymentOrderManageService {
 
@@ -31,58 +34,63 @@ public class PaymentOrderManageService {
     }
 
     @Timed(percentiles = 1.0)
-    public void reserve(OrderDto orderDto) {
+    public OrderDto reserve(OrderDto orderDto) {
         log.debug(
                 "Reserving Order with Id :{} in payment service with payload {}",
-                orderDto.getOrderId(),
+                orderDto.orderId(),
                 orderDto);
-        Customer customer =
-                customerRepository
-                        .findById(orderDto.getCustomerId())
-                        .orElseThrow(() -> new CustomerNotFoundException(orderDto.getCustomerId()));
-        log.info("Found Customer: {}", customer.getId());
-        var totalOrderPrice =
-                orderDto.getItems().stream()
-                        .map(OrderItemDto::getPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .intValue();
-        if (totalOrderPrice < customer.getAmountAvailable()) {
-            orderDto.setStatus("ACCEPT");
-            customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
-            customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
+        Optional<Customer> optionalCustomer = customerRepository.findById(orderDto.customerId());
+        if (optionalCustomer.isPresent()) {
+            Customer customer = optionalCustomer.get();
+            log.info("Found Customer: {}", customer.getId());
+            var totalOrderPrice =
+                    orderDto.items().stream()
+                            .map(OrderItemDto::getPrice)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .doubleValue();
+
+            if (totalOrderPrice <= customer.getAmountAvailable()) {
+                orderDto = orderDto.withStatus("ACCEPT");
+                customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
+                customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
+            } else {
+                orderDto = orderDto.withStatus("REJECT");
+            }
+            log.info("Saving customer: {} after reserving", customer);
+            customerRepository.save(customer);
+            orderDto = orderDto.withSource(AppConstants.SOURCE);
+            kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.orderId(), orderDto);
+            log.info(
+                    "Sent Reserved Order: {} to topic :{}",
+                    orderDto,
+                    AppConstants.PAYMENT_ORDERS_TOPIC);
         } else {
-            orderDto.setStatus("REJECT");
+            log.error("Customer not found for id: {}", orderDto.customerId());
+            throw new CustomerNotFoundException(orderDto.customerId());
         }
-        orderDto.setSource(AppConstants.SOURCE);
-        log.info("Saving customer: {} after reserving", customer);
-        customerRepository.save(customer);
-        kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.getOrderId(), orderDto);
-        log.info(
-                "Sent Reserved Order: {} to topic :{}",
-                orderDto,
-                AppConstants.PAYMENT_ORDERS_TOPIC);
+        return orderDto;
     }
 
     @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {
         log.debug(
                 "Confirming Order with Id :{} in payment service with payload {}",
-                orderDto.getOrderId(),
+                orderDto.orderId(),
                 orderDto);
         Customer customer =
                 customerRepository
-                        .findById(orderDto.getCustomerId())
-                        .orElseThrow(() -> new CustomerNotFoundException(orderDto.getCustomerId()));
+                        .findById(orderDto.customerId())
+                        .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
         log.info("Found Customer: {}", customer);
         var orderPrice =
-                orderDto.getItems().stream()
+                orderDto.items().stream()
                         .map(OrderItemDto::getPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .intValue();
-        if (orderDto.getStatus().equals("CONFIRMED")) {
+        if (orderDto.status().equals("CONFIRMED")) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-        } else if (orderDto.getStatus().equals(AppConstants.ROLLBACK)
-                && !AppConstants.SOURCE.equals(orderDto.getSource())) {
+        } else if (orderDto.status().equals(AppConstants.ROLLBACK)
+                && !AppConstants.SOURCE.equals(orderDto.source())) {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
         }

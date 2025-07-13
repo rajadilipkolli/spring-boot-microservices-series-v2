@@ -12,19 +12,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class MockTestData {
-
     public static OrderDto getOrderDto(String source) {
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(151L);
-        orderDto.setCustomerId(1001L);
-        orderDto.setStatus("NEW");
-        orderDto.setSource(source);
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setItemId(1L);
-        orderItemDto.setProductId("JUNIT_000");
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(10);
-        orderDto.setItems(List.of(orderItemDto));
-        return orderDto;
+        OrderItemDto orderItemDto = new OrderItemDto(1L, "JUNIT_000", 10, BigDecimal.TEN);
+        return new OrderDto(151L, 1001L, "NEW", source, List.of(orderItemDto));
     }
 }

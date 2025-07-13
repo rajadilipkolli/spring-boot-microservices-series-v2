@@ -43,7 +43,6 @@ class ProductServiceTest {
 
     @Test
     void testGenerateProducts() {
-
         // Stubbing productMapper.toEntity()
         given(productMapper.toEntity(any(ProductRequest.class)))
                 .willAnswer(
@@ -75,7 +74,12 @@ class ProductServiceTest {
 
         given(catalogKafkaProducer.send(any(ProductRequest.class))).willReturn(Mono.just(true));
 
-        // Stubbing productRepository.saveProduct()
+        // Mock the repository findByProductCodeAllIgnoreCase method to return empty Mono
+        // This is needed for the idempotency check in saveProduct
+        given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
+                .willReturn(Mono.empty());
+
+        // Stubbing productRepository.save()
         given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
 
         // Use StepVerifier to test the method

@@ -1,7 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.clients.PagedResult;
-import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
@@ -9,6 +8,8 @@ import com.example.retailstore.webapp.clients.order.OrderConfirmationDTO;
 import com.example.retailstore.webapp.clients.order.OrderRequestExternal;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
+import com.example.retailstore.webapp.exception.InvalidRequestException;
+import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -36,12 +37,15 @@ class OrderController {
             SecurityHelper securityHelper,
             CustomerServiceClient customerServiceClient) {
         this.orderServiceClient = orderServiceClient;
-        this.customerServiceClient = customerServiceClient;
         this.securityHelper = securityHelper;
+        this.customerServiceClient = customerServiceClient;
     }
 
     @GetMapping("/cart")
-    String cart() {
+    String cart(Model model) {
+        String username = securityHelper.getUsername();
+        CustomerResponse customer = customerServiceClient.getCustomerByName(username);
+        model.addAttribute("customer", customer);
         return "cart";
     }
 
@@ -55,7 +59,15 @@ class OrderController {
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", orderNumber);
-        return orderServiceClient.getOrder(getHeaders(), orderNumber);
+        try {
+            OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
+            CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.getCustomerId());
+            orderResponse.updateCustomerDetails(customerResponse);
+            return orderResponse;
+        } catch (Exception e) {
+            log.error("Error fetching order {}: {}", orderNumber, e.getMessage());
+            throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
+        }
     }
 
     @GetMapping("/orders")
@@ -79,11 +91,17 @@ class OrderController {
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", orderRequest);
-        String email = securityHelper.getLoggedInUserEmail();
-        CustomerRequest customerRequest = orderRequest.customer().withEmail(email);
-        CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+        try {
+            CustomerResponse customerResponse = customerServiceClient.getCustomerByName(
+                    orderRequest.customer().name());
 
-        OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
-        return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+            OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
+            return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+        } catch (InvalidRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error creating order: {}", e.getMessage());
+            throw new InvalidRequestException("Failed to create order: " + e.getMessage());
+        }
     }
 }

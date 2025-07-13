@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -66,17 +66,29 @@ public class TestData {
     }
 
     public static OrderDto getOrderDto(String source) {
-        OrderDto orderDto = new OrderDto();
-        orderDto.setOrderId(151L);
-        orderDto.setCustomerId(1001L);
-        orderDto.setStatus("ACCEPT");
-        orderDto.setSource(source);
-        OrderItemDto orderItemDto = new OrderItemDto();
-        orderItemDto.setItemId(1L);
-        orderItemDto.setProductId("P1");
-        orderItemDto.setProductPrice(BigDecimal.TEN);
-        orderItemDto.setQuantity(1);
-        orderDto.setItems(List.of(orderItemDto));
-        return orderDto;
+
+        return new OrderDto(151L, 1001L, "ACCEPT", source, getOrderItemDtoList());
+    }
+
+    public static OrderDto getStockOrderDto(String status, Order testOrder) {
+
+        return buildOrderDto(testOrder, status, "INVENTORY");
+    }
+
+    public static OrderDto getPaymentOrderDto(String status, Order testOrder) {
+        return buildOrderDto(testOrder, status, "PAYMENT");
+    }
+
+    private static OrderDto buildOrderDto(Order testOrder, String status, String source) {
+        return new OrderDto(
+                testOrder.getId(),
+                testOrder.getCustomerId(),
+                status,
+                source,
+                getOrderItemDtoList());
+    }
+
+    private static List<OrderItemDto> getOrderItemDtoList() {
+        return List.of(new OrderItemDto(1L, "Product1", 10, BigDecimal.TEN));
     }
 }
