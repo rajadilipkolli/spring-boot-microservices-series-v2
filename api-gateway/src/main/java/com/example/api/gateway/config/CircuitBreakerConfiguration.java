@@ -18,7 +18,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration(proxyBeanMethods = false)
-class CircuitBreakerConfiguration {
+public class CircuitBreakerConfiguration {
 
     @Bean
     PasswordEncoder passwordEncoder() {

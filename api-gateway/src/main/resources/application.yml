@@ -17,7 +17,6 @@ spring:
   application:
     name: api-gateway
   cloud:
-    refresh.enabled: false
     gateway:
       server:
         webflux:
@@ -69,7 +68,7 @@ spring:
                 - Path=/payment-service/**
               uri: lb://payment-service
   config:
-    import: "optional:configserver:${CONFIG_SERVER:http://docker-dev:docker-pass@localhost:8888}/"
+    import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   mustache:
     check-template-location: false
   webflux:
