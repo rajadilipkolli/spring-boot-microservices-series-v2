@@ -8,20 +8,15 @@ import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import dasniko.testcontainers.keycloak.KeycloakContainer;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 class RegistrationControllerIT extends AbstractIntegrationTest {
-
-    @Autowired
-    private KeycloakContainer keycloakContainer;
 
     // The realm name should match the one configured in KeycloakContainer and used by the application
     private static final String REALM_NAME = "retailstore";
@@ -103,5 +98,80 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 }
             }
         }
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidUsername() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "u", // invalid username (too short)
+                "test@example.com",
+                "Test",
+                "User",
+                "Password123!",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE);
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyJson()
+                .extractingPath("$.detail")
+                .asString()
+                .isEqualTo("Invalid request content.");
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidPassword() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "test@example.com",
+                "Test",
+                "User",
+                "password",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE); // invalid password (no uppercase, numbers, or special chars)
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyJson()
+                .extractingPath("$.detail")
+                .asString()
+                .isEqualTo("Invalid request content.");
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidEmail() throws Exception {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "invalid-email", // invalid email format
+                "Test",
+                "User",
+                "Password123!",
+                TEST_PHONE_NUMBER,
+                TEST_ADDRESS_LINE);
+
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(objectMapper.writeValueAsString(request))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyJson()
+                .extractingPath("$.detail")
+                .asString()
+                .isEqualTo("Invalid request content.");
     }
 }

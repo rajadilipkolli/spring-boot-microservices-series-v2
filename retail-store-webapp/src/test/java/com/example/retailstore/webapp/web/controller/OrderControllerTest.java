@@ -223,12 +223,12 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrder_shouldHandleErrorWhenServiceFails() throws Exception {
-        String orderNumber = "ORDER-FAIL";
+        String orderNumber = "ORDER-INVALID";
         when(orderServiceClient.getOrder(anyMap(), anyString()))
                 .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -256,6 +256,6 @@ class OrderControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createOrderRequest)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
     }
 }

@@ -4,6 +4,8 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
+import com.example.retailstore.webapp.exception.InvalidRequestException;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,14 +41,25 @@ class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/products")
     @ResponseBody
-    ProductResponse createProduct(@RequestBody ProductRequest productRequest) {
-        return catalogService.createProduct(productRequest);
+    ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
+        log.info("Creating new product: {}", productRequest);
+        try {
+            return catalogService.createProduct(productRequest);
+        } catch (Exception e) {
+            log.error("Error creating product: {}", e.getMessage());
+            throw new InvalidRequestException("Failed to create product: " + e.getMessage());
+        }
     }
 
     @GetMapping("/api/products")
     @ResponseBody
     PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page, Model model) {
         log.info("Fetching products for page: {}", page);
-        return catalogService.getProducts(page);
+        try {
+            return catalogService.getProducts(page);
+        } catch (Exception e) {
+            log.error("Error fetching products: {}", e.getMessage());
+            throw new InvalidRequestException("Failed to fetch products: " + e.getMessage());
+        }
     }
 }

@@ -4,6 +4,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,9 +17,7 @@ import org.wiremock.spring.InjectWireMock;
         webEnvironment = RANDOM_PORT,
         classes = {ContainerConfig.class})
 @AutoConfigureMockMvc
-@EnableWireMock({
-    @ConfigureWireMock(name = "gateway-service", port = 0, baseUrlProperties = "retailstore.api-gateway-url")
-})
+@EnableWireMock({@ConfigureWireMock(name = "gateway-service", baseUrlProperties = "retailstore.api-gateway-url")})
 public abstract class AbstractIntegrationTest {
 
     @Autowired
@@ -26,6 +25,9 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     protected MockMvcTester mockMvcTester;
+
+    @Autowired
+    protected KeycloakContainer keycloakContainer;
 
     @InjectWireMock("gateway-service")
     protected WireMockServer gatewayServiceMock;
