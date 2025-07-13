@@ -4,10 +4,11 @@
 </p>
 ***/
 
-package com.example.api.gateway.config;
+package com.example.api.gateway.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.api.gateway.config.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -32,9 +33,12 @@ class LoggingFilterIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.cloud.gateway.routes[0].uri", wireMockServer::getBaseUrl);
-        registry.add("spring.cloud.gateway.routes[0].id", () -> "logging-test");
-        registry.add("spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/test/**");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "logging-test");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
+                () -> "Path=/test/**");
     }
 
     @Test

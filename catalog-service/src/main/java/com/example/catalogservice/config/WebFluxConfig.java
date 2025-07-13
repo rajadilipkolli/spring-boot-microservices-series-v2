@@ -21,11 +21,12 @@ public class WebFluxConfig implements WebFluxConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        ApplicationProperties.Cors cors = properties.getCors();
+        ApplicationProperties.Cors cors = properties.cors();
         registry.addMapping(cors.getPathPattern())
-                .allowedMethods(cors.getAllowedMethods())
-                .allowedHeaders(cors.getAllowedHeaders())
-                .allowedOriginPatterns(cors.getAllowedOriginPatterns())
-                .allowCredentials(cors.isAllowCredentials());
+                .allowedMethods(cors.getAllowedMethods().split(","))
+                .allowedHeaders(cors.getAllowedHeaders().split(","))
+                .allowedOriginPatterns(cors.getAllowedOriginPatterns().split(","))
+                .allowCredentials(cors.isAllowCredentials())
+                .maxAge(3600);
     }
 }
