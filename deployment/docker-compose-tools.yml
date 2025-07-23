@@ -419,7 +419,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.5.2
+    image: grafana/loki:3.5.3
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
