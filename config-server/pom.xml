@@ -154,7 +154,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.25.2</version>
+                            <version>1.28.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
