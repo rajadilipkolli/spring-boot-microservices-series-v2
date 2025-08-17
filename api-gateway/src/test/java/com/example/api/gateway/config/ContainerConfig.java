@@ -27,7 +27,7 @@ public class ContainerConfig {
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.0.3-alpine"))
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.2.0-alpine"))
                 .withReuse(true);
     }
 }
