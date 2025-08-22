@@ -23,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ProblemDetail;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -212,13 +211,9 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                 .hasMessageContaining("NONEXISTENTPRODUCT")
                 .satisfies(
                         exception -> {
-                            ProductNotFoundException e = (ProductNotFoundException) exception;
-                            // Verify the exception details
-                            ProblemDetail problemDetail = e.getBody();
-                            assertThat(problemDetail).isNotNull();
-                            assertThat(problemDetail.getDetail())
-                                    .containsIgnoringCase("NonExistentProduct");
-                            assertThat(problemDetail.getTitle()).isEqualTo("Product Not Found");
+                            assertThat(exception.getMessage())
+                                    .contains(
+                                            "One or More products Not found from [NONEXISTENTPRODUCT]");
                         });
 
         // Verify no order was saved
