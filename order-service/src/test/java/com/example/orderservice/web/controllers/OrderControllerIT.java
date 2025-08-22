@@ -176,7 +176,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest orderRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            List.of(new OrderItemRequest("Product10", 10, BigDecimal.TEN)),
                             new Address(
                                     "Junit Address1",
                                     "AddressLine2",
@@ -184,7 +184,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(true, "Product1");
+            mockProductsExistsRequest(true, "Product10");
 
             mockMvc.perform(
                             post("/api/orders")
@@ -199,7 +199,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
                     .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                    .andExpect(jsonPath("$.items[0].productId", is("Product1")))
+                    .andExpect(jsonPath("$.items[0].productId", is("Product10")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
                     .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
                     .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
@@ -219,12 +219,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .hasSize(orderList.size() + 1); // Original orders plus the new one
 
             // Verify the last order in the database matches our request
-            Long orderId = savedOrders.get(savedOrders.size() - 1).getId();
+            Long orderId = savedOrders.getLast().getId();
             Order lastOrder = orderRepository.findOrderById(orderId).get();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
             assertThat(lastOrder.getItems()).hasSize(1);
-            assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product1");
+            assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product10");
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
         }
 

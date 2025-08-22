@@ -8,6 +8,7 @@ package com.example.orderservice.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
+import java.net.URI;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -38,7 +39,30 @@ public class GlobalExceptionHandler {
         log.warn("Order not found: {}", ex.getMessage());
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
-        ProblemDetail problemDetail = ex.getBody();
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Order Not Found");
+        problemDetail.setType(URI.create("http://api.orders.com/errors/not-found"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
+
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleProductNotFound(
+            ProductNotFoundException ex, WebRequest request) {
+        log.warn("Product not found: {}", ex.getMessage());
+
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Product Not Found");
+        problemDetail.setType(URI.create("http://api.products.com/errors/not-found"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+
         addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
