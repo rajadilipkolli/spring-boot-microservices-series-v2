@@ -147,12 +147,6 @@ services:
       resources:
         limits:
           memory: 2gb
-    healthcheck:
-      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
-      interval: 30s
-      timeout: 20s
-      retries: 5
-      start_period: 120s
     networks:
       - microservice-network
 
@@ -374,7 +368,7 @@ services:
       - microservice-network
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       naming-server:
         condition: service_started
       api-gateway:

@@ -314,7 +314,7 @@ Once all services are running, verify the setup:
 - 🌐 **Service Registry:** [http://localhost:8761](http://localhost:8761)
 - 📚 **API Documentation:** [http://localhost:8765/swagger-ui.html](http://localhost:8765/swagger-ui.html)
 - 🛒 **Retail Store App:** [http://localhost:8080](http://localhost:8080)
-- 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (admin/admin)
+- 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (user/password)
 - 🔍 **Zipkin Tracing:** [http://localhost:9411](http://localhost:9411)
 
 ## 🎛️ Service Discovery & API Access
@@ -348,7 +348,7 @@ Access all microservice APIs through a unified interface:
 
 **📊 Grafana**
 - **URL:** [http://localhost:3000](http://localhost:3000)
-- **Credentials:** `admin/admin`
+- **Credentials:** `user/password`
 - **Features:** Beautiful dashboards, alerting, data visualization
 
 </td>
