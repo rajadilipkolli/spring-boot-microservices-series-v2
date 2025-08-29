@@ -35,6 +35,38 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
+    @Test
+    void shouldReturn400WhenCreateProductWithMissingFields() throws Exception {
+        ProductRequest invalidRequest = new ProductRequest(null, "", null, null, null);
+
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(invalidRequest)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("about:blank")
+                .jsonPath("$.title")
+                .isEqualTo("Constraint Violation")
+                .jsonPath("$.status")
+                .isEqualTo(400)
+                .jsonPath("$.detail")
+                .isEqualTo("Invalid request content.")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/products")
+                .jsonPath("$.violations")
+                .isArray()
+                .jsonPath("$.violations[0].field")
+                .exists()
+                .jsonPath("$.violations[0].message")
+                .exists();
+    }
 
     @Autowired private ProductRepository productRepository;
 
