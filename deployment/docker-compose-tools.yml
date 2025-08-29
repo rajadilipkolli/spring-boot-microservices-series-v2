@@ -362,6 +362,8 @@ services:
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin1234
     ports:
       - "8080:8080"
     networks:
