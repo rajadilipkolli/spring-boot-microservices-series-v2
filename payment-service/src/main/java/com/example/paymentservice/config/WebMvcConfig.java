@@ -2,6 +2,7 @@
 package com.example.paymentservice.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -15,12 +16,13 @@ class WebMvcConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         ApplicationProperties.Cors cors = properties.getCors();
         registry.addMapping(cors.getPathPattern())
-                .allowedMethods(cors.getAllowedMethods())
-                .allowedHeaders(cors.getAllowedHeaders())
-                .allowedOriginPatterns(cors.getAllowedOriginPatterns())
-                .allowCredentials(cors.isAllowCredentials());
+                .allowedMethods(cors.getAllowedMethods().split(","))
+                .allowedHeaders(cors.getAllowedHeaders().split(","))
+                .allowedOriginPatterns(cors.getAllowedOriginPatterns().split(","))
+                .allowCredentials(cors.isAllowCredentials())
+                .maxAge(3600); // Cache preflight response for 1 hour
     }
 }
