@@ -1,5 +1,6 @@
 server:
   http_listen_port: 3100
+  http_listen_address: 0.0.0.0
 
 distributor:
   receivers:
@@ -14,6 +15,7 @@ distributor:
         thrift_binary:
         thrift_compact:
     zipkin:
+      endpoint: 0.0.0.0:9411
 
 metrics_generator:
   registry:
