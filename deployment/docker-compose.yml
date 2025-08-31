@@ -22,7 +22,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.2-alpine'
+    image: 'redis:8.2.1-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '6379:6379'
@@ -96,7 +96,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.2.5
+    image: quay.io/keycloak/keycloak:26.3.3
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -317,6 +317,8 @@ services:
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411
+      - KEYCLOAK_ADMINUSERNAME=admin
+      - KEYCLOAK_ADMINPASSWORD=admin1234
     ports:
       - "8080:8080"
     networks:

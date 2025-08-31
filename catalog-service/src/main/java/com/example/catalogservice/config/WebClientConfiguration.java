@@ -41,7 +41,7 @@ public class WebClientConfiguration {
 
     @Bean
     WebClient webClient(WebClient.Builder webClientBuilder) {
-        return webClientBuilder.baseUrl(applicationProperties.getInventoryServiceUrl()).build();
+        return webClientBuilder.baseUrl(applicationProperties.inventoryServiceUrl()).build();
     }
 
     @Bean

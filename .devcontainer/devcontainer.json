@@ -24,10 +24,10 @@
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [9411,8765,8761]
+	"forwardPorts": [9411,8765,8761],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "java -version",
+	"postCreateCommand": "./mvnw clean compile -DskipTests"
 
 	// Configure tool-specific properties.
 	// "customizations": {},

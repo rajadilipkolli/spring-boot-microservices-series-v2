@@ -25,9 +25,10 @@ class WebMvcConfig implements WebMvcConfigurer {
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         Cors cors = properties.getCors();
         registry.addMapping(cors.getPathPattern())
-                .allowedMethods(cors.getAllowedHeaders())
-                .allowedHeaders(cors.getAllowedHeaders())
-                .allowedOriginPatterns(cors.getAllowedOriginPatterns())
-                .allowCredentials(cors.isAllowCredentials());
+                .allowedMethods(cors.getAllowedMethods().split(","))
+                .allowedHeaders(cors.getAllowedHeaders().split(","))
+                .allowedOriginPatterns(cors.getAllowedOriginPatterns().split(","))
+                .allowCredentials(cors.isAllowCredentials())
+                .maxAge(3600); // Cache preflight response for 1 hour
     }
 }

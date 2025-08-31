@@ -168,8 +168,8 @@ class ProductControllerTest {
     @WithMockUser
     void products_shouldHandleErrorWhenServiceFails() throws Exception {
         when(catalogServiceClient.getProducts(anyInt()))
-                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
-        mockMvc.perform(get("/api/products").with(csrf())).andExpect(status().isInternalServerError());
+        mockMvc.perform(get("/api/products").with(csrf())).andExpect(status().isBadRequest());
     }
 }

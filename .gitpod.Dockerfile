@@ -1,4 +1,4 @@
-FROM gitpod/workspace-java-17
+FROM gitpod/workspace-java-21
 
 USER root
 
