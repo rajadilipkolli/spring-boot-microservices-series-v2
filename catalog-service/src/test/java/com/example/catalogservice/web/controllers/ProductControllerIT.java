@@ -649,7 +649,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldReturn400WhenCreateProductWithMissingFields() throws Exception {
+    void shouldReturn400WhenCreateProductWithMissingFields() {
         ProductRequest invalidRequest = new ProductRequest(null, "", null, null, null);
 
         webTestClient
@@ -661,7 +661,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectStatus()
                 .isBadRequest()
                 .expectHeader()
-                .contentType("application/problem+json")
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .expectBody()
                 .jsonPath("$.type")
                 .isEqualTo("about:blank")
@@ -673,6 +673,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo("Invalid request content.")
                 .jsonPath("$.instance")
                 .isEqualTo("/api/catalog")
+                .jsonPath("$.timestamp")
+                .isNotEmpty()
                 .jsonPath("$.violations")
                 .isArray()
                 .jsonPath("$.violations[0].field")

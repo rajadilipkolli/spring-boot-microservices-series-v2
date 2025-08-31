@@ -27,6 +27,7 @@ import org.springframework.web.context.request.WebRequest;
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class GlobalExceptionHandler {
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
@@ -45,7 +46,10 @@ class GlobalExceptionHandler {
                                             fieldError.getRejectedValue(),
                                             Objects.requireNonNull(fieldError.getDefaultMessage()));
                                 })
-                        .sorted(Comparator.comparing(ApiValidationError::field))
+                        .sorted(
+                                Comparator.comparing(
+                                        ApiValidationError::field,
+                                        Comparator.nullsLast(String::compareTo)))
                         .toList();
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(
@@ -65,6 +69,23 @@ class GlobalExceptionHandler {
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setProperty("timestamp", Instant.now());
+        var violations =
+                ex.getConstraintViolations().stream()
+                        .map(
+                                cv ->
+                                        new ApiValidationError(
+                                                cv.getRootBeanClass().getSimpleName(),
+                                                cv.getPropertyPath() != null
+                                                        ? cv.getPropertyPath().toString()
+                                                        : null,
+                                                cv.getInvalidValue(),
+                                                cv.getMessage()))
+                        .sorted(
+                                Comparator.comparing(
+                                        ApiValidationError::field,
+                                        Comparator.nullsLast(String::compareTo)))
+                        .toList();
+        problemDetail.setProperty("violations", violations);
         addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
@@ -83,11 +104,10 @@ class GlobalExceptionHandler {
 
     private void addCorrelationId(ProblemDetail problemDetail, WebRequest request) {
         String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId != null) {
+        if (correlationId != null && !correlationId.isBlank()) {
             problemDetail.setProperty("correlationId", correlationId);
         }
     }
 
-    public record ApiValidationError(
-            String object, String field, Object rejectedValue, String message) {}
+    record ApiValidationError(String object, String field, Object rejectedValue, String message) {}
 }
