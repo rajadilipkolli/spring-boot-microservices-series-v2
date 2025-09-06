@@ -431,7 +431,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.5.3
+    image: grafana/promtail:3.5.4
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
