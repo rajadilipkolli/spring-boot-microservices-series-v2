@@ -75,7 +75,7 @@ class GenerateControllerTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
         // Use Duration.ZERO for tests to avoid unnecessary delays
-        controller = new GenerateController(webClientBuilder, Duration.ZERO);
+        controller = new GenerateController(webClientBuilder, Duration.ZERO, false);
     }
 
     private Mono<?> invokeGenerate() {

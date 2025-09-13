@@ -47,12 +47,15 @@ public class GenerateController implements GenerateAPI {
 
     private final WebClient webClient;
     private final Duration delayBetweenServices;
+    private final boolean exposeUpstreamErrors;
 
     public GenerateController(
             @LoadBalanced WebClient.Builder webClientBuilder,
-            @Value("${gateway.delay-between-services:5s}") Duration delayBetweenServices) {
+            @Value("${gateway.delay-between-services:5s}") Duration delayBetweenServices,
+            @Value("${gateway.expose-upstream-errors:false}") boolean exposeUpstreamErrors) {
         this.webClient = webClientBuilder.build();
         this.delayBetweenServices = delayBetweenServices;
+        this.exposeUpstreamErrors = exposeUpstreamErrors;
     }
 
     /**
@@ -338,21 +341,50 @@ public class GenerateController implements GenerateAPI {
             status = resolveStatusOrDefault(wce);
             String specificErrorMessage = extractWceDetail(wce);
 
+            // Always log the detailed upstream message at debug level (or info for visibility)
+            String requestUri = "";
+            try {
+                var req = wce.getRequest();
+                if (req != null && req.getURI() != null) {
+                    requestUri = req.getURI().toString();
+                }
+            } catch (Exception ex) {
+                // Swallow here; we're just trying to capture a best-effort URI for logging
+            }
+            logger.debug(
+                    "Upstream error detail for URL/service: {}, detectedService={}, detail={}",
+                    requestUri,
+                    failedService,
+                    specificErrorMessage);
+
             if (status == HttpStatus.SERVICE_UNAVAILABLE) {
                 errorMessage = "Service temporarily unavailable.";
                 putIfKnown(serviceResponsesMap, failedService, "Service temporarily unavailable");
             } else if (failedService != null) {
+                // Use a generic client-facing message by default
                 errorMessage =
                         String.format("Error generating data in %s service", failedService.getId());
-                String serviceSpecificDetail =
-                        String.format(
-                                "Error from %s service: %s",
-                                failedService.getId(), specificErrorMessage.trim());
-                serviceResponsesMap.put(failedService.getId(), serviceSpecificDetail);
+
+                if (exposeUpstreamErrors) {
+                    String serviceSpecificDetail =
+                            String.format(
+                                    "Error from %s service: %s",
+                                    failedService.getId(), specificErrorMessage.trim());
+                    serviceResponsesMap.put(failedService.getId(), serviceSpecificDetail);
+                } else {
+                    // Store only a generic marker in serviceResponsesMap to avoid leaking details
+                    serviceResponsesMap.put(
+                            failedService.getId(), "Upstream service error (hidden)");
+                }
             } else {
-                errorMessage =
-                        String.format(
-                                "Error from unknown service: %s", specificErrorMessage.trim());
+                // Unknown failed service: don't include upstream body in client message by default
+                if (exposeUpstreamErrors) {
+                    errorMessage =
+                            String.format(
+                                    "Error from unknown service: %s", specificErrorMessage.trim());
+                } else {
+                    errorMessage = "Error from upstream service";
+                }
             }
         } else {
             putIfKnown(serviceResponsesMap, detectFailedService(e), e.getMessage());
