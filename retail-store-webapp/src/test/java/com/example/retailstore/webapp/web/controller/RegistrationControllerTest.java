@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -47,6 +48,7 @@ class RegistrationControllerTest {
     private CustomerServiceClient customerServiceClient;
 
     @Test
+    @WithAnonymousUser
     void shouldRegisterUserSuccessfully() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
@@ -55,17 +57,18 @@ class RegistrationControllerTest {
         when(customerServiceClient.getOrCreateCustomer(
                         any(com.example.retailstore.webapp.clients.customer.CustomerRequest.class)))
                 .thenReturn(new com.example.retailstore.webapp.clients.customer.CustomerResponse(
-                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
+                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 10_000));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User registered successfully"));
+                .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
     @Test
+    @WithAnonymousUser
     void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
@@ -84,6 +87,7 @@ class RegistrationControllerTest {
     }
 
     @Test
+    @WithAnonymousUser
     void shouldReturn400WhenRegistrationDataIsInvalid() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 "", // invalid username
@@ -102,6 +106,7 @@ class RegistrationControllerTest {
     }
 
     @Test
+    @WithAnonymousUser
     void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");

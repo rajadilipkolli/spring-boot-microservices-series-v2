@@ -37,26 +37,32 @@ public class KeycloakRegistrationService {
     }
 
     private String getAdminToken() {
-        var formData = String.format(
-                "grant_type=password&client_id=%s&client_secret=%s&username=%s&password=%s",
-                keycloakProperties.getAdminClientId(),
-                keycloakProperties.getAdminClientSecret(),
-                keycloakProperties.getAdminUsername(),
-                keycloakProperties.getAdminPassword());
+        try {
+            var formData = String.format(
+                    "grant_type=password&client_id=%s&client_secret=%s&username=%s&password=%s",
+                    keycloakProperties.getAdminClientId(),
+                    keycloakProperties.getAdminClientSecret(),
+                    keycloakProperties.getAdminUsername(),
+                    keycloakProperties.getAdminPassword());
 
-        var response = restClient
-                .post()
-                .uri(keycloakUrl + "/realms/master/protocol/openid-connect/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(formData)
-                .retrieve()
-                .body(Map.class);
+            var response = restClient
+                    .post()
+                    .uri(keycloakUrl + "/realms/master/protocol/openid-connect/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .body(Map.class);
 
-        if (response == null || !response.containsKey("access_token")) {
-            throw new RuntimeException("Failed to obtain access token");
+            if (response == null || !response.containsKey("access_token")) {
+                logger.error("Failed to obtain access token from Keycloak. Response: {}", response);
+                throw new KeyCloakException("Failed to obtain access token from Keycloak");
+            }
+
+            return (String) response.get("access_token");
+        } catch (Exception e) {
+            logger.error("Error obtaining admin token from Keycloak", e);
+            throw new KeyCloakException("Failed to authenticate with Keycloak: " + e.getMessage());
         }
-
-        return (String) response.get("access_token");
     }
 
     public void registerUser(RegistrationRequest request) {
