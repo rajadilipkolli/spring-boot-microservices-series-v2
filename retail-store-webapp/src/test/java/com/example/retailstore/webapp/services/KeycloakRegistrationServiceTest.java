@@ -7,8 +7,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.lenient;
+
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class KeycloakRegistrationServiceTest {
 
     @Mock
@@ -52,24 +56,22 @@ class KeycloakRegistrationServiceTest {
     @Captor
     private ArgumentCaptor<Map<String, Object>> requestCaptor; // Changed to capture Map<String, Object>
 
-    // Removed separate form captor; reuse requestCaptor to capture both bodies (form and JSON)
-
     private KeycloakRegistrationService registrationService;
 
     @BeforeEach
     void setUp() {
         registrationService = new KeycloakRegistrationService("http://localhost:9191", restClient, keycloakProperties);
-        lenient().when(restClient.post()).thenReturn(requestBodyUriSpec);
-        lenient().when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
-        lenient().when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
-        // Make stubbings for body lenient and more specific if possible
-        lenient().when(requestBodySpec.body(anyString())).thenReturn(requestBodySpec); // For token call
-        lenient().when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec); // For user creation call
-        lenient()
-                .when(requestBodySpec.body(any(MultiValueMap.class)))
-                .thenReturn(requestBodySpec); // Keep for other potential uses
-        lenient().when(requestBodySpec.header(any(), any())).thenReturn(requestBodySpec);
-        lenient().when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        given(restClient.post()).willReturn(requestBodyUriSpec);
+        given(requestBodyUriSpec.uri(any(String.class))).willReturn(requestBodySpec);
+        given(requestBodySpec.contentType(any(MediaType.class))).willReturn(requestBodySpec);
+        // Generic body stubbing to cover all overloads; use doAnswer to avoid overload/type matching issues
+        doAnswer(invocation -> requestBodySpec).when(requestBodySpec).body(any());
+        // Also stub common overloaded signatures explicitly
+        doAnswer(invocation -> requestBodySpec).when(requestBodySpec).body(anyString());
+        doAnswer(invocation -> requestBodySpec).when(requestBodySpec).body(any(java.util.Map.class));
+        doAnswer(invocation -> requestBodySpec).when(requestBodySpec).body(any(MultiValueMap.class));
+        given(requestBodySpec.header(any(), any())).willReturn(requestBodySpec);
+        given(requestBodySpec.retrieve()).willReturn(responseSpec);
     }
 
     @Test
@@ -187,7 +189,7 @@ class KeycloakRegistrationServiceTest {
         // So, this stubbing is unnecessary if token retrieval fails before user creation.
         // If it IS called, it should be part of the setup for the specific path being tested.
         // For this test, the failure happens during getAdminToken, so getRealm() for user creation URI is not reached.
-        // lenient().when(keycloakProperties.getRealm()).thenReturn("test-realm"); // Removed as it's not used in this
+        // given(keycloakProperties.getRealm()).willReturn("test-realm"); // Removed as it's not used in this
         // failure path
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
         given(keycloakProperties.getAdminClientSecret()).willReturn("admin-secret");
