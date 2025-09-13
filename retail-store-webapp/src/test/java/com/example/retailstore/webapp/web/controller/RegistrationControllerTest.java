@@ -111,7 +111,7 @@ class RegistrationControllerTest {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
 
-        doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
+        doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed", null))
                 .when(registrationService)
                 .registerUser(any(RegistrationRequest.class));
 

@@ -28,8 +28,8 @@ public class KeyCloakException extends ErrorResponseException {
             "404", HttpStatus.NOT_FOUND,
             "409", HttpStatus.CONFLICT);
 
-    public KeyCloakException(String message) {
-        super(extractStatusFromMessage(message), createProblemDetailWithStatus(message), null);
+    public KeyCloakException(String message, Throwable e) {
+        super(extractStatusFromMessage(message), createProblemDetailWithStatus(message), e);
     }
 
     /**

@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -99,16 +98,6 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/forbidden"));
         problemDetail.setDetail("You do not have the necessary permissions to access this resource.");
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
-    }
-
-    @ExceptionHandler(KeyCloakException.class)
-    public ProblemDetail handleKeyCloakException(KeyCloakException ex, WebRequest request) {
-        log.error("Keycloak operation failed: {}", ex.getMessage(), ex);
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
-        problemDetail.setProperty("error", "Authentication service error");
-        problemDetail.setProperty("message", "Unable to process authentication request. Please try again later.");
-        problemDetail.setProperty("timestamp", Instant.now().toString());
         return problemDetail;
     }
 
