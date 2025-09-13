@@ -36,8 +36,7 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
         registry.add("app.cors.pathPattern", () -> "/api/**");
         registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "correlation-test");
         registry.add(
-                "spring.cloud.gateway.server.webflux.routes[0].uri",
-                () -> wireMockServer.getBaseUrl());
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
                 () -> "Path=/api/correlation/**");

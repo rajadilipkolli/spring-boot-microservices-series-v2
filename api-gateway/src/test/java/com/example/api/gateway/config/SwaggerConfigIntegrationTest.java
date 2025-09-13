@@ -22,52 +22,48 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldConfigureSwaggerUi() {
-        assertThat(swaggerUiConfigProperties).isNotNull();
-        assertThat(swaggerUiConfigProperties.getUrls()).isNotNull();
+        assertThat(swaggerUiConfigProperties)
+                .isNotNull()
+                .extracting(SwaggerUiConfigProperties::getUrls)
+                .isNotNull();
     }
 
     @Test
     void shouldConfigureSwaggerUrlsForServices() {
-        assertThat(swaggerUiConfigProperties.getUrls()).isNotEmpty();
-
-        // Verify that SwaggerUrls are configured for each service including api-gateway
         assertThat(swaggerUiConfigProperties.getUrls())
+                .isNotEmpty()
                 .extracting("name")
                 .containsExactlyInAnyOrder(
                         "api-gateway", "order", "inventory", "catalog", "payment");
 
-        // Verify that each service SwaggerUrl has correct URL pattern
-        swaggerUiConfigProperties.getUrls().stream()
-                .filter(url -> !url.getName().equals("api-gateway"))
+        // Verify URL patterns for services and api-gateway
+        swaggerUiConfigProperties
+                .getUrls()
                 .forEach(
-                        url -> {
-                            assertThat(url.getUrl())
-                                    .matches("/" + url.getName() + "-service/v3/api-docs");
-                        });
-
-        // Verify api-gateway has its own URL pattern
-        swaggerUiConfigProperties.getUrls().stream()
-                .filter(url -> url.getName().equals("api-gateway"))
-                .forEach(
-                        url -> {
-                            assertThat(url.getUrl()).isEqualTo("/v3/api-docs");
-                        });
+                        url ->
+                                assertThat(url.getUrl())
+                                        .matches(
+                                                url.getName().equals("api-gateway")
+                                                        ? "/v3/api-docs"
+                                                        : "/"
+                                                                + url.getName()
+                                                                + "-service/v3/api-docs"));
     }
 
     @Test
     void shouldCreateGroupedOpenApis() {
-        assertThat(groupedOpenApis).isNotNull();
-        assertThat(groupedOpenApis).isNotEmpty();
         assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
                 .extracting("group")
                 .containsExactlyInAnyOrder("order", "inventory", "catalog", "payment");
     }
 
     @Test
     void shouldCreateGroupedOpenApisWithCorrectDisplayNames() {
-        assertThat(groupedOpenApis).isNotNull();
-        assertThat(groupedOpenApis).isNotEmpty();
         assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
                 .extracting("displayName")
                 .containsExactlyInAnyOrder(
                         "ORDER Service", "INVENTORY Service", "CATALOG Service", "PAYMENT Service");
@@ -75,15 +71,13 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldCreateGroupedOpenApisWithCorrectPathsToMatch() {
-        assertThat(groupedOpenApis).isNotNull();
-        assertThat(groupedOpenApis).isNotEmpty();
-
-        // Verify that each grouped API has the correct pathsToMatch pattern
-        groupedOpenApis.forEach(
-                api -> {
-                    String group = api.getGroup();
-                    assertThat(api.getPathsToMatch()).contains("/" + group + "/**");
-                });
+        assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
+                .allSatisfy(
+                        api ->
+                                assertThat(api.getPathsToMatch())
+                                        .contains("/" + api.getGroup() + "/**"));
     }
 
     @Test
@@ -126,9 +120,6 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .allMatch(group -> !((String) group).contains("actuator"))
                 .allMatch(
                         group -> {
-                            // Either it's a service name extracted from route (without -service
-                            // suffix)
-                            // or it's the api-gateway itself configured separately
                             String groupName = (String) group;
                             return groupName.equals("api-gateway")
                                     || List.of("order", "inventory", "catalog", "payment")

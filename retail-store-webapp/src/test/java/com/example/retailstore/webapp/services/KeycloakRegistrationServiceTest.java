@@ -102,8 +102,8 @@ class KeycloakRegistrationServiceTest {
         ord.verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
         ord.verify(requestBodySpec).body(jsonCaptor.capture());
         var userJson = jsonCaptor.getValue();
-        assertThat(userJson.keySet()
-                .containsAll(Set.of("username", "email", "firstName", "lastName", "enabled", "credentials")));
+        assertThat(userJson.keySet())
+                .containsAll(Set.of("username", "email", "firstName", "lastName", "enabled", "credentials"));
         ord.verify(responseSpec).toBodilessEntity();
     }
 
