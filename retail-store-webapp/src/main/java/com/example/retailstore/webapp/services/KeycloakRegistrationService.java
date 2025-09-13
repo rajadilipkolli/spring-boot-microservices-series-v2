@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -56,17 +57,26 @@ public class KeycloakRegistrationService {
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(formData)
                     .retrieve()
-                    .body(Map.class);
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
 
-            if (response == null || !response.containsKey("access_token")) {
-                logger.error("Failed to obtain access token from Keycloak. Response: {}", response);
-                throw new KeyCloakException("Failed to obtain access token from Keycloak", null);
+            if (response == null) {
+                logger.error("Failed to obtain access token from Keycloak.");
+                throw new KeyCloakException("Failed to obtain access token from Keycloak");
             }
 
+            if (!response.containsKey("access_token")) {
+                logger.error(
+                        "Failed to obtain access token from Keycloak. error={}, error_description={}",
+                        response.get("error"),
+                        response.get("error_description"));
+                throw new KeyCloakException("500: [Failed to obtain access token from Keycloak]");
+            }
             return (String) response.get("access_token");
+        } catch (KeyCloakException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Error obtaining admin token from Keycloak", e);
-            throw new KeyCloakException("Failed to authenticate with Keycloak: " + e.getMessage(), e);
+            throw new KeyCloakException("500: [Failed to authenticate with Keycloak]", e);
         }
     }
 
