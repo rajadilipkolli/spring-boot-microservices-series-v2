@@ -7,12 +7,12 @@
 package com.example.api.gateway.web.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.example.api.gateway.model.GenerationResponse;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +58,7 @@ class GenerateControllerTest {
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.just(inventoryResponse));
 
@@ -99,7 +99,7 @@ class GenerateControllerTest {
                         "Catalog service error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(catalogException));
+        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(catalogException));
 
         // When
         Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
@@ -142,7 +142,7 @@ class GenerateControllerTest {
                         "Inventory service error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.error(inventoryException));
 
@@ -181,9 +181,8 @@ class GenerateControllerTest {
     @Test
     void shouldHandleServiceTimeoutDirectlyFromCallMicroservice() {
         // Simulates timeout within callMicroservice's onErrorResume for the first call (catalog)
-        when(responseSpec.toEntity(eq(String.class)))
-                .thenReturn(
-                        Mono.error(new java.util.concurrent.TimeoutException("Simulated timeout")));
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(Mono.error(new TimeoutException("Simulated timeout")));
 
         // When
         Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
@@ -219,7 +218,7 @@ class GenerateControllerTest {
                         "Timeout".getBytes(), // Body of WCE
                         null);
 
-        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(timeoutException));
+        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(timeoutException));
 
         // When
         Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
@@ -256,7 +255,7 @@ class GenerateControllerTest {
                         "Service is down".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.error(serviceUnavailableException));
 
         // When
@@ -293,7 +292,7 @@ class GenerateControllerTest {
                         "unavailable".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.error(serviceUnavailable)) // Attempt 1
                 .thenReturn(Mono.error(serviceUnavailable)) // Attempt 2
                 .thenReturn(Mono.error(serviceUnavailable)) // Attempt 3
@@ -333,7 +332,7 @@ class GenerateControllerTest {
         ResponseEntity<String> catalogErrorResponse =
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Catalog bad request data");
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.just(catalogErrorResponse)); // Catalog returns 400
 
         // When
@@ -364,7 +363,7 @@ class GenerateControllerTest {
         ResponseEntity<String> inventoryErrorResponse =
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body("Inventory not found data");
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.just(catalogSuccessResponse)) // Catalog is OK
                 .thenReturn(Mono.just(inventoryErrorResponse)); // Inventory returns 404
 
@@ -397,7 +396,7 @@ class GenerateControllerTest {
     void shouldHandleGenericExceptionDuringCatalogCall() {
         // Given
         RuntimeException genericError = new RuntimeException("Generic catalog failure message");
-        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(genericError));
+        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(genericError));
 
         // When
         Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
@@ -428,7 +427,7 @@ class GenerateControllerTest {
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         RuntimeException genericError = new RuntimeException("Generic inventory failure message");
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.error(genericError));
 
@@ -471,7 +470,7 @@ class GenerateControllerTest {
                         new byte[0], // Empty body
                         null);
 
-        when(responseSpec.toEntity(eq(String.class)))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(Mono.error(webClientResponseExceptionWithEmptyBody));
 
         // When
@@ -505,8 +504,7 @@ class GenerateControllerTest {
                         "some error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(eq(String.class)))
-                .thenReturn(Mono.error(errorWithUnknownStatus));
+        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(errorWithUnknownStatus));
 
         Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
 
