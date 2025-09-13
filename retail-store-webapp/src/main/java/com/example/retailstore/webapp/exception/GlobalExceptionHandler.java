@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(KeyCloakException.class)
     public ProblemDetail handleKeyCloakException(KeyCloakException ex, WebRequest request) {
         log.error("Keycloak operation failed: {}", ex.getMessage(), ex);
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
         problemDetail.setProperty("error", "Authentication service error");
         problemDetail.setProperty("message", "Unable to process authentication request. Please try again later.");
         problemDetail.setProperty("timestamp", Instant.now().toString());
