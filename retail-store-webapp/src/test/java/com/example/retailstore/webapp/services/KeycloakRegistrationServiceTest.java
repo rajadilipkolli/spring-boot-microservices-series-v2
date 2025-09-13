@@ -13,11 +13,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
+import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -51,8 +51,7 @@ class KeycloakRegistrationServiceTest {
     @Captor
     private ArgumentCaptor<Map<String, Object>> requestCaptor; // Changed to capture Map<String, Object>
 
-    @Captor
-    private ArgumentCaptor<String> stringRequestCaptor; // Added for capturing String body
+    // Removed separate form captor; reuse requestCaptor to capture both bodies (form and JSON)
 
     private KeycloakRegistrationService registrationService;
 
@@ -89,7 +88,6 @@ class KeycloakRegistrationServiceTest {
     }
 
     @Test
-    @Disabled
     void shouldRegisterUserWithCorrectRoles() {
         // Arrange
         RegistrationRequest registrationRequest = new RegistrationRequest(
@@ -99,6 +97,9 @@ class KeycloakRegistrationServiceTest {
         given(keycloakProperties.getRealm()).willReturn("test-realm");
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
         given(keycloakProperties.getAdminClientSecret()).willReturn("admin-secret");
+        // Admin credentials used when obtaining admin token
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin1234");
 
         // Mock specific responses for token and user creation calls
         given(responseSpec.body(any(ParameterizedTypeReference.class)))
@@ -112,35 +113,63 @@ class KeycloakRegistrationServiceTest {
         // Assert
         verify(restClient, times(2)).post(); // Token endpoint and user creation endpoint
 
-        // Capture arguments for body calls specifically by type
-        verify(requestBodySpec).body(stringRequestCaptor.capture()); // Captures String body for token
-        verify(requestBodySpec).body(requestCaptor.capture()); // Captures Map body for user creation
+        // Capture both body invocations (token form and user creation JSON)
+        verify(requestBodySpec, times(2)).body(requestCaptor.capture());
 
-        String tokenRequestBody = stringRequestCaptor.getValue();
-        assertThat(tokenRequestBody.contains("grant_type=password")).isTrue();
-        assertThat(tokenRequestBody.contains("client_id=" + keycloakProperties.getAdminClientId()))
-                .isTrue();
-        assertThat(tokenRequestBody.contains("client_secret=" + keycloakProperties.getAdminClientSecret()))
-                .isTrue();
-        assertThat(tokenRequestBody.contains("username=admin")).isTrue();
-        assertThat(tokenRequestBody.contains("password=admin1234")).isTrue();
+        var allBodies = requestCaptor.getAllValues();
+        // First call is the token form (LinkedMultiValueMap) - values may be lists
+        Map<?, ?> tokenBody = allBodies.getFirst();
+        Object grant = tokenBody.get("grant_type");
+        if (grant instanceof List) {
+            assertThat(((List<?>) grant).getFirst()).isEqualTo("password");
+        } else {
+            assertThat(grant).isEqualTo("password");
+        }
+        Object clientId = tokenBody.get("client_id");
+        if (clientId instanceof List) {
+            assertThat(((List<?>) clientId).getFirst()).isEqualTo(keycloakProperties.getAdminClientId());
+        } else {
+            assertThat(clientId).isEqualTo(keycloakProperties.getAdminClientId());
+        }
+        Object clientSecret = tokenBody.get("client_secret");
+        if (clientSecret instanceof List) {
+            assertThat(((List<?>) clientSecret).getFirst()).isEqualTo(keycloakProperties.getAdminClientSecret());
+        } else {
+            assertThat(clientSecret).isEqualTo(keycloakProperties.getAdminClientSecret());
+        }
+        Object username = tokenBody.get("username");
+        if (username instanceof List) {
+            assertThat(((List<?>) username).getFirst()).isEqualTo("admin");
+        } else {
+            assertThat(username).isEqualTo("admin");
+        }
+        Object password = tokenBody.get("password");
+        if (password instanceof List) {
+            assertThat(((List<?>) password).getFirst()).isEqualTo("admin1234");
+        } else {
+            assertThat(password).isEqualTo("admin1234");
+        }
 
         // Second call is for user creation
-        Map<String, Object> userRequestBody = requestCaptor.getValue(); // No explicit cast needed if captor is typed
+        Map<String, Object> userRequestBody = (Map<String, Object>) allBodies.get(1);
         assertThat(userRequestBody.get("username")).isEqualTo(registrationRequest.username());
-        assertThat(userRequestBody.get("password")).isEqualTo(registrationRequest.password());
+        // Password is stored in credentials, not as a top-level property
         assertThat(userRequestBody.get("email")).isEqualTo(registrationRequest.email());
         assertThat(userRequestBody.get("firstName")).isEqualTo(registrationRequest.firstName());
         assertThat(userRequestBody.get("lastName")).isEqualTo(registrationRequest.lastName());
         assertThat((Boolean) userRequestBody.get("enabled")).isTrue();
 
-        @SuppressWarnings("unchecked") // Suppress warning for casting Object to List<Map<String,String>>
-        List<Map<String, String>> credentials = (List<Map<String, String>>) userRequestBody.get("credentials");
+        @SuppressWarnings("unchecked") // Suppress warning for casting Object to List<Map<String,Object>>
+        List<Map<String, Object>> credentials = (List<Map<String, Object>>) userRequestBody.get("credentials");
         assertThat(credentials).isNotEmpty().hasSize(1);
         assertThat(credentials.getFirst().get("type")).isEqualTo("password");
         assertThat(credentials.getFirst().get("value")).isEqualTo(registrationRequest.password());
-        assertThat(Boolean.parseBoolean(credentials.getFirst().get("temporary")))
-                .isFalse();
+        Object tempVal = credentials.getFirst().get("temporary");
+        if (tempVal instanceof Boolean) {
+            assertThat((Boolean) tempVal).isFalse();
+        } else {
+            assertThat(Boolean.parseBoolean(String.valueOf(tempVal))).isFalse();
+        }
 
         @SuppressWarnings("unchecked") // Suppress warning for casting Object to List
         List<String> realmRoles = (List<String>) userRequestBody.get("realmRoles");
@@ -184,6 +213,9 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.toBodilessEntity()).willThrow(new RuntimeException("Keycloak registration failed"));
 
         // When/Then
-        assertThatThrownBy(() -> registrationService.registerUser(request)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> registrationService.registerUser(request))
+                .isInstanceOf(KeyCloakException.class)
+                .hasCauseInstanceOf(RuntimeException.class)
+                .hasMessageContaining("registration");
     }
 }
