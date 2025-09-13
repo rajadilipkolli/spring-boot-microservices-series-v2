@@ -37,7 +37,7 @@ Start-Process powershell -ArgumentList "cd order-service; ./mvnw spring-boot:run
 Write-Host "Waiting for Order Service to start..." -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-# Start Order Service
+# Start Payment Service
 Write-Host "Starting Payment Service..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "cd payment-service; ./mvnw spring-boot:run"
 Write-Host "Waiting for Payment Service to start..." -ForegroundColor Yellow

@@ -29,7 +29,11 @@ public class KeyCloakException extends ErrorResponseException {
             "409", HttpStatus.CONFLICT);
 
     public KeyCloakException(String message) {
-        super(extractStatusFromMessage(message), createProblemDetailWithStatus(message), null);
+        this(message, null);
+    }
+
+    public KeyCloakException(String message, Throwable e) {
+        super(extractStatusFromMessage(message), createProblemDetailWithStatus(message), e);
     }
 
     /**
