@@ -7,12 +7,11 @@
 package com.example.api.gateway.web.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.example.api.gateway.model.GenerationResponse;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +38,33 @@ class GenerateControllerTest {
 
     private GenerateController controller;
 
+    // Reflection helpers to access the record-like GenerationResponse at runtime
+    private String getBodyStatus(Object body) {
+        try {
+            return (String) body.getClass().getMethod("status").invoke(body);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getBodyMessage(Object body) {
+        try {
+            return (String) body.getClass().getMethod("message").invoke(body);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.Map<String, String> getServiceResponses(Object body) {
+        try {
+            return (java.util.Map<String, String>)
+                    body.getClass().getMethod("serviceResponses").invoke(body);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @BeforeEach
     void setup() {
         when(webClientBuilder.build()).thenReturn(webClient);
@@ -52,35 +78,38 @@ class GenerateControllerTest {
         controller = new GenerateController(webClientBuilder, Duration.ZERO);
     }
 
+    private Mono<?> invokeGenerate() {
+        try {
+            java.lang.reflect.Method m = controller.getClass().getMethod("generate");
+            return (Mono<?>) m.invoke(controller);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     void shouldGenerateDataWhenBothServicesSucceed() {
-        // Given
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
 
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.just(inventoryResponse));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.OK
-                                    && Objects.requireNonNull(body).status().equals("success")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("success")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Generation process completed successfully")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Test catalog data")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
                                             .equals("Test inventory data");
                         })
@@ -89,7 +118,6 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleCatalogServiceError() {
-        // Given
         WebClientResponseException catalogException =
                 new WebClientResponseException(
                         "Catalog Service Error",
@@ -99,29 +127,21 @@ class GenerateControllerTest {
                         "Catalog service error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(catalogException));
+        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(catalogException));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    // VALIDATION: Main message should indicate the stage of failure
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .containsKey("catalog")
-                                    // VALIDATION: Specific error from callMicroservice is in
-                                    // serviceResponses
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals(
                                                     "Error from catalog service: Catalog service error body");
@@ -131,7 +151,6 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleInventoryServiceError() {
-        // Given
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         WebClientResponseException inventoryException =
                 new WebClientResponseException(
@@ -142,36 +161,27 @@ class GenerateControllerTest {
                         "Inventory service error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.error(inventoryException));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    // VALIDATION: Main message should indicate the stage of failure
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in inventory service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .containsKey("inventory")
-                                    // VALIDATION: Specific error from callMicroservice is in
-                                    // serviceResponses
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
                                             .equals(
                                                     "Error from inventory service: Inventory service error body")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Test catalog data");
                         })
@@ -180,28 +190,22 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceTimeoutDirectlyFromCallMicroservice() {
-        // Simulates timeout within callMicroservice's onErrorResume for the first call (catalog)
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(Mono.error(new TimeoutException("Simulated timeout")));
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(
+                        Mono.error(new java.util.concurrent.TimeoutException("Simulated timeout")));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.REQUEST_TIMEOUT
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    // VALIDATION: Main message should indicate the stage of failure
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
-                                            // VALIDATION: Specific error from callMicroservice
                                             .equals("Timeout occurred");
                         })
                 .verifyComplete();
@@ -209,36 +213,28 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceTimeoutWrappedInWebClientResponseException() {
-        // Simulates a scenario where WebClient might wrap a timeout
         WebClientResponseException timeoutException =
                 new WebClientResponseException(
-                        HttpStatus.REQUEST_TIMEOUT.value(), // Status code
-                        "Request Timeout", // Raw message in WCE
+                        HttpStatus.REQUEST_TIMEOUT.value(),
+                        "Request Timeout",
                         HttpHeaders.EMPTY,
-                        "Timeout".getBytes(), // Body of WCE
+                        "Timeout".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(timeoutException));
+        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(timeoutException));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.REQUEST_TIMEOUT
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    // VALIDATION: Main message should indicate the stage of failure
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
-                                            // VALIDATION: Specific error from callMicroservice
-                                            // (uses WCE body)
                                             .equals("Error from catalog service: Timeout");
                         })
                 .verifyComplete();
@@ -246,7 +242,6 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceUnavailable() {
-        // Given
         WebClientResponseException serviceUnavailableException =
                 new WebClientResponseException(
                         HttpStatus.SERVICE_UNAVAILABLE.value(),
@@ -255,28 +250,21 @@ class GenerateControllerTest {
                         "Service is down".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.error(serviceUnavailableException));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    // VALIDATION: Main message should indicate the stage of failure
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
-                                            // VALIDATION: Specific message for 503 from
-                                            // callMicroservice
                                             .equals("Service temporarily unavailable");
                         })
                 .verifyComplete();
@@ -292,32 +280,23 @@ class GenerateControllerTest {
                         "unavailable".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(Mono.error(serviceUnavailable)) // Attempt 1
-                .thenReturn(Mono.error(serviceUnavailable)) // Attempt 2
-                .thenReturn(Mono.error(serviceUnavailable)) // Attempt 3
-                .thenReturn(
-                        Mono.error(
-                                serviceUnavailable)); // Attempt 4 (this error will be processed by
-        // callMicroservice's onErrorResume)
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(Mono.error(serviceUnavailable))
+                .thenReturn(Mono.error(serviceUnavailable))
+                .thenReturn(Mono.error(serviceUnavailable))
+                .thenReturn(Mono.error(serviceUnavailable));
 
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
-                            // After retries are exhausted, callMicroservice's onErrorResume for
-                            // SERVICE_UNAVAILABLE kicks in.
-                            // This ServiceResult then goes to generate()'s flatMap, leading to this
-                            // response.
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Service temporarily unavailable");
                         })
@@ -326,30 +305,22 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleCatalogReturningNonOkStatusDirectly() {
-        // Given
-        // This simulates the catalog service itself returning a 400, not a
-        // WebClientResponseException
         ResponseEntity<String> catalogErrorResponse =
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Catalog bad request data");
 
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(Mono.just(catalogErrorResponse)); // Catalog returns 400
+        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.just(catalogErrorResponse));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.BAD_REQUEST
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Catalog bad request data");
                         })
@@ -358,34 +329,28 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleInventoryReturningNonOkStatusDirectly() {
-        // Given
         ResponseEntity<String> catalogSuccessResponse = ResponseEntity.ok("Catalog data");
         ResponseEntity<String> inventoryErrorResponse =
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body("Inventory not found data");
 
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(Mono.just(catalogSuccessResponse)) // Catalog is OK
-                .thenReturn(Mono.just(inventoryErrorResponse)); // Inventory returns 404
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(Mono.just(catalogSuccessResponse))
+                .thenReturn(Mono.just(inventoryErrorResponse));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.NOT_FOUND
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Error generating data in inventory service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Catalog data")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
                                             .equals("Inventory not found data");
                         })
@@ -394,65 +359,51 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleGenericExceptionDuringCatalogCall() {
-        // Given
         RuntimeException genericError = new RuntimeException("Generic catalog failure message");
-        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(genericError));
+        when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(genericError));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Error generating data in catalog service")
-                                    && // Corrected
-                                    Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals(
-                                                    "Unexpected error calling catalog service: Generic catalog failure message"); // Corrected
+                                                    "Unexpected error calling catalog service: Generic catalog failure message");
                         })
                 .verifyComplete();
     }
 
     @Test
     void shouldHandleGenericExceptionDuringInventoryCall() {
-        // Given
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         RuntimeException genericError = new RuntimeException("Generic inventory failure message");
 
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.just(catalogResponse))
                 .thenReturn(Mono.error(genericError));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Error generating data in inventory service")
-                                    && // Corrected
-                                    Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
                                             .equals(
                                                     "Unexpected error calling inventory service: Generic inventory failure message")
-                                    && // Corrected
-                                    Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Test catalog data");
                         })
@@ -461,33 +412,28 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleWebClientResponseExceptionWithEmptyBody() {
-        // Given
         WebClientResponseException webClientResponseExceptionWithEmptyBody =
                 new WebClientResponseException(
-                        HttpStatus.BAD_GATEWAY.value(), // 502
-                        "Bad Gateway", // status text
+                        HttpStatus.BAD_GATEWAY.value(),
+                        "Bad Gateway",
                         HttpHeaders.EMPTY,
-                        new byte[0], // Empty body
+                        new byte[0],
                         null);
 
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.error(webClientResponseExceptionWithEmptyBody));
 
-        // When
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        // Then
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.BAD_GATEWAY
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .equals("Error generating data in catalog service")
-                                    && Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
                                             .equals("Error from catalog service: 502 Bad Gateway");
                         })
@@ -498,34 +444,28 @@ class GenerateControllerTest {
     void shouldHandleWebClientResponseExceptionWithUnknownStatus() {
         WebClientResponseException errorWithUnknownStatus =
                 new WebClientResponseException(
-                        999, // Unknown status
-                        "Unknown Error", // This is wce.getMessage()
+                        999,
+                        "Unknown Error",
                         HttpHeaders.EMPTY,
                         "some error body".getBytes(),
                         null);
 
-        when(responseSpec.toEntity(String.class)).thenReturn(Mono.error(errorWithUnknownStatus));
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(Mono.error(errorWithUnknownStatus));
 
-        Mono<ResponseEntity<GenerationResponse>> result = controller.generate();
+        Mono<?> result = invokeGenerate();
 
-        StepVerifier.create(result)
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
                 .expectNextMatches(
                         response -> {
-                            GenerationResponse body = response.getBody();
-                            // HttpStatus.resolve(999) is null, so callMicroservice defaults to
-                            // INTERNAL_SERVER_ERROR for ServiceResult status
+                            Object body = response.getBody();
                             return response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
-                                    && Objects.requireNonNull(body).status().equals("error")
-                                    && Objects.requireNonNull(body)
-                                            .message()
+                                    && Objects.requireNonNull(getBodyStatus(body)).equals("error")
+                                    && Objects.requireNonNull(getBodyMessage(body))
                                             .contains("Error generating data in catalog service")
-                                    && // Corrected
-                                    // callMicroservice uses WCE body if not empty
-                                    Objects.requireNonNull(body)
-                                            .serviceResponses()
+                                    && Objects.requireNonNull(getServiceResponses(body))
                                             .get("catalog")
-                                            .equals(
-                                                    "Error from catalog service: some error body"); // Corrected
+                                            .equals("Error from catalog service: some error body");
                         })
                 .verifyComplete();
     }

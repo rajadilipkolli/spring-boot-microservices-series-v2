@@ -12,6 +12,7 @@ import com.example.api.gateway.model.ServiceType;
 import com.example.api.gateway.web.api.GenerateAPI;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
@@ -139,8 +140,8 @@ public class GenerateController implements GenerateAPI {
                 .get()
                 .uri(url)
                 .retrieve()
-                .toEntity(String.class)
-                .timeout(REQUEST_TIMEOUT)
+                .toEntity(String.class) // Original Mono<ResponseEntity<String>>
+                .timeout(REQUEST_TIMEOUT) // Apply timeout to each attempt
                 .map(this::toServiceResult)
                 .retryWhen(createRetrySpec(url))
                 .onErrorResume(throwable -> handleCallError(throwable, url, serviceType));
@@ -148,6 +149,7 @@ public class GenerateController implements GenerateAPI {
 
     private Retry createRetrySpec(String url) {
         return Retry.backoff(MAX_RETRY_ATTEMPTS, RETRY_BACKOFF)
+                .jitter(0.5) // Add jitter to avoid thundering herd
                 .filter(throwable -> shouldRetry(throwable, url))
                 .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
@@ -178,8 +180,11 @@ public class GenerateController implements GenerateAPI {
                     url,
                     wce.getMessage());
 
-            if (wce.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE) {
-                logger.debug("Retry filter: SERVICE_UNAVAILABLE for {}, retrying.", url);
+            if (wce.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
+                    || wce.getStatusCode() == HttpStatus.BAD_GATEWAY
+                    || wce.getStatusCode() == HttpStatus.GATEWAY_TIMEOUT
+                    || wce.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                logger.debug("Retry filter: {} for {}, retrying.", wce.getStatusCode(), url);
                 return true;
             }
 
@@ -214,7 +219,7 @@ public class GenerateController implements GenerateAPI {
     private String safeLowerResponseBody(WebClientResponseException wce) {
         try {
             String rawBody = wce.getResponseBodyAsString();
-            return rawBody != null ? rawBody.toLowerCase() : "";
+            return safeLower(rawBody);
         } catch (Exception ex) {
             logger.warn("Could not get response body for WCE in retry filter: {}", ex.getMessage());
             return "";
@@ -222,7 +227,7 @@ public class GenerateController implements GenerateAPI {
     }
 
     private String safeLower(String s) {
-        return s != null ? s.toLowerCase() : "";
+        return s != null ? s.toLowerCase(Locale.ROOT) : "";
     }
 
     private Mono<ServiceResult> handleCallError(
@@ -239,26 +244,8 @@ public class GenerateController implements GenerateAPI {
         }
 
         if (throwable instanceof WebClientResponseException wce) {
-            HttpStatus status = HttpStatus.resolve(wce.getStatusCode().value());
-            if (status == null) {
-                status = HttpStatus.INTERNAL_SERVER_ERROR;
-            }
-            String responseBody = wce.getResponseBodyAsString();
-            String detailMessage;
-            if (!responseBody.isEmpty()) {
-                detailMessage = responseBody;
-            } else {
-                String statusText = wce.getStatusText();
-                HttpStatus resolvedWceStatus = HttpStatus.resolve(wce.getStatusCode().value());
-                if (statusText.trim().isEmpty()) {
-                    statusText =
-                            (resolvedWceStatus != null) ? resolvedWceStatus.getReasonPhrase() : "";
-                }
-                statusText = statusText.trim();
-                detailMessage =
-                        wce.getStatusCode().value()
-                                + (!statusText.isEmpty() ? " " + statusText : "");
-            }
+            HttpStatus status = resolveStatusOrDefault(wce);
+            String detailMessage = extractWceDetail(wce);
 
             String errorMessage = getErrorMessage(serviceType, wce, detailMessage);
             return Mono.just(new ServiceResult(status.value(), errorMessage));
@@ -298,7 +285,10 @@ public class GenerateController implements GenerateAPI {
     }
 
     private boolean isTimeout(Throwable e) {
-        return e instanceof TimeoutException || e.getCause() instanceof TimeoutException;
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof TimeoutException) return true;
+        }
+        return false;
     }
 
     private void putIfKnown(Map<String, String> map, ServiceType service, String value) {

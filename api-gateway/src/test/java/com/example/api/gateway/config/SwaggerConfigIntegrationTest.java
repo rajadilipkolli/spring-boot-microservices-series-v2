@@ -42,7 +42,7 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .forEach(
                         url ->
                                 assertThat(url.getUrl())
-                                        .matches(
+                                        .isEqualTo(
                                                 url.getName().equals("api-gateway")
                                                         ? "/v3/api-docs"
                                                         : "/"
