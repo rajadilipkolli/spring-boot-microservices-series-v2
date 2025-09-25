@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spotless-maven-plugin.version>3.0.0</spotless-maven-plugin.version>
+        <spotless.version>3.0.0</spotless.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -196,7 +196,7 @@
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>${spotless-maven-plugin.version}</version>
+                <version>${spotless.version}</version>
                 <configuration>
                     <java>
                         <importOrder />
