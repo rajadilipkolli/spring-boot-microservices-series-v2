@@ -26,7 +26,7 @@
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>3.0.0</spotless.version>
-        <dependency-check-maven.version>12.1.5</dependency-check-maven.version>
+        <dependency-check-maven.version>12.1.6</dependency-check-maven.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <sonar-maven-plugin.version>5.2.0.4988</sonar-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
