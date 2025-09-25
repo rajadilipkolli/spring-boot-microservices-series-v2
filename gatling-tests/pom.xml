@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.14.5</gatling.version>
         <gatling-plugin.version>4.20.4</gatling-plugin.version>
-        <spotless.version>2.46.1</spotless.version>
+        <spotless.version>3.0.0</spotless.version>
     </properties>
 
     <dependencies>
