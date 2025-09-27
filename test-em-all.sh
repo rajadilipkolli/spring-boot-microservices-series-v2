@@ -456,6 +456,7 @@ function testCircuitBreaker() {
         track_test_result "Slow-call fallback (or normal): ${svc}" "PASS" "HTTP 200"
       else
         track_test_result "Slow-call unexpected: ${svc}" "FAIL" "HTTP ${code}"
+        TEST_STATUS=1
       fi
     done
 
@@ -476,6 +477,7 @@ function testCircuitBreaker() {
               track_test_result "Strict-mode induced fallback: ${svc}" "PASS" "HTTP 200"
             else
               track_test_result "Strict-mode induced failure: ${svc}" "FAIL" "HTTP ${codef}"
+              TEST_STATUS=1
             fi
           done
 
@@ -506,6 +508,7 @@ function testCircuitBreaker() {
       fi
     else
       track_test_result "Post-failure slow call: ${svc}" "FAIL" "HTTP ${code2}"
+      TEST_STATUS=1
     fi
 
     # Also test normal call may return fallback when open
@@ -516,6 +519,7 @@ function testCircuitBreaker() {
       track_test_result "Normal call (during open) ${svc}" "PASS" "HTTP 200"
     else
       track_test_result "Normal call (during open) ${svc}" "FAIL" "HTTP ${codeN}"
+      TEST_STATUS=1
     fi
 
     # Check fallback for not-found resource (mimic attached 404 check)
@@ -525,7 +529,8 @@ function testCircuitBreaker() {
     if [[ "$code404" == "404" ]]; then
       track_test_result "Not-found fallback: ${svc}" "PASS" "HTTP 404"
     else
-      track_test_result "Not-found check: ${svc}" "PASS" "WARN HTTP ${code404}"
+      track_test_result "Not-found check: ${svc}" "FAIL" "HTTP ${code404}"
+      TEST_STATUS=1
     fi
 
     # Wait up to 10s for HALF_OPEN (mimic attached sleep)
@@ -823,6 +828,9 @@ function display_help() {
     echo -e "  stop                Stop the test environment after tests"
     echo -e "  setup               Set up the test environment using tools compose file"
     echo -e "  teardown            Tear down the test environment after tests"
+    echo -e "  circuit-test        Run only circuit breaker checks (set CB_STRICT=true to induce failures)"
+    echo -e "\nEnvironment:"
+    echo -e "  CB_STRICT=true      Stop dependent service to force CB OPEN, then verify recovery"
     echo -e "\nExamples:"
     echo -e "  HOST=localhost PORT=8765 ./test-em-all.sh"
     echo -e "  ./test-em-all.sh start stop"
@@ -869,7 +877,7 @@ if [[ $@ == *"start"* ]]; then
 fi
 
 # If only running circuit breaker checks, skip setup and API tests
-if [[ " $* " == *" circuit-test "* ]]; then
+if [[ $@ == *"circuit-test"* ]]; then
   log_info "Running only circuit breaker checks (skipping full setup)..."
   # Ensure gateway is reachable
   waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
