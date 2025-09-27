@@ -347,11 +347,6 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
-    // ---------------------------------------------------------------------
-    // Additional tests appended focusing on PR diff: new endpoints and logic
-    // Test stack: JUnit 5 + Spring Boot WebFlux @WebFluxTest + Mockito (@MockitoBean) + WebTestClient
-    // ---------------------------------------------------------------------
-
     @Test
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
@@ -368,14 +363,18 @@ class ProductControllerTest {
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(productResponse.id())
-                .jsonPath("$.productCode").isEqualTo(productResponse.productCode())
-                .jsonPath("$.productName").isEqualTo(productResponse.productName())
-                .jsonPath("$.description").isEqualTo(productResponse.description())
-                .jsonPath("$.price").isEqualTo(productResponse.price());
+                .jsonPath("$.id")
+                .isEqualTo(productResponse.id())
+                .jsonPath("$.productCode")
+                .isEqualTo(productResponse.productCode())
+                .jsonPath("$.productName")
+                .isEqualTo(productResponse.productName())
+                .jsonPath("$.description")
+                .isEqualTo(productResponse.description())
+                .jsonPath("$.price")
+                .isEqualTo(productResponse.price());
 
-        org.mockito.Mockito.verify(productService)
-                .findProductByProductCode(code, false);
+        org.mockito.Mockito.verify(productService).findProductByProductCode(code, false);
     }
 
     @Test
@@ -403,16 +402,17 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/productCode/{productCode}")
-                        .queryParam("fetchInStock", true)
-                        .build(code))
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/productCode/{productCode}")
+                                        .queryParam("fetchInStock", true)
+                                        .build(code))
                 .exchange()
                 .expectStatus()
                 .isOk();
 
-        org.mockito.Mockito.verify(productService)
-                .findProductByProductCode(code, true);
+        org.mockito.Mockito.verify(productService).findProductByProductCode(code, true);
     }
 
     @Test
@@ -426,51 +426,55 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/productCode/{productCode}")
-                        .queryParam("delay", 1)
-                        .build(code))
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/productCode/{productCode}")
+                                        .queryParam("delay", 1)
+                                        .build(code))
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(productResponse.id());
+                .jsonPath("$.id")
+                .isEqualTo(productResponse.id());
     }
 
     @Test
     void shouldReturnTrueWhenProductsExist() {
         var codes = java.util.List.of("code-1", "code-2");
-        given(productService.productExistsByProductCodes(codes))
-                .willReturn(Mono.just(true));
+        given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(true));
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/exists")
-                        .queryParam("productCodes", "code-1", "code-2")
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/exists")
+                                        .queryParam("productCodes", "code-1", "code-2")
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody(Boolean.class)
                 .isEqualTo(true);
 
-        org.mockito.Mockito.verify(productService)
-                .productExistsByProductCodes(codes);
+        org.mockito.Mockito.verify(productService).productExistsByProductCodes(codes);
     }
 
     @Test
     void shouldReturnFalseWhenProductsDoNotExist() {
         var codes = java.util.List.of("missing");
-        given(productService.productExistsByProductCodes(codes))
-                .willReturn(Mono.just(false));
+        given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(false));
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/exists")
-                        .queryParam("productCodes", "missing")
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/exists")
+                                        .queryParam("productCodes", "missing")
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -530,10 +534,12 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/search")
-                        .queryParam("term", "laptop")
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/search")
+                                        .queryParam("term", "laptop")
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -554,11 +560,13 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/search")
-                        .queryParam("minPrice", 50.0)
-                        .queryParam("maxPrice", 150.0)
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/search")
+                                        .queryParam("minPrice", 50.0)
+                                        .queryParam("maxPrice", 150.0)
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -574,17 +582,21 @@ class ProductControllerTest {
                 new org.springframework.data.domain.PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
-        given(productService.searchProductsByTermAndPriceRange("laptop", 50.0, 150.0, 0, 10, "id", "asc"))
+        given(
+                        productService.searchProductsByTermAndPriceRange(
+                                "laptop", 50.0, 150.0, 0, 10, "id", "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/search")
-                        .queryParam("term", "laptop")
-                        .queryParam("minPrice", 50.0)
-                        .queryParam("maxPrice", 150.0)
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/search")
+                                        .queryParam("term", "laptop")
+                                        .queryParam("minPrice", 50.0)
+                                        .queryParam("maxPrice", 150.0)
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -611,8 +623,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
-                .findAllProducts(0, 10, "id", "asc");
+        org.mockito.Mockito.verify(productService).findAllProducts(0, 10, "id", "asc");
     }
 
     @Test
@@ -626,17 +637,18 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/search")
-                        .queryParam("term", "")
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/search")
+                                        .queryParam("term", "")
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
-                .findAllProducts(0, 10, "id", "asc");
+        org.mockito.Mockito.verify(productService).findAllProducts(0, 10, "id", "asc");
     }
 
     @Test
@@ -650,14 +662,16 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/catalog/search")
-                        .queryParam("term", "laptop")
-                        .queryParam("pageNo", 1)
-                        .queryParam("pageSize", 5)
-                        .queryParam("sortBy", "name")
-                        .queryParam("sortDir", "DESC")
-                        .build())
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path("/api/catalog/search")
+                                        .queryParam("term", "laptop")
+                                        .queryParam("pageNo", 1)
+                                        .queryParam("pageSize", 5)
+                                        .queryParam("sortBy", "name")
+                                        .queryParam("sortDir", "DESC")
+                                        .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -666,5 +680,4 @@ class ProductControllerTest {
         org.mockito.Mockito.verify(productService)
                 .searchProductsByTerm("laptop", 1, 5, "name", "DESC");
     }
-
 }
