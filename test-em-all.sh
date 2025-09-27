@@ -374,7 +374,7 @@ function testCircuitBreaker() {
   # Closely mimic attached script flow: CLOSED -> cause slow failures (expect 500/fallback) -> verify fallback -> HALF_OPEN -> normal calls -> CLOSED
   log_info "Start Circuit Breaker tests!"
 
-  SERVICES=("catalog-service" "inventory-service")
+  SERVICES=("catalog-service" "inventory-service" "order-service")
 
   for svc in "${SERVICES[@]}"; do
     echo "\nStart Circuit Breaker tests for ${svc}!"
@@ -419,11 +419,21 @@ function testCircuitBreaker() {
       track_test_result "Circuit breaker initial state: ${svc}" "PASS" "CLOSED"
     fi
 
-    # endpoints
+    # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
     if [[ "$svc" == "catalog-service" ]]; then
       SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}?delay=3"
       NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}"
       NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
+    elif [[ "$svc" == "order-service" ]]; then
+      # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
+      ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
+      if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
+        # fall back to 1 (many test runs create id=1) — conservative best-effort
+        ORDER_ID_FROM_COMPOSITE=1
+      fi
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
+      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/9999999"
     else
       SLOW_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}?delay=3"
       NORMAL_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}"
@@ -568,7 +578,7 @@ function testCircuitBreaker() {
 
   done
 
-  log_success "Circuit breaker tests completed for catalog and inventory."
+  log_success "Circuit breaker tests completed for catalog, inventory and order."
 }
 
 function verifyAPIs() {
