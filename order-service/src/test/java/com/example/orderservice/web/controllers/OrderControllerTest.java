@@ -22,6 +22,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
@@ -36,6 +39,9 @@ import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.common.dtos.OrderDto;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -67,6 +73,7 @@ class OrderControllerTest {
     @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private OrderController orderController;
 
     @Test
     void shouldFetchAllOrders() throws Exception {
@@ -477,6 +484,264 @@ class OrderControllerTest {
                     .andExpect(
                             jsonPath("$.detail")
                                     .value("Order with Id %d not found".formatted(orderId)));
+        }
+    }
+
+    @Nested
+    @DisplayName("additional get methods")
+    class GetExtras {
+
+        @Test
+        @DisplayName("should fetch all orders with custom params")
+        void shouldFetchAllOrdersWithCustomParams() throws Exception {
+            List<OrderResponse> orderResponseList =
+                    List.of(
+                            new OrderResponse(
+                                    1L,
+                                    1L,
+                                    "NEW",
+                                    "",
+                                    new Address(
+                                            "Junit Address1",
+                                            "AddressLine2",
+                                            "city",
+                                            "state",
+                                            "zipCode",
+                                            "country"),
+                                    LocalDateTime.now(),
+                                    BigDecimal.TEN,
+                                    new ArrayList<>()),
+                            new OrderResponse(
+                                    2L,
+                                    2L,
+                                    "NEW",
+                                    "",
+                                    new Address(
+                                            "Junit Address1",
+                                            "AddressLine2",
+                                            "city",
+                                            "state",
+                                            "zipCode",
+                                            "country"),
+                                    LocalDateTime.now(),
+                                    BigDecimal.ONE,
+                                    new ArrayList<>()));
+
+            Page<OrderResponse> page = new PageImpl<>(orderResponseList);
+            PagedResult<OrderResponse> paged = new PagedResult<>(page);
+
+            given(orderService.findAllOrders(2, 5, "customerId", "desc")).willReturn(paged);
+
+            mockMvc.perform(
+                            get("/api/orders")
+                                    .param("pageNo", "2")
+                                    .param("pageSize", "5")
+                                    .param("sortBy", "customerId")
+                                    .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.size()", is(orderResponseList.size())))
+                    .andExpect(jsonPath("$.totalElements", is(orderResponseList.size())));
+        }
+
+        @Test
+        @DisplayName("should return order by id even with delay parameter")
+        void shouldGetOrderByIdWithDelay() throws Exception {
+            Long orderId = 42L;
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            orderId,
+                            1L,
+                            "NEW",
+                            "",
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+            given(orderService.findOrderByIdAsResponse(orderId)).willReturn(Optional.of(orderResponse));
+
+            mockMvc.perform(get("/api/orders/{id}", orderId).param("delay", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.orderId", is(orderId.intValue())));
+        }
+
+        @Test
+        @DisplayName("should include Location header on create")
+        void shouldReturnLocationHeaderOnCreate() throws Exception {
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            1L,
+                            List.of(new OrderItemRequest("Product1", 10, BigDecimal.TEN)),
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"));
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            5L,
+                            1L,
+                            "NEW",
+                            "",
+                            new Address(
+                                    "Junit Address1",
+                                    "AddressLine2",
+                                    "city",
+                                    "state",
+                                    "zipCode",
+                                    "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+
+            given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
+
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                    .andExpect(status().isCreated())
+                    .andExpect(header().string("Location", "/api/orders/5"));
+        }
+
+        @Test
+        @DisplayName("should return 400 for malformed JSON on create")
+        void shouldReturn400ForMalformedJsonOnCreate() throws Exception {
+            mockMvc.perform(
+                            post("/api/orders")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{invalid json"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
+    @DisplayName("generator methods")
+    class Generator {
+        @Test
+        void shouldGenerateMockOrders() throws Exception {
+            doNothing().when(orderGeneratorService).generateOrders();
+
+            mockMvc.perform(get("/api/orders/generate"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string("true"));
+
+            verify(orderGeneratorService).generateOrders();
+        }
+    }
+
+    @Nested
+    @DisplayName("kafka stream methods")
+    class KafkaStream {
+        @Test
+        void shouldReturnAllOrdersFromKafka_withDefaults() throws Exception {
+            List<OrderDto> orderDtos =
+                    List.of(
+                            new OrderDto(1L, "ORD-1", 1L, LocalDateTime.now(), "NEW"),
+                            new OrderDto(2L, "ORD-2", 2L, LocalDateTime.now(), "COMPLETED"));
+
+            given(orderKafkaStreamService.getAllOrders(0, 10)).willReturn(orderDtos);
+
+            mockMvc.perform(get("/api/orders/all"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(orderDtos.size())));
+        }
+
+        @Test
+        void shouldReturnAllOrdersFromKafka_withCustomParams() throws Exception {
+            List<OrderDto> orderDtos =
+                    List.of(new OrderDto(1L, "ORD-1", 1L, LocalDateTime.now(), "NEW"));
+
+            given(orderKafkaStreamService.getAllOrders(1, 5)).willReturn(orderDtos);
+
+            mockMvc.perform(get("/api/orders/all").param("pageNo", "1").param("pageSize", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(orderDtos.size())));
+        }
+    }
+
+    @Nested
+    @DisplayName("customer orders methods")
+    class CustomerOrders {
+        @Test
+        void shouldReturnOrdersByCustomerId() throws Exception {
+            List<OrderResponse> data =
+                    List.of(
+                            new OrderResponse(
+                                    1L,
+                                    1L,
+                                    "NEW",
+                                    "",
+                                    new Address(
+                                            "Junit Address1",
+                                            "AddressLine2",
+                                            "city",
+                                            "state",
+                                            "zipCode",
+                                            "country"),
+                                    LocalDateTime.now(),
+                                    BigDecimal.TEN,
+                                    new ArrayList<>()));
+
+            Page<OrderResponse> page = new PageImpl<>(data);
+            PagedResult<OrderResponse> paged = new PagedResult<>(page);
+
+            given(orderService.getOrdersByCustomerId(
+                            eq(1L), any(org.springframework.data.domain.Pageable.class)))
+                    .willReturn(paged);
+
+            mockMvc.perform(
+                            get("/api/orders/customer/{id}", 1L).param("page", "0").param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.totalElements", is(1)));
+        }
+
+        @Test
+        void shouldReturnEmptyPageForLargeCustomerId() throws Exception {
+            Page<OrderResponse> page = new PageImpl<>(List.of());
+            PagedResult<OrderResponse> paged = new PagedResult<>(page);
+
+            given(orderService.getOrdersByCustomerId(
+                            eq(Long.MAX_VALUE), any(org.springframework.data.domain.Pageable.class)))
+                    .willReturn(paged);
+
+            mockMvc.perform(get("/api/orders/customer/{id}", Long.MAX_VALUE))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(0)))
+                    .andExpect(jsonPath("$.totalElements", is(0)));
+        }
+    }
+
+    @Nested
+    @DisplayName("fallback method")
+    class Fallback {
+        @Test
+        void shouldReturnFallbackResponseForNonOrderNotFoundException() {
+            Long id = 9L;
+            ResponseEntity<String> resp =
+                    orderController.hardcodedResponse(id, new RuntimeException("boom"));
+            assertEquals(HttpStatus.OK, resp.getStatusCode());
+            assertEquals("fallback-response for id : " + id, resp.getBody());
+        }
+
+        @Test
+        void shouldRethrowOrderNotFoundExceptionFromFallback() {
+            Long id = 99L;
+            assertThrows(
+                    com.example.orderservice.exception.OrderNotFoundException.class,
+                    () ->
+                            orderController.hardcodedResponse(
+                                    id,
+                                    new com.example.orderservice.exception.OrderNotFoundException(
+                                            id)));
         }
     }
 }

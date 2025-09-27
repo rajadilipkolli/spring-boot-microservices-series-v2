@@ -346,4 +346,366 @@ class ProductControllerTest {
                 .expectStatus()
                 .isNotFound();
     }
+
+// ----- Additional tests for diffed endpoints in ProductController -----
+// Note: Testing stack -> JUnit 5 (Jupiter), Spring Boot WebFlux (@WebFluxTest) with WebTestClient,
+// Mockito via @MockitoBean, and assertions via AssertJ/Hamcrest.
+
+    @Test
+    void shouldGetProductByProductCode_withoutFetchInStock() {
+        ProductResponse productResponse =
+                new ProductResponse(10L, "PROD001", "name 1", "desc", null, 9.99, true);
+        given(productService.findProductByProductCode("PROD001", false))
+                .willReturn(Mono.just(productResponse));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/productCode/{code}", "PROD001")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productCode")
+                .isEqualTo("PROD001");
+
+        verify(productService).findProductByProductCode("PROD001", false);
+    }
+
+    @Test
+    void shouldGetProductByProductCode_withFetchInStockTrue() {
+        ProductResponse productResponse =
+                new ProductResponse(11L, "PROD002", "name 2", "desc", null, 19.99, true);
+        given(productService.findProductByProductCode("PROD002", true))
+                .willReturn(Mono.just(productResponse));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/productCode/{code}")
+                        .queryParam("fetchInStock", true)
+                        .build("PROD002"))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productCode")
+                .isEqualTo("PROD002");
+
+        verify(productService).findProductByProductCode("PROD002", true);
+    }
+
+    @Test
+    void shouldGetProductByProductCode_withDelay() {
+        ProductResponse productResponse =
+                new ProductResponse(12L, "PROD003", "name 3", "desc", null, 29.99, true);
+        given(productService.findProductByProductCode("PROD003", false))
+                .willReturn(Mono.just(productResponse));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/productCode/{code}")
+                        .queryParam("delay", 1)
+                        .build("PROD003"))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productCode")
+                .isEqualTo("PROD003");
+
+        verify(productService).findProductByProductCode("PROD003", false);
+    }
+
+    @Test
+    void shouldGetProductByProductCode_ignoreNegativeDelay() {
+        ProductResponse productResponse =
+                new ProductResponse(13L, "PROD004", "name 4", "desc", null, 39.99, true);
+        given(productService.findProductByProductCode("PROD004", false))
+                .willReturn(Mono.just(productResponse));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/productCode/{code}")
+                        .queryParam("delay", -5)
+                        .build("PROD004"))
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productCode")
+                .isEqualTo("PROD004");
+
+        verify(productService).findProductByProductCode("PROD004", false);
+    }
+
+    @Test
+    void shouldReturnTrueWhenProductsExistByCodes() {
+        var codes = Arrays.asList("PROD001", "PROD002");
+        given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(true));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/exists")
+                        .queryParam("productCodes", "PROD001", "PROD002")
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Boolean.class)
+                .isEqualTo(true);
+
+        verify(productService).productExistsByProductCodes(codes);
+    }
+
+    @Test
+    void shouldReturnFalseWhenProductsDoNotExistByCodes() {
+        var codes = Arrays.asList("DOES_NOT_EXIST_1", "DOES_NOT_EXIST_2");
+        given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(false));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/exists")
+                        .queryParam("productCodes", "DOES_NOT_EXIST_1", "DOES_NOT_EXIST_2")
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Boolean.class)
+                .isEqualTo(false);
+    }
+
+    @Test
+    void shouldHandleEmptyProductCodesListOnExists() {
+        // Note: Depending on binding, this may resolve to an empty list.
+        given(productService.productExistsByProductCodes(Collections.emptyList()))
+                .willReturn(Mono.just(false));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/exists?productCodes=")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Boolean.class)
+                .isEqualTo(false);
+    }
+
+    @Test
+    void shouldGenerateRandomProducts_whenServiceReturnsTrue() {
+        given(productService.generateProducts()).willReturn(Mono.just(true));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/generate")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Boolean.class)
+                .isEqualTo(true);
+
+        verify(productService).generateProducts();
+    }
+
+    @Test
+    void shouldGenerateRandomProducts_whenServiceReturnsFalse() {
+        given(productService.generateProducts()).willReturn(Mono.just(false));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/generate")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Boolean.class)
+                .isEqualTo(false);
+    }
+
+    @Test
+    void shouldSearchByTermAndPriceRange() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByTermAndPriceRange("laptop", 100.0, 500.0, 0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("term", "laptop")
+                        .queryParam("minPrice", 100.0)
+                        .queryParam("maxPrice", 500.0)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService)
+                .searchProductsByTermAndPriceRange("laptop", 100.0, 500.0, 0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldSearchByTermOnly() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByTerm("laptop", 0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("term", "laptop")
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldSearchByPriceRangeOnly() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByPriceRange(100.0, 500.0, 0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("minPrice", 100.0)
+                        .queryParam("maxPrice", 500.0)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).searchProductsByPriceRange(100.0, 500.0, 0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldReturnAllProductsWhenNoCriteria() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/search")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).findAllProducts(0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldIgnoreEmptyTermAndSearchByPriceRange() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByPriceRange(100.0, 500.0, 0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("term", "")
+                        .queryParam("minPrice", 100.0)
+                        .queryParam("maxPrice", 500.0)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).searchProductsByPriceRange(100.0, 500.0, 0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldSearchByTermWithCustomPaginationAndSorting() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByTerm("laptop", 1, 5, "name", "desc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("term", "laptop")
+                        .queryParam("pageNo", 1)
+                        .queryParam("pageSize", 5)
+                        .queryParam("sortBy", "name")
+                        .queryParam("sortDir", "desc")
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).searchProductsByTerm("laptop", 1, 5, "name", "desc");
+    }
+
+    @Test
+    void shouldHandlePartialPriceRangeOnlyMinPriceWithTerm() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.searchProductsByTerm("laptop", 0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("term", "laptop")
+                        .queryParam("minPrice", 100.0)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
+    }
+
+    @Test
+    void shouldHandlePartialPriceRangeOnlyMaxPrice() {
+        var page = new PageImpl<>(productResponseList);
+        var pagedResult = new PagedResult<ProductResponse>(page);
+
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.just(pagedResult));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/catalog/search")
+                        .queryParam("maxPrice", 500.0)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        verify(productService).findAllProducts(0, 10, "id", "asc");
+    }
+
 }
