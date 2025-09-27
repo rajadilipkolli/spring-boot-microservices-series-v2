@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -13,6 +13,7 @@ import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -56,7 +57,17 @@ class InventoryController {
     // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     // @RateLimiter(name = "default")
     // @Bulkhead(name = "inventory-api")
-    ResponseEntity<Inventory> getInventoryByProductCode(@PathVariable String productCode) {
+    ResponseEntity<Inventory> getInventoryByProductCode(
+            @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
+        // If delay is specified, block for the requested seconds — used by tests to simulate slow
+        // responses
+        if (delay != null && delay > 0) {
+            try {
+                TimeUnit.SECONDS.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         return inventoryService
                 .findInventoryByProductCode(productCode)
                 .map(ResponseEntity::ok)

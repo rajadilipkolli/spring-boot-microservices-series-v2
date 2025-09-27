@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -16,6 +16,7 @@ import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -65,10 +66,14 @@ public class ProductController implements ProductApi {
     @GetMapping("/productCode/{productCode}")
     public Mono<ResponseEntity<ProductResponse>> getProductByProductCode(
             @PathVariable String productCode,
-            @RequestParam(required = false) boolean fetchInStock) {
-        return productService
-                .findProductByProductCode(productCode, fetchInStock)
-                .map(ResponseEntity::ok);
+            @RequestParam(required = false) Boolean fetchInStock,
+            @RequestParam(required = false) Integer delay) {
+        boolean fetch = fetchInStock != null && fetchInStock;
+        Mono<ProductResponse> mono = productService.findProductByProductCode(productCode, fetch);
+        if (delay != null && delay > 0) {
+            mono = mono.delayElement(Duration.ofSeconds(delay));
+        }
+        return mono.map(ResponseEntity::ok);
     }
 
     @GetMapping("/exists")
