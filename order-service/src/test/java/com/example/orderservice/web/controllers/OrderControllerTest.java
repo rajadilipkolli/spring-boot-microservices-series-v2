@@ -6,12 +6,6 @@
 
 package com.example.orderservice.web.controllers;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.request.OrderRequest;
@@ -20,13 +14,8 @@ import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
+import com.example.orderservice.utils.AppConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,23 +29,41 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 /**
- * Unit tests for OrderController using @WebMvcTest with Spring Boot Test framework. Testing
- * library: Spring Boot Test with JUnit 5, MockMvc, and Mockito for mocking.
+ * Unit tests for OrderController using @WebMvcTest with Spring Boot Test framework.
+ * Testing library: Spring Boot Test with JUnit 5, MockMvc, and Mockito for mocking.
  */
 @WebMvcTest(OrderController.class)
 @DisplayName("Order Controller Tests")
 class OrderControllerTest {
 
-    @Autowired private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    @MockBean private OrderService orderService;
+    @MockBean
+    private OrderService orderService;
 
-    @MockBean private OrderGeneratorService orderGeneratorService;
+    @MockBean
+    private OrderGeneratorService orderGeneratorService;
 
-    @MockBean private OrderKafkaStreamService orderKafkaStreamService;
+    @MockBean
+    private OrderKafkaStreamService orderKafkaStreamService;
 
     private OrderRequest validOrderRequest;
     private OrderResponse sampleOrderResponse;
@@ -68,39 +75,33 @@ class OrderControllerTest {
         // Setup test data
         validOrderRequest = new OrderRequest();
         // Assuming OrderRequest has typical fields - adjust based on actual implementation
+        
+        sampleOrderResponse = new OrderResponse(
+            1L,
+            "TEST-ORDER-001",
+            1L,
+            "Test Customer",
+            LocalDateTime.now(),
+            BigDecimal.valueOf(100.00),
+            "PENDING"
+        );
 
-        sampleOrderResponse =
-                new OrderResponse(
-                        1L,
-                        "TEST-ORDER-001",
-                        1L,
-                        "Test Customer",
-                        LocalDateTime.now(),
-                        BigDecimal.valueOf(100.00),
-                        "PENDING");
+        pagedResult = new PagedResult<>(
+            Arrays.asList(sampleOrderResponse),
+            1L,
+            1,
+            1,
+            1,
+            true,
+            false,
+            true,
+            false
+        );
 
-        pagedResult =
-                new PagedResult<>(
-                        Arrays.asList(sampleOrderResponse), 1L, 1, 1, 1, true, false, true, false);
-
-        orderDtoList =
-                Arrays.asList(
-                        new OrderDto(
-                                1L,
-                                "ORDER-001",
-                                1L,
-                                "Customer A",
-                                LocalDateTime.now(),
-                                BigDecimal.valueOf(100.00),
-                                "PENDING"),
-                        new OrderDto(
-                                2L,
-                                "ORDER-002",
-                                2L,
-                                "Customer B",
-                                LocalDateTime.now(),
-                                BigDecimal.valueOf(200.00),
-                                "COMPLETED"));
+        orderDtoList = Arrays.asList(
+            new OrderDto(1L, "ORDER-001", 1L, "Customer A", LocalDateTime.now(), BigDecimal.valueOf(100.00), "PENDING"),
+            new OrderDto(2L, "ORDER-002", 2L, "Customer B", LocalDateTime.now(), BigDecimal.valueOf(200.00), "COMPLETED")
+        );
     }
 
     @Nested
@@ -132,12 +133,11 @@ class OrderControllerTest {
         void shouldReturnPagedOrdersWithCustomParameters() throws Exception {
             when(orderService.findAllOrders(1, 5, "customerName", "desc")).thenReturn(pagedResult);
 
-            mockMvc.perform(
-                            get("/api/orders")
-                                    .param("pageNo", "1")
-                                    .param("pageSize", "5")
-                                    .param("sortBy", "customerName")
-                                    .param("sortDir", "desc"))
+            mockMvc.perform(get("/api/orders")
+                    .param("pageNo", "1")
+                    .param("pageSize", "5")
+                    .param("sortBy", "customerName")
+                    .param("sortDir", "desc"))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").exists())
@@ -149,10 +149,11 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle invalid page parameters gracefully")
         void shouldHandleInvalidPageParametersGracefully() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(pagedResult);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(pagedResult);
 
-            mockMvc.perform(get("/api/orders").param("pageNo", "-1").param("pageSize", "0"))
+            mockMvc.perform(get("/api/orders")
+                    .param("pageNo", "-1")
+                    .param("pageSize", "0"))
                     .andDo(print())
                     .andExpect(status().isOk());
 
@@ -162,9 +163,9 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return empty page when no orders exist")
         void shouldReturnEmptyPageWhenNoOrdersExist() throws Exception {
-            PagedResult<OrderResponse> emptyResult =
-                    new PagedResult<>(
-                            Collections.emptyList(), 0L, 0, 0, 10, true, true, true, true);
+            PagedResult<OrderResponse> emptyResult = new PagedResult<>(
+                Collections.emptyList(), 0L, 0, 0, 10, true, true, true, true
+            );
             when(orderService.findAllOrders(0, 10, "id", "asc")).thenReturn(emptyResult);
 
             mockMvc.perform(get("/api/orders"))
@@ -182,8 +183,7 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return order when valid ID is provided")
         void shouldReturnOrderWhenValidIdProvided() throws Exception {
-            when(orderService.findOrderByIdAsResponse(1L))
-                    .thenReturn(Optional.of(sampleOrderResponse));
+            when(orderService.findOrderByIdAsResponse(1L)).thenReturn(Optional.of(sampleOrderResponse));
 
             mockMvc.perform(get("/api/orders/{id}", 1L))
                     .andDo(print())
@@ -212,27 +212,27 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle delay parameter for testing slow responses")
         void shouldHandleDelayParameterForTestingSlowResponses() throws Exception {
-            when(orderService.findOrderByIdAsResponse(1L))
-                    .thenReturn(Optional.of(sampleOrderResponse));
+            when(orderService.findOrderByIdAsResponse(1L)).thenReturn(Optional.of(sampleOrderResponse));
 
             long startTime = System.currentTimeMillis();
-            mockMvc.perform(get("/api/orders/{id}", 1L).param("delay", "1"))
+            mockMvc.perform(get("/api/orders/{id}", 1L)
+                    .param("delay", "1"))
                     .andDo(print())
                     .andExpected(status().isOk());
             long endTime = System.currentTimeMillis();
 
             // Verify that delay was applied (should be at least 1 second)
-            assert (endTime - startTime >= 1000);
+            assert(endTime - startTime >= 1000);
             verify(orderService).findOrderByIdAsResponse(1L);
         }
 
         @Test
         @DisplayName("Should handle zero delay parameter")
         void shouldHandleZeroDelayParameter() throws Exception {
-            when(orderService.findOrderByIdAsResponse(1L))
-                    .thenReturn(Optional.of(sampleOrderResponse));
+            when(orderService.findOrderByIdAsResponse(1L)).thenReturn(Optional.of(sampleOrderResponse));
 
-            mockMvc.perform(get("/api/orders/{id}", 1L).param("delay", "0"))
+            mockMvc.perform(get("/api/orders/{id}", 1L)
+                    .param("delay", "0"))
                     .andDo(print())
                     .andExpected(status().isOk());
 
@@ -242,10 +242,10 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle negative delay parameter")
         void shouldHandleNegativeDelayParameter() throws Exception {
-            when(orderService.findOrderByIdAsResponse(1L))
-                    .thenReturn(Optional.of(sampleOrderResponse));
+            when(orderService.findOrderByIdAsResponse(1L)).thenReturn(Optional.of(sampleOrderResponse));
 
-            mockMvc.perform(get("/api/orders/{id}", 1L).param("delay", "-1"))
+            mockMvc.perform(get("/api/orders/{id}", 1L)
+                    .param("delay", "-1"))
                     .andDo(print())
                     .andExpected(status().isOk());
 
@@ -270,30 +270,26 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle fallback with OrderNotFoundException")
         void shouldHandleFallbackWithOrderNotFoundException() {
-            OrderController controller =
-                    new OrderController(
-                            orderService, orderGeneratorService, orderKafkaStreamService);
+            OrderController controller = new OrderController(orderService, orderGeneratorService, orderKafkaStreamService);
             OrderNotFoundException exception = new OrderNotFoundException(1L);
 
             try {
                 controller.hardcodedResponse(1L, exception);
             } catch (OrderNotFoundException e) {
-                assert (e.getMessage().contains("1"));
+                assert(e.getMessage().contains("1"));
             }
         }
 
         @Test
         @DisplayName("Should return fallback response for other exceptions")
         void shouldReturnFallbackResponseForOtherExceptions() {
-            OrderController controller =
-                    new OrderController(
-                            orderService, orderGeneratorService, orderKafkaStreamService);
+            OrderController controller = new OrderController(orderService, orderGeneratorService, orderKafkaStreamService);
             RuntimeException exception = new RuntimeException("Service unavailable");
 
             var response = controller.hardcodedResponse(1L, exception);
 
-            assert (response.getStatusCode().is2xxSuccessful());
-            assert (response.getBody().contains("fallback-response for id : 1"));
+            assert(response.getStatusCode().is2xxSuccessful());
+            assert(response.getBody().contains("fallback-response for id : 1"));
         }
     }
 
@@ -306,10 +302,9 @@ class OrderControllerTest {
         void shouldCreateOrderWithValidRequest() throws Exception {
             when(orderService.saveOrder(any(OrderRequest.class))).thenReturn(sampleOrderResponse);
 
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(validOrderRequest)))
+            mockMvc.perform(post("/api/orders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(validOrderRequest)))
                     .andDo(print())
                     .andExpected(status().isCreated())
                     .andExpected(header().string("Location", "/api/orders/1"))
@@ -322,10 +317,9 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return bad request for invalid JSON")
         void shouldReturnBadRequestForInvalidJson() throws Exception {
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content("{invalid json}"))
+            mockMvc.perform(post("/api/orders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{invalid json}"))
                     .andDo(print())
                     .andExpected(status().isBadRequest());
 
@@ -335,9 +329,8 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return bad request for missing content type")
         void shouldReturnBadRequestForMissingContentType() throws Exception {
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .content(objectMapper.writeValueAsString(validOrderRequest)))
+            mockMvc.perform(post("/api/orders")
+                    .content(objectMapper.writeValueAsString(validOrderRequest)))
                     .andDo(print())
                     .andExpected(status().isUnsupportedMediaType());
 
@@ -347,10 +340,9 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should validate request body and return bad request for null request")
         void shouldValidateRequestBodyAndReturnBadRequestForNullRequest() throws Exception {
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content("null"))
+            mockMvc.perform(post("/api/orders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("null"))
                     .andDo(print())
                     .andExpected(status().isBadRequest());
 
@@ -367,13 +359,11 @@ class OrderControllerTest {
         void shouldUpdateExistingOrder() throws Exception {
             Object existingOrder = new Object(); // Mock existing order entity
             when(orderService.findOrderById(1L)).thenReturn(Optional.of(existingOrder));
-            when(orderService.updateOrder(any(OrderRequest.class), eq(existingOrder)))
-                    .thenReturn(sampleOrderResponse);
+            when(orderService.updateOrder(any(OrderRequest.class), eq(existingOrder))).thenReturn(sampleOrderResponse);
 
-            mockMvc.perform(
-                            put("/api/orders/{id}", 1L)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(validOrderRequest)))
+            mockMvc.perform(put("/api/orders/{id}", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(validOrderRequest)))
                     .andDo(print())
                     .andExpected(status().isOk())
                     .andExpected(jsonPath("$.orderId").value(1L))
@@ -388,10 +378,9 @@ class OrderControllerTest {
         void shouldThrowOrderNotFoundExceptionForNonExistentOrder() throws Exception {
             when(orderService.findOrderById(999L)).thenReturn(Optional.empty());
 
-            mockMvc.perform(
-                            put("/api/orders/{id}", 999L)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(validOrderRequest)))
+            mockMvc.perform(put("/api/orders/{id}", 999L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(validOrderRequest)))
                     .andDo(print())
                     .andExpected(status().isNotFound());
 
@@ -402,10 +391,9 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return bad request for invalid JSON in update")
         void shouldReturnBadRequestForInvalidJsonInUpdate() throws Exception {
-            mockMvc.perform(
-                            put("/api/orders/{id}", 1L)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content("{invalid json}"))
+            mockMvc.perform(put("/api/orders/{id}", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{invalid json}"))
                     .andDo(print())
                     .andExpected(status().isBadRequest());
 
@@ -416,10 +404,9 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle invalid ID format in update")
         void shouldHandleInvalidIdFormatInUpdate() throws Exception {
-            mockMvc.perform(
-                            put("/api/orders/{id}", "invalid")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(validOrderRequest)))
+            mockMvc.perform(put("/api/orders/{id}", "invalid")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(validOrderRequest)))
                     .andDo(print())
                     .andExpected(status().isBadRequest());
 
@@ -506,9 +493,7 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle exception during order generation")
         void shouldHandleExceptionDuringOrderGeneration() throws Exception {
-            doThrow(new RuntimeException("Generation failed"))
-                    .when(orderGeneratorService)
-                    .generateOrders();
+            doThrow(new RuntimeException("Generation failed")).when(orderGeneratorService).generateOrders();
 
             mockMvc.perform(get("/api/orders/generate"))
                     .andDo(print())
@@ -545,7 +530,9 @@ class OrderControllerTest {
         void shouldReturnAllOrdersWithCustomParameters() throws Exception {
             when(orderKafkaStreamService.getAllOrders(2, 5)).thenReturn(orderDtoList);
 
-            mockMvc.perform(get("/api/orders/all").param("pageNo", "2").param("pageSize", "5"))
+            mockMvc.perform(get("/api/orders/all")
+                    .param("pageNo", "2")
+                    .param("pageSize", "5"))
                     .andDo(print())
                     .andExpected(status().isOk())
                     .andExpected(jsonPath("$").isArray())
@@ -590,14 +577,12 @@ class OrderControllerTest {
         @DisplayName("Should return orders for valid customer ID")
         void shouldReturnOrdersForValidCustomerId() throws Exception {
             Pageable pageable = PageRequest.of(0, 10, Sort.by("id"));
-            when(orderService.getOrdersByCustomerId(eq(1L), any(Pageable.class)))
-                    .thenReturn(pagedResult);
+            when(orderService.getOrdersByCustomerId(eq(1L), any(Pageable.class))).thenReturn(pagedResult);
 
-            mockMvc.perform(
-                            get("/api/orders/customer/{id}", 1L)
-                                    .param("page", "0")
-                                    .param("size", "10")
-                                    .param("sort", "id"))
+            mockMvc.perform(get("/api/orders/customer/{id}", 1L)
+                    .param("page", "0")
+                    .param("size", "10")
+                    .param("sort", "id"))
                     .andDo(print())
                     .andExpected(status().isOk())
                     .andExpected(jsonPath("$.data").isArray())
@@ -610,11 +595,10 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should return empty result for customer with no orders")
         void shouldReturnEmptyResultForCustomerWithNoOrders() throws Exception {
-            PagedResult<OrderResponse> emptyResult =
-                    new PagedResult<>(
-                            Collections.emptyList(), 0L, 0, 0, 10, true, true, true, true);
-            when(orderService.getOrdersByCustomerId(eq(999L), any(Pageable.class)))
-                    .thenReturn(emptyResult);
+            PagedResult<OrderResponse> emptyResult = new PagedResult<>(
+                Collections.emptyList(), 0L, 0, 0, 10, true, true, true, true
+            );
+            when(orderService.getOrdersByCustomerId(eq(999L), any(Pageable.class))).thenReturn(emptyResult);
 
             mockMvc.perform(get("/api/orders/customer/{id}", 999L))
                     .andDo(print())
@@ -638,14 +622,12 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle custom pagination parameters")
         void shouldHandleCustomPaginationParameters() throws Exception {
-            when(orderService.getOrdersByCustomerId(eq(1L), any(Pageable.class)))
-                    .thenReturn(pagedResult);
+            when(orderService.getOrdersByCustomerId(eq(1L), any(Pageable.class))).thenReturn(pagedResult);
 
-            mockMvc.perform(
-                            get("/api/orders/customer/{id}", 1L)
-                                    .param("page", "1")
-                                    .param("size", "5")
-                                    .param("sort", "customerName,desc"))
+            mockMvc.perform(get("/api/orders/customer/{id}", 1L)
+                    .param("page", "1")
+                    .param("size", "5")
+                    .param("sort", "customerName,desc"))
                     .andDo(print())
                     .andExpected(status().isOk())
                     .andExpected(jsonPath("$.data").exists());
@@ -661,12 +643,12 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle concurrent requests gracefully")
         void shouldHandleConcurrentRequestsGracefully() throws Exception {
-            when(orderService.findOrderByIdAsResponse(1L))
-                    .thenReturn(Optional.of(sampleOrderResponse));
+            when(orderService.findOrderByIdAsResponse(1L)).thenReturn(Optional.of(sampleOrderResponse));
 
             // Simulate multiple concurrent requests
             for (int i = 0; i < 5; i++) {
-                mockMvc.perform(get("/api/orders/{id}", 1L)).andExpected(status().isOk());
+                mockMvc.perform(get("/api/orders/{id}", 1L))
+                        .andExpected(status().isOk());
             }
 
             verify(orderService, times(5)).findOrderByIdAsResponse(1L);
@@ -675,30 +657,25 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle very large page numbers")
         void shouldHandleVeryLargePageNumbers() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(pagedResult);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(pagedResult);
 
-            mockMvc.perform(
-                            get("/api/orders")
-                                    .param("pageNo", String.valueOf(Integer.MAX_VALUE))
-                                    .param("pageSize", "1"))
+            mockMvc.perform(get("/api/orders")
+                    .param("pageNo", String.valueOf(Integer.MAX_VALUE))
+                    .param("pageSize", "1"))
                     .andDo(print())
                     .andExpected(status().isOk());
 
-            verify(orderService)
-                    .findAllOrders(eq(Integer.MAX_VALUE), eq(1), anyString(), anyString());
+            verify(orderService).findAllOrders(eq(Integer.MAX_VALUE), eq(1), anyString(), anyString());
         }
 
         @Test
         @DisplayName("Should handle special characters in sort parameters")
         void shouldHandleSpecialCharactersInSortParameters() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(pagedResult);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(pagedResult);
 
-            mockMvc.perform(
-                            get("/api/orders")
-                                    .param("sortBy", "customer.name")
-                                    .param("sortDir", "DESC"))
+            mockMvc.perform(get("/api/orders")
+                    .param("sortBy", "customer.name")
+                    .param("sortDir", "DESC"))
                     .andDo(print())
                     .andExpected(status().isOk());
 
@@ -708,8 +685,7 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should maintain proper headers in responses")
         void shouldMaintainProperHeadersInResponses() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(pagedResult);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(pagedResult);
 
             mockMvc.perform(get("/api/orders"))
                     .andDo(print())
@@ -720,8 +696,7 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should handle null values in service responses")
         void shouldHandleNullValuesInServiceResponses() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(null);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(null);
 
             mockMvc.perform(get("/api/orders"))
                     .andDo(print())
@@ -740,10 +715,9 @@ class OrderControllerTest {
             OrderRequest invalidRequest = new OrderRequest();
             // Assuming OrderRequest has validation annotations that would fail
 
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(invalidRequest)))
+            mockMvc.perform(post("/api/orders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(invalidRequest)))
                     .andDo(print());
             // Status depends on actual validation rules in OrderRequest
         }
@@ -751,14 +725,15 @@ class OrderControllerTest {
         @Test
         @DisplayName("Should verify @RequestMapping base path is applied")
         void shouldVerifyRequestMappingBasePathIsApplied() throws Exception {
-            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString()))
-                    .thenReturn(pagedResult);
+            when(orderService.findAllOrders(anyInt(), anyInt(), anyString(), anyString())).thenReturn(pagedResult);
 
             // Test that all endpoints are under /api/orders
-            mockMvc.perform(get("/api/orders")).andExpected(status().isOk());
+            mockMvc.perform(get("/api/orders"))
+                    .andExpected(status().isOk());
 
             // This would fail if base mapping wasn't applied
-            mockMvc.perform(get("/orders")).andExpected(status().isNotFound());
+            mockMvc.perform(get("/orders"))
+                    .andExpected(status().isNotFound());
         }
     }
 }
