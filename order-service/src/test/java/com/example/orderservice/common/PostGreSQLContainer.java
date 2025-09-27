@@ -18,7 +18,7 @@ public class PostGreSQLContainer {
     @ServiceConnection
     @Bean
     PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("17-alpine"))
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres").withTag("18-alpine"))
                 .withReuse(true);
     }
 }

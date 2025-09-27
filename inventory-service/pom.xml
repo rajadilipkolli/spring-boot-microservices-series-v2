@@ -276,7 +276,7 @@
                 <configuration>
                     <database>
                         <type>POSTGRES</type>
-                        <containerImage>postgres:17-alpine</containerImage>
+                        <containerImage>postgres:18-alpine</containerImage>
                         <username>test</username>
                         <password>test</password>
                         <databaseName>test</databaseName>
