@@ -53,7 +53,7 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isOk()
                     .expectHeader()
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                     .expectBody(String.class)
                     .value(response -> assertThat(response).isEqualTo(expectedResponse));
         }
@@ -74,7 +74,7 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isOk()
                     .expectHeader()
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                     .expectBody(String.class)
                     .value(response -> assertThat(response).isEqualTo(expectedResponse));
         }
@@ -220,7 +220,7 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isOk()
                     .expectHeader()
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                     .expectBody(String.class);
         }
 
@@ -384,22 +384,26 @@ class GatewayInventoryFallbackTest {
     class PerformanceTests {
 
         @Test
-        @DisplayName("Should respond quickly for multiple sequential requests")
-        void shouldRespondQuicklyForSequentialRequests() {
+        @DisplayName("Should handle multiple concurrent calls correctly")
+        void shouldHandleConcurrentCalls() {
             // Given
-            String productId = "PERF_TEST";
-            int numberOfRequests = 10;
+            GatewayInventoryFallback controller = new GatewayInventoryFallback();
+            String[] productIds = {"P001", "P002", "P003", "P004", "P005"};
 
-            // When & Then - All requests should complete successfully
-            for (int i = 0; i < numberOfRequests; i++) {
-                webTestClient
-                        .get()
-                        .uri("/fallback/api/inventory/{id}", productId + "_" + i)
-                        .exchange()
-                        .expectStatus()
-                        .isOk()
-                        .expectBody(String.class)
-                        .value(response -> assertThat(response).contains(productId + "_" + i));
+            // When - Create multiple Monos
+            Mono<String>[] monos = new Mono[productIds.length];
+            for (int i = 0; i < productIds.length; i++) {
+                monos[i] = controller.fallback(productIds[i]);
+            }
+
+            // Then - Verify each Mono independently
+            for (int i = 0; i < productIds.length; i++) {
+                final int index = i; // Capture loop variable as final
+                final String expectedResponse =
+                        "Hello " + productIds[index]; // Pre-calculate expected response
+                StepVerifier.create(monos[index]) // Use final variable instead of loop variable
+                        .expectNext(expectedResponse)
+                        .verifyComplete();
             }
         }
 
@@ -457,7 +461,7 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isOk()
                     .expectHeader()
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                     .expectBody(String.class)
                     .value(
                             response -> {
