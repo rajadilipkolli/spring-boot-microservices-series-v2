@@ -27,7 +27,7 @@ import reactor.test.StepVerifier;
  * Integration test for ProductService that verifies race condition handling in the saveProduct
  * method.
  */
-public class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
+class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
 
     @Autowired private ProductRepository productRepository;
 
