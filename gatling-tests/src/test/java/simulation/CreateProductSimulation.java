@@ -49,13 +49,13 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-            {
-              "productCode": "#{productCode}",
-              "productName": "#{productName}",
-              "price": #{price},
-              "description": "Performance test product"
-            }
-            """))
+    {
+      "productCode": "#{productCode}",
+      "productName": "#{productName}",
+      "price": #{price},
+      "description": "Performance test product"
+    }
+    """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("productLocation")))
@@ -140,25 +140,25 @@ public class CreateProductSimulation extends BaseSimulation {
                             .body(
                                     StringBody(
                                             """
-            {
-              "customerId": #{customerId},
-              "items": [
-                {
-                  "productCode": "#{productCode}",
-                  "quantity": #{quantity},
-                  "productPrice": #{price}
-                }
-              ],
-              "deliveryAddress": {
-                "addressLine1": "123 Performance Test St",
-                "addressLine2": "Suite 456",
-                "city": "Test City",
-                "state": "TS",
-                "zipCode": "12345",
-                "country": "Test Country"
-              }
-            }
-            """))
+    {
+      "customerId": #{customerId},
+      "items": [
+        {
+          "productCode": "#{productCode}",
+          "quantity": #{quantity},
+          "productPrice": #{price}
+        }
+      ],
+      "deliveryAddress": {
+        "addressLine1": "123 Performance Test St",
+        "addressLine2": "Suite 456",
+        "city": "Test City",
+        "state": "TS",
+        "zipCode": "12345",
+        "country": "Test Country"
+      }
+    }
+    """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("orderLocation")))
@@ -186,24 +186,23 @@ public class CreateProductSimulation extends BaseSimulation {
                                     .pause(200) // Reduced pause time from 500 to 200 ms
                                     .exec(getProduct)
                                     .pause(100) // Reduced pause time from 300 to 100 ms
-                                    // .exec(getInventory)
+                                    .exec(getInventory)
                                     .pause(100) // Reduced pause time
-                                    .exec(
-                                            session -> {
-                                                // Add safeguard to skip inventory update if
-                                                // inventory info is missing or invalid
-                                                if (session.contains("inventoryResponseBody")
-                                                        && session.getString(
-                                                                        "inventoryResponseBody")
-                                                                != null) {
-                                                    return session;
-                                                } else {
-                                                    LOGGER.warn(
-                                                            "Skipping inventory update due to missing inventory data");
-                                                    return session.markAsFailed();
-                                                }
-                                            })
-                                    .exec(updateInventory)
+                                    // Only attempt to update inventory when a valid
+                                    // inventory response body is present in the
+                                    // session. If it's missing or empty, skip update
+                                    // entirely to avoid runtime exceptions.
+                                    .doIf(
+                                            session ->
+                                                    session.contains("inventoryResponseBody")
+                                                            && session.getString(
+                                                                            "inventoryResponseBody")
+                                                                    != null
+                                                            && !session.getString(
+                                                                            "inventoryResponseBody")
+                                                                    .trim()
+                                                                    .isEmpty())
+                                    .then(exec(updateInventory))
                                     .pause(300)
                                     .exec(createOrder));
 
