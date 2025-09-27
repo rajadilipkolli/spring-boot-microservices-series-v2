@@ -23,6 +23,7 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -76,7 +77,16 @@ class OrderController implements OrderApi {
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     @RateLimiter(name = "default")
     @Bulkhead(name = "order-api")
-    ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
+    ResponseEntity<OrderResponse> getOrderById(
+            @PathVariable Long id, @RequestParam(required = false) Integer delay) {
+        // Allow tests to simulate slow responses by sleeping for `delay` seconds
+        if (delay != null && delay > 0) {
+            try {
+                TimeUnit.SECONDS.sleep(delay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         return orderService
                 .findOrderByIdAsResponse(id)
                 .map(ResponseEntity::ok)
