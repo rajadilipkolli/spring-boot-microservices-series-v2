@@ -455,7 +455,7 @@ function testCircuitBreaker() {
       elif [[ "$code" == "200" ]]; then
         track_test_result "Slow-call fallback (or normal): ${svc}" "PASS" "HTTP 200"
       else
-        track_test_result "Slow-call unexpected: ${svc}" "PASS" "WARN HTTP ${code}"
+        track_test_result "Slow-call unexpected: ${svc}" "FAIL" "HTTP ${code}"
       fi
     done
 
@@ -475,7 +475,7 @@ function testCircuitBreaker() {
             if [[ "$codef" == "200" ]]; then
               track_test_result "Strict-mode induced fallback: ${svc}" "PASS" "HTTP 200"
             else
-              track_test_result "Strict-mode induced failure: ${svc}" "PASS" "WARN HTTP ${codef}"
+              track_test_result "Strict-mode induced failure: ${svc}" "FAIL" "HTTP ${codef}"
             fi
           done
 
@@ -505,7 +505,7 @@ function testCircuitBreaker() {
         track_test_result "Fallback response observed: ${svc}" "PASS" "HTTP 200"
       fi
     else
-      track_test_result "Post-failure slow call: ${svc}" "PASS" "WARN HTTP ${code2}"
+      track_test_result "Post-failure slow call: ${svc}" "FAIL" "HTTP ${code2}"
     fi
 
     # Also test normal call may return fallback when open
@@ -515,7 +515,7 @@ function testCircuitBreaker() {
     if [[ "$codeN" == "200" ]]; then
       track_test_result "Normal call (during open) ${svc}" "PASS" "HTTP 200"
     else
-      track_test_result "Normal call (during open) ${svc}" "PASS" "WARN HTTP ${codeN}"
+      track_test_result "Normal call (during open) ${svc}" "FAIL" "HTTP ${codeN}"
     fi
 
     # Check fallback for not-found resource (mimic attached 404 check)
@@ -869,7 +869,7 @@ if [[ $@ == *"start"* ]]; then
 fi
 
 # If only running circuit breaker checks, skip setup and API tests
-if [[ $@ == *"circuit-test"* ]]; then
+if [[ " $* " == *" circuit-test "* ]]; then
   log_info "Running only circuit breaker checks (skipping full setup)..."
   # Ensure gateway is reachable
   waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
