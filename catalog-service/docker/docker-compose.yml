@@ -2,7 +2,7 @@ version: '3.8'
 services:
 
   postgresql:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: postgresql
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:

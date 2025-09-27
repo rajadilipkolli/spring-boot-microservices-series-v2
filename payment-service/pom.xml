@@ -262,7 +262,7 @@
                 <configuration>
                     <database>
                         <type>POSTGRES</type>
-                        <containerImage>postgres:17-alpine</containerImage>
+                        <containerImage>postgres:18-alpine</containerImage>
                         <username>test</username>
                         <password>test</password>
                         <databaseName>test</databaseName>
@@ -382,7 +382,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.25.2</version>
+                            <version>1.27.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>

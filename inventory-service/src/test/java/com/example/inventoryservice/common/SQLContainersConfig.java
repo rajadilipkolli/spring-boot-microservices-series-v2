@@ -18,7 +18,7 @@ public class SQLContainersConfig {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgreSQLContainer() {
-        return new PostgreSQLContainer<>(DockerImageName.parse("postgres:17-alpine"))
+        return new PostgreSQLContainer<>(DockerImageName.parse("postgres:18-alpine"))
                 .withReuse(true);
     }
 }

@@ -2,7 +2,7 @@ name: spring-boot-microservices-series-v2
 services:
   postgresql:
     container_name: postgresql
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
