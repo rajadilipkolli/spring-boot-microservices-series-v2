@@ -12,7 +12,6 @@ import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -34,15 +33,12 @@ class KafkaListenerConfig {
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
-    private final ObjectMapper objectMapper;
 
     KafkaListenerConfig(
             InventoryOrderManageService orderManageService,
-            ProductManageService productManageService,
-            ObjectMapper objectMapper) {
+            ProductManageService productManageService) {
         this.orderManageService = orderManageService;
         this.productManageService = productManageService;
-        this.objectMapper = objectMapper;
     }
 
     // retries if processing of event fails
@@ -60,9 +56,10 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload String productDto) throws JsonProcessingException {
+    public void onSaveProductEvent(@Payload @Valid ProductDto productDto)
+            throws JsonProcessingException {
         log.info("Received Product: {}", productDto);
-        productManageService.manage(objectMapper.readValue(productDto, ProductDto.class));
+        productManageService.manage(productDto);
     }
 
     @DltHandler
