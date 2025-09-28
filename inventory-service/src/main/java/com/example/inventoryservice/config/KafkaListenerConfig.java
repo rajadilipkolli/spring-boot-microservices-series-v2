@@ -12,6 +12,7 @@ import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
