@@ -50,6 +50,8 @@ When running a single service locally, prefer the service's README instructions 
 mvnw.cmd -pl <module> test` on Windows).
   2. If it affects DB schema, update Liquibase changelogs under `src/main/resources/db/changelog` for that service.
   3. If it changes event payloads, update consumers/producers in other services and add a migration plan (backwards-compatible changes preferred).
+  4. Always prefer AssertJ for assertions in tests.
+  5. Always use imports rather than fully qualified class names in code.
 
 ### CI / Build notes
 - Builds use Maven and the wrapper; maintainers rely on `spotless` and `checkstyle` in some modules. Avoid changing formatting rules without running `spotless:apply`.
