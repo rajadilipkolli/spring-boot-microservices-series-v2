@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 @Component
 class LoggingFilter implements GlobalFilter {
@@ -21,14 +23,40 @@ class LoggingFilter implements GlobalFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // skip actuator traces
         if (exchange.getRequest().getURI().getPath().contains("/actuator")) {
-            log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
-        } else {
-            log.info(
-                    "Path of the request received -> {} with method {}",
-                    exchange.getRequest().getPath(),
-                    exchange.getRequest().getMethod());
+            if (log.isTraceEnabled()) {
+                log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
+            }
+            return chain.filter(exchange);
         }
-        return chain.filter(exchange);
+
+        StopWatch startStopWatch = new StopWatch();
+        log.info(
+                "Path of the request received -> {} with method {}",
+                exchange.getRequest().getPath(),
+                exchange.getRequest().getMethod());
+
+        return chain.filter(exchange)
+                .doFinally(
+                        (SignalType signal) -> {
+                            Integer status = null;
+                            try {
+                                if (exchange.getResponse() != null
+                                        && exchange.getResponse().getStatusCode() != null) {
+                                    status = exchange.getResponse().getStatusCode().value();
+                                }
+                            } catch (Exception e) {
+                                // ignore - best effort to read status
+                            }
+                            startStopWatch.stop();
+                            long took = startStopWatch.getTotalTimeMillis();
+                            log.info(
+                                    "Request {} {} -> status={} took={}ms",
+                                    exchange.getRequest().getMethod(),
+                                    exchange.getRequest().getURI().getPath(),
+                                    status == null ? "UNKNOWN" : status,
+                                    took);
+                        });
     }
 }
