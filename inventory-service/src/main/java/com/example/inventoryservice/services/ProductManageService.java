@@ -10,6 +10,7 @@ import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,7 +24,20 @@ public class ProductManageService {
     }
 
     public void manage(ProductDto productDto) {
-        Inventory inventory = new Inventory().setProductCode(productDto.code());
-        this.inventoryRepository.save(inventory);
+        String productCode = productDto.code();
+        // avoid inserting duplicate inventory records when retries or duplicate events arrive
+        if (this.inventoryRepository.existsByProductCode(productCode)) {
+            return;
+        }
+
+        Inventory inventory = new Inventory().setProductCode(productCode);
+        try {
+            this.inventoryRepository.save(inventory);
+        } catch (DataIntegrityViolationException ex) {
+            // likely a concurrent insert produced the same product_code - ignore to keep
+            // idempotency
+            // Logging is handled by the @Loggable aspect; swallow the exception to avoid crashing
+            // the listener
+        }
     }
 }
