@@ -31,7 +31,8 @@ class LoggingFilter implements GlobalFilter {
             return chain.filter(exchange);
         }
 
-        StopWatch startStopWatch = new StopWatch();
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         log.info(
                 "Path of the request received -> {} with method {}",
                 exchange.getRequest().getPath(),
@@ -49,8 +50,8 @@ class LoggingFilter implements GlobalFilter {
                             } catch (Exception e) {
                                 // ignore - best effort to read status
                             }
-                            startStopWatch.stop();
-                            long took = startStopWatch.getTotalTimeMillis();
+                            stopWatch.stop();
+                            long took = stopWatch.getTotalTimeMillis();
                             log.info(
                                     "Request {} {} -> status={} took={}ms",
                                     exchange.getRequest().getMethod(),
