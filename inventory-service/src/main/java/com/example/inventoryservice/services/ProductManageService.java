@@ -34,10 +34,11 @@ public class ProductManageService {
         try {
             this.inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
-            // likely a concurrent insert produced the same product_code - ignore to keep
-            // idempotency
-            // Logging is handled by the @Loggable aspect; swallow the exception to avoid crashing
-            // the listener
+            if (!this.inventoryRepository.existsByProductCode(productCode)) {
+                throw ex;
+            }
+            // Another thread created the same product_code concurrently; ignore to keep
+            // idempotency. Logging is handled by the @Loggable aspect.
         }
     }
 }
