@@ -6,6 +6,7 @@
 
 package com.example.orderservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
@@ -191,6 +192,33 @@ class OrderControllerTest {
         private Address getDeliveryAddress() {
             return new Address(
                     "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country");
+        }
+
+        @Test
+        void shouldRespectDelayParameter() throws Exception {
+            Long orderId = 1L;
+            LocalDateTime testDateTime = LocalDateTime.now();
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "",
+                            getDeliveryAddress(),
+                            testDateTime,
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+            given(orderService.findOrderByIdAsResponse(orderId))
+                    .willReturn(Optional.of(orderResponse));
+
+            long startTime = System.nanoTime();
+            mockMvc.perform(get("/api/orders/{id}", orderId).param("delay", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.orderId", is(1)));
+            long duration = (System.nanoTime() - startTime) / 1_000_000; // Convert to milliseconds
+
+            assertThat(duration).isGreaterThanOrEqualTo(900);
+            verify(orderService).findOrderByIdAsResponse(orderId);
         }
 
         @Test
