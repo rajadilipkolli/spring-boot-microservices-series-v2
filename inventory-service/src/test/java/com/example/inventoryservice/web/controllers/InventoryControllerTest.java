@@ -49,21 +49,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Tests generated and updated to validate InventoryController endpoints introduced/changed
- * in the current pull request, with emphasis on:
- * - GET /api/inventory (paged response fields)
- * - GET /api/inventory/{productCode} including delay query-param behavior
- * - GET /api/inventory/product?codes=...
- * - GET /api/inventory/generate
- * - POST/PUT/DELETE flows
- *
- * Testing stack:
- *   - JUnit 5
- *   - Spring Boot @WebMvcTest + MockMvc
- *   - Mockito via @MockitoBean
- *   - Instancio for sample data
- */
 @WebMvcTest(controllers = InventoryController.class)
 @ActiveProfiles("test")
 @ExtendWith(InstancioExtension.class)
@@ -114,8 +99,7 @@ class InventoryControllerTest {
                         0);
         PagedResult<Inventory> paged = new PagedResult<>(page);
 
-        given(inventoryService.findAllInventories(1, 20, "productCode", "desc"))
-                .willReturn(paged);
+        given(inventoryService.findAllInventories(1, 20, "productCode", "desc")).willReturn(paged);
 
         this.mockMvc
                 .perform(
@@ -152,7 +136,8 @@ class InventoryControllerTest {
     @Test
     void shouldReturn404WhenFetchingNonExistingInventoryByProductCode() throws Exception {
         String missingCode = "does-not-exist";
-        given(inventoryService.findInventoryByProductCode(missingCode)).willReturn(Optional.empty());
+        given(inventoryService.findInventoryByProductCode(missingCode))
+                .willReturn(Optional.empty());
 
         this.mockMvc
                 .perform(get("/api/inventory/{productCode}", missingCode))
@@ -182,9 +167,17 @@ class InventoryControllerTest {
     @Test
     void shouldReturnInventoriesByProductCodes() throws Exception {
         Inventory inv1 =
-                new Inventory().setId(1L).setProductCode("P1").setAvailableQuantity(3).setReservedItems(0);
+                new Inventory()
+                        .setId(1L)
+                        .setProductCode("P1")
+                        .setAvailableQuantity(3)
+                        .setReservedItems(0);
         Inventory inv2 =
-                new Inventory().setId(2L).setProductCode("P2").setAvailableQuantity(7).setReservedItems(0);
+                new Inventory()
+                        .setId(2L)
+                        .setProductCode("P2")
+                        .setAvailableQuantity(7)
+                        .setReservedItems(0);
 
         given(inventoryService.getInventoryByProductCodes(Arrays.asList("P1", "P2")))
                 .willReturn(Arrays.asList(inv1, inv2));
