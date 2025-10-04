@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0-M2</version>
+        <version>4.0.0-M3</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -18,7 +18,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <spring-cloud.version>2025.1.0-M2</spring-cloud.version>
+        <spring-cloud.version>2025.1.0-M3</spring-cloud.version>
         <spotless.version>3.0.0</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <sonar-maven-plugin.version>5.2.0.4988</sonar-maven-plugin.version>
