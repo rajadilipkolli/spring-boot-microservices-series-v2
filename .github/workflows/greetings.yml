@@ -13,5 +13,5 @@ jobs:
     - uses: actions/first-interaction@v3
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: 'Thanks for reporting issues'
-        pr-message: 'Thanks for sending your prs'
+        issue_message: 'Thanks for reporting issues'
+        pr_message: 'Thanks for sending your prs'
