@@ -1,4 +1,4 @@
-version: "3.9"
+name: api-gateway
 
 services:
 
@@ -32,7 +32,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -51,7 +51,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:

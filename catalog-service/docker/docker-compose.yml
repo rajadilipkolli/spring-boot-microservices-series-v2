@@ -72,7 +72,7 @@ services:
   config-server:
     container_name: config-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -87,7 +87,7 @@ services:
   naming-server:
     container_name: naming-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
