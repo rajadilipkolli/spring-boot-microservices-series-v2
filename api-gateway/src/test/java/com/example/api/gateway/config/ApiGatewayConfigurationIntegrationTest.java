@@ -24,7 +24,12 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                             "test-routing",
                             ApiGatewayConfigurationIntegrationTest.class,
                             ApiGatewayConfigurationIntegrationTest.class.getSimpleName()
-                                    + "/test-routing.json");
+                                    + "/test-routing.json")
+                    .withMappingFromResource(
+                            "get-mapping",
+                            ApiGatewayConfigurationIntegrationTest.class,
+                            ApiGatewayConfigurationIntegrationTest.class.getSimpleName()
+                                    + "/get-mapping.json");
 
     static {
         wireMockServer.start();
@@ -47,6 +52,7 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.replacement",
                 () -> "/${segment}");
+        registry.add("app.gateway.httpbin", wireMockServer::getBaseUrl);
     }
 
     @Test
