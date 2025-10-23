@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;

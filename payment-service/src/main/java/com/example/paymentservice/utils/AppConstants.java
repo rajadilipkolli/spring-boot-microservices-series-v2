@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli. ***/
 package com.example.paymentservice.utils;
 
 public final class AppConstants {
