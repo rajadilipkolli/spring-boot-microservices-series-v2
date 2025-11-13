@@ -40,11 +40,12 @@ resilience4j:
           - java.io.IOException
         ignoreExceptions:
           - com.example.catalogservice.exception.ProductNotFoundException
-    instances:
-      default:
-        baseConfig: default
-      getInventoryByProductCodes:
-        baseConfig: default
+    # disabled to avoid conflicts with circuitbreaker retries as part of spring boot 4 upgrade
+    # instances:
+    #   default:
+    #     baseConfig: default
+    #   getInventoryByProductCodes:
+    #     baseConfig: default
   bulkhead:
     configs:
       default:
