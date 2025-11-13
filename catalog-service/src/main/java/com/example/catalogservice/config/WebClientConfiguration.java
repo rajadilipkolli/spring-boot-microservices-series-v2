@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
+import org.springframework.cloud.client.loadbalancer.reactive.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;

@@ -32,6 +32,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
         problemDetail.setDetail("Invalid request content.");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         // Build violations list
         var violations =

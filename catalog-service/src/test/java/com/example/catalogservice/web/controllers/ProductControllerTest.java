@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
@@ -24,7 +25,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -177,7 +178,7 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .expectBody()
                 .jsonPath("$.type")
-                .isEqualTo("about:blank")
+                .isEqualTo("https://api.microservices.com/errors/validation-error")
                 .jsonPath("$.title")
                 .isEqualTo("Validation Error")
                 .jsonPath("$.status")
@@ -374,7 +375,7 @@ class ProductControllerTest {
                 .jsonPath("$.price")
                 .isEqualTo(productResponse.price());
 
-        org.mockito.Mockito.verify(productService).findProductByProductCode(code, false);
+        verify(productService).findProductByProductCode(code, false);
     }
 
     @Test
@@ -412,7 +413,7 @@ class ProductControllerTest {
                 .expectStatus()
                 .isOk();
 
-        org.mockito.Mockito.verify(productService).findProductByProductCode(code, true);
+        verify(productService).findProductByProductCode(code, true);
     }
 
     @Test
@@ -459,7 +460,7 @@ class ProductControllerTest {
                 .expectBody(Boolean.class)
                 .isEqualTo(true);
 
-        org.mockito.Mockito.verify(productService).productExistsByProductCodes(codes);
+        verify(productService).productExistsByProductCodes(codes);
     }
 
     @Test
@@ -545,8 +546,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
-                .searchProductsByTerm("laptop", 0, 10, "id", "asc");
+        verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
     }
 
     @Test
@@ -572,8 +572,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
-                .searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc");
+        verify(productService).searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc");
     }
 
     @Test
@@ -602,7 +601,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
+        verify(productService)
                 .searchProductsByTermAndPriceRange("laptop", 50.0, 150.0, 0, 10, "id", "asc");
     }
 
@@ -623,7 +622,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService).findAllProducts(0, 10, "id", "asc");
+        verify(productService).findAllProducts(0, 10, "id", "asc");
     }
 
     @Test
@@ -648,7 +647,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService).findAllProducts(0, 10, "id", "asc");
+        verify(productService).findAllProducts(0, 10, "id", "asc");
     }
 
     @Test
@@ -677,7 +676,6 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        org.mockito.Mockito.verify(productService)
-                .searchProductsByTerm("laptop", 1, 5, "name", "DESC");
+        verify(productService).searchProductsByTerm("laptop", 1, 5, "name", "DESC");
     }
 }
