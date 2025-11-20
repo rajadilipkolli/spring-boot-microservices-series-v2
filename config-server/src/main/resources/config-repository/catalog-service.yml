@@ -25,8 +25,8 @@ resilience4j:
         ignoreExceptions:
           - com.example.catalogservice.exception.ProductNotFoundException
     instances:
-      default:
-        baseConfig: default
+      # default:
+      #   baseConfig: default
       getInventoryByProductCodes:
         baseConfig: shared
   retry:
@@ -63,8 +63,8 @@ resilience4j:
         coreThreadPoolSize: 2
         queueCapacity: 2
     instances:
-      default:
-        baseConfig: default
+      # default:
+      #   baseConfig: default
       getInventoryByProductCodes:
         maxThreadPoolSize: 1
         coreThreadPoolSize: 1
@@ -78,8 +78,8 @@ resilience4j:
         timeoutDuration: 0
         eventConsumerBufferSize: 100
     instances:
-      default:
-        baseConfig: default
+      # default:
+      #   baseConfig: default
       getInventoryByProductCodes:
         limitForPeriod: 6
         limitRefreshPeriod: 500ms
@@ -90,8 +90,8 @@ resilience4j:
         cancelRunningFuture: false
         timeoutDuration: 2s
     instances:
-      default:
-        baseConfig: default
+      # default:
+      #   baseConfig: default
       getInventoryByProductCodes:
         baseConfig: default
 
