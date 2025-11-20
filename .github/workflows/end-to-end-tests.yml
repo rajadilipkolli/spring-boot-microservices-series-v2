@@ -7,7 +7,7 @@ jobs:
     name: Run End-to-End Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
           
       - name: Run End to End Tests
         run: ./test-em-all.sh --detailed-logs start stop
