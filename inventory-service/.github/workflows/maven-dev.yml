@@ -11,7 +11,7 @@ jobs:
     name: Run Unit & Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5.0.0
