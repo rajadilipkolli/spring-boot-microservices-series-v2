@@ -21,7 +21,7 @@
 
         <java.version>25</java.version>
         <spring-cloud.version>2025.1.0-RC1</spring-cloud.version>
-        <springdoc-openapi.version>3.0.0-RC1</springdoc-openapi.version>
+        <springdoc-openapi.version>3.0.0</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
 
