@@ -23,6 +23,11 @@ class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectBody(String.class)
                 .consumeWith(
-                        res -> assertThat(res.getResponseBody()).isEqualTo("{\"status\":\"UP\"}"));
+                        res ->
+                                assertThat(res.getResponseBody())
+                                        .isEqualToIgnoringWhitespace(
+                                                """
+                                {"groups":["liveness","readiness"],"status":"UP"}
+                                """));
     }
 }
