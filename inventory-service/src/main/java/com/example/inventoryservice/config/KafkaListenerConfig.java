@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,7 +25,6 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.retry.annotation.Backoff;
 
 @EnableKafka
 @Configuration(proxyBeanMethods = false)
@@ -47,7 +47,7 @@ class KafkaListenerConfig {
 
     // retries if processing of event fails
     @RetryableTopic(
-            backoff = @Backoff(delay = 1000, multiplier = 2.0),
+            backOff = @BackOff(delay = 1000, multiplier = 2.0),
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(OrderDto orderDto) {
