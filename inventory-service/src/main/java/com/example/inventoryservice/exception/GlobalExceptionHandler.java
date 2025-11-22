@@ -102,6 +102,7 @@ class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request format");
         problemDetail.setTitle("Bad Request");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/bad-request"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("error", "Invalid JSON format");
         addCorrelationId(problemDetail, request);
