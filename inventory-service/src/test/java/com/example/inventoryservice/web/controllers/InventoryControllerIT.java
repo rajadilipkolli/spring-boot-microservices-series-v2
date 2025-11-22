@@ -110,7 +110,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue(), Long.class))
                 .andExpect(jsonPath("$.availableQuantity", is(10)))
@@ -126,7 +126,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
@@ -157,7 +157,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/inventory/{id}", inventory.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
                 .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 1000)))
