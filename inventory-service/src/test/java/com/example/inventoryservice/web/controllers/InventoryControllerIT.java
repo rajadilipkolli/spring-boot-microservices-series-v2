@@ -20,20 +20,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.request.InventoryRequest;
-import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.List;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 @ExtendWith(InstancioExtension.class)
 class InventoryControllerIT extends AbstractIntegrationTest {
-
-    @Autowired private InventoryRepository inventoryRepository;
 
     private List<Inventory> inventoryList = null;
 
@@ -114,7 +110,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue(), Long.class))
                 .andExpect(jsonPath("$.availableQuantity", is(10)))
@@ -130,10 +126,16 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(header().string("Content-Type", is("application/problem+json")))
-                .andExpect(jsonPath("$.type", is("about:blank")))
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(
+                        jsonPath(
+                                "$.type",
+                                is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -155,7 +157,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/inventory/{id}", inventory.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
                 .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 1000)))
