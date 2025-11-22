@@ -1,14 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.client.AutoConfigureWebClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -20,7 +20,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
             "spring.cloud.config.enabled=false"
         },
         classes = ContainerConfig.class)
-@AutoConfigureWebClient
+@AutoConfigureWebTestClient
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
