@@ -251,8 +251,8 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-                        <builder>docker.io/paketobuildpacks/builder-noble-java-tiny</builder>
-                        <runImage>docker.io/paketobuildpacks/ubuntu-noble-run-base</runImage>
+                        <builder>docker.io/paketobuildpacks/builder-jammy-base</builder>
+                        <runImage>docker.io/paketobuildpacks/run-jammy-base</runImage>
                     </image>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                     <docker>
