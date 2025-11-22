@@ -2,8 +2,6 @@
 
 <div align="center">
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)
-
 **A comprehensive microservices architecture showcase using modern cloud-native technologies**
 
 *Building resilient, scalable, and observable distributed systems with Spring Boot ecosystem*
