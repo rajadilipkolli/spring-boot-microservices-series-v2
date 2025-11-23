@@ -12,28 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.wiremock.integrations.testcontainers.WireMockContainer;
 
 class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
-
-    @Container
-    static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:latest-alpine")
-                    .withMappingFromResource(
-                            "test-routing",
-                            ApiGatewayConfigurationIntegrationTest.class,
-                            ApiGatewayConfigurationIntegrationTest.class.getSimpleName()
-                                    + "/test-routing.json")
-                    .withMappingFromResource(
-                            "get-mapping",
-                            ApiGatewayConfigurationIntegrationTest.class,
-                            ApiGatewayConfigurationIntegrationTest.class.getSimpleName()
-                                    + "/get-mapping.json");
-
-    static {
-        wireMockServer.start();
-    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
