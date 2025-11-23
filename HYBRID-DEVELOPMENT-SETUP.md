@@ -91,13 +91,23 @@ spring.security.oauth2.client.registration.keycloak.redirect-uri=http://localhos
 # Navigate to retail webapp directory
 cd retail-store-webapp
 
-# Run the application
+# Run the application with required environment variables
+# Linux/macOS:
+export KEYCLOAK_ADMINUSERNAME=admin
+export KEYCLOAK_ADMINPASSWORD=admin1234
 ./mvnw spring-boot:run
 
-# Running it needs below environment variables as well
-cmd /c "set KEYCLOAK_ADMINUSERNAME=admin && set KEYCLOAK_ADMINPASSWORD=admin1234 && mvnw.cmd spring-boot:run"
+# Windows (PowerShell):
+$env:KEYCLOAK_ADMINUSERNAME="admin"
+$env:KEYCLOAK_ADMINPASSWORD="admin1234"
+.\mvnw.cmd spring-boot:run
 
-# Or run from IDE
+# Windows (CMD):
+set KEYCLOAK_ADMINUSERNAME=admin
+set KEYCLOAK_ADMINPASSWORD=admin1234
+mvnw.cmd spring-boot:run
+
+# Or run from IDE with environment variables configured
 ```
 
 ## 🔐 Authentication Setup
@@ -176,6 +186,11 @@ spring.security.oauth2.client.provider.keycloak.issuer-uri=http://localhost:9191
 **Database Connection:**
 - Ensure PostgreSQL is running in Docker
 - Check port 5432 is not blocked
+
+**User Registration Issues:**
+- Ensure `KEYCLOAK_ADMINUSERNAME` and `KEYCLOAK_ADMINPASSWORD` environment variables are set
+- Verify Keycloak admin credentials: admin/admin1234
+- Check Keycloak is accessible at http://localhost:9191
 
 ### Verification Commands
 
