@@ -234,6 +234,8 @@
                         <include>**/*IntTest*</include>
                         <include>**/*IntegrationTest*</include>
                     </includes>
+                    <parallel>classes</parallel>
+                    <threadCount>4</threadCount>
                 </configuration>
                 <executions>
                     <execution>
