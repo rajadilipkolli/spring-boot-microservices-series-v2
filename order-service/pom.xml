@@ -97,6 +97,11 @@
             <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.21.0</version>
+        </dependency>
+        <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
             <version>2.5.3</version>
