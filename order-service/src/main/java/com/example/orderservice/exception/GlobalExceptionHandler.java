@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setTitle("Order Not Found");
-        problemDetail.setType(URI.create("http://api.orders.com/errors/not-found"));
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setTitle("Product Not Found");
-        problemDetail.setType(URI.create("http://api.products.com/errors/not-found"));
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
@@ -76,6 +76,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setTitle("Resource Not Found");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("timestamp", Instant.now());
         addCorrelationId(problemDetail, request);
 
@@ -105,6 +106,7 @@ public class GlobalExceptionHandler {
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.BAD_REQUEST, "Invalid request content.");
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
         addCorrelationId(problemDetail, request);
@@ -120,6 +122,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         addCorrelationId(problemDetail, request);
 
@@ -134,6 +137,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid Request");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/invalid-request"));
         problemDetail.setProperty("timestamp", Instant.now());
         addCorrelationId(problemDetail, request);
 
