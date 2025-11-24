@@ -254,7 +254,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Product Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
