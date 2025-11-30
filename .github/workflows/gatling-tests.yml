@@ -35,7 +35,7 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: "temurin"
           cache: "maven"
-      
+
       - name: Start up softwares via Docker Compose
         run: |
           pwd
@@ -50,27 +50,36 @@ jobs:
 
       - name: Copy Gatling Reports to docs folder
         if: always()
+        working-directory: .
         run: |
-          cd ..
           TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
           REPORT_DIR="docs/gatling-reports/${TIMESTAMP}"
+          echo "Creating report directory: ${REPORT_DIR}"
           mkdir -p "${REPORT_DIR}"
+          
           if [ -d "gatling-tests/target/gatling" ]; then
+            echo "Found Gatling reports directory"
+            ls -la gatling-tests/target/gatling/
             cp -r gatling-tests/target/gatling/* "${REPORT_DIR}/"
             echo "Reports copied successfully to ${REPORT_DIR}"
             ls -la "${REPORT_DIR}/"
           else
-            echo "No Gatling reports found"
+            echo "ERROR: No Gatling reports found at gatling-tests/target/gatling"
+            exit 0
           fi
         shell: bash
 
       - name: Commit and Push Gatling Reports
         if: always() && github.ref == 'refs/heads/main'
+        working-directory: .
         run: |
-          cd ..
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add docs/gatling-reports/
-          git diff --staged --quiet || git commit -m "Update Gatling performance test reports [skip ci]"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update Gatling performance test reports [skip ci]"
+            git push
+          fi
         shell: bash
