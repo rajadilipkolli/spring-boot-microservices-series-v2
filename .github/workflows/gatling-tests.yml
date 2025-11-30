@@ -50,29 +50,37 @@ jobs:
 
       - name: Copy Gatling Reports to docs folder
         if: always()
-        working-directory: .
         run: |
+          pwd
+          echo "Current working directory contents:"
+          ls -la
+          
           TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-          REPORT_DIR="docs/gatling-reports/${TIMESTAMP}"
+          REPORT_DIR="../docs/gatling-reports/${TIMESTAMP}"
           echo "Creating report directory: ${REPORT_DIR}"
           mkdir -p "${REPORT_DIR}"
           
-          if [ -d "gatling-tests/target/gatling" ]; then
-            echo "Found Gatling reports directory"
-            ls -la gatling-tests/target/gatling/
-            cp -r gatling-tests/target/gatling/* "${REPORT_DIR}/"
+          if [ -d "target/gatling" ]; then
+            echo "Found Gatling reports directory in target/gatling"
+            ls -la target/gatling/
+            cp -r target/gatling/* "${REPORT_DIR}/"
             echo "Reports copied successfully to ${REPORT_DIR}"
             ls -la "${REPORT_DIR}/"
           else
-            echo "ERROR: No Gatling reports found at gatling-tests/target/gatling"
+            echo "ERROR: No Gatling reports found at target/gatling"
+            ls -la target/ || echo "target directory does not exist"
             exit 0
           fi
         shell: bash
 
       - name: Commit and Push Gatling Reports
         if: always() && github.ref == 'refs/heads/main'
-        working-directory: .
         run: |
+          cd ..
+          pwd
+          echo "Checking for report files to commit:"
+          ls -la docs/gatling-reports/ || echo "docs/gatling-reports directory does not exist"
+          
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add docs/gatling-reports/
@@ -83,3 +91,5 @@ jobs:
             git push
           fi
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
