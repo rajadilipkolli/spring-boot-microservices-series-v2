@@ -47,3 +47,30 @@ jobs:
 
       - name: Build and analyze
         run: ./mvnw clean gatling:test
+
+      - name: Copy Gatling Reports to docs folder
+        if: always()
+        run: |
+          cd ..
+          TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+          REPORT_DIR="docs/gatling-reports/${TIMESTAMP}"
+          mkdir -p "${REPORT_DIR}"
+          if [ -d "gatling-tests/target/gatling" ]; then
+            cp -r gatling-tests/target/gatling/* "${REPORT_DIR}/"
+            echo "Reports copied successfully to ${REPORT_DIR}"
+            ls -la "${REPORT_DIR}/"
+          else
+            echo "No Gatling reports found"
+          fi
+        shell: bash
+
+      - name: Commit and Push Gatling Reports
+        if: always() && github.ref == 'refs/heads/main'
+        run: |
+          cd ..
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/gatling-reports/
+          git diff --staged --quiet || git commit -m "Update Gatling performance test reports [skip ci]"
+          git push
+        shell: bash
