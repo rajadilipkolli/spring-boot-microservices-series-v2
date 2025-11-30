@@ -11,26 +11,16 @@ import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;
 import com.example.orderservice.services.OrderService;
-import com.example.orderservice.utils.AppConstants;
 import io.micrometer.observation.tck.TestObservationRegistry;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
-@ActiveProfiles({AppConstants.PROFILE_TEST})
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"},
-        classes = {ContainersConfig.class, PostGreSQLContainer.class})
-@AutoConfigureMockMvc
-@AutoConfigureTracing
+@IntegrationTest
 public abstract class AbstractIntegrationTest extends ContainerInitializer {
 
     @Autowired protected MockMvc mockMvc;
@@ -44,6 +34,12 @@ public abstract class AbstractIntegrationTest extends ContainerInitializer {
     @Autowired protected OrderItemRepository orderItemRepository;
 
     @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+
+    @BeforeEach
+    void setUpAbstractIntegrationTest() {
+        // Ensure containers are started before tests run (idempotent)
+        ensureContainersStarted();
+    }
 
     @TestConfiguration
     static class ObservationTestConfiguration {
