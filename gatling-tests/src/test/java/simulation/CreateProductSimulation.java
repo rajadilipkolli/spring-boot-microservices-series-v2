@@ -46,10 +46,10 @@ public class CreateProductSimulation extends BaseSimulation {
     // maintainability
     private final ChainBuilder createProduct =
             exec(http("Create product")
-                    .post("/catalog-service/api/catalog")
-                    .body(
-                            StringBody(
-                                    """
+                            .post("/catalog-service/api/catalog")
+                            .body(
+                                    StringBody(
+                                            """
     {
       "productCode": "#{productCode}",
       "productName": "#{productName}",
@@ -57,9 +57,9 @@ public class CreateProductSimulation extends BaseSimulation {
       "description": "Performance test product"
     }
     """))
-                    .asJson()
-                    .check(status().is(201))
-                    .check(header("location").saveAs("productLocation")))
+                            .asJson()
+                            .check(status().is(201))
+                            .check(header("location").saveAs("productLocation")))
                     .exec(
                             session -> {
                                 LOGGER.debug(
@@ -82,9 +82,9 @@ public class CreateProductSimulation extends BaseSimulation {
 
     private final ChainBuilder getInventory =
             exec(http("Get product inventory")
-                    .get("/inventory-service/api/inventory/#{productCode}")
-                    .check(status().is(200))
-                    .check(bodyString().saveAs("inventoryResponseBody")))
+                            .get("/inventory-service/api/inventory/#{productCode}")
+                            .check(status().is(200))
+                            .check(bodyString().saveAs("inventoryResponseBody")))
                     .pause(1000) // Add a pause to ensure the response is processed
                     .exec(
                             session -> {
@@ -113,20 +113,20 @@ public class CreateProductSimulation extends BaseSimulation {
 
     private final ChainBuilder updateInventory =
             exec(http("Update inventory")
-                    .put(
-                            session ->
-                                    "/inventory-service/api/inventory/"
-                                            + getInventoryId(
-                                            session.getString(
-                                                    "inventoryResponseBody")))
-                    .body(
-                            StringBody(
+                            .put(
                                     session ->
-                                            getBodyAsString(
-                                                    session.getString(
-                                                            "inventoryResponseBody"))))
-                    .asJson()
-                    .check(status().is(200)))
+                                            "/inventory-service/api/inventory/"
+                                                    + getInventoryId(
+                                                            session.getString(
+                                                                    "inventoryResponseBody")))
+                            .body(
+                                    StringBody(
+                                            session ->
+                                                    getBodyAsString(
+                                                            session.getString(
+                                                                    "inventoryResponseBody"))))
+                            .asJson()
+                            .check(status().is(200)))
                     .exec(
                             session -> {
                                 LOGGER.debug(
@@ -137,10 +137,10 @@ public class CreateProductSimulation extends BaseSimulation {
 
     private final ChainBuilder createOrder =
             exec(http("Create order with product")
-                    .post("/order-service/api/orders")
-                    .body(
-                            StringBody(
-                                    """
+                            .post("/order-service/api/orders")
+                            .body(
+                                    StringBody(
+                                            """
     {
       "customerId": #{customerId},
       "items": [
@@ -160,9 +160,9 @@ public class CreateProductSimulation extends BaseSimulation {
       }
     }
     """))
-                    .asJson()
-                    .check(status().is(201))
-                    .check(header("location").saveAs("orderLocation")))
+                            .asJson()
+                            .check(status().is(201))
+                            .check(header("location").saveAs("orderLocation")))
                     .exec(
                             session -> {
                                 LOGGER.debug(
@@ -187,9 +187,9 @@ public class CreateProductSimulation extends BaseSimulation {
                                 if (session.contains("inventoryResponseBody")
                                         && session.getString("inventoryResponseBody") != null
                                         && !Objects.requireNonNull(
-                                                session.getString("inventoryResponseBody"))
-                                        .trim()
-                                        .isEmpty()) {
+                                                        session.getString("inventoryResponseBody"))
+                                                .trim()
+                                                .isEmpty()) {
                                     return session;
                                 } else {
                                     LOGGER.warn(
