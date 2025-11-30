@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.5
+    image: quay.io/keycloak/keycloak:26.4.6
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -415,7 +415,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.6.1
+    image: grafana/loki:3.6.2
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -431,7 +431,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.6.1
+    image: grafana/promtail:3.6.2
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
