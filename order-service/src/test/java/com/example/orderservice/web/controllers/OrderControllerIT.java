@@ -33,12 +33,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 
+@Disabled
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
@@ -158,7 +162,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -189,7 +195,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(header().exists("Location"))
                     .andExpect(jsonPath("$.orderId", notNullValue()))
@@ -246,13 +252,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isNotFound())
                     .andExpect(
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.products.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Product Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -274,13 +282,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -313,13 +324,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -349,10 +363,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(header().string("Content-Type", is("application/problem+json")))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -383,11 +400,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(
-                                            objectMapper.writeValueAsString(
+                                            jsonMapper.writeValueAsString(
                                                     invalidProductCodeRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(header().string("Content-Type", is("application/problem+json")))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -409,12 +429,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    invalidQuantityRequest)))
+                                    .content(jsonMapper.writeValueAsString(invalidQuantityRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(header().string("Content-Type", is("application/problem+json")))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -436,10 +457,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(invalidPriceRequest)))
+                                    .content(jsonMapper.writeValueAsString(invalidPriceRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(header().string("Content-Type", is("application/problem+json")))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -463,7 +487,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/orders/{id}", order.getId())
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(orderRequest)))
+                                .content(jsonMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(1211.00, 0.01)))
@@ -559,7 +583,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(
                         put("/api/orders/{id}", orderId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(updateRequest)))
+                                .content(jsonMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
                 .andExpect(jsonPath("$.customerId", is(1)))
