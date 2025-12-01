@@ -20,7 +20,7 @@
 
         <java.version>25</java.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
-        <springdoc-openapi.version>2.8.14</springdoc-openapi.version>
+        <springdoc-openapi.version>3.0.0</springdoc-openapi.version>
         <problem-spring-web.version>0.29.1</problem-spring-web.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
 
