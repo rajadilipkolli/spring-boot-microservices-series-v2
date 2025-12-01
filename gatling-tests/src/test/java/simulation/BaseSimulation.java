@@ -29,7 +29,7 @@ public abstract class BaseSimulation extends Simulation {
     // Kafka initialization delay in seconds (Kafka takes 5-8 seconds to initialize on first product
     // creation)
     protected static final int KAFKA_INIT_DELAY_SECONDS =
-            Integer.parseInt(System.getProperty("kafkaInitDelay", "15"));
+            Integer.parseInt(System.getProperty("kafkaInitDelay", "10"));
 
     // JSON object mapper for serialization/deserialization
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -45,7 +45,9 @@ public abstract class BaseSimulation extends Simulation {
                     .maxConnectionsPerHost(100) // Increase max connections
                     .connectionHeader("keep-alive")
                     .acceptEncodingHeader("gzip, deflate")
-                    .enableHttp2(); // Enable HTTP/2 for better performance
+                    .enableHttp2() // Enable HTTP/2 for better performance
+                    .inferHtmlResources() // Better resource inference
+                    .silentResources(); // Don't log resource requests separately
 
     // Common data feeder for product data with address information
     protected Iterator<Map<String, Object>> enhancedProductFeeder() {

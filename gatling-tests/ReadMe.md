@@ -6,7 +6,7 @@ This module contains comprehensive Gatling performance tests for the Spring Boot
 
 1. All microservices must be running (catalog-service, inventory-service, order-service, etc.)
 2. API Gateway must be accessible at http://localhost:8765 (configurable)
-3. JDK 21 or later
+3. JDK 25 or later
 
 ## Available Test Suites
 

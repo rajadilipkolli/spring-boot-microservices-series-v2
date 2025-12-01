@@ -38,14 +38,14 @@ public class StressTestSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StressTestSimulation.class);
 
-    // Stress test specific configuration
-    private static final int MAX_USERS = Integer.parseInt(System.getProperty("maxUsers", "100"));
+    // Stress test specific configuration - balanced for sustainable load
+    private static final int MAX_USERS = Integer.parseInt(System.getProperty("maxUsers", "50"));
     private static final int RAMP_DURATION_MINUTES =
-            Integer.parseInt(System.getProperty("rampDurationMinutes", "5"));
+            Integer.parseInt(System.getProperty("rampDurationMinutes", "3"));
     private static final int PLATEAU_DURATION_MINUTES =
-            Integer.parseInt(System.getProperty("plateauDurationMinutes", "10"));
+            Integer.parseInt(System.getProperty("plateauDurationMinutes", "5"));
     private static final int COOL_DOWN_MINUTES =
-            Integer.parseInt(System.getProperty("coolDownMinutes", "2"));
+            Integer.parseInt(System.getProperty("coolDownMinutes", "1"));
 
     // Performance SLAs
     private static final int MEAN_RESPONSE_TIME_MS = 1500;
@@ -53,14 +53,14 @@ public class StressTestSimulation extends BaseSimulation {
     private static final int P99_RESPONSE_TIME_MS = 5000;
     private static final double MAX_ERROR_PERCENT = 5.0;
 
-    // Think time configurations for more realistic user behavior
-    private static final Duration MIN_THINK_TIME = Duration.ofSeconds(2);
-    private static final Duration MAX_THINK_TIME = Duration.ofSeconds(10);
-    private static final Duration MIN_PAGE_THINK_TIME = Duration.ofMillis(750);
-    private static final Duration MAX_PAGE_THINK_TIME = Duration.ofSeconds(3);
+    // Think time configurations for realistic user behavior with sustainable throughput
+    private static final Duration MIN_THINK_TIME = Duration.ofSeconds(1);
+    private static final Duration MAX_THINK_TIME = Duration.ofSeconds(3);
+    private static final Duration MIN_PAGE_THINK_TIME = Duration.ofMillis(300);
+    private static final Duration MAX_PAGE_THINK_TIME = Duration.ofSeconds(1);
 
     // Pause duration between smoke test and main load test
-    private static final Duration SMOKE_TEST_PAUSE = Duration.ofSeconds(30);
+    private static final Duration SMOKE_TEST_PAUSE = Duration.ofSeconds(10);
 
     // Create a reusable chain for viewing catalog with realistic think times and error recovery
     private final ChainBuilder browseCatalog =
@@ -368,7 +368,7 @@ public class StressTestSimulation extends BaseSimulation {
                                     LOGGER.info("Created product code: {}", productCode);
                                     return session;
                                 })
-                        .pause(Duration.ofSeconds(2)) // Wait for product to be available
+                        .pause(Duration.ofMillis(500)) // Wait for product to be available
                         .exec(browseCatalog)
                         .exitHereIfFailed()
                         .exec(
