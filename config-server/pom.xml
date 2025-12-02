@@ -21,7 +21,7 @@
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <spotless.version>3.1.0</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>5.3.0.6276</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.4.0.6343</sonar-maven-plugin.version>
         <CI_DOCKER_PASSWORD />
         <CI_DOCKER_USERNAME />
     </properties>
