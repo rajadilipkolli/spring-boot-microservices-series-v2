@@ -13,6 +13,8 @@ The Order Service implements a sophisticated event-driven architecture using Apa
 7. [Performance Characteristics](#performance-characteristics)
 
 > 📚 **For comprehensive Kafka Streams concepts, configurations, and best practices, see:** [**02-Kafka-Streams-Deep-Dive.md**](./02-Kafka-Streams-Deep-Dive.md)
+> 
+> 📊 **For detailed data flow analysis, sample data structures, and storage mechanisms, see:** [**03-Kafka-Streams-Data-Flow-Analysis.md**](./03-Kafka-Streams-Data-Flow-Analysis.md)
 
 ---
 

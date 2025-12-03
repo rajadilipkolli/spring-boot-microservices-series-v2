@@ -1,5 +1,7 @@
 # 🌊 Kafka Streams Deep Dive
 
+> 📊 **For detailed data flow analysis, sample data structures, and storage mechanisms, see:** [**03-Kafka-Streams-Data-Flow-Analysis.md**](./03-Kafka-Streams-Data-Flow-Analysis.md)
+
 ## 📊 Visual Overview
 
 ### Kafka Streams Architecture
@@ -657,24 +659,24 @@ graph TB
 ```mermaid
 timeline
     title Stream Windowing Types
-    
-    section Tumbling Windows
-        00:00-00:05 : Window 1
-        00:05-00:10 : Window 2
-        00:10-00:15 : Window 3
-        00:15-00:20 : Window 4
-    
-    section Hopping Windows
-        00:00-00:05 : Window 1
-        00:02-00:07 : Window 2
-        00:04-00:09 : Window 3
-        00:06-00:11 : Window 4
-    
-    section Session Windows
-        00:00-00:03 : Session 1 (User A)
-        00:05-00:08 : Session 2 (User A)
-        00:01-00:06 : Session 1 (User B)
-        00:10-00:12 : Session 3 (User A)
+
+    Tumbling Windows:
+        Window 1 : 00:00 : 00:05
+        Window 2 : 00:05 : 00:10
+        Window 3 : 00:10 : 00:15
+        Window 4 : 00:15 : 00:20
+
+    Hopping Windows:
+        Window 1 : 00:00 : 00:05
+        Window 2 : 00:02 : 00:07
+        Window 3 : 00:04 : 00:09
+        Window 4 : 00:06 : 00:11
+
+    Session Windows:
+        Session 1 (User A) : 00:00 : 00:03
+        Session 2 (User A) : 00:05 : 00:08
+        Session 1 (User B) : 00:01 : 00:06
+        Session 3 (User A) : 00:10 : 00:12
 ```
 
 ### 1. Stream Processing Semantics
