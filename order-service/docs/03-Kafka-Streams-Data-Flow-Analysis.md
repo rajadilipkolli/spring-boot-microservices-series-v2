@@ -584,7 +584,7 @@ graph TB
     subgraph "🔄 Join Processing"
         JOIN_WINDOW[10-Second Join Window]
         CORRELATION[Key-based Correlation<br/>orderId: 12345]
-        BUSINESS_LOGIC[Business Logic<br/>OrderManageService.confirm()]
+        BUSINESS_LOGIC[Business Logic<br/>OrderManageService.confirm]
     end
     
     subgraph "📤 Output Data"
