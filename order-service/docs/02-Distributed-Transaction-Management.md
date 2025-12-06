@@ -127,6 +127,8 @@ KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
 - **Exactly-Once:** Guarantees no duplicate processing
 - **Stateful Join:** Maintains state for partial responses
 
+> 📖 **Detailed Explanation:** For in-depth understanding of exactly-once semantics and window behavior, see [Saga Confusion Points Clarified](./06-Saga-Confusion-Points-Clarified.md)
+
 ### 3. Business Decision Logic
 **File:** `OrderManageService.java` (Lines 25-50)
 ```java
