@@ -135,6 +135,8 @@ org:
       datasource: default
 ```
 
+> 📚 **Deep Dive:** For detailed visual explanations of `worker-count`, horizontal scaling, and database-backed queues, see [JobRunr Scalability Explained](./JobRunr-Scalability-Explained.md)
+
 ### 4. Integration with Kafka Producer
 **File:** `KafkaOrderProducer.java` (Reused from main flow)
 ```java
@@ -436,5 +438,7 @@ public void skipRetryDueToDownstream(Exception ex) {
 - **Queue Capacity:** Unlimited (database-backed)
 - **Concurrent Jobs:** Multiple job types can run simultaneously
 - **Horizontal Scaling:** Multiple instances can share job processing
+
+> 📚 **Visual Guide:** See [JobRunr Scalability Explained](./JobRunr-Scalability-Explained.md) for detailed diagrams and performance comparisons
 
 This background processing system provides reliable order recovery with comprehensive monitoring and flexible retry strategies.
