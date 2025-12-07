@@ -16,7 +16,7 @@ import org.springframework.web.service.annotation.HttpExchange;
 // @HttpExchange("lb://catalog-service/")
 // @HttpExchange("http://localhost:18080/catalog-service")
 @HttpExchange(
-        url = "${application.catalog-service-url}",
+        // url = "${application.catalog-service-url}",
         accept = MediaType.APPLICATION_JSON_VALUE,
         contentType = MediaType.APPLICATION_JSON_VALUE)
 @Loggable

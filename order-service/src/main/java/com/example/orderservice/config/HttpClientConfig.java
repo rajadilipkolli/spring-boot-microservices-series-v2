@@ -22,6 +22,9 @@ class HttpClientConfig {
             ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
         return groups ->
                 groups.forEachClient(
-                        (_, builder) -> builder.observationRegistry(observationRegistry).build());
+                        (_, builder) ->
+                                builder.baseUrl(applicationProperties.catalogServiceUrl())
+                                        .observationRegistry(observationRegistry)
+                                        .build());
     }
 }
