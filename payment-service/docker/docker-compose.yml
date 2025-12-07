@@ -2,7 +2,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -32,7 +32,7 @@ services:
       - payment-network
 
   kafka:
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka-native:4.1.1
     ports:
       - "9092:9092"
     healthcheck:
@@ -62,7 +62,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -103,7 +103,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:

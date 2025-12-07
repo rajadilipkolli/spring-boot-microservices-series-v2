@@ -29,17 +29,20 @@ import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
-import org.springframework.kafka.support.serializer.JsonSerde;
+import org.springframework.kafka.support.serializer.JacksonJsonSerde;
 import org.springframework.util.Assert;
 
 @Configuration(proxyBeanMethods = false)
@@ -55,6 +58,7 @@ class KafkaStreamsConfig {
     }
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     StreamsBuilderFactoryBeanConfigurer configurer(
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
         return factoryBean -> {
@@ -70,7 +74,7 @@ class KafkaStreamsConfig {
 
             // Enhanced error handling
             streamsConfiguration.put(
-                    StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                    StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                     RecoveringDeserializationExceptionHandler.class);
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
@@ -104,7 +108,7 @@ class KafkaStreamsConfig {
 
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-        Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
 
         // Log important config information for troubleshooting
         log.info(
@@ -132,7 +136,7 @@ class KafkaStreamsConfig {
     KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
         KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
                 streamsBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(

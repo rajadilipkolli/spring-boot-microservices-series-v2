@@ -9,8 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -37,26 +40,44 @@ public class KeycloakRegistrationService {
     }
 
     private String getAdminToken() {
-        var formData = String.format(
-                "grant_type=password&client_id=%s&client_secret=%s&username=%s&password=%s",
-                keycloakProperties.getAdminClientId(),
-                keycloakProperties.getAdminClientSecret(),
-                keycloakProperties.getAdminUsername(),
-                keycloakProperties.getAdminPassword());
+        try {
 
-        var response = restClient
-                .post()
-                .uri(keycloakUrl + "/realms/master/protocol/openid-connect/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(formData)
-                .retrieve()
-                .body(Map.class);
+            var formData = new LinkedMultiValueMap<String, String>();
+            formData.add("grant_type", "password");
+            formData.add("client_id", keycloakProperties.getAdminClientId());
+            if (StringUtils.hasText(keycloakProperties.getAdminClientSecret())) {
+                formData.add("client_secret", keycloakProperties.getAdminClientSecret());
+            }
+            formData.add("username", keycloakProperties.getAdminUsername());
+            formData.add("password", keycloakProperties.getAdminPassword());
 
-        if (response == null || !response.containsKey("access_token")) {
-            throw new RuntimeException("Failed to obtain access token");
+            var response = restClient
+                    .post()
+                    .uri(keycloakUrl + "/realms/master/protocol/openid-connect/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            if (response == null) {
+                logger.error("Failed to obtain access token from Keycloak.");
+                throw new KeyCloakException("Failed to obtain access token from Keycloak");
+            }
+
+            if (!response.containsKey("access_token")) {
+                logger.error(
+                        "Failed to obtain access token from Keycloak. error={}, error_description={}",
+                        response.get("error"),
+                        response.get("error_description"));
+                throw new KeyCloakException("500: [Failed to obtain access token from Keycloak]");
+            }
+            return (String) response.get("access_token");
+        } catch (KeyCloakException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error obtaining admin token from Keycloak", e);
+            throw new KeyCloakException("500: [Failed to authenticate with Keycloak]", e);
         }
-
-        return (String) response.get("access_token");
     }
 
     public void registerUser(RegistrationRequest request) {
@@ -91,9 +112,11 @@ public class KeycloakRegistrationService {
                     .retrieve()
                     .toBodilessEntity();
             logger.info("User {} registered successfully", request.username());
+        } catch (KeyCloakException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Error registering user: {}", request.username(), e);
-            throw new KeyCloakException(e.getMessage());
+            throw new KeyCloakException("Keycloak registration failed", e);
         }
     }
 }

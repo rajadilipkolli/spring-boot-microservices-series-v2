@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -16,26 +16,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
-import org.testcontainers.junit.jupiter.Container;
-import org.wiremock.integrations.testcontainers.WireMockContainer;
 
 class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(RateLimiterConfigurationIntegrationTest.class);
-
-    @Container
-    static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:latest-alpine")
-                    .withMappingFromResource(
-                            "order-by-id",
-                            RateLimiterConfigurationIntegrationTest.class,
-                            RateLimiterConfigurationIntegrationTest.class.getSimpleName()
-                                    + "/mocks-config.json");
-
-    static {
-        wireMockServer.start();
-    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -50,13 +35,16 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
                 () -> "RequestRateLimiter");
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.redis-rate-limiter.replenishRate",
-                () -> "10");
+                () -> "1");
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.redis-rate-limiter.burstCapacity",
-                () -> "20");
+                () -> "1");
+        registry.add(
+                "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.redis-rate-limiter.requestedTokens",
+                () -> "1");
     }
 
-    @RepeatedTest(value = 60)
+    @RepeatedTest(value = 5)
     void orderService() {
         EntityExchangeResult<String> r =
                 webTestClient

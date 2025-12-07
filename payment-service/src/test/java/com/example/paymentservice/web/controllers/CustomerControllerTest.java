@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
@@ -23,7 +23,6 @@ import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +30,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
@@ -39,8 +38,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.zalando.problem.jackson.ProblemModule;
-import org.zalando.problem.violations.ConstraintViolationProblemModule;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = CustomerController.class)
 @ActiveProfiles(PROFILE_TEST)
@@ -79,9 +77,6 @@ class CustomerControllerTest {
                                 .setAddress("Third Address")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0));
-
-        objectMapper.registerModule(new ProblemModule());
-        objectMapper.registerModule(new ConstraintViolationProblemModule());
     }
 
     @Test
@@ -153,7 +148,9 @@ class CustomerControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Customer Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
@@ -171,7 +168,9 @@ class CustomerControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Customer Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -218,7 +217,7 @@ class CustomerControllerTest {
                     .andExpect(
                             jsonPath(
                                     "$.type",
-                                    is("https://zalando.github.io/problem/constraint-violation")))
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.violations", hasSize(3)))
@@ -284,7 +283,9 @@ class CustomerControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Customer Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));
@@ -324,7 +325,9 @@ class CustomerControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Customer Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(jsonPath("$.detail").value("Customer with Id '1' not found"));

@@ -21,10 +21,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 class ProductController {
 
     private static final Logger log = LoggerFactory.getLogger(ProductController.class);
-    private final CatalogServiceClient catalogService;
+    private final CatalogServiceClient catalogServiceClient;
 
-    ProductController(CatalogServiceClient catalogService) {
-        this.catalogService = catalogService;
+    ProductController(CatalogServiceClient catalogServiceClient) {
+        this.catalogServiceClient = catalogServiceClient;
     }
 
     @GetMapping
@@ -44,7 +44,7 @@ class ProductController {
     ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
         log.info("Creating new product: {}", productRequest);
         try {
-            return catalogService.createProduct(productRequest);
+            return catalogServiceClient.createProduct(productRequest);
         } catch (Exception e) {
             log.error("Error creating product: {}", e.getMessage());
             throw new InvalidRequestException("Failed to create product: " + e.getMessage());
@@ -56,7 +56,7 @@ class ProductController {
     PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page, Model model) {
         log.info("Fetching products for page: {}", page);
         try {
-            return catalogService.getProducts(page);
+            return catalogServiceClient.getProducts(page);
         } catch (Exception e) {
             log.error("Error fetching products: {}", e.getMessage());
             throw new InvalidRequestException("Failed to fetch products: " + e.getMessage());

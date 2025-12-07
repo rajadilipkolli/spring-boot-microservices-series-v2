@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0-M2</version>
+        <version>4.0.0</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -17,11 +17,11 @@
     <description>Centralized Configuration Server</description>
 
     <properties>
-        <java.version>21</java.version>
-        <spring-cloud.version>2025.1.0-M1</spring-cloud.version>
-        <spotless.version>2.46.1</spotless.version>
+        <java.version>25</java.version>
+        <spring-cloud.version>2025.1.0</spring-cloud.version>
+        <spotless.version>3.1.0</spotless.version>
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>5.2.0.4988</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.5.0.6356</sonar-maven-plugin.version>
         <CI_DOCKER_PASSWORD />
         <CI_DOCKER_USERNAME />
     </properties>

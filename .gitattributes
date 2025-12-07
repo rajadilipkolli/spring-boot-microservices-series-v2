@@ -1,3 +1,35 @@
+# Auto-detect text files and normalize
+* text=auto
+
+# Force LF for shell scripts and common config/source files
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.properties text eol=lf
+*.xml text eol=lf
+*.java text eol=lf
+*.gradle text eol=lf
+pom.xml text eol=lf
+*.md text eol=lf
+Dockerfile text eol=lf
+deployment/** text eol=lf
+
+# Keep Windows script files in CRLF form (helpful for PowerShell/Batch authors)
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Treat common binary files as binary to avoid EOL conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.jar binary
+*.war binary
+*.zip binary
+*.gz binary
+
+# Ensure the attributes file itself uses LF
+.gitattributes text eol=lf
 *.xml text eol=lf
 *.yaml text eol=lf
 *.properties text eol=lf

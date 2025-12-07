@@ -1,12 +1,13 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import java.net.URI;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -18,8 +19,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -55,6 +58,7 @@ class GlobalExceptionHandler {
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.BAD_REQUEST, "Invalid request content.");
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
         addCorrelationId(problemDetail, request);
@@ -68,6 +72,7 @@ class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         var violations =
                 ex.getConstraintViolations().stream()
@@ -86,6 +91,32 @@ class GlobalExceptionHandler {
                                         Comparator.nullsLast(String::compareTo)))
                         .toList();
         problemDetail.setProperty("violations", violations);
+        addCorrelationId(problemDetail, request);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetail> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        log.warn("Bad request: {}", ex.getMessage());
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request format");
+        problemDetail.setTitle("Bad Request");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/bad-request"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        problemDetail.setProperty("error", "Invalid JSON format");
+        addCorrelationId(problemDetail, request);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ProblemDetail> handleMissingParameter(
+            MissingServletRequestParameterException ex, WebRequest request) {
+        log.warn("Missing parameter: {}", ex.getMessage());
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setTitle("Bad Request");
+        problemDetail.setProperty("timestamp", Instant.now());
         addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }

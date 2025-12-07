@@ -9,11 +9,11 @@ package com.example.catalogservice.kafka;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 @Loggable
@@ -21,13 +21,13 @@ public class CatalogKafkaProducer {
 
     private final StreamBridge streamBridge;
     private final ProductMapper productMapper;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     public CatalogKafkaProducer(
-            StreamBridge streamBridge, ProductMapper productMapper, ObjectMapper objectMapper) {
+            StreamBridge streamBridge, ProductMapper productMapper, JsonMapper jsonMapper) {
         this.streamBridge = streamBridge;
         this.productMapper = productMapper;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     public Mono<Boolean> send(ProductRequest productRequest) {
@@ -35,16 +35,7 @@ public class CatalogKafkaProducer {
                 .map(productMapper::toProductDto)
                 .flatMap(
                         productDto ->
-                                Mono.fromCallable(
-                                                () -> {
-                                                    try {
-                                                        return objectMapper.writeValueAsString(
-                                                                productDto);
-                                                    } catch (Exception e) {
-                                                        throw new RuntimeException(
-                                                                "Error serializing product", e);
-                                                    }
-                                                })
+                                Mono.fromCallable(() -> jsonMapper.writeValueAsString(productDto))
                                         .subscribeOn(Schedulers.boundedElastic()))
                 .flatMap(
                         productDtoAsString ->

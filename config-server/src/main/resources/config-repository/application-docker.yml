@@ -1,0 +1,11 @@
+
+spring:
+  datasource:
+    password: secret
+    url: jdbc:postgresql://postgresql:5432/appdb
+    username: appuser
+  kafka.bootstrap-servers:
+  - kafka:29092
+  threads.virtual.enabled: true
+eureka.client.service-url.defaultZone: http://naming-server:8761/eureka/
+management.tracing.export.zipkin.endpoint: http://zipkin-server:9411/api/v2/spans

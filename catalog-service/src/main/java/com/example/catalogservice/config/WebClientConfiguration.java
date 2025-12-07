@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -15,13 +15,12 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
+import org.springframework.cloud.client.loadbalancer.reactive.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
@@ -55,7 +54,6 @@ public class WebClientConfiguration {
                                     httpHeaders.add(
                                             HttpHeaders.CONTENT_TYPE,
                                             MediaType.APPLICATION_JSON_VALUE);
-                                    httpHeaders.add(HttpHeaders.ACCEPT_ENCODING, "gzip");
                                 })
                         .filter(logRequestDetails())
                         .filter(logResponseDetails())
@@ -80,28 +78,18 @@ public class WebClientConfiguration {
     }
 
     private ExchangeFilterFunction logResponseDetails() {
+        // Avoid attempting to eagerly read the body as a String. Reading
+        // binary/gzipped payloads here can corrupt the reactive pipeline
+        // and lead to JSON parsing errors downstream. Instead, log status
+        // and headers only and return the original response unchanged.
         return ExchangeFilterFunction.ofResponseProcessor(
-                clientResponse ->
-                        clientResponse
-                                .bodyToMono(String.class)
-                                .defaultIfEmpty("")
-                                .flatMap(
-                                        responseBody -> {
-                                            final ClientResponse orgClientResponse =
-                                                    clientResponse
-                                                            .mutate()
-                                                            .body(responseBody)
-                                                            .build();
-                                            log.info(
-                                                    "Received response from API with body [{}] status [{}] with response headers [{}]",
-                                                    responseBody,
-                                                    clientResponse.statusCode(),
-                                                    clientResponse
-                                                            .headers()
-                                                            .asHttpHeaders()
-                                                            .toSingleValueMap());
-                                            return just(orgClientResponse);
-                                        }));
+                clientResponse -> {
+                    log.info(
+                            "Received response from API with status [{}] and response headers [{}]",
+                            clientResponse.statusCode(),
+                            clientResponse.headers().asHttpHeaders().toSingleValueMap());
+                    return just(clientResponse);
+                });
     }
 
     private HttpClient clientConnectorConfig() {

@@ -1,8 +1,8 @@
-version: '3.8'
+name: catalog-service
 services:
 
   postgresql:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: postgresql
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:
@@ -36,7 +36,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka-native:4.1.1
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: broker
     ports:
@@ -72,7 +72,7 @@ services:
   config-server:
     container_name: config-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -83,11 +83,13 @@ services:
       - catalog-network
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: docker-dev
+      SPRING_SECURITY_USER_PASSWORD: docker-pass
 
   naming-server:
     container_name: naming-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -99,8 +101,8 @@ services:
     depends_on:
       - config-server
     environment:
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
   
   inventory-service:
@@ -123,8 +125,8 @@ services:
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
 networks:

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
@@ -23,6 +23,11 @@ class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectBody(String.class)
                 .consumeWith(
-                        res -> assertThat(res.getResponseBody()).isEqualTo("{\"status\":\"UP\"}"));
+                        res ->
+                                assertThat(res.getResponseBody())
+                                        .isEqualToIgnoringWhitespace(
+                                                """
+                                {"groups":["liveness","readiness"],"status":"UP"}
+                                """));
     }
 }

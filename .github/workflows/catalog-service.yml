@@ -22,9 +22,9 @@ jobs:
         working-directory: "catalog-service"
     strategy:
       matrix:
-        java: ["21"]
+        java: ["25"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
