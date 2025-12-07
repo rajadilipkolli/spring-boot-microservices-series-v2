@@ -105,7 +105,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void testGetOrders() throws Exception {
         PagedResult<OrderResponse> pagedResult =
-                new PagedResult<>(Collections.emptyList(), 0, 1, 0, true, true, false, false);
+                new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders")) // Removed query params from mock URL
                 .willReturn(aResponse()
