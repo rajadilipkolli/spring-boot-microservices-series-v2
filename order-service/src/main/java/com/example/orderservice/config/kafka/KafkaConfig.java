@@ -16,6 +16,10 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
+/**
+ * Kafka configuration class focused on topic creation. Rest of the producer configuration is
+ * handled through application.yml
+ */
 @Configuration(proxyBeanMethods = false)
 @EnableKafka
 class KafkaConfig {
@@ -36,6 +40,6 @@ class KafkaConfig {
                 TopicBuilder.name(ORDERS_TOPIC).build(),
                 TopicBuilder.name(PAYMENT_ORDERS_TOPIC).build(),
                 TopicBuilder.name(STOCK_ORDERS_TOPIC).build(),
-                TopicBuilder.name(RECOVER_DLQ_TOPIC).build());
+                TopicBuilder.name(RECOVER_DLQ_TOPIC).partitions(1).replicas(1).build());
     }
 }
