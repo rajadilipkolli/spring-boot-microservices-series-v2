@@ -16,15 +16,15 @@ import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
