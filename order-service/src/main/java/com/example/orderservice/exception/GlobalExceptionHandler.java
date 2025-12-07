@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -34,7 +36,7 @@ public class GlobalExceptionHandler {
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
     @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleOrderNotFound(
+    public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(
             OrderNotFoundException ex, WebRequest request) {
         log.warn("Order not found: {}", ex.getMessage());
 
@@ -52,7 +54,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ProductNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleProductNotFound(
+    public ResponseEntity<@NonNull ProblemDetail> handleProductNotFound(
             ProductNotFoundException ex, WebRequest request) {
         log.warn("Product not found: {}", ex.getMessage());
 
@@ -69,7 +71,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleEntityNotFound(
+    public ResponseEntity<@NonNull ProblemDetail> handleEntityNotFound(
             EntityNotFoundException ex, WebRequest request) {
         log.warn("Entity not found: {}", ex.getMessage());
 
@@ -84,7 +86,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationErrors(
+    public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {
         log.warn("Validation failed: {}", ex.getMessage());
 
@@ -115,7 +117,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConstraintViolation(
+    public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
             ConstraintViolationException ex, WebRequest request) {
         log.warn("Constraint violation: {}", ex.getMessage());
 
@@ -130,7 +132,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ProblemDetail> handleIllegalArgument(
+    public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
             IllegalArgumentException ex, WebRequest request) {
         log.warn("Illegal argument: {}", ex.getMessage());
 
@@ -145,7 +147,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
         log.error("Unexpected error occurred: ", ex);
 
         ProblemDetail problemDetail =

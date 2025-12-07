@@ -41,8 +41,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
