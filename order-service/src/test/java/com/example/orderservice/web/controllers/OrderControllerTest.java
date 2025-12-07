@@ -6,6 +6,7 @@
 
 package com.example.orderservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
@@ -35,7 +36,6 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
@@ -53,6 +53,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = OrderController.class)
 @ActiveProfiles(AppConstants.PROFILE_TEST)
@@ -194,6 +195,33 @@ class OrderControllerTest {
         }
 
         @Test
+        void shouldRespectDelayParameter() throws Exception {
+            Long orderId = 1L;
+            LocalDateTime testDateTime = LocalDateTime.now();
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "",
+                            getDeliveryAddress(),
+                            testDateTime,
+                            BigDecimal.TEN,
+                            new ArrayList<>());
+            given(orderService.findOrderByIdAsResponse(orderId))
+                    .willReturn(Optional.of(orderResponse));
+
+            long startTime = System.nanoTime();
+            mockMvc.perform(get("/api/orders/{id}", orderId).param("delay", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.orderId", is(1)));
+            long duration = (System.nanoTime() - startTime) / 1_000_000; // Convert to milliseconds
+
+            assertThat(duration).isGreaterThanOrEqualTo(900);
+            verify(orderService).findOrderByIdAsResponse(orderId);
+        }
+
+        @Test
         void shouldReturn404WhenFetchingNonExistingOrder() throws Exception {
             Long orderId = 1L;
             given(orderService.findOrderByIdAsResponse(orderId)).willReturn(Optional.empty());
@@ -204,7 +232,9 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -299,7 +329,10 @@ class OrderControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -335,7 +368,10 @@ class OrderControllerTest {
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -433,7 +469,9 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -471,7 +509,9 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(

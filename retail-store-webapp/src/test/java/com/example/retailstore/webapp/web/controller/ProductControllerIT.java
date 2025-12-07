@@ -36,6 +36,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                                   "productCode": "TESTPROD001",
                                   "productName": "Test Product",
                                   "description": "A beautiful product",
+                                  "price": 10.0,
                                   "inStock": true
                                 }
                               ],
@@ -83,17 +84,14 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     assertThat(productMap.get("productCode")).isEqualTo("TESTPROD001");
                     assertThat(productMap.get("productName")).isEqualTo("Test Product");
                     assertThat(productMap.get("description")).isEqualTo("A beautiful product");
-                    assertThat(productMap.get("imageUrl")).isNull(); // Not in stub, so defaults to null for String
-                    // For numeric types like double, if not present in JSON, they might default to 0.0 or cause an
-                    // error
-                    // depending on Jackson's deserialization configuration. Assuming 0.0 for price.
-                    assertThat(productMap.get("price")).isEqualTo(0.0);
+                    assertThat(productMap.get("imageUrl")).isNull();
+                    assertThat(productMap.get("price")).isEqualTo(10.0);
                     assertThat(productMap.get("inStock")).isEqualTo(true);
                 });
     }
 
     @Test
-    void testCreateProduct() throws Exception {
+    void testCreateProduct() {
         // Example stub for catalog service
         gatewayServiceMock.stubFor(
                 post(urlEqualTo("/catalog-service/api/catalog"))
@@ -121,7 +119,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 .with(csrf())
                 .with(user("admin").roles("ADMIN")) // Authenticate as admin
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productRequest)) // Serialize request body to JSON
+                .content(jsonMapper.writeValueAsString(productRequest)) // Serialize request body to JSON
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)

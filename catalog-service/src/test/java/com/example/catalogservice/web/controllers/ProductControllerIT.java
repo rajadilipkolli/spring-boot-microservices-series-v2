@@ -16,15 +16,19 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.repositories.ProductRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.*;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -49,14 +53,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @AfterAll
-    static void tearDown() throws IOException {
-        mockWebServer.shutdown();
+    static void tearDown() {
+        if (mockWebServer != null) {
+            mockWebServer.close();
+        }
     }
 
     @DynamicPropertySource
     static void backendProperties(DynamicPropertyRegistry registry) {
         registry.add(
                 "application.inventory-service-url", () -> mockWebServer.url("/").url().toString());
+        registry.add("spring.webflux.base-path", () -> "");
     }
 
     @BeforeEach
@@ -92,12 +99,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldFetchAllProducts() throws JsonProcessingException {
+    void shouldFetchAllProducts() {
 
         transitionToClosedState("getInventoryByProductCodes");
 
         mockBackendEndpoint(
-                200, objectMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
+                200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
 
         webTestClient
                 .get()
@@ -206,7 +213,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldFindProductById() throws JsonProcessingException {
+    void shouldFindProductById() {
 
         transitionToClosedState("default");
 
@@ -214,8 +221,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Long productId = product.getId();
         mockBackendEndpoint(
                 200,
-                objectMapper.writeValueAsString(
-                        new InventoryResponse(product.getProductCode(), 0)));
+                jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 0)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -241,7 +247,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldRetryOnErrorAndFetchSuccessResponse() throws JsonProcessingException {
+    void shouldRetryOnErrorAndFetchSuccessResponse() {
 
         int requestCount = mockWebServer.getRequestCount();
         mockBackendEndpoint(
@@ -259,8 +265,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Long productId = product.getId();
         mockBackendEndpoint(
                 200,
-                objectMapper.writeValueAsString(
-                        new InventoryResponse(product.getProductCode(), 10)));
+                jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 10)));
 
         webTestClient
                 .get()
@@ -288,7 +293,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldRetryOnErrorAndBreakCircuitResponse() throws JsonProcessingException {
+    void shouldRetryOnErrorAndBreakCircuitResponse() {
 
         int requestCount = mockWebServer.getRequestCount();
 
@@ -314,8 +319,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         Long productId = product.getId();
         mockBackendEndpoint(
                 200,
-                objectMapper.writeValueAsString(
-                        new InventoryResponse(product.getProductCode(), 10)));
+                jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 10)));
 
         webTestClient
                 .get()
@@ -332,7 +336,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldRetryAndFailAndBreakCloseTheCircuitTest() throws JsonProcessingException {
+    void shouldRetryAndFailAndBreakCloseTheCircuitTest() {
 
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
@@ -351,8 +355,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(
                 200,
-                objectMapper.writeValueAsString(
-                        new InventoryResponse(product.getProductCode(), 10)));
+                jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 10)));
         webTestClient
                 .get()
                 .uri("/api/catalog/id/{id}", productId)
@@ -453,13 +456,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
-    void shouldFindProductByProductCodeWithStock() throws JsonProcessingException {
+    void shouldFindProductByProductCodeWithStock() {
         Product product = savedProductList.getFirst();
 
         mockBackendEndpoint(
                 200,
-                objectMapper.writeValueAsString(
-                        new InventoryResponse(product.getProductCode(), 10)));
+                jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 10)));
         webTestClient
                 .get()
                 .uri(
@@ -602,13 +604,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .expectBody()
                 .jsonPath("$.type")
-                .isEqualTo("about:blank")
+                .isEqualTo("https://api.microservices.com/errors/validation-error")
                 .jsonPath("$.title")
                 .isEqualTo("Validation Error")
                 .jsonPath("$.status")
                 .isEqualTo(400)
                 .jsonPath("$.detail")
-                .isEqualTo("Invalid request content")
+                .isEqualTo("Invalid request content.")
                 .jsonPath("$.instance")
                 .isEqualTo("/api/catalog");
     }
@@ -649,6 +651,41 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     }
 
     @Test
+    void shouldReturn400WhenCreateProductWithMissingFields() {
+        ProductRequest invalidRequest = new ProductRequest(null, "", null, null, null);
+
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(invalidRequest)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/validation-error")
+                .jsonPath("$.title")
+                .isEqualTo("Validation Error")
+                .jsonPath("$.status")
+                .isEqualTo(400)
+                .jsonPath("$.detail")
+                .isEqualTo("Invalid request content.")
+                .jsonPath("$.instance")
+                .isEqualTo("/api/catalog")
+                .jsonPath("$.timestamp")
+                .isNotEmpty()
+                .jsonPath("$.violations")
+                .isArray()
+                .jsonPath("$.violations[0].field")
+                .exists()
+                .jsonPath("$.violations[0].message")
+                .exists();
+    }
+
+    @Test
     void shouldDeleteProduct() {
         Product product = savedProductList.getFirst();
 
@@ -677,10 +714,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @DisplayName("product search")
     class ProductSearch {
         @Test
-        void shouldSearchProductsByTerm() throws JsonProcessingException {
+        void shouldSearchProductsByTerm() {
             mockBackendEndpoint(
-                    200,
-                    objectMapper.writeValueAsString(List.of(new InventoryResponse("P001", 5))));
+                    200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P001", 5))));
 
             webTestClient
                     .get()
@@ -704,11 +740,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         }
 
         @Test
-        void shouldSearchProductsByPriceRange() throws JsonProcessingException {
+        void shouldSearchProductsByPriceRange() {
             // Setup mock inventory response
             mockBackendEndpoint(
                     200,
-                    objectMapper.writeValueAsString(
+                    jsonMapper.writeValueAsString(
                             List.of(
                                     new InventoryResponse("P002", 3),
                                     new InventoryResponse("P003", 0))));
@@ -734,11 +770,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         }
 
         @Test
-        void shouldSearchByTermAndPriceRange() throws JsonProcessingException {
+        void shouldSearchByTermAndPriceRange() {
             // Setup mock inventory response
             mockBackendEndpoint(
                     200,
-                    objectMapper.writeValueAsString(
+                    jsonMapper.writeValueAsString(
                             List.of(
                                     new InventoryResponse("P001", 5),
                                     new InventoryResponse("P002", 3),
@@ -765,10 +801,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         }
 
         @Test
-        void shouldReturnAllProductsWhenNoSearchCriteriaProvided() throws JsonProcessingException {
+        void shouldReturnAllProductsWhenNoSearchCriteriaProvided() {
             mockBackendEndpoint(
                     200,
-                    objectMapper.writeValueAsString(
+                    jsonMapper.writeValueAsString(
                             List.of(
                                     new InventoryResponse("P001", 5),
                                     new InventoryResponse("P002", 3),
@@ -795,8 +831,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         }
 
         @Test
-        void shouldReturnEmptyResultsWhenNoProductsMatchSearch() throws JsonProcessingException {
-            mockBackendEndpoint(200, objectMapper.writeValueAsString(List.of()));
+        void shouldReturnEmptyResultsWhenNoProductsMatchSearch() {
+            mockBackendEndpoint(200, jsonMapper.writeValueAsString(List.of()));
 
             webTestClient
                     .get()
@@ -819,10 +855,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     private void mockBackendEndpoint(int responseCode, String body) {
         MockResponse mockResponse =
-                new MockResponse()
-                        .setResponseCode(responseCode)
-                        .setBody(body)
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                new MockResponse.Builder()
+                        .code(responseCode)
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .body(body)
+                        .build();
         mockWebServer.enqueue(mockResponse);
     }
 }

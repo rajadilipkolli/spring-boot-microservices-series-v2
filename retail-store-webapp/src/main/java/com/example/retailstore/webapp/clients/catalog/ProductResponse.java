@@ -13,5 +13,5 @@ public record ProductResponse(
         String productName,
         String description,
         String imageUrl,
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") double price,
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") Double price,
         boolean inStock) {}

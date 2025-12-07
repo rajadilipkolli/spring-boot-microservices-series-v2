@@ -1,0 +1,20 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/get"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "args": { "Param": "MyValue" },
+          "headers": { "Myheader": "MyURI" }
+        }
+      }
+    }
+  ]
+}

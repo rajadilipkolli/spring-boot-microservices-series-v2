@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.catalogservice.exception;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -30,7 +31,19 @@ public class GlobalExceptionHandler {
         log.warn("Validation error", ex);
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
-        problemDetail.setDetail("Invalid request content");
+        problemDetail.setDetail("Invalid request content.");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        // Build violations list
+        var violations =
+                ex.getFieldErrors().stream()
+                        .map(
+                                fieldError ->
+                                        Map.of(
+                                                "field", fieldError.getField(),
+                                                "message", fieldError.getDefaultMessage()))
+                        .toList();
+        problemDetail.setProperty("violations", violations);
         return Mono.just(problemDetail);
     }
 

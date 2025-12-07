@@ -1,33 +1,33 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway.config;
 
 import com.redis.testcontainers.RedisContainer;
+import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
     @Bean
-    @ServiceConnection(name = "openzipkin/zipkin")
-    GenericContainer<?> zipkinContainer() {
-        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411)
-                .withReuse(true);
+    @ServiceConnection
+    LgtmStackContainer lgtmContainer() {
+        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.11.17"))
+                .withStartupTimeout(Duration.ofMinutes(2));
     }
 
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.0.2-alpine"))
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.4.0-alpine"))
                 .withReuse(true);
     }
 }

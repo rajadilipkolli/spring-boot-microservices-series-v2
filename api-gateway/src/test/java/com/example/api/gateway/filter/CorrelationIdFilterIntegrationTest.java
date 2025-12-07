@@ -13,31 +13,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.wiremock.integrations.testcontainers.WireMockContainer;
 
-class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
-
-    @Container
-    static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:latest-alpine")
-                    .withMappingFromResource(
-                            "correlation-test",
-                            CorrelationIdFilterIntegrationTest.class,
-                            CorrelationIdFilterIntegrationTest.class.getSimpleName()
-                                    + "/correlation-test.json");
-
-    static {
-        wireMockServer.start();
-    }
+public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("app.cors.pathPattern", () -> "/api/**");
         registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "correlation-test");
         registry.add(
-                "spring.cloud.gateway.server.webflux.routes[0].uri",
-                () -> wireMockServer.getBaseUrl());
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
                 () -> "Path=/api/correlation/**");

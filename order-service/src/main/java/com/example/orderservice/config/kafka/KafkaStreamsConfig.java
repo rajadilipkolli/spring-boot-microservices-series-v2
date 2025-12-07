@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -14,9 +14,7 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -31,17 +29,20 @@ import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
-import org.springframework.kafka.support.serializer.JsonSerde;
+import org.springframework.kafka.support.serializer.JacksonJsonSerde;
 import org.springframework.util.Assert;
 
 @Configuration(proxyBeanMethods = false)
@@ -57,35 +58,43 @@ class KafkaStreamsConfig {
     }
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     StreamsBuilderFactoryBeanConfigurer configurer(
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
         return factoryBean -> {
             factoryBean.setStateListener(
                     (newState, oldState) ->
-                            log.info("State transition from {} to {} ", oldState, newState));
+                            log.info(
+                                    "Kafka Streams state transition from {} to {}",
+                                    oldState,
+                                    newState));
+
             Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
             Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
+
+            // Enhanced error handling
             streamsConfiguration.put(
-                    StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                    StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                     RecoveringDeserializationExceptionHandler.class);
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
                     deadLetterPublishingRecoverer);
 
-            // Enhanced logging and configuration
-            log.info(
-                    "Configuring Kafka Streams with properties (sensitive values redacted): {}",
-                    streamsConfiguration.entrySet().stream()
-                            .filter(e -> !e.getKey().toString().toLowerCase().contains("password"))
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> "******")));
-
-            // Set more aggressive timeouts for stream processing
+            // Performance and reliability optimizations
             streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
             streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
-
-            // Ensure clean shutdown and startup
             streamsConfiguration.put(
                     StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
+
+            // Memory management
+            streamsConfiguration.put(
+                    StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
+            streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "2");
+
+            // Enhanced monitoring
+            streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");
+
+            log.info("Kafka Streams configured with enhanced error handling and monitoring");
         };
     }
 
@@ -99,7 +108,7 @@ class KafkaStreamsConfig {
 
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-        Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
 
         // Log important config information for troubleshooting
         log.info(
@@ -127,7 +136,7 @@ class KafkaStreamsConfig {
     KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
         KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
         KStream<Long, OrderDto> stream =
                 streamsBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
         return stream.toTable(

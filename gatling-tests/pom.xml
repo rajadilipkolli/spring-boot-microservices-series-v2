@@ -12,9 +12,9 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <gatling.version>3.14.3</gatling.version>
-        <gatling-plugin.version>4.19.2</gatling-plugin.version>
-        <spotless.version>2.45.0</spotless.version>
+        <gatling.version>3.14.9</gatling.version>
+        <gatling-plugin.version>4.20.8</gatling-plugin.version>
+        <spotless.version>3.1.0</spotless.version>
     </properties>
 
     <dependencies>
@@ -35,7 +35,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.27.0</version>
+                            <version>1.28.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                     </java>

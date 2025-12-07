@@ -1,11 +1,12 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2022 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +16,9 @@ import org.springframework.context.annotation.Configuration;
 class ApiGatewayConfiguration {
 
     @Bean
-    RouteLocator gatewayRouter(RouteLocatorBuilder builder) {
+    RouteLocator gatewayRouter(
+            RouteLocatorBuilder builder,
+            @Value("${app.gateway.httpbin:http://httpbin.org:80}") String httpbinUri) {
         return builder.routes()
                 .route(
                         routeSpec ->
@@ -28,7 +31,7 @@ class ApiGatewayConfiguration {
                                                                         "MyHeader", "MyURI")
                                                                 .addRequestParameter(
                                                                         "Param", "MyValue"))
-                                        .uri("http://httpbin.org:80"))
+                                        .uri(httpbinUri))
                 .route(
                         p ->
                                 p.path("/ORDER-SERVICE-new/**")

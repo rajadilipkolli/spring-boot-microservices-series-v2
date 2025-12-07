@@ -2,7 +2,7 @@ name: spring-boot-microservices-series-v2
 services:
   postgresql:
     container_name: postgresql
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -22,7 +22,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.3-alpine'
+    image: 'redis:8.4.0-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '6379:6379'
@@ -59,7 +59,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka-native:4.1.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -96,7 +96,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3.1
+    image: quay.io/keycloak/keycloak:26.4.7
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -107,6 +107,11 @@ services:
       # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # ✅ THESE FIX THE REDIRECT ISSUE
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_URL=http://localhost:9191
+      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
+      - KC_PROXY=edge
       # Database configuration for PostgreSQL
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
@@ -139,7 +144,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -159,7 +164,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -254,6 +259,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   order-service:
@@ -280,6 +286,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   payment-service:
@@ -306,6 +313,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   retailstore-webapp:
@@ -317,6 +325,8 @@ services:
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411
+      - KEYCLOAK_ADMINUSERNAME=admin
+      - KEYCLOAK_ADMINPASSWORD=admin1234
     ports:
       - "8080:8080"
     networks:

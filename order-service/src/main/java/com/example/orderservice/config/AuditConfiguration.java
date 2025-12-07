@@ -7,6 +7,7 @@
 package com.example.orderservice.config;
 
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
@@ -17,7 +18,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 class AuditConfiguration {
 
     @Bean
-    AuditorAware<String> auditorProvider() {
+    AuditorAware<@NonNull String> auditorProvider() {
         return () -> Optional.of("AppUser");
     }
 }

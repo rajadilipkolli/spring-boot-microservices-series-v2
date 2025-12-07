@@ -3,7 +3,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -45,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.0.3-alpine'
+    image: 'redis:8.4.0-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -61,7 +61,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka-native:4.1.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3.1
+    image: quay.io/keycloak/keycloak:26.4.7
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -147,18 +147,12 @@ services:
       resources:
         limits:
           memory: 2gb
-    healthcheck:
-      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
-      interval: 30s
-      timeout: 20s
-      retries: 5
-      start_period: 120s
     networks:
       - microservice-network
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -181,7 +175,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -309,6 +303,7 @@ services:
           memory: 1050m
     ports:
       - "18282:18282"
+      - "28282:28282"
     networks:
       - microservice-network
     depends_on:
@@ -368,13 +363,15 @@ services:
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin1234
     ports:
       - "8080:8080"
     networks:
       - microservice-network
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       naming-server:
         condition: service_started
       api-gateway:
@@ -390,7 +387,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.0.2
+    image: grafana/grafana:12.3.0
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -419,7 +416,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.5.2
+    image: grafana/loki:3.6.2
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -435,7 +432,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.5.2
+    image: grafana/promtail:3.6.2
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -455,7 +452,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.4.2
+    image: prom/prometheus:v3.8.0
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -476,7 +473,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.8.1
+    image: grafana/tempo:2.9.0
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -496,7 +493,7 @@ services:
       start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.28.1
+    image: prom/alertmanager:v0.29.0
     container_name: alertmanager
     ports:
       - "9093:9093"

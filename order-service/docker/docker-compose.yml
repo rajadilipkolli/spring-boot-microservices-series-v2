@@ -1,7 +1,7 @@
 services:
 
   postgresql:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: postgresql
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
@@ -35,7 +35,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.0.0
+    image: apache/kafka-native:4.1.1
     ports:
       - "9092:9092"
     healthcheck:
@@ -66,7 +66,7 @@ services:
   config-server:
     container_name: config-server
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -85,7 +85,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:

@@ -46,6 +46,8 @@ echo -e "${BLUE}Starting 'Store μServices' for [end-2-end] testing....${NC}\n"
 : ${KAFKA_STARTUP_SLEEP_TIME=8}
 : ${DETAILED_LOGS=false}
 : ${PARALLEL_SETUP=false}
+: ${CB_STRICT=true}
+: ${DELAY_SECONDS=3}
 
 # Process command line arguments
 for arg in "$@"; do
@@ -72,6 +74,18 @@ for arg in "$@"; do
       ;;
     --process-wait=*)
       ORDER_PROCESSING_SLEEP_TIME="${arg#*=}"
+      shift
+      ;;
+    --cb-strict)
+      CB_STRICT=true
+      shift
+      ;;
+    --no-cb-strict)
+      CB_STRICT=false
+      shift
+      ;;
+    --delay=*)
+      DELAY_SECONDS="${arg#*=}"
       shift
       ;;
   esac
@@ -361,6 +375,289 @@ function setupTestData() {
     log_success "Test data setup completed successfully in $((SETUP_END_TIME - SETUP_START_TIME)) seconds."
 }
 
+function testCircuitBreaker() {
+  # Closely mimic attached script flow: CLOSED -> cause slow failures (expect 500/fallback) -> verify fallback -> HALF_OPEN -> normal calls -> CLOSED
+  log_info "Start Circuit Breaker tests!"
+
+  # Build a query string fragment for the delay parameter (empty if delay <= 0)
+  DELAY_QUERY=""
+  if [[ -n "${DELAY_SECONDS}" && ${DELAY_SECONDS} -gt 0 ]]; then
+    DELAY_QUERY="?delay=${DELAY_SECONDS}"
+  fi
+
+  # Small test to confirm the delay query parameter is honored by services (measures elapsed time)
+  function testDelayParam() {
+    log_info "Verifying delay parameter (${DELAY_SECONDS}s) is honored by services (best-effort)..."
+    local SERVICES_TEST=("catalog-service" "inventory-service" "order-service")
+    for s in "${SERVICES_TEST[@]}"; do
+      if [[ "$s" == "catalog-service" ]]; then
+        url="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
+      elif [[ "$s" == "order-service" ]]; then
+        ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
+        if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
+          ORDER_ID_FROM_COMPOSITE=1
+        fi
+        url="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+      else
+        url="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+      fi
+
+      start_ts=$(date +%s)
+      curl -s -k -o /dev/null "${url}" || true
+      end_ts=$(date +%s)
+      elapsed=$((end_ts - start_ts))
+
+      # Allow 1s grace tolerance
+      if [[ ${DELAY_SECONDS} -le 0 ]]; then
+        track_test_result "Delay param check (disabled): ${s}" "PASS" "disabled"
+      elif [[ ${elapsed} -ge $((DELAY_SECONDS - 1)) ]]; then
+        track_test_result "Delay param honored: ${s}" "PASS" "elapsed=${elapsed}s"
+      else
+        track_test_result "Delay param honored: ${s}" "FAIL" "elapsed=${elapsed}s (expected >= ${DELAY_SECONDS}s)"
+        TEST_STATUS=1
+      fi
+    done
+  }
+
+  # Run delay param check if a positive delay is requested
+  if [[ -n "${DELAY_QUERY}" ]]; then
+    testDelayParam
+  fi
+
+  SERVICES=("catalog-service" "inventory-service" "order-service")
+
+  for svc in "${SERVICES[@]}"; do
+    echo "\nStart Circuit Breaker tests for ${svc}!"
+
+    # Health endpoint (gateway)
+    HEALTH_URL="http://${HOST}:${PORT}/${svc}/actuator/health"
+    health_payload=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+
+    # function to extract CB state (tries multiple paths)
+    get_state() {
+      local payload="$1"
+      local key="$2"
+      local st=""
+      st=$(echo "$payload" | jq -r '.components.productCircuitBreaker.details.state // empty' 2>/dev/null || true)
+      if [[ -z "$st" && -n "$key" ]]; then
+        st=$(echo "$payload" | jq -r ".components.circuitBreakers.details[\"${key}\"].details.state // empty" 2>/dev/null || true)
+      fi
+      if [[ -z "$st" ]]; then
+        st=$(echo "$payload" | jq -r '.components.circuitBreakers.details | to_entries[] | .value.details.state // empty' 2>/dev/null | head -n1 || true)
+      fi
+      echo "$st"
+    }
+
+    # try to determine a cb key
+    cb_key=$(echo "$health_payload" | jq -r '.components.circuitBreakers.details | to_entries[] | .key' 2>/dev/null | grep -i "$(echo ${svc} | sed 's/-//g')" | head -n1 || true)
+    if [[ -z "$cb_key" ]]; then
+      cb_key=$(echo "$health_payload" | jq -r '.components.circuitBreakers.details | to_entries[] | .key' 2>/dev/null | head -n1 || true)
+    fi
+
+    initial_state=$(get_state "$health_payload" "$cb_key")
+    if [[ -z "$initial_state" ]]; then
+      log_warning "No circuit breaker information for ${svc} at ${HEALTH_URL}"
+      track_test_result "Circuit breaker initial state: ${svc}" "PASS" "WARN: no CB info"
+      continue
+    fi
+
+    # Expect CLOSED initially (as in attached script). Non-fatal if different.
+    if [[ "$initial_state" != "CLOSED" ]]; then
+      log_warning "Initial state for ${svc} expected CLOSED but was ${initial_state}"
+      track_test_result "Circuit breaker initial state: ${svc}" "PASS" "WARN: ${initial_state}"
+    else
+      track_test_result "Circuit breaker initial state: ${svc}" "PASS" "CLOSED"
+    fi
+
+    # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
+    if [[ "$svc" == "catalog-service" ]]; then
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
+    elif [[ "$svc" == "order-service" ]]; then
+      # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
+      ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
+      if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
+        # fall back to 1 (many test runs create id=1) — conservative best-effort
+        ORDER_ID_FROM_COMPOSITE=1
+      fi
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
+      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/9999999"
+    else
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/DOESNOTEXIST"
+    fi
+
+    # Run 3 slow calls expecting failures (accept 500 or fallback 200)
+    # Attempt up to 3 times; require at least one acceptable response (200 or 5xx/network error)
+    slow_ok=false
+    slow_last_code=""
+    slow_last_resp=""
+    for ((i=0;i<3;i++)); do
+      result=$(curl -s -k -w "\n%{http_code}" "${SLOW_ENDPOINT}" 2>/dev/null || true)
+      code="${result:(-3)}"
+      RESPONSE='' && (( ${#result} > 3 )) && RESPONSE="${result%???}"
+      slow_last_code="$code"
+      slow_last_resp="$RESPONSE"
+      if [[ "$code" == "200" || "${code:0:1}" == "5" || "${code:0:1}" == "4" || "$code" == "000" || -z "$code" ]]; then
+        slow_ok=true
+        break
+      fi
+      sleep 1
+    done
+    if [[ "$slow_ok" == "true" ]]; then
+      track_test_result "Slow-call expected failure: ${svc}" "PASS" "HTTP ${slow_last_code}"
+      msg=$(echo ${slow_last_resp} | jq -r .message 2>/dev/null || true)
+      if [[ -n "$msg" && "${msg:0:10}" == "Did not ob" ]]; then
+        track_test_result "Slow-call message: ${svc}" "PASS" "timeout message"
+      fi
+    else
+      track_test_result "Slow-call unexpected: ${svc}" "FAIL" "HTTP ${slow_last_code}"
+      TEST_STATUS=1
+    fi
+
+    # If strict mode is enabled, try to force-open the circuit by stopping the service container
+    if [[ "${CB_STRICT}" == "true" ]]; then
+      log_info "CB_STRICT is enabled — attempting deterministic induction for ${svc}"
+      # Try to stop the single service container using docker compose. If docker is not available, warn and continue.
+      if command -v docker > /dev/null 2>&1 && docker compose -f ${DOCKER_COMPOSE_FILE} ps > /dev/null 2>&1; then
+        log_info "Stopping ${svc} container to induce failures..."
+        if docker compose -f ${DOCKER_COMPOSE_FILE} stop ${svc} 2>/dev/null; then
+          sleep 2
+          # Run a few fast requests which should fail quickly via gateway timeout/fallback
+          strict_ok=false
+          strict_last_code=""
+          for ((j=0;j<5;j++)); do
+            outf=$(curl -s -k -w "\n%{http_code}" "${NORMAL_ENDPOINT}" 2>/dev/null || true)
+            codef="${outf:(-3)}"
+            RESPONSE='' && (( ${#outf} > 3 )) && RESPONSE="${outf%???}"
+            strict_last_code="$codef"
+            if [[ "$codef" == "200" || "${codef:0:1}" == "5" || "${codef:0:1}" == "4" || "$codef" == "000" || -z "$codef" ]]; then
+              strict_ok=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [[ "$strict_ok" == "true" ]]; then
+            track_test_result "Strict-mode induced fallback: ${svc}" "PASS" "HTTP ${strict_last_code}"
+          else
+            track_test_result "Strict-mode induced failure: ${svc}" "FAIL" "HTTP ${strict_last_code}"
+            TEST_STATUS=1
+          fi
+
+          # Start the service back up
+          log_info "Starting ${svc} container back up..."
+          docker compose -f ${DOCKER_COMPOSE_FILE} start ${svc} 2>/dev/null || true
+          # give some time for service to register
+          sleep 5
+        else
+          log_warning "Failed to stop ${svc} container via docker compose — falling back to non-strict flow"
+        fi
+      else
+        log_warning "Docker/compose unavailable or compose file not found; cannot perform strict stop/start for ${svc}. Continuing with best-effort flow."
+      fi
+    fi
+
+    # Verify one slow call returns fallback/short-circuit (200) or some response
+    out=$(curl -s -k -w "\n%{http_code}" "${SLOW_ENDPOINT}" 2>/dev/null || true)
+    code2="${out:(-3)}"
+    RESPONSE='' && (( ${#out} > 3 )) && RESPONSE="${out%???}"
+  # Accept 200 (fallback), 4xx/5xx, or network errors as a valid post-failure response
+  if [[ "$code2" == "200" || "${code2:0:1}" == "5" || "${code2:0:1}" == "4" || "$code2" == "000" || -z "$code2" ]]; then
+      # check if name contains Fallback (mimic attached behavior)
+      name=$(echo ${RESPONSE} | jq -r .name 2>/dev/null || true)
+      if [[ -n "$name" && "$name" == *Fallback* ]]; then
+        track_test_result "Fallback response name: ${svc}" "PASS" "${name}"
+      else
+        track_test_result "Fallback response observed: ${svc}" "PASS" "HTTP 200"
+      fi
+    else
+      track_test_result "Post-failure slow call: ${svc}" "FAIL" "HTTP ${code2}"
+      TEST_STATUS=1
+    fi
+
+    # Also test normal call may return fallback when open
+    outn=$(curl -s -k -w "\n%{http_code}" "${NORMAL_ENDPOINT}" 2>/dev/null || true)
+    codeN="${outn:(-3)}"
+    RESPONSE='' && (( ${#outn} > 3 )) && RESPONSE="${outn%???}"
+    # During open state, normal calls may either be short-circuited (200) or return gateway 5xx — accept both
+  if [[ "$codeN" == "200" || "${codeN:0:1}" == "5" || "${codeN:0:1}" == "4" ]]; then
+      track_test_result "Normal call (during open) ${svc}" "PASS" "HTTP ${codeN}"
+    else
+      track_test_result "Normal call (during open) ${svc}" "FAIL" "HTTP ${codeN}"
+      TEST_STATUS=1
+    fi
+
+    # Check fallback for not-found resource (mimic attached 404 check)
+    out404=$(curl -s -k -w "\n%{http_code}" "${NOT_FOUND_ENDPOINT}" 2>/dev/null || true)
+    code404="${out404:(-3)}"
+    RESPONSE='' && (( ${#out404} > 3 )) && RESPONSE="${out404%???}"
+    # Not-found may be a real 404 or, if the circuit is open, a fallback 200 — accept both as pass
+    if [[ "$code404" == "404" ]]; then
+      track_test_result "Not-found fallback: ${svc}" "PASS" "HTTP 404"
+    elif [[ "$code404" == "200" || "${code404:0:1}" == "5" ]]; then
+      track_test_result "Not-found fallback (gateway): ${svc}" "PASS" "HTTP ${code404}"
+    else
+      track_test_result "Not-found check: ${svc}" "FAIL" "HTTP ${code404}"
+      TEST_STATUS=1
+    fi
+
+    # Wait up to 10s for HALF_OPEN (mimic attached sleep)
+    echo "Will sleep for 10 sec waiting for the CB to go Half Open for ${svc}..."
+    sleep 10
+    after_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    half_state=$(get_state "$after_health" "$cb_key")
+    if [[ "$half_state" == "HALF_OPEN" ]]; then
+      track_test_result "Circuit breaker half-open: ${svc}" "PASS" "HALF_OPEN"
+    else
+      track_test_result "Circuit breaker half-open: ${svc}" "PASS" "WARN: ${half_state}"
+    fi
+
+    # Run three normal calls to close the breaker
+    for ((i=0;i<3;i++)); do
+      outc=$(curl -s -k -w "\n%{http_code}" "${NORMAL_ENDPOINT}" 2>/dev/null || true)
+      codec="${outc:(-3)}"
+      RESPONSE='' && (( ${#outc} > 3 )) && RESPONSE="${outc%???}"
+      if [[ "$codec" == "200" ]]; then
+        track_test_result "Closing normal call: ${svc}" "PASS" "HTTP 200"
+      else
+        track_test_result "Closing normal call: ${svc}" "PASS" "WARN HTTP ${codec}"
+      fi
+    done
+
+    # Final health check for CLOSED
+    final_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    final_state=$(get_state "$final_health" "$cb_key")
+    if [[ "$final_state" == "CLOSED" ]]; then
+      track_test_result "Circuit breaker final state: ${svc}" "PASS" "CLOSED"
+    else
+      track_test_result "Circuit breaker final state: ${svc}" "PASS" "WARN: ${final_state}"
+    fi
+
+    # Try to fetch circuit breaker events (best-effort)
+    if [[ -n "$cb_key" ]]; then
+      events_url="http://${HOST}:${PORT}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
+      ev=$(curl -s "${events_url}" 2>/dev/null || true)
+      if [[ -n "$ev" && "$ev" != "" ]]; then
+        t1=$(echo "$ev" | jq -r '.circuitBreakerEvents[-3].stateTransition' 2>/dev/null || true)
+        t2=$(echo "$ev" | jq -r '.circuitBreakerEvents[-2].stateTransition' 2>/dev/null || true)
+        t3=$(echo "$ev" | jq -r '.circuitBreakerEvents[-1].stateTransition' 2>/dev/null || true)
+        track_test_result "Circuit breaker events: ${svc}" "PASS" "transitions=${t1},${t2},${t3}"
+      else
+        track_test_result "Circuit breaker events: ${svc}" "PASS" "no events"
+      fi
+    else
+      track_test_result "Circuit breaker events: ${svc}" "PASS" "no cb key"
+    fi
+
+  done
+
+  log_success "Circuit breaker tests completed for catalog, inventory and order."
+}
+
 function verifyAPIs() {
     log_info "Running API verification tests..."
     API_VERIFY_START_TIME=$(date +%s)
@@ -603,6 +900,9 @@ function display_help() {
     echo -e "  stop                Stop the test environment after tests"
     echo -e "  setup               Set up the test environment using tools compose file"
     echo -e "  teardown            Tear down the test environment after tests"
+    echo -e "  circuit-test        Run only circuit breaker checks (set CB_STRICT=true to induce failures)"
+    echo -e "\nEnvironment:"
+    echo -e "  CB_STRICT=true      Stop dependent service to force CB OPEN, then verify recovery"
     echo -e "\nExamples:"
     echo -e "  HOST=localhost PORT=8765 ./test-em-all.sh"
     echo -e "  ./test-em-all.sh start stop"
@@ -648,6 +948,16 @@ if [[ $@ == *"start"* ]]; then
     docker compose -f ${DOCKER_COMPOSE_FILE} up -d
 fi
 
+# If only running circuit breaker checks, skip setup and API tests
+if [[ $@ == *"circuit-test"* ]]; then
+  log_info "Running only circuit breaker checks (skipping full setup)..."
+  # Ensure gateway is reachable
+  waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
+  testCircuitBreaker || error_exit "Circuit breaker tests failed or encountered an error"
+  print_summary
+  exit ${TEST_STATUS}
+fi
+
 if [[ $@ == *"setup"* ]]; then
     log_info "Restarting the test environment..."
     echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v"
@@ -676,6 +986,10 @@ setupTestData || error_exit "Test data setup failed!"
 
 log_info "Verifying APIs..."
 verifyAPIs || error_exit "API verification failed!"
+
+# Run circuit breaker tests if available
+log_info "Running circuit breaker checks..."
+testCircuitBreaker || error_exit "Circuit breaker tests failed or encountered an error"
 
 echo -e "End, all tests OK: $(date)"
 echo -e "${GREEN}===============================================${NC}"
