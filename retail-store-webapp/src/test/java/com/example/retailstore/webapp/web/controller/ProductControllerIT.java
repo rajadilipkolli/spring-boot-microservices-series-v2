@@ -36,6 +36,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                                   "productCode": "TESTPROD001",
                                   "productName": "Test Product",
                                   "description": "A beautiful product",
+                                  "price": 10.0,
                                   "inStock": true
                                 }
                               ],
@@ -84,7 +85,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     assertThat(productMap.get("productName")).isEqualTo("Test Product");
                     assertThat(productMap.get("description")).isEqualTo("A beautiful product");
                     assertThat(productMap.get("imageUrl")).isNull();
-                    assertThat(productMap.get("price")).isEqualTo(0.0);
+                    assertThat(productMap.get("price")).isEqualTo(10.0);
                     assertThat(productMap.get("inStock")).isEqualTo(true);
                 });
     }
