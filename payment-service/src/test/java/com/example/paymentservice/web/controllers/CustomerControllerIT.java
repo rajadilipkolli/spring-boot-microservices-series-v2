@@ -134,7 +134,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
@@ -159,7 +159,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
@@ -178,7 +178,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customer)))
+                                .content(jsonMapper.writeValueAsString(customer)))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
@@ -214,7 +214,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value(customerId))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
@@ -239,7 +239,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
