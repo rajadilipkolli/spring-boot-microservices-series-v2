@@ -7,7 +7,6 @@ import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import tools.jackson.core.JacksonException;
 
 class RegistrationControllerIT extends AbstractIntegrationTest {
 
@@ -29,7 +29,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
 
     @Test
-    void testRegister() throws JsonProcessingException {
+    void testRegister() throws JacksonException {
 
         RegistrationRequest registrationRequest = new RegistrationRequest(
                 TEST_USERNAME,
@@ -48,16 +48,16 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
 
         // Arrange: Stub for CustomerServiceClient call via gatewayServiceMock
         gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
-                .withRequestBody(equalToJson(objectMapper.writeValueAsString(expectedCustomerRequest)))
+                .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest)))
                 .willReturn(aResponse()
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(expectedCustomerResponse))));
+                        .withBody(jsonMapper.writeValueAsString(expectedCustomerResponse))));
 
         // Act
         mockMvcTester
                 .post()
                 .uri("/api/register")
-                .content(objectMapper.writeValueAsString(registrationRequest))
+                .content(jsonMapper.writeValueAsString(registrationRequest))
                 .contentType(MediaType.APPLICATION_JSON)
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
@@ -82,7 +82,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         gatewayServiceMock.verify(
                 1, // Ensure it was called exactly once
                 postRequestedFor(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
-                        .withRequestBody(equalToJson(objectMapper.writeValueAsString(expectedCustomerRequest))));
+                        .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest))));
     }
 
     @AfterEach
@@ -114,7 +114,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .post()
                 .uri("/api/register")
-                .content(objectMapper.writeValueAsString(request))
+                .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
@@ -139,7 +139,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .post()
                 .uri("/api/register")
-                .content(objectMapper.writeValueAsString(request))
+                .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
@@ -164,7 +164,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .post()
                 .uri("/api/register")
-                .content(objectMapper.writeValueAsString(request))
+                .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
