@@ -20,18 +20,22 @@ import org.springframework.web.service.registry.ImportHttpServices;
 class HttpClientConfig {
 
     @Bean
-    RestClientHttpServiceGroupConfigurer groupConfigurer(ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
-        return groups -> groups.forEachClient((_, builder) -> builder
-                .defaultHeaders(
-                        httpHeaders -> {
-                            httpHeaders.add(
-                                    HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
-                            httpHeaders.add(
-                                    HttpHeaders.CONTENT_TYPE,
-                                    MediaType.APPLICATION_JSON_VALUE);
-                        })
-                .baseUrl(applicationProperties.catalogServiceUrl())
-                .observationRegistry(observationRegistry)
-                .build());
+    RestClientHttpServiceGroupConfigurer groupConfigurer(
+            ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
+        return groups ->
+                groups.forEachClient(
+                        (_, builder) ->
+                                builder.defaultHeaders(
+                                                httpHeaders -> {
+                                                    httpHeaders.add(
+                                                            HttpHeaders.ACCEPT,
+                                                            MediaType.APPLICATION_JSON_VALUE);
+                                                    httpHeaders.add(
+                                                            HttpHeaders.CONTENT_TYPE,
+                                                            MediaType.APPLICATION_JSON_VALUE);
+                                                })
+                                        .baseUrl(applicationProperties.catalogServiceUrl())
+                                        .observationRegistry(observationRegistry)
+                                        .build());
     }
 }

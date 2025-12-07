@@ -7,7 +7,6 @@
 package com.example.orderservice.config;
 
 import java.util.Optional;
-
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +146,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<@NonNull ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleGenericException(
+            Exception ex, WebRequest request) {
         log.error("Unexpected error occurred: ", ex);
 
         ProblemDetail problemDetail =
