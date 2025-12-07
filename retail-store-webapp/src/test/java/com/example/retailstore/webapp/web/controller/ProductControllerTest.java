@@ -100,7 +100,7 @@ class ProductControllerTest {
     @Test
     @WithMockUser
     void products_shouldReturnPagedResult() throws Exception {
-        when(catalogServiceClient.getProducts(anyInt())).thenReturn(pagedResult);
+        when(catalogServiceClient.getProducts(anyInt())).thenReturn(objectMapper.writeValueAsString(pagedResult));
 
         mockMvc.perform(get("/api/products").with(csrf()))
                 .andExpect(status().isOk())
@@ -123,7 +123,7 @@ class ProductControllerTest {
     @Test
     @WithMockUser
     void products_shouldReturnPagedResultForSpecifiedPage() throws Exception {
-        when(catalogServiceClient.getProducts(2)).thenReturn(pagedResult);
+        when(catalogServiceClient.getProducts(2)).thenReturn(objectMapper.writeValueAsString(pagedResult));
 
         mockMvc.perform(get("/api/products").param("page", "2").with(csrf()))
                 .andExpect(status().isOk())
