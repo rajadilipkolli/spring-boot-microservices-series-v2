@@ -41,13 +41,14 @@ class Initializer implements CommandLineRunner {
                             .setAmountReserved(0);
             customerList.add(customer);
         }
-        Customer retailCustomer = new Customer()
-                .setName("retail")
-                .setEmail("retail@gmail.com")
-                .setAddress(faker.address().fullAddress())
-                .setPhone(faker.phoneNumber().phoneNumber())
-                .setAmountAvailable(secureRandom.nextInt(1000))
-                .setAmountReserved(0);
+        Customer retailCustomer =
+                new Customer()
+                        .setName("retail")
+                        .setEmail("retail@gmail.com")
+                        .setAddress(faker.address().fullAddress())
+                        .setPhone(faker.phoneNumber().phoneNumber())
+                        .setAmountAvailable(secureRandom.nextInt(1000))
+                        .setAmountReserved(0);
         customerList.add(retailCustomer);
         // Using BatchMode to save Entities
         this.customerRepository.saveAll(customerList);
