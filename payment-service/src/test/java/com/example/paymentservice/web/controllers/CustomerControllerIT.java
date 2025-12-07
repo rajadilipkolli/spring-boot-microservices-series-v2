@@ -97,7 +97,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(
@@ -187,7 +187,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath(
                                 "$.type",
-                                is("https://zalando.github.io/problem/constraint-violation")))
+                                is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(4)))
@@ -245,7 +245,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(
@@ -278,7 +278,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(
