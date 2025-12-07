@@ -303,6 +303,7 @@ services:
           memory: 1050m
     ports:
       - "18282:18282"
+      - "28282:28282"
     networks:
       - microservice-network
     depends_on:

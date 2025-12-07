@@ -35,7 +35,15 @@ public class KafkaListenerConfig {
     }
 
     // retries if processing of event fails
-    @RetryableTopic(
+    // @RetryableTopic annotation configures retry behavior for failed message processing:
+// - Initial retry delay of 1000ms that doubles with each attempt (multiplier=2.0)
+// - Excludes CustomerNotFoundException from retries since it's a permanent failure
+// - Creates retry topics with indexed suffixes (e.g. topic-retry-0, topic-retry-1)
+// @KafkaListener configures the Kafka consumer:
+// - Consumer group ID "payment" for load balancing across instances
+// - Listens to the ORDERS_TOPIC defined in AppConstants
+// - Unique listener ID "orders" to identify this consumer
+@RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
             exclude = {CustomerNotFoundException.class},
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
@@ -53,9 +61,19 @@ public class KafkaListenerConfig {
         }
     }
 
-    @DltHandler
+    /**
+ * Dead Letter Topic (DLT) handler for processing messages that have failed processing after all retries
+ * This method is invoked when a message reaches the dead letter topic after exhausting retry attempts
+ * 
+ * @param orderDto The failed order message that reached the DLT
+ * @param topic The Kafka topic from which the dead letter message was received
+ */
+@DltHandler
     public void dlt(OrderDto orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        // Log the failed message and topic at error level for monitoring/debugging
         log.error("Received dead-letter message : {} from topic {}", orderDto, topic);
+        // Decrement latch to signal that a DLT message was processed
+        // This is useful for testing and monitoring DLT handling
         deadLetterLatch.countDown();
     }
 

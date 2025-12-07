@@ -1,0 +1,96 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-sample-products
+      author: system
+      context: sample-data
+      changes:
+        - insert:
+            tableName: products
+            columns:
+              - column:
+                  name: product_code
+                  value: "P001"
+              - column:
+                  name: product_name
+                  value: "iPhone 15 Pro"
+              - column:
+                  name: description
+                  value: "Latest Apple iPhone with advanced camera system"
+              - column:
+                  name: price
+                  value: 999.99
+              - column:
+                  name: image_url
+                  value: "https://example.com/images/iphone15pro.jpg"
+        - insert:
+            tableName: products
+            columns:
+              - column:
+                  name: product_code
+                  value: "P002"
+              - column:
+                  name: product_name
+                  value: "Samsung Galaxy S24"
+              - column:
+                  name: description
+                  value: "Premium Android smartphone with AI features"
+              - column:
+                  name: price
+                  value: 899.99
+              - column:
+                  name: image_url
+                  value: "https://example.com/images/galaxy-s24.jpg"
+        - insert:
+            tableName: products
+            columns:
+              - column:
+                  name: product_code
+                  value: "P003"
+              - column:
+                  name: product_name
+                  value: "MacBook Air M3"
+              - column:
+                  name: description
+                  value: "Ultra-thin laptop with M3 chip"
+              - column:
+                  name: price
+                  value: 1299.99
+              - column:
+                  name: image_url
+                  value: "https://example.com/images/macbook-air-m3.jpg"
+        - insert:
+            tableName: products
+            columns:
+              - column:
+                  name: product_code
+                  value: "P004"
+              - column:
+                  name: product_name
+                  value: "Dell XPS 13"
+              - column:
+                  name: description
+                  value: "Premium Windows ultrabook"
+              - column:
+                  name: price
+                  value: 1099.99
+              - column:
+                  name: image_url
+                  value: "https://example.com/images/dell-xps13.jpg"
+        - insert:
+            tableName: products
+            columns:
+              - column:
+                  name: product_code
+                  value: "P005"
+              - column:
+                  name: product_name
+                  value: "AirPods Pro"
+              - column:
+                  name: description
+                  value: "Wireless earbuds with active noise cancellation"
+              - column:
+                  name: price
+                  value: 249.99
+              - column:
+                  name: image_url
+                  value: "https://example.com/images/airpods-pro.jpg"
