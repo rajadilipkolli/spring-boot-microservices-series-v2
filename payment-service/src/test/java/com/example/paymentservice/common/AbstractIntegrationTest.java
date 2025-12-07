@@ -7,13 +7,13 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
@@ -25,7 +25,7 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected MockMvc mockMvc;
 
-    @Autowired protected ObjectMapper objectMapper;
+    @Autowired protected JsonMapper jsonMapper;
 
     @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
 
