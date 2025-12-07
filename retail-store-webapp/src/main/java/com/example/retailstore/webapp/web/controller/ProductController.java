@@ -62,9 +62,13 @@ class ProductController {
         log.info("Fetching products for page: {}", page);
         try {
             String json = catalogServiceClient.getProducts(page);
-            ObjectMapper mapper =
-                    objectMapper.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
-            return mapper.readValue(json, new TypeReference<PagedResult<ProductResponse>>() {});
+            boolean prev = objectMapper.isEnabled(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
+            objectMapper.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+            try {
+                return objectMapper.readValue(json, new TypeReference<PagedResult<ProductResponse>>() {});
+            } finally {
+                objectMapper.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, prev);
+            }
         } catch (Exception e) {
             log.error("Error fetching products: {}", e.getMessage());
             throw new InvalidRequestException("Failed to fetch products: " + e.getMessage());
