@@ -60,8 +60,9 @@ class ProductController {
     PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page, Model model) {
         log.info("Fetching products for page: {}", page);
         try {
-            String json = catalogServiceClient.getProducts(page);
-            return objectMapper.readValue(json, new TypeReference<PagedResult<ProductResponse>>() {});
+                String json = catalogServiceClient.getProducts(page);
+                ObjectMapper mapper = objectMapper.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+                return mapper.readValue(json, new TypeReference<PagedResult<ProductResponse>>() {});
         } catch (Exception e) {
             log.error("Error fetching products: {}", e.getMessage());
             throw new InvalidRequestException("Failed to fetch products: " + e.getMessage());
