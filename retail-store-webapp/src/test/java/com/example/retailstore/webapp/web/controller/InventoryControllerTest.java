@@ -1,6 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -115,10 +115,10 @@ class InventoryControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(result -> {
                     String location = result.getResponse().getHeader("Location");
-                    assertTrue(
-                            location != null
-                                    && (location.endsWith("/login") || location.contains("/oauth2/authorization/")),
-                            "Redirect location should be login page or oauth2 authorization endpoint");
+                    assertThat(location)
+                            .isNotNull()
+                            .satisfiesAnyOf(loc -> assertThat(loc).endsWith("/login"), loc -> assertThat(loc)
+                                    .contains("/oauth2/authorization/"));
                 });
     }
 
