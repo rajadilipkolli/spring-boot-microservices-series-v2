@@ -91,9 +91,10 @@ public class GlobalExceptionHandler {
 
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
+                        .filter(FieldError.class::isInstance)
+                        .map(FieldError.class::cast)
                         .map(
-                                objectError -> {
-                                    FieldError fieldError = (FieldError) objectError;
+                                fieldError -> {
                                     return new ApiValidationError(
                                             fieldError.getObjectName(),
                                             fieldError.getField(),

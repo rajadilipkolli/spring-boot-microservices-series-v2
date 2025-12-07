@@ -108,7 +108,7 @@ class KafkaStreamsConfig {
 
     @Bean
     KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-        Serde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
 
         // Log important config information for troubleshooting
         log.info(

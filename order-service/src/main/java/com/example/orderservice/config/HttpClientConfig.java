@@ -10,8 +10,6 @@ import com.example.orderservice.services.CatalogServiceProxy;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.support.RestClientHttpServiceGroupConfigurer;
 import org.springframework.web.service.registry.ImportHttpServices;
 
@@ -24,18 +22,6 @@ class HttpClientConfig {
             ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
         return groups ->
                 groups.forEachClient(
-                        (_, builder) ->
-                                builder.defaultHeaders(
-                                                httpHeaders -> {
-                                                    httpHeaders.add(
-                                                            HttpHeaders.ACCEPT,
-                                                            MediaType.APPLICATION_JSON_VALUE);
-                                                    httpHeaders.add(
-                                                            HttpHeaders.CONTENT_TYPE,
-                                                            MediaType.APPLICATION_JSON_VALUE);
-                                                })
-                                        .baseUrl(applicationProperties.catalogServiceUrl())
-                                        .observationRegistry(observationRegistry)
-                                        .build());
+                        (_, builder) -> builder.observationRegistry(observationRegistry).build());
     }
 }
