@@ -52,34 +52,34 @@ docker-compose -f docker-compose-tools.yml up -d
 ## 🎯 Service Endpoints
 
 ### 🏢 Core Application Services
-| Service | Port | URL | Description |
-|---------|------|-----|-------------|
-| **Retail Store WebApp** | 8080 | http://localhost:8080 | Customer-facing application |
-| **API Gateway** | 8765 | http://localhost:8765 | Single entry point for all APIs |
-| **Service Registry** | 8761 | http://localhost:8761 | Eureka service discovery |
-| **Config Server** | 8888 | http://localhost:8888 | Centralized configuration |
-| **Catalog Service** | 18080 | http://localhost:18080 | Product catalog management |
-| **Inventory Service** | 18081 | http://localhost:18081 | Stock level management |
-| **Order Service** | 18282 | http://localhost:18282 | Order processing |
-| **Payment Service** | 18085 | http://localhost:18085 | Payment processing |
+| Service                 | Port  | URL                    | Description                     |
+|-------------------------|-------|------------------------|---------------------------------|
+| **Retail Store WebApp** | 8080  | http://localhost:8080  | Customer-facing application     |
+| **API Gateway**         | 8765  | http://localhost:8765  | Single entry point for all APIs |
+| **Service Registry**    | 8761  | http://localhost:8761  | Eureka service discovery        |
+| **Config Server**       | 8888  | http://localhost:8888  | Centralized configuration       |
+| **Catalog Service**     | 18080 | http://localhost:18080 | Product catalog management      |
+| **Inventory Service**   | 18081 | http://localhost:18081 | Stock level management          |
+| **Order Service**       | 18282 | http://localhost:18282 | Order processing                |
+| **Payment Service**     | 18085 | http://localhost:18085 | Payment processing              |
 
 ### 📊 Observability Stack
-| Tool | Port | URL | Credentials | Purpose |
-|------|------|-----|-------------|---------|
-| **Grafana** | 3000 | http://localhost:3000 | user/password | Dashboards & visualization |
-| **Prometheus** | 9090 | http://localhost:9090 | - | Metrics collection |
-| **AlertManager** | 9093 | http://localhost:9093 | - | Alert routing |
-| **Loki** | 3100 | http://localhost:3100 | - | Log aggregation |
-| **Tempo** | 3110 | http://localhost:3110 | - | Distributed tracing |
-| **Zipkin UI** | 9411 | http://localhost:9411 | - | Trace visualization |
+| Tool             | Port | URL                   | Credentials   | Purpose                    |
+|------------------|------|-----------------------|---------------|----------------------------|
+| **Grafana**      | 3000 | http://localhost:3000 | user/password | Dashboards & visualization |
+| **Prometheus**   | 9090 | http://localhost:9090 | -             | Metrics collection         |
+| **AlertManager** | 9093 | http://localhost:9093 | -             | Alert routing              |
+| **Loki**         | 3100 | http://localhost:3100 | -             | Log aggregation            |
+| **Tempo**        | 3110 | http://localhost:3110 | -             | Distributed tracing        |
+| **Zipkin UI**    | 9411 | http://localhost:9411 | -             | Trace visualization        |
 
 ### 🗄️ Infrastructure Services
-| Service | Port | URL | Credentials |
-|---------|------|-----|-------------|
-| **PostgreSQL** | 5432 | localhost:5432 | retailuser/retailpass |
-| **Keycloak** | 9191 | http://localhost:9191 | admin/admin1234 |
-| **Kafka** | 9092 | localhost:9092 | - |
-| **Redis** | 6379 | localhost:6379 | - |
+| Service        | Port | URL                   | Credentials           |
+|----------------|------|-----------------------|-----------------------|
+| **PostgreSQL** | 5432 | localhost:5432        | retailuser/retailpass |
+| **Keycloak**   | 9191 | http://localhost:9191 | admin/admin1234       |
+| **Kafka**      | 9092 | localhost:9092        | -                     |
+| **Redis**      | 6379 | localhost:6379        | -                     |
 
 ## 📊 Grafana Dashboards
 
@@ -209,11 +209,11 @@ All services include health checks with:
 ## 💾 Resource Allocation
 
 ### 🖥️ Memory Limits
-| Service | Memory Limit | Purpose |
-|---------|-------------|---------|
-| Microservices | 1050MB | Standard Spring Boot apps |
-| Payment Service | 1400MB | Higher due to complex processing |
-| Retail WebApp | 700MB | Lightweight UI application |
+| Service         | Memory Limit | Purpose                          |
+|-----------------|--------------|----------------------------------|
+| Microservices   | 1050MB       | Standard Spring Boot apps        |
+| Payment Service | 1400MB       | Higher due to complex processing |
+| Retail WebApp   | 700MB        | Lightweight UI application       |
 
 ## 🛠️ Development Tips
 
@@ -270,10 +270,10 @@ docker system prune -a -f --volumes
 - [ ] Enable authentication for Prometheus/Grafana
 
 ### 🔑 Default Credentials
-| Service | Username | Password |
-|---------|----------|----------|
-| Grafana | user | password |
-| Keycloak | admin | admin1234 |
+| Service    | Username   | Password   |
+|------------|------------|------------|
+| Grafana    | user       | password   |
+| Keycloak   | admin      | admin1234  |
 | PostgreSQL | retailuser | retailpass |
 
 > ⚠️ **Warning**: Change all default credentials before production deployment

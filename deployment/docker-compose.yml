@@ -107,11 +107,6 @@ services:
       # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
-      # ✅ THESE FIX THE REDIRECT ISSUE
-      - KC_HOSTNAME=localhost
-      - KC_HOSTNAME_URL=http://localhost:9191
-      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
-      - KC_PROXY=edge
       # Database configuration for PostgreSQL
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
@@ -259,7 +254,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+#      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   order-service:
@@ -286,7 +281,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+#      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   payment-service:
@@ -313,7 +308,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+#      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   retailstore-webapp:
