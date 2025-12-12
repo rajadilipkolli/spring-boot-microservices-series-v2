@@ -22,7 +22,7 @@
         <java.version>25</java.version>
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <springdoc-openapi.version>3.0.0</springdoc-openapi.version>
-        <hibernate.version>7.1.11.Final</hibernate.version>
+        <hibernate.version>7.2.0.Final</hibernate.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
