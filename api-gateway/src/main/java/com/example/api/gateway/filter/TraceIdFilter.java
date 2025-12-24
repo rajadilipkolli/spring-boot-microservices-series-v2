@@ -23,6 +23,8 @@ import reactor.core.publisher.Mono;
 @Order(2)
 class TraceIdFilter implements WebFilter {
 
+    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+
     private final Tracer tracer;
 
     TraceIdFilter(@Nullable Tracer tracer) {
@@ -36,7 +38,7 @@ class TraceIdFilter implements WebFilter {
                         () -> {
                             String traceId = getTraceId();
                             if (traceId != null) {
-                                exchange.getResponse().getHeaders().add("X-Trace-Id", traceId);
+                                exchange.getResponse().getHeaders().add(TRACE_ID_HEADER, traceId);
                             }
                             return Mono.empty();
                         });

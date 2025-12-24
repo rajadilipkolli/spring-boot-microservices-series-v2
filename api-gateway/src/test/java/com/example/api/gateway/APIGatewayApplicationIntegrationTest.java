@@ -21,6 +21,8 @@ class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody(String.class)
                 .consumeWith(
                         res ->
