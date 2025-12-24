@@ -192,7 +192,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -225,7 +225,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -257,7 +257,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -287,7 +287,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -318,7 +318,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -348,7 +348,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://tempo:9411
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://tempo:4318
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
@@ -362,7 +362,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin1234
     ports:
@@ -479,7 +479,8 @@ services:
     command: -config.file /etc/tempo-config.yml
     ports:
       - "3110:3100" # Tempo
-      - "4317:4317" # OTLP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
       - "9411:9411" # Zipkin
     volumes:
       - ./config/tempo/tempo.yml:/etc/tempo-config.yml

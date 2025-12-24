@@ -71,7 +71,6 @@ docker-compose -f docker-compose-tools.yml up -d
 | **AlertManager** | 9093 | http://localhost:9093 | -             | Alert routing              |
 | **Loki**         | 3100 | http://localhost:3100 | -             | Log aggregation            |
 | **Tempo**        | 3110 | http://localhost:3110 | -             | Distributed tracing        |
-| **Zipkin UI**    | 9411 | http://localhost:9411 | -             | Trace visualization        |
 
 ### 🗄️ Infrastructure Services
 | Service        | Port | URL                   | Credentials           |

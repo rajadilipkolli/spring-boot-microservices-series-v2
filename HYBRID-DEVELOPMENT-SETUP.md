@@ -23,7 +23,7 @@ This guide documents the hybrid development approach for running the Spring Boot
 │  ├── 🔴 Redis (localhost:6379)                             │
 │  ├── 📡 Kafka (localhost:9092)                             │
 │  ├── 🔐 Keycloak (localhost:9191)                          │
-│  ├── 🔍 Zipkin (localhost:9411)                            │
+│  ├── 🔍 LGTM (localhost:3000)                            │
 │  ├── 📁 Config Server (localhost:8888)                     │
 │  ├── 🏢 Service Registry (localhost:8761)                  │
 │  ├── 🌐 API Gateway (localhost:8765)                       │

@@ -44,6 +44,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody(String.class)
                 .consumeWith(
                         result -> {
@@ -60,6 +62,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.headers.Myheader")
                 .isEqualTo("MyURI");
@@ -74,6 +78,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.args.Param")
                 .isEqualTo("MyValue");
@@ -88,6 +94,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isNotFound()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.args.Param")
                 .doesNotExist();
