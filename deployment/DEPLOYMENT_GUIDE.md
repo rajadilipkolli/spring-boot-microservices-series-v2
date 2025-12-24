@@ -86,33 +86,33 @@ docker-compose -f docker-compose-tools.yml up -d
 All dashboards are **automatically imported** when Grafana starts:
 
 1. **🔄 Circuit Breaker Dashboard**
-   - Monitor circuit breaker states
-   - Track failure rates and recovery times
-   - Visualize resilience patterns
+    - Monitor circuit breaker states
+    - Track failure rates and recovery times
+    - Visualize resilience patterns
 
 2. **☕ JVM Dashboard**
-   - Memory usage (heap, non-heap, metaspace)
-   - Garbage collection metrics
-   - Thread pool monitoring
-   - CPU usage per service
+    - Memory usage (heap, non-heap, metaspace)
+    - Garbage collection metrics
+    - Thread pool monitoring
+    - CPU usage per service
 
 3. **📊 Logs, Traces & Metrics**
-   - Unified observability view
-   - Correlate logs with traces
-   - Service dependency mapping
-   - Error rate tracking
+    - Unified observability view
+    - Correlate logs with traces
+    - Service dependency mapping
+    - Error rate tracking
 
 4. **📈 Spring Boot Statistics**
-   - HTTP request metrics
-   - Response time percentiles
-   - Throughput analysis
-   - Database connection pools
+    - HTTP request metrics
+    - Response time percentiles
+    - Throughput analysis
+    - Database connection pools
 
 5. **🌐 Spring Cloud Gateway**
-   - Route-specific metrics
-   - Load balancing statistics
-   - Gateway performance
-   - Circuit breaker integration
+    - Route-specific metrics
+    - Load balancing statistics
+    - Gateway performance
+    - Circuit breaker integration
 
 ### 🔍 Accessing Dashboards
 1. Open Grafana: http://localhost:3000
@@ -133,12 +133,12 @@ All dashboards are **automatically imported** when Grafana starts:
 **File**: `config/prometheus/config/alert-rules.yml`
 
 1. **ServerDown Alert**
-   - Triggers when service is down > 1 minute
-   - Severity: Critical
+    - Triggers when service is down > 1 minute
+    - Severity: Critical
 
 2. **HighCpuUsage Alert**
-   - Triggers when CPU usage > 80% for 5 minutes
-   - Severity: Critical
+    - Triggers when CPU usage > 80% for 5 minutes
+    - Severity: Critical
 
 ### 📧 AlertManager Configuration
 **File**: `config/alert-manager/config/alertmanager.yml`
@@ -148,6 +148,58 @@ All dashboards are **automatically imported** when Grafana starts:
 - **Target Email**: dockertmt@gmail.com
 
 > ⚠️ **Note**: Update email credentials before production use
+
+#### Update AlertManager email credentials (Gmail)
+
+When using Gmail as the SMTP provider for AlertManager, follow these steps and security considerations.
+
+- **Prerequisite**: The Gmail account used for sending must have **2-Step Verification** enabled. App passwords require 2-Step Verification and will not be available otherwise.
+- **Why App Passwords**: Google no longer supports "less secure apps" that use plain username/password for SMTP without 2FA. Create an App Password which is a 16-character string that grants SMTP access for a specific app (AlertManager).
+
+Step-by-step: Generate a Gmail App Password
+
+1. Open your Google Account: https://myaccount.google.com
+2. Go to **Security** → **Signing in to Google** → **App passwords**.
+3. Under **Select app** choose "Other (Custom name)" and enter `alertmanager`.
+4. Click **Generate** and copy the 16-character password shown.
+5. In `deployment/config/alert-manager/config/alertmanager.yml`, update the `auth_username` and `auth_password` fields:
+
+```yaml
+email_configs:
+  - to: '<recipient@example.com>'   # keep configurable
+    from: '<sender@gmail.com>'       # full Gmail address; keep configurable
+    smarthost: 'smtp.gmail.com:587'  # verified Gmail SMTP host:port
+    auth_username: 'sender@gmail.com' # must be the full Gmail address
+    auth_password: '<16-character-app-password>'
+    require_tls: true
+```
+
+Important notes:
+- Use the full Gmail address for `auth_username` (for example `alerts@example.gmail.com@gmail.com`).
+- The `auth_password` must be the 16-character App Password generated in Google — NOT your regular account password.
+- `require_tls: true` enforces STARTTLS which Gmail requires on port 587.
+
+Troubleshooting
+- "Invalid credentials" — verify `auth_username` is the full Gmail address and `auth_password` is the exact 16-character app password (no spaces).
+- "Blocked sign-in attempt" emails from Google — visit https://myaccount.google.com/security-checkup and review security alerts; sometimes sign-ins from unknown locations/devices are blocked until you confirm them.
+- Ensure the account has 2-Step Verification enabled and the App Password was generated after enabling it.
+- Check AlertManager logs and SMTP connectivity from the host to `smtp.gmail.com:587` (firewall or network restrictions can block outbound SMTP).
+
+Security considerations and best practices
+- Do NOT commit `auth_password` or any credentials to version control. Use environment variables or a secret manager (Docker secrets, Vault, Kubernetes Secrets) to inject credentials at runtime.
+- Prefer a dedicated Gmail account for sending alerts rather than a personal account.
+- Rotate App Passwords periodically (e.g., every 90 days) and revoke any unused App Passwords from the Google Account security settings.
+- App Password vs OAuth: App Passwords are simpler to configure for server-to-server SMTP but provide a static secret. OAuth provides better long-term security and fine-grained scopes but is more complex to configure with AlertManager (requires token refresh flow and additional tooling). For production, evaluate OAuth for stricter requirements.
+- IP restrictions & Google security: Google may flag sign-in attempts from unfamiliar IPs. If you run AlertManager in a production environment with stable IP ranges, add those to your Google account's security alerts monitoring and use a dedicated account.
+- Store credentials in a secrets management system and grant minimal access. Avoid embedding them in YAML files in source control.
+
+Credential management checklist
+- [ ] Enable 2-Step Verification on the Gmail account
+- [ ] Create an App Password named `alertmanager`
+- [ ] Inject credentials via secrets (do not commit to repo)
+- [ ] Use a dedicated Gmail account for alerts
+- [ ] Schedule regular password/secret rotation
+
 
 ### 📋 Log Collection (Promtail)
 **File**: `config/promtail/promtail.yml`
@@ -174,17 +226,17 @@ All dashboards are **automatically imported** when Grafana starts:
 - **URL**: http://tempo:3100
 - **Purpose**: Distributed tracing
 - **Features**:
-  - Trace-to-metrics correlation
-  - Trace-to-logs correlation
-  - Service dependency mapping
+    - Trace-to-metrics correlation
+    - Trace-to-logs correlation
+    - Service dependency mapping
 
 ### 📋 Loki
 - **URL**: http://loki:3100
 - **Purpose**: Centralized logging
 - **Features**:
-  - Log-to-trace correlation
-  - Real-time log streaming
-  - Container log aggregation
+    - Log-to-trace correlation
+    - Real-time log streaming
+    - Container log aggregation
 
 ## 🔄 Service Dependencies
 
@@ -303,41 +355,41 @@ docker system prune -a -f --volumes
 
 #### 🏢 Business Intelligence Dashboards
 - **📈 Business KPI Dashboard**
-  - Order conversion rates
-  - Revenue per service
-  - Customer acquisition metrics
-  - Product performance analytics
+    - Order conversion rates
+    - Revenue per service
+    - Customer acquisition metrics
+    - Product performance analytics
 
 - **💰 Financial Metrics Dashboard**
-  - Payment success/failure rates
-  - Transaction volume trends
-  - Revenue by payment method
-  - Refund and chargeback tracking
+    - Payment success/failure rates
+    - Transaction volume trends
+    - Revenue by payment method
+    - Refund and chargeback tracking
 
 - **👥 User Behavior Dashboard**
-  - User journey analytics
-  - Cart abandonment rates
-  - Session duration metrics
-  - Feature usage statistics
+    - User journey analytics
+    - Cart abandonment rates
+    - Session duration metrics
+    - Feature usage statistics
 
 #### 🔧 Technical Enhancement Dashboards
 - **🗄️ Database Performance Dashboard**
-  - Connection pool utilization
-  - Query execution times
-  - Slow query analysis
-  - Database lock monitoring
+    - Connection pool utilization
+    - Query execution times
+    - Slow query analysis
+    - Database lock monitoring
 
 - **📡 Kafka Monitoring Dashboard**
-  - Topic throughput and lag
-  - Consumer group performance
-  - Message processing rates
-  - Partition distribution
+    - Topic throughput and lag
+    - Consumer group performance
+    - Message processing rates
+    - Partition distribution
 
 - **🔄 API Performance Dashboard**
-  - Endpoint-specific metrics
-  - Rate limiting statistics
-  - API versioning usage
-  - Client application breakdown
+    - Endpoint-specific metrics
+    - Rate limiting statistics
+    - API versioning usage
+    - Client application breakdown
 
 ### 🚨 Enhanced Alerting
 
@@ -498,5 +550,5 @@ When modifying configurations:
 
 ---
 
-**📝 Last Updated**: $(date)
+**📝 Last Updated**: 25-DEC-2025
 **🔧 Maintained By**: Spring Boot Microservices Team
