@@ -95,7 +95,7 @@ Based on comprehensive analysis of the Order Service microservices architecture 
 ## 📊 **Monitoring, Observability & DevOps**
 
 ### **Comprehensive Monitoring**
-- **Implemented distributed tracing** with **Micrometer** and **Zipkin**, achieving **complete request flow visibility** across **5+ microservices**
+- **Implemented distributed tracing** with **Micrometer** and **Grafana**, achieving **complete request flow visibility** across **5+ microservices**
 - **Built custom metrics** tracking **throughput** (1000+ msg/sec), **latency** (P50: 50ms, P95: 200ms, P99: 500ms), and **error rates** (<1%)
 - **Designed Grafana dashboards** with **real-time monitoring** of **Kafka Streams metrics**, **JVM performance**, and **business KPIs**
 
