@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet author="system" id="insert-sample-customers" context="sample-data">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM payment.customers WHERE id BETWEEN 401 AND 405</sqlCheck>
+        </preConditions>
+        
+        <insert tableName="customers" schemaName="payment">
+            <column name="id" value="401"/>
+            <column name="name" value="John Doe"/>
+            <column name="email" value="john.doe@example.com"/>
+            <column name="address" value="123 Main St, New York, NY 10001"/>
+            <column name="phone" value="+1-555-0101"/>
+            <column name="amount_available" value="5000.00"/>
+            <column name="amount_reserved" value="200.00"/>
+        </insert>
+        
+        <insert tableName="customers" schemaName="payment">
+            <column name="id" value="402"/>
+            <column name="name" value="Jane Smith"/>
+            <column name="email" value="jane.smith@example.com"/>
+            <column name="address" value="456 Oak Ave, Los Angeles, CA 90210"/>
+            <column name="phone" value="+1-555-0102"/>
+            <column name="amount_available" value="3500.00"/>
+            <column name="amount_reserved" value="150.00"/>
+        </insert>
+        
+        <insert tableName="customers" schemaName="payment">
+            <column name="id" value="403"/>
+            <column name="name" value="Mike Johnson"/>
+            <column name="email" value="mike.johnson@example.com"/>
+            <column name="address" value="789 Pine Rd, Chicago, IL 60601"/>
+            <column name="phone" value="+1-555-0103"/>
+            <column name="amount_available" value="7500.00"/>
+            <column name="amount_reserved" value="500.00"/>
+        </insert>
+        
+        <insert tableName="customers" schemaName="payment">
+            <column name="id" value="404"/>
+            <column name="name" value="Sarah Wilson"/>
+            <column name="email" value="sarah.wilson@example.com"/>
+            <column name="address" value="321 Elm St, Miami, FL 33101"/>
+            <column name="phone" value="+1-555-0104"/>
+            <column name="amount_available" value="2800.00"/>
+            <column name="amount_reserved" value="100.00"/>
+        </insert>
+        
+        <insert tableName="customers" schemaName="payment">
+            <column name="id" value="405"/>
+            <column name="name" value="David Brown"/>
+            <column name="email" value="david.brown@example.com"/>
+            <column name="address" value="654 Maple Dr, Seattle, WA 98101"/>
+            <column name="phone" value="+1-555-0105"/>
+            <column name="amount_available" value="4200.00"/>
+            <column name="amount_reserved" value="300.00"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

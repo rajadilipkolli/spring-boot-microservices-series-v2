@@ -35,6 +35,8 @@ management:
   observations:
     key-values:
       application: ${spring.application.name}
+    annotations:
+      enabled: true
   # For Exemplars to work we need histogram buckets
   metrics:
     distribution:

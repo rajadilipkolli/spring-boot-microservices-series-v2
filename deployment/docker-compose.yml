@@ -36,26 +36,21 @@ services:
     networks:
       - microservice-network
 
-  zipkin-server:
-    image: openzipkin/zipkin
-    container_name: zipkin-server
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.13.0
+    extra_hosts: ['host.docker.internal:host-gateway']
+    container_name: grafana-lgtm
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
     ports:
-      - "9411:9411"
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
     networks:
       - microservice-network
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9411/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
 
   kafka:
     container_name: kafka
@@ -96,7 +91,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.6
+    image: quay.io/keycloak/keycloak:26.4.7
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -107,6 +102,11 @@ services:
       # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # ✅ THESE FIX THE REDIRECT ISSUE
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_URL=http://localhost:9191
+      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
+      - KC_PROXY=edge
       # Database configuration for PostgreSQL
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
@@ -148,8 +148,8 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      zipkin-server:
-        condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
     networks:
       - microservice-network
     environment:
@@ -194,8 +194,8 @@ services:
         condition: service_started
       naming-server:
         condition: service_started
-      zipkin-server:
-        condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
@@ -254,6 +254,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   order-service:
@@ -280,6 +281,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   payment-service:
@@ -306,6 +308,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   retailstore-webapp:
@@ -316,7 +319,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-lgtm:4318/v1/traces
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
     ports:

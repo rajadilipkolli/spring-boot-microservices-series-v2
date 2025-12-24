@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,7 +68,7 @@ public class GenerateController implements GenerateAPI {
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
-    public Mono<ResponseEntity<GenerationResponse>> generate() {
+    public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
         return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
                 .flatMap(
                         catalogResult -> {
@@ -306,7 +307,7 @@ public class GenerateController implements GenerateAPI {
 
     private String extractWceDetail(WebClientResponseException wce) {
         String wceResponseBody = wce.getResponseBodyAsString();
-        if (wceResponseBody != null && !wceResponseBody.isEmpty()) {
+        if (!wceResponseBody.isEmpty()) {
             return wceResponseBody;
         }
         String statusText = wce.getStatusText();
@@ -340,7 +341,8 @@ public class GenerateController implements GenerateAPI {
             status = resolveStatusOrDefault(wce);
             String specificErrorMessage = extractWceDetail(wce);
 
-            // Always log the detailed upstream message at debug level (or info for visibility)
+            // Always log the detailed upstream message at debug level (or info for
+            // visibility)
             String requestUri = "";
             try {
                 var req = wce.getRequest();
@@ -375,7 +377,8 @@ public class GenerateController implements GenerateAPI {
                             failedService.getId(), "Upstream service error (hidden)");
                 }
             } else {
-                // Unknown failed service: don't include upstream body in client message by default
+                // Unknown failed service: don't include upstream body in client message by
+                // default
                 if (exposeUpstreamErrors) {
                     errorMessage =
                             "Error from unknown service: %s".formatted(specificErrorMessage.trim());

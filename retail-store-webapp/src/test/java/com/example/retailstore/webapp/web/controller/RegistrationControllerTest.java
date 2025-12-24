@@ -11,20 +11,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.retailstore.webapp.clients.customer.CustomerRequest;
+import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
@@ -54,10 +56,8 @@ class RegistrationControllerTest {
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(
-                        any(com.example.retailstore.webapp.clients.customer.CustomerRequest.class)))
-                .thenReturn(new com.example.retailstore.webapp.clients.customer.CustomerResponse(
-                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 10_000));
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 10_000));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
@@ -74,10 +74,8 @@ class RegistrationControllerTest {
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(
-                        any(com.example.retailstore.webapp.clients.customer.CustomerRequest.class)))
-                .thenReturn(new com.example.retailstore.webapp.clients.customer.CustomerResponse(
-                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)

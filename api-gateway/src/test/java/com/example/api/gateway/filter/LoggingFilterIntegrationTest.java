@@ -35,6 +35,8 @@ public class LoggingFilterIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody(String.class)
                 .consumeWith(
                         result -> {
@@ -51,6 +53,8 @@ public class LoggingFilterIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody(String.class)
                 .consumeWith(
                         result -> {
