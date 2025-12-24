@@ -8,4 +8,10 @@ spring:
   - kafka:29092
   threads.virtual.enabled: true
 eureka.client.service-url.defaultZone: http://naming-server:8761/eureka/
-management.tracing.export.zipkin.endpoint: http://zipkin-server:9411/api/v2/spans
+# Metrics Export
+management.otlp.metrics.export.url=http://grafana-lgtm:4318/v1/metrics
+management.otlp.metrics.export.step=10s
+# Tracing Endpoint
+management.opentelemetry.tracing.export.otlp.endpoint=http://grafana-lgtm:4318/v1/traces
+# Logs Exporter Endpoint
+management.opentelemetry.logging.export.otlp.endpoint=http://grafana-lgtm:4318/v1/logs
