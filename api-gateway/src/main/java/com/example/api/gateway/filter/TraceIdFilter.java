@@ -9,6 +9,7 @@ package com.example.api.gateway.filter;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -50,7 +51,8 @@ class TraceIdFilter implements WebFilter {
         if (span != null && span.context() != null) {
             return span.context().traceId();
         }
-        TraceContext context = this.tracer.currentTraceContext().context();
-        return context != null ? context.traceId() : null;
+        return Optional.ofNullable(tracer.currentTraceContext().context())
+                .map(TraceContext::traceId)
+                .orElse(null);
     }
 }
