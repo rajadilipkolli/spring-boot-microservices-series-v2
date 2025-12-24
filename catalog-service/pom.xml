@@ -197,7 +197,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-zipkin-test</artifactId>
+            <artifactId>spring-boot-starter-opentelemetry-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
