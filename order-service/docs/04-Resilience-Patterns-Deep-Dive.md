@@ -397,7 +397,7 @@ public class DLQProcessor {
         
         try {
             // Attempt to parse and reprocess
-            OrderDto orderDto = objectMapper.readValue(message, OrderDto.class);
+            OrderDto orderDto = jsonMapper.readValue(message, OrderDto.class);
             
             // Apply business rules for DLQ handling
             if (shouldRetryMessage(orderDto, headers)) {

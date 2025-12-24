@@ -160,7 +160,7 @@ sequenceDiagram
         
         Kafka->>ProductTopic: ProductDto published<br/>(from Catalog Service)
         ProductTopic->>KafkaListener: @KafkaListener(topics="productTopic")<br/>groupId="product"
-        KafkaListener->>KafkaListener: ObjectMapper.readValue()<br/>(JSON to ProductDto)
+        KafkaListener->>KafkaListener: JsonMapper.readValue()<br/>(JSON to ProductDto)
         
         KafkaListener->>InventoryAPI: productManageService.manage()
         InventoryAPI->>InventoryAPI: @Loggable + Extract productCode
