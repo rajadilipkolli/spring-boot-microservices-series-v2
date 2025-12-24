@@ -42,7 +42,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = OrderController.class)
 @Import(TestSecurityConfig.class)
@@ -61,7 +61,7 @@ class OrderControllerTest {
     private SecurityHelper securityHelper;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     private List<OrderResponse> orderResponseList;
     private PagedResult<OrderResponse> pagedResult;
@@ -213,7 +213,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createOrderRequest)))
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId", is(123)))
                 .andExpect(jsonPath("$.customerId", is(1)))
@@ -255,7 +255,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createOrderRequest)))
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isBadRequest());
     }
 }

@@ -24,7 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = InventoryController.class)
 @Import(TestSecurityConfig.class)
@@ -36,7 +36,7 @@ class InventoryControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private InventoryServiceClient inventoryServiceClient;
@@ -75,7 +75,7 @@ class InventoryControllerTest {
 
         mockMvc.perform(get(INVENTORY_API_PATH).with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(pagedResult)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(pagedResult)));
     }
 
     @Test
@@ -92,9 +92,9 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -105,7 +105,7 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isForbidden());
     }
 
@@ -129,7 +129,7 @@ class InventoryControllerTest {
 
         mockMvc.perform(put(INVENTORY_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isForbidden());
     }
 
@@ -142,8 +142,8 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(inventory)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(inventory)));
     }
 }

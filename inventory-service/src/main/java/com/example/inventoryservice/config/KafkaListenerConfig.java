@@ -24,7 +24,7 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @EnableKafka
 @Configuration(proxyBeanMethods = false)
@@ -34,15 +34,15 @@ class KafkaListenerConfig {
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     KafkaListenerConfig(
             InventoryOrderManageService orderManageService,
             ProductManageService productManageService,
-            ObjectMapper objectMapper) {
+            JsonMapper jsonMapper) {
         this.orderManageService = orderManageService;
         this.productManageService = productManageService;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     // retries if processing of event fails
@@ -62,7 +62,7 @@ class KafkaListenerConfig {
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
     public void onSaveProductEvent(@Payload String productDto) throws JacksonException {
         log.info("Received Product: {}", productDto);
-        productManageService.manage(objectMapper.readValue(productDto, ProductDto.class));
+        productManageService.manage(jsonMapper.readValue(productDto, ProductDto.class));
     }
 
     @DltHandler
