@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet author="system" id="insert-sample-orders" context="sample-data">
+        <!-- Sample Order 1 -->
+        <insert tableName="orders">
+            <column name="customer_id" value="401"/>
+            <column name="status" value="NEW"/>
+            <column name="source" value="WEB"/>
+            <column name="delivery_address_line1" value="123 Main St"/>
+            <column name="delivery_address_city" value="New York"/>
+            <column name="delivery_address_state" value="NY"/>
+            <column name="delivery_address_zip_code" value="10001"/>
+            <column name="delivery_address_country" value="USA"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueDate="2024-01-15T10:30:00"/>
+        </insert>
+        
+        <insert tableName="order_items">
+            <column name="product_code" value="P001"/>
+            <column name="quantity" value="1"/>
+            <column name="product_price" value="999.99"/>
+            <column name="order_id" valueSequenceCurrent="orders_seq"/>
+        </insert>
+        
+        <insert tableName="order_items">
+            <column name="product_code" value="P005"/>
+            <column name="quantity" value="2"/>
+            <column name="product_price" value="249.99"/>
+            <column name="order_id" valueSequenceCurrent="orders_seq"/>
+        </insert>
+
+        <!-- Sample Order 2 -->
+        <insert tableName="orders">
+            <column name="customer_id" value="402"/>
+            <column name="status" value="CONFIRMED"/>
+            <column name="source" value="MOBILE"/>
+            <column name="delivery_address_line1" value="456 Oak Ave"/>
+            <column name="delivery_address_city" value="Los Angeles"/>
+            <column name="delivery_address_state" value="CA"/>
+            <column name="delivery_address_zip_code" value="90210"/>
+            <column name="delivery_address_country" value="USA"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueDate="2024-01-16T14:15:00"/>
+        </insert>
+        
+        <insert tableName="order_items">
+            <column name="product_code" value="P003"/>
+            <column name="quantity" value="1"/>
+            <column name="product_price" value="1299.99"/>
+            <column name="order_id" valueSequenceCurrent="orders_seq"/>
+        </insert>
+
+        <!-- Sample Order 3 -->
+        <insert tableName="orders">
+            <column name="customer_id" value="403"/>
+            <column name="status" value="CONFIRMED"/>
+            <column name="source" value="WEB"/>
+            <column name="delivery_address_line1" value="789 Pine Rd"/>
+            <column name="delivery_address_city" value="Chicago"/>
+            <column name="delivery_address_state" value="IL"/>
+            <column name="delivery_address_zip_code" value="60601"/>
+            <column name="delivery_address_country" value="USA"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueDate="2024-01-10T09:45:00"/>
+        </insert>
+        
+        <insert tableName="order_items">
+            <column name="product_code" value="P002"/>
+            <column name="quantity" value="1"/>
+            <column name="product_price" value="899.99"/>
+            <column name="order_id" valueSequenceCurrent="orders_seq"/>
+        </insert>
+        
+        <insert tableName="order_items">
+            <column name="product_code" value="P004"/>
+            <column name="quantity" value="1"/>
+            <column name="product_price" value="1099.99"/>
+            <column name="order_id" valueSequenceCurrent="orders_seq"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

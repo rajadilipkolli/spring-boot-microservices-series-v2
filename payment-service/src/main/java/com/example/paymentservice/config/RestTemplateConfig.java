@@ -1,7 +1,7 @@
-/*** Licensed under MIT License Copyright (c) 2022 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;

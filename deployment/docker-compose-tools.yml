@@ -45,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.2.1-alpine'
+    image: 'redis:8.4.0-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -61,7 +61,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.0
+    image: apache/kafka-native:4.1.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3.5
+    image: quay.io/keycloak/keycloak:26.4.7
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -192,7 +192,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -225,7 +225,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411/
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -257,7 +257,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -287,7 +287,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -303,6 +303,7 @@ services:
           memory: 1050m
     ports:
       - "18282:18282"
+      - "28282:28282"
     networks:
       - microservice-network
     depends_on:
@@ -317,7 +318,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
     restart: unless-stopped
     labels:
       logging: "promtail"
@@ -347,7 +348,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://tempo:9411
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://tempo:4318
     labels:
       logging: "promtail"
       logging_jobname: "containerlogs"
@@ -361,7 +362,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://tempo:9411
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin1234
     ports:
@@ -386,7 +387,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.2.0
+    image: grafana/grafana:12.3.1
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -415,7 +416,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.5.5
+    image: grafana/loki:3.6.3
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -431,7 +432,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.5.5
+    image: grafana/promtail:3.6.3
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -451,7 +452,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.6.0
+    image: prom/prometheus:v3.8.1
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -472,13 +473,14 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.8.2
+    image: grafana/tempo:2.9.0
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
     ports:
       - "3110:3100" # Tempo
-      - "4317:4317" # OTLP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
       - "9411:9411" # Zipkin
     volumes:
       - ./config/tempo/tempo.yml:/etc/tempo-config.yml
@@ -492,7 +494,7 @@ services:
       start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.28.1
+    image: prom/alertmanager:v0.30.0
     container_name: alertmanager
     ports:
       - "9093:9093"

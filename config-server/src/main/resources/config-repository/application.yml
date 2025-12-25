@@ -35,6 +35,8 @@ management:
   observations:
     key-values:
       application: ${spring.application.name}
+    annotations:
+      enabled: true
   # For Exemplars to work we need histogram buckets
   metrics:
     distribution:
@@ -125,35 +127,3 @@ springdoc:
     operationsSorter: alpha
     #For sorting tags alphabetically
     tagsSorter: alpha
----
-spring:
-  config:
-    activate:
-      on-profile: "docker"
-  datasource:
-    password: secret
-    url: jdbc:postgresql://postgresql:5432/appdb
-    username: appuser
-  kafka:
-    bootstrap-servers:
-    - kafka:29092
-  threads:
-    virtual:
-      enabled: true
-eureka:
-  client:
-    service-url:
-      defaultZone: http://naming-server:8761/eureka/
-management:
-  zipkin:
-    tracing:
-      endpoint: http://zipkin-server:9411/api/v2/spans
----
-spring:
-  config:
-    activate:
-      on-profile: "native"
-    import: optional:configserver:http://localhost:8888/
-  threads:
-    virtual:
-      enabled: true

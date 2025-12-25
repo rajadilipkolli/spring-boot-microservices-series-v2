@@ -1,4 +1,4 @@
-version: '3.8'
+name: catalog-service
 services:
 
   postgresql:
@@ -19,24 +19,25 @@ services:
     networks:
       - catalog-network
 
-  zipkin-server:
-    image: openzipkin/zipkin
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.13.0
     extra_hosts: ['host.docker.internal:host-gateway']
-    container_name: zipkin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
+    container_name: grafana-lgtm
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
     ports:
-      - "9411:9411"
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
     networks:
       - catalog-network
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.0
+    image: apache/kafka-native:4.1.1
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: broker
     ports:
@@ -72,7 +73,7 @@ services:
   config-server:
     container_name: config-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -83,11 +84,13 @@ services:
       - catalog-network
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: docker-dev
+      SPRING_SECURITY_USER_PASSWORD: docker-pass
 
   naming-server:
     container_name: naming-server
     extra_hosts: ['host.docker.internal:host-gateway']
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -99,8 +102,8 @@ services:
     depends_on:
       - config-server
     environment:
-      - SPRING.ZIPKIN.BASEURL= http://zipkin-server:9411/
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
   
   inventory-service:
@@ -123,8 +126,8 @@ services:
       postgresql:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
 networks:

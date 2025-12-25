@@ -1,12 +1,13 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import java.net.URI;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -57,6 +58,7 @@ class GlobalExceptionHandler {
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.BAD_REQUEST, "Invalid request content.");
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
         addCorrelationId(problemDetail, request);
@@ -70,6 +72,7 @@ class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         var violations =
                 ex.getConstraintViolations().stream()
@@ -99,6 +102,7 @@ class GlobalExceptionHandler {
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request format");
         problemDetail.setTitle("Bad Request");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/bad-request"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("error", "Invalid JSON format");
         addCorrelationId(problemDetail, request);

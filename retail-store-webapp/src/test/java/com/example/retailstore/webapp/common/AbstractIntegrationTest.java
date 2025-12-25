@@ -2,16 +2,16 @@ package com.example.retailstore.webapp.common;
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
 import org.wiremock.spring.InjectWireMock;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
@@ -21,7 +21,7 @@ import org.wiremock.spring.InjectWireMock;
 public abstract class AbstractIntegrationTest {
 
     @Autowired
-    protected ObjectMapper objectMapper;
+    protected JsonMapper jsonMapper;
 
     @Autowired
     protected MockMvcTester mockMvcTester;

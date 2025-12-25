@@ -31,7 +31,6 @@ spring:
     virtual:
       enabled: true
   http:
-    client:
-      factory: jdk
+      clients.imperative.factory: jdk
   main:
     web-application-type: servlet

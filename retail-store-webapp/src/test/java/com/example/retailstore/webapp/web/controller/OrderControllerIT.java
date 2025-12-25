@@ -44,19 +44,19 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(customerResponse))));
+                        .withBody(jsonMapper.writeValueAsString(customerResponse))));
 
         // Mock Order Service
         gatewayServiceMock.stubFor(post(urlEqualTo("/order-service/api/orders"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.CREATED.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(orderConfirmationDTO))));
+                        .withBody(jsonMapper.writeValueAsString(orderConfirmationDTO))));
 
         mockMvcTester
                 .post()
                 .uri("/api/orders")
-                .content(objectMapper.writeValueAsString(createOrderRequest))
+                .content(jsonMapper.writeValueAsString(createOrderRequest))
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(csrf())
                 .with(user("user").roles("USER"))
@@ -81,13 +81,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(customerResponse))));
+                        .withBody(jsonMapper.writeValueAsString(customerResponse))));
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/1"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(orderResponse))));
+                        .withBody(jsonMapper.writeValueAsString(orderResponse))));
 
         mockMvcTester
                 .get()
@@ -105,13 +105,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void testGetOrders() throws Exception {
         PagedResult<OrderResponse> pagedResult =
-                new PagedResult<>(Collections.emptyList(), 0, 1, 0, true, true, false, false);
+                new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders")) // Removed query params from mock URL
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(pagedResult))));
+                        .withBody(jsonMapper.writeValueAsString(pagedResult))));
 
         mockMvcTester
                 .get()

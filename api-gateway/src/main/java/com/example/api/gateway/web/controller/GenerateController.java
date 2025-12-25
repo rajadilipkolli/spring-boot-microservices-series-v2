@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,7 +68,7 @@ public class GenerateController implements GenerateAPI {
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
-    public Mono<ResponseEntity<GenerationResponse>> generate() {
+    public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
         return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
                 .flatMap(
                         catalogResult -> {
@@ -257,9 +258,8 @@ public class GenerateController implements GenerateAPI {
         return Mono.just(
                 new ServiceResult(
                         HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        String.format(
-                                "Unexpected error calling %s service: %s",
-                                serviceType.getId(), throwable.getMessage())));
+                        "Unexpected error calling %s service: %s"
+                                .formatted(serviceType.getId(), throwable.getMessage())));
     }
 
     private static String getErrorMessage(
@@ -270,8 +270,8 @@ public class GenerateController implements GenerateAPI {
         } else {
             // Reverted diagnostic change in message format
             errorMessage =
-                    String.format(
-                            "Error from %s service: %s", serviceType.getId(), detailMessage.trim());
+                    "Error from %s service: %s"
+                            .formatted(serviceType.getId(), detailMessage.trim());
         }
         return errorMessage;
     }
@@ -307,7 +307,7 @@ public class GenerateController implements GenerateAPI {
 
     private String extractWceDetail(WebClientResponseException wce) {
         String wceResponseBody = wce.getResponseBodyAsString();
-        if (wceResponseBody != null && !wceResponseBody.isEmpty()) {
+        if (!wceResponseBody.isEmpty()) {
             return wceResponseBody;
         }
         String statusText = wce.getStatusText();
@@ -341,7 +341,8 @@ public class GenerateController implements GenerateAPI {
             status = resolveStatusOrDefault(wce);
             String specificErrorMessage = extractWceDetail(wce);
 
-            // Always log the detailed upstream message at debug level (or info for visibility)
+            // Always log the detailed upstream message at debug level (or info for
+            // visibility)
             String requestUri = "";
             try {
                 var req = wce.getRequest();
@@ -363,13 +364,12 @@ public class GenerateController implements GenerateAPI {
             } else if (failedService != null) {
                 // Use a generic client-facing message by default
                 errorMessage =
-                        String.format("Error generating data in %s service", failedService.getId());
+                        "Error generating data in %s service".formatted(failedService.getId());
 
                 if (exposeUpstreamErrors) {
                     String serviceSpecificDetail =
-                            String.format(
-                                    "Error from %s service: %s",
-                                    failedService.getId(), specificErrorMessage.trim());
+                            "Error from %s service: %s"
+                                    .formatted(failedService.getId(), specificErrorMessage.trim());
                     serviceResponsesMap.put(failedService.getId(), serviceSpecificDetail);
                 } else {
                     // Store only a generic marker in serviceResponsesMap to avoid leaking details
@@ -377,11 +377,11 @@ public class GenerateController implements GenerateAPI {
                             failedService.getId(), "Upstream service error (hidden)");
                 }
             } else {
-                // Unknown failed service: don't include upstream body in client message by default
+                // Unknown failed service: don't include upstream body in client message by
+                // default
                 if (exposeUpstreamErrors) {
                     errorMessage =
-                            String.format(
-                                    "Error from unknown service: %s", specificErrorMessage.trim());
+                            "Error from unknown service: %s".formatted(specificErrorMessage.trim());
                 } else {
                     errorMessage = "Error from upstream service";
                 }
@@ -392,8 +392,7 @@ public class GenerateController implements GenerateAPI {
 
         if ("An unexpected error occurred during data generation.".equals(errorMessage)
                 && failedService != null) {
-            errorMessage =
-                    String.format("Error generating data in %s service", failedService.getId());
+            errorMessage = "Error generating data in %s service".formatted(failedService.getId());
         }
 
         return Mono.just(

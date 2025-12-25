@@ -11,11 +11,11 @@ import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,7 +24,8 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.retry.annotation.Backoff;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @EnableKafka
 @Configuration(proxyBeanMethods = false)
@@ -34,17 +35,20 @@ class KafkaListenerConfig {
 
     private final InventoryOrderManageService orderManageService;
     private final ProductManageService productManageService;
+    private final JsonMapper jsonMapper;
 
     KafkaListenerConfig(
             InventoryOrderManageService orderManageService,
-            ProductManageService productManageService) {
+            ProductManageService productManageService,
+            JsonMapper jsonMapper) {
         this.orderManageService = orderManageService;
         this.productManageService = productManageService;
+        this.jsonMapper = jsonMapper;
     }
 
     // retries if processing of event fails
     @RetryableTopic(
-            backoff = @Backoff(delay = 1000, multiplier = 2.0),
+            backOff = @BackOff(delay = 1000, multiplier = 2.0),
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(OrderDto orderDto) {
@@ -57,10 +61,9 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload @Valid ProductDto productDto)
-            throws JsonProcessingException {
+    public void onSaveProductEvent(@Payload @Valid String productDto) throws JacksonException {
         log.info("Received Product: {}", productDto);
-        productManageService.manage(productDto);
+        productManageService.manage(jsonMapper.readValue(productDto, ProductDto.class));
     }
 
     @DltHandler
