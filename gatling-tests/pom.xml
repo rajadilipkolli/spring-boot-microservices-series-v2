@@ -9,8 +9,8 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.14.9</gatling.version>
         <gatling-plugin.version>4.20.16</gatling-plugin.version>
@@ -57,11 +57,16 @@
                     <simulationClass>${gatling.simulationClass}</simulationClass>
                     <jvmArgs>
                         <jvmArg>-Xmx1g</jvmArg>
+                        <jvmArg>-Xms512m</jvmArg>
                     </jvmArgs>
                     <includes>
                         <include>simulation.*</include>
                     </includes>
                     <runMultipleSimulations>true</runMultipleSimulations>
+                    <!-- Enable more detailed reporting -->
+                    <noReports>false</noReports>
+                    <reportsOnly></reportsOnly>
+                    <runDescription>Microservices Performance Test</runDescription>
                 </configuration>
             </plugin>
         </plugins>
