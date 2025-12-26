@@ -15,7 +15,6 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
-import com.example.catalogservice.repositories.ProductRepository;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
 import java.time.Duration;
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -39,8 +37,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 class ProductControllerIT extends AbstractCircuitBreakerTest {
-
-    @Autowired private ProductRepository productRepository;
 
     public static MockWebServer mockWebServer;
 
