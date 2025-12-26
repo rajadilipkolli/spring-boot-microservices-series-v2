@@ -3,7 +3,7 @@
 # Default values
 TEST_PROFILE="heavy"
 BASE_URL="http://localhost:8765"
-USERS=100
+USERS=50
 DURATION=300
 KAFKA_INIT_DELAY=15
 
