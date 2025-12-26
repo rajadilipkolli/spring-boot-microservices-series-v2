@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Default values
-TEST_PROFILE="default"
+TEST_PROFILE="heavy"
 BASE_URL="http://localhost:8765"
-USERS=10
-DURATION=60
+USERS=100
+DURATION=300
 KAFKA_INIT_DELAY=15
 
 # Parse command line arguments
