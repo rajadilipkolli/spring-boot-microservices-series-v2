@@ -52,12 +52,6 @@ databaseChangeLog:
           - column:
               name: price
               type: 'NUMERIC(19,2)'
-          - column:
-              name: version
-              type: BIGINT
-              defaultValueNumeric: 0
-              constraints:
-                nullable: false
         tableName: products
       addUniqueConstraint:
         columnNames: product_code

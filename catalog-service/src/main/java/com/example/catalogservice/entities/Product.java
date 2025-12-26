@@ -9,7 +9,6 @@ package com.example.catalogservice.entities;
 import java.io.Serial;
 import java.io.Serializable;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table(name = "products")
@@ -28,8 +27,6 @@ public class Product implements Serializable {
     private double price;
 
     private String imageUrl;
-
-    @Version private Long version = 0L;
 
     public Product() {}
 
@@ -84,15 +81,6 @@ public class Product implements Serializable {
 
     public Product setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
-        return this;
-    }
-
-    public Long getVersion() {
-        return version;
-    }
-
-    public Product setVersion(Long version) {
-        this.version = version;
         return this;
     }
 }
