@@ -9,6 +9,7 @@ package com.example.orderservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.utils.LogSanitizer;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,15 +38,17 @@ public class KafkaOrderProducer {
                             if (ex == null) {
                                 log.info(
                                         "Sent message=[ {} ] from order service with offset=[{}] to topic {}",
-                                        persistedOrderDto,
+                                        LogSanitizer.sanitizeForLog(
+                                                String.valueOf(persistedOrderDto)),
                                         result.getRecordMetadata().offset(),
                                         AppConstants.ORDERS_TOPIC);
                             } else {
                                 log.warn(
                                         "Unable to send message=[{}] from order service to {} due to : {}",
-                                        persistedOrderDto,
+                                        LogSanitizer.sanitizeForLog(
+                                                String.valueOf(persistedOrderDto)),
                                         AppConstants.ORDERS_TOPIC,
-                                        ex.getMessage());
+                                        LogSanitizer.sanitizeException(ex));
                             }
                         });
     }

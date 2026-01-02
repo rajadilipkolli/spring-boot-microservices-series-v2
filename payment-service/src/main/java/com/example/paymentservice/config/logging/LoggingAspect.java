@@ -2,6 +2,7 @@
 package com.example.paymentservice.config.logging;
 
 import com.example.paymentservice.utils.AppConstants;
+import com.example.paymentservice.utils.LogSanitizer;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +60,7 @@ class LoggingAspect {
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
                     e.getCause() == null ? "NULL" : e.getCause(),
-                    e.getMessage(),
+                    LogSanitizer.sanitizeException(e),
                     e);
 
         } else {
@@ -158,7 +159,10 @@ class LoggingAspect {
                 stringArrayList.add(paramName + " : " + argValue);
             }
             String argsString = String.join(", ", stringArrayList);
-            logExecutionDetails(joinPoint, logLevel, methodName + "() args :: -> " + argsString);
+            logExecutionDetails(
+                    joinPoint,
+                    logLevel,
+                    methodName + "() args :: -> " + LogSanitizer.sanitizeForLog(argsString, 1024));
         }
     }
 
@@ -167,7 +171,12 @@ class LoggingAspect {
         if (result != null) {
             boolean printResponse = shouldLog(joinPoint, Loggable::result);
             if (printResponse) {
-                logExecutionDetails(joinPoint, logLevel, methodName + "() Returned : " + result);
+                logExecutionDetails(
+                        joinPoint,
+                        logLevel,
+                        methodName
+                                + "() Returned : "
+                                + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
             }
         }
     }

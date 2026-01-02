@@ -6,6 +6,7 @@
 
 package com.example.orderservice.exception;
 
+import com.example.orderservice.utils.LogSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
@@ -37,11 +38,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(
             OrderNotFoundException ex, WebRequest request) {
-        log.warn("Order not found: {}", ex.getMessage());
+        log.warn("Order not found: {}", LogSanitizer.sanitizeException(ex));
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Order Not Found");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");
@@ -55,10 +57,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleProductNotFound(
             ProductNotFoundException ex, WebRequest request) {
-        log.warn("Product not found: {}", ex.getMessage());
+        log.warn("Product not found: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Product Not Found");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");
@@ -72,10 +75,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleEntityNotFound(
             EntityNotFoundException ex, WebRequest request) {
-        log.warn("Entity not found: {}", ex.getMessage());
+        log.warn("Entity not found: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Resource Not Found");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("timestamp", Instant.now());
@@ -87,7 +91,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {
-        log.warn("Validation failed: {}", ex.getMessage());
+        log.warn("Validation failed: {}", LogSanitizer.sanitizeException(ex));
 
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
@@ -119,10 +123,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
             ConstraintViolationException ex, WebRequest request) {
-        log.warn("Constraint violation: {}", ex.getMessage());
+        log.warn("Constraint violation: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
@@ -134,10 +139,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
             IllegalArgumentException ex, WebRequest request) {
-        log.warn("Illegal argument: {}", ex.getMessage());
+        log.warn("Illegal argument: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Invalid Request");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/invalid-request"));
         problemDetail.setProperty("timestamp", Instant.now());

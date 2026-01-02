@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.exception;
 
+import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({HttpClientErrorException.class, HttpServerErrorException.class})
     ProblemDetail handleHttpException(Exception ex) {
-        log.error("HTTP error occurred", ex);
+        log.error("HTTP error occurred: {}", LogSanitizer.sanitizeException(ex));
         HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof HttpClientErrorException clientError) {
             status = clientError.getStatusCode();
@@ -65,7 +66,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
         problemDetail.setTitle("Service Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/service-error"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -75,7 +76,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Bad Request");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/bad-request"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -85,14 +86,16 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problemDetail.setTitle("Not Found");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleSpringAccessDeniedException(AccessDeniedException ex) {
-        log.warn("Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}", ex.getMessage());
+        log.warn(
+                "Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}",
+                LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
         problemDetail.setTitle("Forbidden");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/forbidden"));
@@ -103,7 +106,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ProblemDetail handleGenericException(Exception ex) {
-        log.error("Unexpected error occurred", ex);
+        log.error("Unexpected error occurred: {}", LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
