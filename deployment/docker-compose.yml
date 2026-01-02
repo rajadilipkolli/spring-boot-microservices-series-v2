@@ -239,7 +239,7 @@ services:
         limits:
           memory: 1050m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - microservice-network
     depends_on:

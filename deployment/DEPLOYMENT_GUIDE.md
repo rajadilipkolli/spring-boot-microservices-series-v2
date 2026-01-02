@@ -59,7 +59,7 @@ docker-compose -f docker-compose-tools.yml up -d
 | **Service Registry**    | 8761  | http://localhost:8761  | Eureka service discovery        |
 | **Config Server**       | 8888  | http://localhost:8888  | Centralized configuration       |
 | **Catalog Service**     | 18080 | http://localhost:18080 | Product catalog management      |
-| **Inventory Service**   | 18081 | http://localhost:18081 | Stock level management          |
+| **Inventory Service**   | 18181 | http://localhost:18181 | Stock level management          |
 | **Order Service**       | 18282 | http://localhost:18282 | Order processing                |
 | **Payment Service**     | 18085 | http://localhost:18085 | Payment processing              |
 
