@@ -11,6 +11,7 @@ import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
 import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
+import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -58,14 +59,17 @@ class OrderController {
     @GetMapping("/api/orders/{orderNumber}")
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
-        log.info("Fetching order details for orderNumber: {}", orderNumber);
+        log.info("Fetching order details for orderNumber: {}", LogSanitizer.sanitizeForLog(orderNumber));
         try {
             OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
             CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.getCustomerId());
             orderResponse.updateCustomerDetails(customerResponse);
             return orderResponse;
         } catch (Exception e) {
-            log.error("Error fetching order {}: {}", orderNumber, e.getMessage());
+            log.error(
+                    "Error fetching order {}: {}",
+                    LogSanitizer.sanitizeForLog(orderNumber),
+                    LogSanitizer.sanitizeException(e));
             throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
         }
     }
@@ -90,7 +94,7 @@ class OrderController {
     @PostMapping("/api/orders")
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
-        log.info("Creating order: {}", orderRequest);
+        log.info("Creating order: {}", LogSanitizer.sanitizeForLog(String.valueOf(orderRequest)));
         try {
             CustomerResponse customerResponse = customerServiceClient.getCustomerByName(
                     orderRequest.customer().name());
@@ -100,8 +104,8 @@ class OrderController {
         } catch (InvalidRequestException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error creating order: {}", e.getMessage());
-            throw new InvalidRequestException("Failed to create order: " + e.getMessage());
+            log.error("Error creating order: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to create order: " + LogSanitizer.sanitizeException(e));
         }
     }
 }

@@ -8,6 +8,7 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.config.ApplicationProperties;
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.utils.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import org.slf4j.Logger;
@@ -37,8 +38,8 @@ public class CatalogService {
     boolean productsExistsDefaultValue(List<String> productCodes, Exception e) {
         log.error(
                 "While fetching status for productCodes :{}, Exception Occurred : {}",
-                productCodes,
-                e.getMessage());
+                LogSanitizer.sanitizeCollection(productCodes),
+                LogSanitizer.sanitizeException(e));
         return applicationProperties.byPassCircuitBreaker();
     }
 }

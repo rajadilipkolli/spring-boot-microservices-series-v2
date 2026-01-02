@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.config.logging;
 
+import com.example.catalogservice.util.LogSanitizer;
 import com.example.catalogservice.utils.AppConstants;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ public class LoggingAspect {
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
                     e.getCause() == null ? "NULL" : e.getCause(),
-                    e.getMessage(),
+                    LogSanitizer.sanitizeException(e),
                     e);
 
         } else {
@@ -161,7 +162,10 @@ public class LoggingAspect {
                 stringArrayList.add(paramName + " : " + argValue);
             }
             String argsString = String.join(", ", stringArrayList);
-            logExecutionDetails(joinPoint, logLevel, methodName + "() args :: -> " + argsString);
+            logExecutionDetails(
+                    joinPoint,
+                    logLevel,
+                    methodName + "() args :: -> " + LogSanitizer.sanitizeForLog(argsString, 1024));
         }
     }
 
@@ -170,7 +174,12 @@ public class LoggingAspect {
         if (result != null) {
             boolean printResponse = shouldLog(joinPoint, Loggable::result);
             if (printResponse) {
-                logExecutionDetails(joinPoint, logLevel, methodName + "() Returned : " + result);
+                logExecutionDetails(
+                        joinPoint,
+                        logLevel,
+                        methodName
+                                + "() Returned : "
+                                + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
             }
         }
     }

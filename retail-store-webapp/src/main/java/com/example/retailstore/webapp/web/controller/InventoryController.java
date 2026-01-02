@@ -4,6 +4,7 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.inventory.InventoryResponse;
 import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
+import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ class InventoryController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/inventory")
     String showInventoriesPage(@RequestParam(defaultValue = "0") int page, Model model) {
-        log.debug("Inventory page accessed with page number: {}", page);
+        log.debug("Inventory page accessed with page number: {}", LogSanitizer.sanitizeForLog(String.valueOf(page)));
         model.addAttribute("pageNo", page);
         return "inventory";
     }
@@ -45,12 +46,12 @@ class InventoryController {
     @GetMapping(value = "/api/inventory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     PagedResult<InventoryResponse> inventories(@RequestParam(defaultValue = "0") int page, Model model) {
-        log.info("Fetching inventories for page: {}", page);
+        log.info("Fetching inventories for page: {}", LogSanitizer.sanitizeForLog(String.valueOf(page)));
         try {
             return inventoryServiceClient.getInventories(page);
         } catch (Exception e) {
-            log.error("Error fetching inventories: {}", e.getMessage());
-            throw new InvalidRequestException("Failed to fetch inventory: " + e.getMessage());
+            log.error("Error fetching inventories: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to fetch inventory: " + LogSanitizer.sanitizeException(e));
         }
     }
 
@@ -58,7 +59,7 @@ class InventoryController {
     @ResponseBody
     @PreAuthorize("hasRole('ADMIN')")
     InventoryResponse updateInventory(@Valid @RequestBody InventoryResponse inventoryResponse) {
-        log.debug("Input Received :{}", inventoryResponse);
+        log.debug("Input Received :{}", LogSanitizer.sanitizeForLog(String.valueOf(inventoryResponse)));
         try {
             if (inventoryResponse.id() == null) {
                 throw new InvalidRequestException("Inventory ID cannot be null");
@@ -68,8 +69,11 @@ class InventoryController {
         } catch (InvalidRequestException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error updating inventory {}: {}", inventoryResponse.id(), e.getMessage());
-            throw new InvalidRequestException("Failed to update inventory: " + e.getMessage());
+            log.error(
+                    "Error updating inventory {}: {}",
+                    LogSanitizer.sanitizeForLog(String.valueOf(inventoryResponse.id())),
+                    LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to update inventory: " + LogSanitizer.sanitizeException(e));
         }
     }
 }

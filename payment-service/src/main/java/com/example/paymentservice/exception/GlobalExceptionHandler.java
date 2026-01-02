@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
 package com.example.paymentservice.exception;
 
+import com.example.paymentservice.utils.LogSanitizer;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -31,11 +32,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CustomerNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleCustomerNotFound(
             CustomerNotFoundException ex, WebRequest request) {
-        log.warn("Customer not found: {}", ex.getMessage());
+        log.warn("Customer not found: {}", LogSanitizer.sanitizeException(ex));
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Customer Not Found");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("errorCategory", "Generic");
@@ -49,7 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {
-        log.warn("Validation failed: {}", ex.getMessage());
+        log.warn("Validation failed: {}", LogSanitizer.sanitizeException(ex));
 
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
@@ -80,10 +82,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
             ConstraintViolationException ex, WebRequest request) {
-        log.warn("Constraint violation: {}", ex.getMessage());
+        log.warn("Constraint violation: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
@@ -95,10 +98,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
             IllegalArgumentException ex, WebRequest request) {
-        log.warn("Illegal argument: {}", ex.getMessage());
+        log.warn("Illegal argument: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST, LogSanitizer.sanitizeException(ex));
         problemDetail.setTitle("Invalid Request");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/invalid-request"));
         problemDetail.setProperty("timestamp", Instant.now());

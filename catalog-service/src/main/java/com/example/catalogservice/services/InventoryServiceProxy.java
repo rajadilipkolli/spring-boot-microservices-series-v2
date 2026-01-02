@@ -11,6 +11,7 @@ import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
+import com.example.catalogservice.util.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -63,7 +64,9 @@ public class InventoryServiceProxy {
     }
 
     public Mono<InventoryResponse> getInventoryByProductCode(String productCode) {
-        log.info("Fetching inventory information for productCode {}", productCode);
+        log.info(
+                "Fetching inventory information for productCode {}",
+                LogSanitizer.sanitizeForLog(productCode));
         return executeWithFallback(
                 webClient
                         .get()
@@ -74,7 +77,10 @@ public class InventoryServiceProxy {
     }
 
     private Mono<InventoryResponse> getInventoryByProductCodeFallBack(String code, Throwable e) {
-        log.error("Exception occurred while fetching product details for code :{}", code, e);
+        log.error(
+                "Exception occurred while fetching product details for code :{}: {}",
+                LogSanitizer.sanitizeForLog(code),
+                LogSanitizer.sanitizeException(e));
         return Mono.just(new InventoryResponse(code, 0));
     }
 
@@ -82,7 +88,9 @@ public class InventoryServiceProxy {
             name = "getInventoryByProductCodes",
             fallbackMethod = "getInventoryByProductCodesFallBack")
     public Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
-        log.info("Fetching inventory information for productCodes : {}", productCodeList);
+        log.info(
+                "Fetching inventory information for productCodes : {}",
+                LogSanitizer.sanitizeCollection(productCodeList));
         return webClient
                 .get()
                 .uri(

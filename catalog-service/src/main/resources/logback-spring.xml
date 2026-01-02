@@ -5,6 +5,9 @@
 
     <springProperty scope="context" name="appName" source="spring.application.name"/>
 
+    <!-- Security: neutralize CR/LF and other injection sequences in log messages -->
+    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %replace(%msg){'[\\r]+','_'}%n"/>
+
     <springProfile name="default">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
