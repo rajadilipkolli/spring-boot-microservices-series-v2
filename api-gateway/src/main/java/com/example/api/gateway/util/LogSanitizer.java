@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.apigateway.util;
+package com.example.api.gateway.util;
 
 import java.util.Collection;
 import java.util.Objects;

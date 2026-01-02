@@ -6,7 +6,7 @@
 
 package com.example.catalogservice.exception;
 
-import com.example.catalogservice.util.LogSanitizer;
+import com.example.catalogservice.utils.LogSanitizer;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;

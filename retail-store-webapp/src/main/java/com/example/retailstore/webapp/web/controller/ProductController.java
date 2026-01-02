@@ -48,7 +48,7 @@ class ProductController {
             return catalogServiceClient.createProduct(productRequest);
         } catch (Exception e) {
             log.error("Error creating product: {}", LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to create product: " + LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to create product", e);
         }
     }
 
@@ -60,7 +60,7 @@ class ProductController {
             return catalogServiceClient.getProducts(page);
         } catch (Exception e) {
             log.error("Error fetching products: {}", LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to fetch products: " + LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to fetch products", e);
         }
     }
 }

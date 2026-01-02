@@ -11,7 +11,7 @@ import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.util.LogSanitizer;
+import com.example.catalogservice.utils.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;

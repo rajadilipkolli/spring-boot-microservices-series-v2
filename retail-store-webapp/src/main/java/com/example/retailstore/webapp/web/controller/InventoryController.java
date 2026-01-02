@@ -51,7 +51,7 @@ class InventoryController {
             return inventoryServiceClient.getInventories(page);
         } catch (Exception e) {
             log.error("Error fetching inventories: {}", LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to fetch inventory: " + LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to fetch inventoryies. Please try again later.");
         }
     }
 
@@ -73,7 +73,7 @@ class InventoryController {
                     "Error updating inventory {}: {}",
                     LogSanitizer.sanitizeForLog(String.valueOf(inventoryResponse.id())),
                     LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to update inventory: " + LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to update inventory. Please try again later.");
         }
     }
 }

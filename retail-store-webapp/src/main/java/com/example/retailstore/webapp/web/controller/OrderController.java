@@ -105,7 +105,7 @@ class OrderController {
             throw e;
         } catch (Exception e) {
             log.error("Error creating order: {}", LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to create order: " + LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to create order. Please try again later.");
         }
     }
 }

@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.catalogservice.util;
+package com.example.catalogservice.utils;
 
 import java.util.Collection;
 import java.util.Objects;

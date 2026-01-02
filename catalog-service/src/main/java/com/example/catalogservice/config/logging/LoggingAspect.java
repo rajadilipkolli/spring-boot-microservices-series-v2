@@ -6,8 +6,8 @@
 
 package com.example.catalogservice.config.logging;
 
-import com.example.catalogservice.util.LogSanitizer;
 import com.example.catalogservice.utils.AppConstants;
+import com.example.catalogservice.utils.LogSanitizer;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
