@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.exception;
 
+import com.example.catalogservice.utils.LogSanitizer;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WebExchangeBindException.class)
     Mono<ProblemDetail> handleWebExchangeBindException(WebExchangeBindException ex) {
-        log.warn("Validation error", ex);
+        log.warn("Validation error: {}", LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
         problemDetail.setDetail("Invalid request content.");
@@ -49,7 +50,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataBufferLimitException.class)
     Mono<ProblemDetail> handleDataBufferLimitException(DataBufferLimitException ex) {
-        log.warn("Request body too large", ex);
+        log.warn("Request body too large: {}", LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
         problemDetail.setTitle("Request Entity Too Large");
         problemDetail.setDetail("The request body exceeds the maximum allowed size");
@@ -58,7 +59,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     Mono<ProblemDetail> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
-        log.warn("Data integrity violation", ex);
+        log.warn("Data integrity violation: {}", LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problemDetail.setTitle("Data Integrity Violation");
         problemDetail.setDetail("A conflict occurred while trying to save the data");

@@ -53,7 +53,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = OrderController.class)
 @ActiveProfiles(AppConstants.PROFILE_TEST)
@@ -67,7 +67,7 @@ class OrderControllerTest {
 
     @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JsonMapper jsonMapper;
 
     @Test
     void shouldFetchAllOrders() throws Exception {
@@ -283,7 +283,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId", notNullValue()))
                     .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
@@ -323,7 +323,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
@@ -362,7 +362,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
@@ -428,7 +428,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             put("/api/orders/{id}", 1L)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.orderId", is(1)))
                     .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
@@ -463,7 +463,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             put("/api/orders/{id}", orderId)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(order)))
+                                    .content(jsonMapper.writeValueAsString(order)))
                     .andExpect(status().isNotFound())
                     .andExpect(
                             header().string(

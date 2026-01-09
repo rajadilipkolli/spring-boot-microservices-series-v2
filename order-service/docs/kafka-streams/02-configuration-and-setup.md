@@ -416,7 +416,7 @@ streamsConfiguration.put(
 public Serde<OrderDto> orderDtoSerde() {
     JsonSerde<OrderDto> serde = new JsonSerde<>(OrderDto.class);
     
-    // Configure ObjectMapper
+    // Configure JsonMapper
     serde.configure(Map.of(
         JsonDeserializer.TRUSTED_PACKAGES, "com.example.common.dtos",
         JsonDeserializer.USE_TYPE_INFO_HEADERS, false,

@@ -17,6 +17,7 @@ import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -86,7 +87,9 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .toList();
         if (productsExistsAndInStock(productCodes)) {
-            log.debug("ProductCodes :{} exists in db, hence proceeding", productCodes);
+            log.debug(
+                    "ProductCodes :{} exists in db, hence proceeding",
+                    LogSanitizer.sanitizeCollection(productCodes));
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = this.orderRepository.save(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
@@ -94,7 +97,9 @@ public class OrderService {
             kafkaOrderProducer.sendOrder(persistedOrderDto);
             return this.orderMapper.toResponse(savedOrder);
         } else {
-            log.debug("one or more of product codes :{} does not exists in db", productCodes);
+            log.debug(
+                    "one or more of product codes :{} does not exists in db",
+                    LogSanitizer.sanitizeCollection(productCodes));
             throw new ProductNotFoundException(productCodes);
         }
     }
@@ -111,7 +116,9 @@ public class OrderService {
                         .toList();
 
         if (productsExistsAndInStock(allProductCodes)) {
-            log.debug("All ProductCodes exist in db, proceeding with batch save");
+            log.debug(
+                    "All ProductCodes exist in db, proceeding with batch save: {}",
+                    LogSanitizer.sanitizeCollection(allProductCodes));
             List<Order> orderEntities =
                     orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
 
@@ -124,7 +131,9 @@ public class OrderService {
 
             return savedOrders.stream().map(this.orderMapper::toResponse).toList();
         } else {
-            log.debug("One or more product codes do not exist in db");
+            log.debug(
+                    "One or more product codes do not exist in db: {}",
+                    LogSanitizer.sanitizeCollection(allProductCodes));
             throw new ProductNotFoundException(allProductCodes);
         }
     }
@@ -197,7 +206,9 @@ public class OrderService {
         byStatusOrderByIdAsc.forEach(
                 order -> {
                     OrderDto persistedOrderDto = this.orderMapper.toDto(order);
-                    log.info("Retrying Order :{}", persistedOrderDto);
+                    log.info(
+                            "Retrying Order :{}",
+                            LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
                     kafkaOrderProducer.sendOrder(persistedOrderDto);
                 });
     }

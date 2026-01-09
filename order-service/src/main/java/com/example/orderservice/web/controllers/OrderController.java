@@ -16,6 +16,7 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.utils.LogSanitizer;
 import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -97,7 +98,7 @@ class OrderController implements OrderApi {
         if (ex instanceof OrderNotFoundException orderNotFoundException) {
             throw orderNotFoundException;
         }
-        log.error("Exception occurred ", ex);
+        log.error("Exception occurred: {}", LogSanitizer.sanitizeException(ex));
         return ResponseEntity.ok("fallback-response for id : " + id);
     }
 

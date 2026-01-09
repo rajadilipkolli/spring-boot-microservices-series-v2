@@ -47,7 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = InventoryController.class)
 @ActiveProfiles("test")
@@ -58,7 +58,7 @@ class InventoryControllerTest {
 
     @MockitoBean private InventoryService inventoryService;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JsonMapper jsonMapper;
 
     private List<Inventory> inventoryList;
 
@@ -221,7 +221,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
@@ -236,7 +236,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
@@ -260,7 +260,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(bad)))
+                                .content(jsonMapper.writeValueAsString(bad)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -275,7 +275,7 @@ class InventoryControllerTest {
                 .perform(
                         put("/api/inventory/{id}", inventoryId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isNotFound());
     }
 
@@ -297,7 +297,7 @@ class InventoryControllerTest {
                 .perform(
                         put("/api/inventory/{id}", inventoryId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(req)))
+                                .content(jsonMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(inventoryId.intValue())))
                 .andExpect(jsonPath("$.productCode", is("updated")))

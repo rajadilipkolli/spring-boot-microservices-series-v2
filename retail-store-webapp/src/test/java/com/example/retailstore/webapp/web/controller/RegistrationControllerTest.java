@@ -26,7 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
@@ -41,7 +41,7 @@ class RegistrationControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private KeycloakRegistrationService registrationService;
@@ -62,7 +62,7 @@ class RegistrationControllerTest {
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
@@ -79,7 +79,7 @@ class RegistrationControllerTest {
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
     }
@@ -99,7 +99,7 @@ class RegistrationControllerTest {
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -116,7 +116,7 @@ class RegistrationControllerTest {
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type", is("https://api.retailstore.com/errors/keycloak-registration")))

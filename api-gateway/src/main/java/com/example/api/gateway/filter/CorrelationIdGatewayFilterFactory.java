@@ -29,23 +29,22 @@ public class CorrelationIdGatewayFilterFactory extends AbstractGatewayFilterFact
             String correlationId =
                     exchange.getRequest().getHeaders().getFirst(CORRELATION_ID_HEADER);
 
-            final String finalCorrelationId;
             if (correlationId == null || correlationId.isEmpty()) {
-                finalCorrelationId = UUID.randomUUID().toString();
-                log.debug("Generated new correlation ID: {}", finalCorrelationId);
+                correlationId = UUID.randomUUID().toString();
+                log.debug("Generated new correlation ID: {}", correlationId);
             } else {
-                finalCorrelationId = correlationId;
-                log.debug("Using existing correlation ID: {}", finalCorrelationId);
+                log.debug("Using existing correlation ID: {}", correlationId);
             }
 
             // Add correlation ID to request
             var request =
                     exchange.getRequest()
                             .mutate()
-                            .header(CORRELATION_ID_HEADER, finalCorrelationId)
+                            .header(CORRELATION_ID_HEADER, correlationId)
                             .build();
 
             // Add correlation ID to response
+            String finalCorrelationId = correlationId;
             exchange.getResponse()
                     .beforeCommit(
                             () -> {

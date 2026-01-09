@@ -6,12 +6,13 @@
 
 package com.example.catalogservice.common;
 
+import java.time.Duration;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
-import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -27,11 +28,10 @@ public class ContainersConfig {
     }
 
     @Bean
-    @ServiceConnection(name = "openzipkin/zipkin")
-    GenericContainer<?> zipkinContainer() {
-        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411)
-                .withReuse(true);
+    @ServiceConnection
+    LgtmStackContainer lgtmContainer() {
+        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.14.0"))
+                .withStartupTimeout(Duration.ofMinutes(2));
     }
 
     @Bean

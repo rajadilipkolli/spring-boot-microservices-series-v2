@@ -4,8 +4,32 @@ spring:
     password: secret
     url: jdbc:postgresql://postgresql:5432/appdb
     username: appuser
-  kafka.bootstrap-servers:
-  - kafka:29092
-  threads.virtual.enabled: true
-eureka.client.service-url.defaultZone: http://naming-server:8761/eureka/
-management.tracing.export.zipkin.endpoint: http://zipkin-server:9411/api/v2/spans
+  kafka:
+    bootstrap-servers:
+      - kafka:29092
+  threads:
+    virtual:
+      enabled: true
+eureka:
+  client:
+    service-url:
+      defaultZone: http://naming-server:8761/eureka/
+
+# Metrics Export
+management:
+  otlp:
+    metrics:
+      export:
+        url: http://grafana-lgtm:4318/v1/metrics
+        step: 10s
+  # Tracing Endpoint
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/traces
+    # Logs Exporter Endpoint
+    logging:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/logs

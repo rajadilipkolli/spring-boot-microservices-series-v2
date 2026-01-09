@@ -100,7 +100,7 @@ sequenceDiagram
             
             CatalogAPI->>StreamBridge: catalogKafkaProducer.send(productRequest)
             StreamBridge->>StreamBridge: ProductMapper.toProductDto()
-            StreamBridge->>StreamBridge: ObjectMapper.writeValueAsString()<br/>(JSON serialization)
+            StreamBridge->>StreamBridge: JsonMapper.writeValueAsString()<br/>(JSON serialization)
             StreamBridge->>Kafka: streamBridge.send("inventory-out-0", productDto)
             Kafka-->>StreamBridge: Kafka send confirmation
             StreamBridge-->>CatalogAPI: Mono<Boolean> success
@@ -291,7 +291,7 @@ sequenceDiagram
 ### 🎯 **Event-Driven Architecture**
 - **Product Events**: Kafka publishing for inventory service integration
 - **Spring Cloud Stream**: Declarative messaging with StreamBridge
-- **JSON Serialization**: ObjectMapper for message payload conversion
+- **JSON Serialization**: JsonMapper for message payload conversion
 - **Topic Configuration**: Configurable destination and content type
 
 ### 📊 **Data Management**

@@ -8,6 +8,7 @@ import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
+import com.example.paymentservice.utils.LogSanitizer;
 import io.micrometer.core.annotation.Timed;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -37,12 +38,14 @@ public class PaymentOrderManageService {
     public OrderDto reserve(OrderDto orderDto) {
         log.debug(
                 "Reserving Order with Id :{} in payment service with payload {}",
-                orderDto.orderId(),
-                orderDto);
+                LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
+                LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
         Optional<Customer> optionalCustomer = customerRepository.findById(orderDto.customerId());
         if (optionalCustomer.isPresent()) {
             Customer customer = optionalCustomer.get();
-            log.info("Found Customer: {}", customer.getId());
+            log.info(
+                    "Found Customer: {}",
+                    LogSanitizer.sanitizeForLog(String.valueOf(customer.getId())));
             var totalOrderPrice =
                     orderDto.items().stream()
                             .map(OrderItemDto::getPrice)
@@ -56,13 +59,15 @@ public class PaymentOrderManageService {
             } else {
                 orderDto = orderDto.withStatus("REJECT");
             }
-            log.info("Saving customer: {} after reserving", customer);
+            log.info(
+                    "Saving customer: {} after reserving",
+                    LogSanitizer.sanitizeForLog(String.valueOf(customer)));
             customerRepository.save(customer);
             orderDto = orderDto.withSource(AppConstants.SOURCE);
             kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.orderId(), orderDto);
             log.info(
                     "Sent Reserved Order: {} to topic :{}",
-                    orderDto,
+                    LogSanitizer.sanitizeForLog(String.valueOf(orderDto)),
                     AppConstants.PAYMENT_ORDERS_TOPIC);
         } else {
             log.error("Customer not found for id: {}", orderDto.customerId());
@@ -75,13 +80,13 @@ public class PaymentOrderManageService {
     public void confirm(OrderDto orderDto) {
         log.debug(
                 "Confirming Order with Id :{} in payment service with payload {}",
-                orderDto.orderId(),
-                orderDto);
+                LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
+                LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
         Customer customer =
                 customerRepository
                         .findById(orderDto.customerId())
                         .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
-        log.info("Found Customer: {}", customer);
+        log.info("Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customer)));
         var orderPrice =
                 orderDto.items().stream()
                         .map(OrderItemDto::getPrice)
@@ -94,8 +99,10 @@ public class PaymentOrderManageService {
             customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
             customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
         }
-        log.info("Saving customer :{} After Confirmation", customer);
+        log.info(
+                "Saving customer :{} After Confirmation",
+                LogSanitizer.sanitizeForLog(String.valueOf(customer)));
         Customer saved = customerRepository.save(customer);
-        log.debug("Saved customer :{}", saved);
+        log.debug("Saved customer :{}", LogSanitizer.sanitizeForLog(String.valueOf(saved)));
     }
 }

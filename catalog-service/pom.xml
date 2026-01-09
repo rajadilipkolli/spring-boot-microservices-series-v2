@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.catalogservice</groupId>
@@ -21,7 +21,7 @@
 
         <java.version>25</java.version>
         <spring-cloud.version>2025.1.0</spring-cloud.version>
-        <springdoc-openapi.version>3.0.0</springdoc-openapi.version>
+        <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
 
@@ -30,7 +30,7 @@
         <spotless.version>3.1.0</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
 
-        <dependency-check-maven.version>12.1.9</dependency-check-maven.version>
+        <dependency-check-maven.version>12.2.0</dependency-check-maven.version>
 
         <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
         <sonar-maven-plugin.version>5.5.0.6356</sonar-maven-plugin.version>
@@ -121,13 +121,8 @@
         </dependency>
         <!-- Tracing -->
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-otel</artifactId>
-        </dependency>
-        <!-- Latency Visualization -->
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-exporter-zipkin</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
         </dependency>
         <!-- end Observability -->
         <dependency>
@@ -202,7 +197,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-zipkin-test</artifactId>
+            <artifactId>spring-boot-starter-opentelemetry-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -228,6 +223,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-kafka</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-grafana</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -389,7 +389,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>12.2.0</version>
+                        <version>13.0.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>
