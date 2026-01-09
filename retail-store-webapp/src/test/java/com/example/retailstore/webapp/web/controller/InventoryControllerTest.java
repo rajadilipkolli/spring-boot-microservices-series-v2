@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.web.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -7,7 +8,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -15,16 +15,16 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.inventory.InventoryResponse;
 import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = InventoryController.class)
 @Import(TestSecurityConfig.class)
@@ -36,7 +36,7 @@ class InventoryControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private InventoryServiceClient inventoryServiceClient;
@@ -75,7 +75,7 @@ class InventoryControllerTest {
 
         mockMvc.perform(get(INVENTORY_API_PATH).with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(pagedResult)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(pagedResult)));
     }
 
     @Test
@@ -92,9 +92,9 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(response)));
     }
 
     @Test
@@ -105,15 +105,21 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void shouldRedirectUnauthenticatedUserToLoginPage() throws Exception {
-        mockMvc.perform(get(INVENTORY_PATH).with(csrf()))
+        mockMvc.perform(get(INVENTORY_PATH))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/login"));
+                .andExpect(result -> {
+                    String location = result.getResponse().getHeader("Location");
+                    assertThat(location)
+                            .isNotNull()
+                            .satisfiesAnyOf(loc -> assertThat(loc).endsWith("/login"), loc -> assertThat(loc)
+                                    .contains("/oauth2/authorization/"));
+                });
     }
 
     @Test
@@ -123,7 +129,7 @@ class InventoryControllerTest {
 
         mockMvc.perform(put(INVENTORY_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isForbidden());
     }
 
@@ -136,8 +142,8 @@ class InventoryControllerTest {
         mockMvc.perform(put(INVENTORY_PATH)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inventory)))
+                        .content(jsonMapper.writeValueAsString(inventory)))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(inventory)));
+                .andExpect(content().json(jsonMapper.writeValueAsString(inventory)));
     }
 }

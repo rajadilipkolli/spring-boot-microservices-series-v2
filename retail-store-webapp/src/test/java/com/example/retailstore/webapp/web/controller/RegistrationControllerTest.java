@@ -11,19 +11,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.retailstore.webapp.clients.customer.CustomerRequest;
+import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(RegistrationController.class)
 @Import({TestSecurityConfig.class})
@@ -38,7 +41,7 @@ class RegistrationControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private KeycloakRegistrationService registrationService;
@@ -47,43 +50,42 @@ class RegistrationControllerTest {
     private CustomerServiceClient customerServiceClient;
 
     @Test
+    @WithAnonymousUser
     void shouldRegisterUserSuccessfully() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(
-                        any(com.example.retailstore.webapp.clients.customer.CustomerRequest.class)))
-                .thenReturn(new com.example.retailstore.webapp.clients.customer.CustomerResponse(
-                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 10_000));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User registered successfully"));
+                .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
     @Test
+    @WithAnonymousUser
     void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(
-                        any(com.example.retailstore.webapp.clients.customer.CustomerRequest.class)))
-                .thenReturn(new com.example.retailstore.webapp.clients.customer.CustomerResponse(
-                        1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
     }
 
     @Test
+    @WithAnonymousUser
     void shouldReturn400WhenRegistrationDataIsInvalid() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 "", // invalid username
@@ -97,11 +99,12 @@ class RegistrationControllerTest {
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
+    @WithAnonymousUser
     void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
@@ -113,7 +116,7 @@ class RegistrationControllerTest {
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type", is("https://api.retailstore.com/errors/keycloak-registration")))

@@ -2,8 +2,6 @@
 
 <div align="center">
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rajadilipkolli/spring-boot-microservices-series-v2)
-
 **A comprehensive microservices architecture showcase using modern cloud-native technologies**
 
 *Building resilient, scalable, and observable distributed systems with Spring Boot ecosystem*
@@ -211,7 +209,6 @@ graph TB
 ### Metrics & Tracing
 * ![Prometheus](https://img.shields.io/badge/Prometheus-Latest-orange?style=flat-square&logo=prometheus) [Prometheus](http://prometheus.io/)
 * ![Grafana](https://img.shields.io/badge/Grafana-Latest-orange?style=flat-square&logo=grafana) [Grafana](http://grafana.org/)
-* ![Zipkin](https://img.shields.io/badge/Zipkin-Latest-yellow?style=flat-square) [Zipkin](https://zipkin.io/)
 * ![Micrometer](https://img.shields.io/badge/Micrometer-Latest-blue?style=flat-square) Micrometer
 
 ### Logging
@@ -314,8 +311,8 @@ Once all services are running, verify the setup:
 - 🌐 **Service Registry:** [http://localhost:8761](http://localhost:8761)
 - 📚 **API Documentation:** [http://localhost:8765/swagger-ui.html](http://localhost:8765/swagger-ui.html)
 - 🛒 **Retail Store App:** [http://localhost:8080](http://localhost:8080)
-- 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (admin/admin)
-- 🔍 **Zipkin Tracing:** [http://localhost:9411](http://localhost:9411)
+- 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (user/password)
+- 🔍 **Loki Tracing:** [http://localhost:3000](http://localhost:3000)
 
 ## 🎛️ Service Discovery & API Access
 
@@ -348,7 +345,7 @@ Access all microservice APIs through a unified interface:
 
 **📊 Grafana**
 - **URL:** [http://localhost:3000](http://localhost:3000)
-- **Credentials:** `admin/admin`
+- **Credentials:** `user/password`
 - **Features:** Beautiful dashboards, alerting, data visualization
 
 </td>
@@ -371,8 +368,8 @@ Access all microservice APIs through a unified interface:
 
 ### 🔍 Distributed Tracing
 
-**Zipkin Integration**
-- **URL:** [http://localhost:9411/zipkin/](http://localhost:9411/zipkin/)
+**LGTM Integration**
+- **URL:** [http://localhost:3000/](http://localhost:3000/)
 - **Features:** Request flow visualization, latency analysis, dependency mapping
 - **Integration:** Micrometer Tracing with Spring Boot
 

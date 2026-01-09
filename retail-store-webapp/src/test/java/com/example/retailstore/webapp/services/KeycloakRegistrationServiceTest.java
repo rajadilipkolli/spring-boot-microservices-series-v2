@@ -1,23 +1,27 @@
 package com.example.retailstore.webapp.services;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
+import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
@@ -42,134 +46,149 @@ class KeycloakRegistrationServiceTest {
     private RestClient.ResponseSpec responseSpec;
 
     @Captor
-    private ArgumentCaptor<Map<String, Object>> requestCaptor; // Changed to capture Map<String, Object>
+    ArgumentCaptor<MultiValueMap<String, String>> formCaptor;
 
     @Captor
-    private ArgumentCaptor<String> stringRequestCaptor; // Added for capturing String body
+    ArgumentCaptor<Map<String, Object>> jsonCaptor;
 
-    private KeycloakRegistrationService registrationService;
+    private KeycloakRegistrationService svc;
 
     @BeforeEach
-    void setUp() {
-        registrationService = new KeycloakRegistrationService("http://localhost:9191", restClient, keycloakProperties);
-        lenient().when(restClient.post()).thenReturn(requestBodyUriSpec);
-        lenient().when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
-        lenient().when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
-        // Make stubbings for body lenient and more specific if possible
-        lenient().when(requestBodySpec.body(anyString())).thenReturn(requestBodySpec); // For token call
-        lenient().when(requestBodySpec.body(any(Map.class))).thenReturn(requestBodySpec); // For user creation call
-        lenient()
-                .when(requestBodySpec.body(any(MultiValueMap.class)))
-                .thenReturn(requestBodySpec); // Keep for other potential uses
-        lenient().when(requestBodySpec.header(any(), any())).thenReturn(requestBodySpec);
-        lenient().when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    void beforeEach() {
+        svc = new KeycloakRegistrationService("http://kc", restClient, keycloakProperties);
+        given(restClient.post()).willReturn(requestBodyUriSpec);
+        given(requestBodyUriSpec.uri(anyString())).willReturn(requestBodySpec);
+        given(requestBodySpec.retrieve()).willReturn(responseSpec);
     }
 
     @Test
-    void shouldRegisterUserSuccessfully() {
-        // Given
-        var request = new RegistrationRequest(
-                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
+    void registerSuccessPathPostsTokenAndUser() {
+        // arrange
+        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
+        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
+        given(keycloakProperties.getRealm()).willReturn("realm1");
 
-        when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token"));
-        when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
-        when(keycloakProperties.getRealm()).thenReturn("test-realm");
+        // token form body: accept MultiValueMap
+        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
+                .willReturn(requestBodySpec);
+        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
+                .willReturn(Map.of("access_token", "tkn"));
 
-        // When/Then
-        assertDoesNotThrow(() -> registrationService.registerUser(request));
-        verify(requestBodySpec).header(eq("Authorization"), eq("Bearer mock-token"));
+        // user creation JSON
+        given(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<Map<String, Object>>any())).willReturn(requestBodySpec);
+        given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
+        given(responseSpec.toBodilessEntity()).willReturn(ResponseEntity.ok().build());
+
+        var r = new RegistrationRequest("u1", "e@example.com", "First", "Last", "p", 1L, "addr");
+
+        // act / assert
+        assertDoesNotThrow(() -> svc.registerUser(r));
+
+        // verify: capture the two body calls in the execution order (form then json)
+        InOrder ord = inOrder(requestBodySpec, responseSpec);
+        ord.verify(requestBodySpec).contentType(MediaType.APPLICATION_FORM_URLENCODED);
+        ord.verify(requestBodySpec).body(formCaptor.capture());
+        // assert token form contains expected keys; values can be any
+        var tokenForm = formCaptor.getValue();
+        assertThat(tokenForm.keySet())
+                .containsAll(Set.of("client_id", "client_secret", "username", "password", "grant_type"));
+
+        ord.verify(requestBodySpec).contentType(MediaType.APPLICATION_JSON);
+        ord.verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
+        ord.verify(requestBodySpec).body(jsonCaptor.capture());
+        var userJson = jsonCaptor.getValue();
+        assertThat(userJson.keySet())
+                .containsAll(Set.of("username", "email", "firstName", "lastName", "enabled", "credentials"));
+        ord.verify(responseSpec).toBodilessEntity();
     }
 
     @Test
-    @Disabled
-    void shouldRegisterUserWithCorrectRoles() {
-        // Arrange
-        RegistrationRequest registrationRequest = new RegistrationRequest(
-                "testUser", "test@example.com", "Test", "User", "testPassword", 9848022334L, "junitAddress");
+    void registerFailsWhenTokenReturnsErrorMap() {
+        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
+        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
 
-        // Mock Keycloak responses
-        when(keycloakProperties.getRealm()).thenReturn("test-realm");
-        when(keycloakProperties.getAdminClientId()).thenReturn("admin-cli");
-        when(keycloakProperties.getAdminClientSecret()).thenReturn("admin-secret");
+        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
+                .willReturn(requestBodySpec);
+        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
+                .willReturn(Map.of("error", "nope"));
 
-        // Mock specific responses for token and user creation calls
-        when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token")); // For token response
-        when(responseSpec.toBodilessEntity())
-                .thenReturn(ResponseEntity.status(201).build()); // For user creation response
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
 
-        // Act
-        registrationService.registerUser(registrationRequest);
-
-        // Assert
-        verify(restClient, times(2)).post(); // Token endpoint and user creation endpoint
-
-        // Capture arguments for body calls specifically by type
-        verify(requestBodySpec).body(stringRequestCaptor.capture()); // Captures String body for token
-        verify(requestBodySpec).body(requestCaptor.capture()); // Captures Map body for user creation
-
-        String tokenRequestBody = stringRequestCaptor.getValue();
-        assertTrue(tokenRequestBody.contains("grant_type=password"));
-        assertTrue(tokenRequestBody.contains("client_id=" + keycloakProperties.getAdminClientId()));
-        assertTrue(tokenRequestBody.contains("client_secret=" + keycloakProperties.getAdminClientSecret()));
-        assertTrue(tokenRequestBody.contains("username=admin"));
-        assertTrue(tokenRequestBody.contains("password=admin1234"));
-
-        // Second call is for user creation
-        Map<String, Object> userRequestBody = requestCaptor.getValue(); // No explicit cast needed if captor is typed
-        assertEquals(registrationRequest.username(), userRequestBody.get("username"));
-        assertEquals(registrationRequest.email(), userRequestBody.get("email"));
-        assertEquals(registrationRequest.firstName(), userRequestBody.get("firstName"));
-        assertEquals(registrationRequest.lastName(), userRequestBody.get("lastName"));
-        assertTrue((Boolean) userRequestBody.get("enabled"));
-
-        @SuppressWarnings("unchecked") // Suppress warning for casting Object to List<Map<String,String>>
-        List<Map<String, String>> credentials = (List<Map<String, String>>) userRequestBody.get("credentials");
-        assertEquals(1, credentials.size());
-        assertEquals("password", credentials.get(0).get("type"));
-        assertEquals(registrationRequest.password(), credentials.get(0).get("value"));
-        assertFalse(Boolean.parseBoolean((String) credentials.get(0).get("temporary")));
-
-        @SuppressWarnings("unchecked") // Suppress warning for casting Object to List
-        List<String> realmRoles = (List<String>) userRequestBody.get("realmRoles");
-        assertTrue(realmRoles.contains("user"));
+        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
     @Test
-    void shouldThrowExceptionWhenAdminTokenCannotBeObtained() {
-        // Given
-        var request = new RegistrationRequest(
-                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
-        // keycloakProperties.getRealm() is NOT called in the getAdminToken() path, only for user creation.
-        // So, this stubbing is unnecessary if token retrieval fails before user creation.
-        // If it IS called, it should be part of the setup for the specific path being tested.
-        // For this test, the failure happens during getAdminToken, so getRealm() for user creation URI is not reached.
-        // lenient().when(keycloakProperties.getRealm()).thenReturn("test-realm"); // Removed as it's not used in this
-        // failure path
-        when(keycloakProperties.getAdminClientId()).thenReturn("admin-cli");
-        when(keycloakProperties.getAdminClientSecret()).thenReturn("admin-secret");
+    void registerFailsWhenTokenBodyIsNull() {
+        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
+        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
 
-        // Simulate failure in retrieving token
-        when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("error", "unauthorized"));
+        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
+                .willReturn(requestBodySpec);
+        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
+                .willReturn(null);
 
-        // When/Then
-        assertThrows(RuntimeException.class, () -> registrationService.registerUser(request));
-        // Verify that getRealm was NOT called, confirming it's not part of the failing token path.
-        verify(keycloakProperties, never()).getRealm();
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
     @Test
-    void shouldThrowExceptionWhenKeycloakRegistrationFails() {
-        // Given
-        var request = new RegistrationRequest(
-                "testuser", "test@example.com", "Test", "User", "password123", 9848022334L, "junitAddress");
-        when(keycloakProperties.getRealm()).thenReturn("test-realm");
-        when(keycloakProperties.getAdminClientId()).thenReturn("admin-cli");
-        when(keycloakProperties.getAdminClientSecret()).thenReturn("admin-secret");
+    void registerWrapsExceptionsFromTokenCall() {
+        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
+        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
 
-        when(responseSpec.body(eq(Map.class))).thenReturn(Map.of("access_token", "mock-token"));
-        when(responseSpec.toBodilessEntity()).thenThrow(new RuntimeException("Keycloak registration failed"));
+        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
+                .willReturn(requestBodySpec);
+        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
+                .willThrow(new RuntimeException("boom"));
 
-        // When/Then
-        assertThrows(RuntimeException.class, () -> registrationService.registerUser(request));
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+
+        assertThatThrownBy(() -> svc.registerUser(r))
+                .isInstanceOf(KeyCloakException.class)
+                .hasCauseInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void registerWrapsExceptionsFromUserCreation() {
+        // token ok
+        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
+        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
+        given(keycloakProperties.getAdminUsername()).willReturn("admin");
+        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
+        given(keycloakProperties.getRealm()).willReturn("realm1");
+
+        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
+                .willReturn(requestBodySpec);
+        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
+                .willReturn(Map.of("access_token", "tkn"));
+
+        // user creation stubbed to fail
+        given(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).willReturn(requestBodySpec);
+        given(requestBodySpec.body(ArgumentMatchers.<Map<String, Object>>any())).willReturn(requestBodySpec);
+        given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
+        given(responseSpec.toBodilessEntity()).willThrow(new RuntimeException("create-fail"));
+
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
+        verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
     }
 }

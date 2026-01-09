@@ -5,6 +5,7 @@ import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
+import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +22,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 class ProductController {
 
     private static final Logger log = LoggerFactory.getLogger(ProductController.class);
-    private final CatalogServiceClient catalogService;
+    private final CatalogServiceClient catalogServiceClient;
 
-    ProductController(CatalogServiceClient catalogService) {
-        this.catalogService = catalogService;
+    ProductController(CatalogServiceClient catalogServiceClient) {
+        this.catalogServiceClient = catalogServiceClient;
     }
 
     @GetMapping
@@ -42,24 +43,24 @@ class ProductController {
     @PostMapping("/api/products")
     @ResponseBody
     ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
-        log.info("Creating new product: {}", productRequest);
+        log.info("Creating new product: {}", LogSanitizer.sanitizeForLog(String.valueOf(productRequest)));
         try {
-            return catalogService.createProduct(productRequest);
+            return catalogServiceClient.createProduct(productRequest);
         } catch (Exception e) {
-            log.error("Error creating product: {}", e.getMessage());
-            throw new InvalidRequestException("Failed to create product: " + e.getMessage());
+            log.error("Error creating product: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to create product", e);
         }
     }
 
     @GetMapping("/api/products")
     @ResponseBody
     PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page, Model model) {
-        log.info("Fetching products for page: {}", page);
+        log.info("Fetching products for page: {}", LogSanitizer.sanitizeForLog(String.valueOf(page)));
         try {
-            return catalogService.getProducts(page);
+            return catalogServiceClient.getProducts(page);
         } catch (Exception e) {
-            log.error("Error fetching products: {}", e.getMessage());
-            throw new InvalidRequestException("Failed to fetch products: " + e.getMessage());
+            log.error("Error fetching products: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to fetch products", e);
         }
     }
 }

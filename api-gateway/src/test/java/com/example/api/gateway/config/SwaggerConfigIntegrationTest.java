@@ -22,17 +22,62 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldConfigureSwaggerUi() {
-        assertThat(swaggerUiConfigProperties).isNotNull();
-        assertThat(swaggerUiConfigProperties.getUrls()).isNotNull();
+        assertThat(swaggerUiConfigProperties)
+                .isNotNull()
+                .extracting(SwaggerUiConfigProperties::getUrls)
+                .isNotNull();
+    }
+
+    @Test
+    void shouldConfigureSwaggerUrlsForServices() {
+        assertThat(swaggerUiConfigProperties.getUrls())
+                .isNotEmpty()
+                .extracting("name")
+                .containsExactlyInAnyOrder(
+                        "api-gateway", "order", "inventory", "catalog", "payment");
+
+        // Verify URL patterns for services and api-gateway
+        swaggerUiConfigProperties
+                .getUrls()
+                .forEach(
+                        url ->
+                                assertThat(url.getUrl())
+                                        .isEqualTo(
+                                                url.getName().equals("api-gateway")
+                                                        ? "/v3/api-docs"
+                                                        : "/"
+                                                                + url.getName()
+                                                                + "-service/v3/api-docs"));
     }
 
     @Test
     void shouldCreateGroupedOpenApis() {
-        assertThat(groupedOpenApis).isNotNull();
-        assertThat(groupedOpenApis).isNotEmpty();
         assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
                 .extracting("group")
                 .containsExactlyInAnyOrder("order", "inventory", "catalog", "payment");
+    }
+
+    @Test
+    void shouldCreateGroupedOpenApisWithCorrectDisplayNames() {
+        assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
+                .extracting("displayName")
+                .containsExactlyInAnyOrder(
+                        "ORDER Service", "INVENTORY Service", "CATALOG Service", "PAYMENT Service");
+    }
+
+    @Test
+    void shouldCreateGroupedOpenApisWithCorrectPathsToMatch() {
+        assertThat(groupedOpenApis)
+                .isNotNull()
+                .isNotEmpty()
+                .allSatisfy(
+                        api ->
+                                assertThat(api.getPathsToMatch())
+                                        .contains("/" + api.getGroup() + "/**"));
     }
 
     @Test
@@ -44,7 +89,9 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isTemporaryRedirect()
                 .expectHeader()
-                .valueEquals("Location", "swagger-ui.html");
+                .valueEquals("Location", "swagger-ui.html")
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -57,6 +104,8 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .contentType("application/json")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.info.title")
                 .isEqualTo("api-gateway")
@@ -64,5 +113,21 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo("Documentation for all the Microservices in Demo Application")
                 .jsonPath("$.info.version")
                 .isEqualTo("v1");
+    }
+
+    @Test
+    void shouldFilterServiceRoutesCorrectly() {
+        // Test the private method logic by checking the results
+        // Only routes ending with "-service" and not containing "actuator" should be included
+        assertThat(groupedOpenApis)
+                .extracting("group")
+                .allMatch(group -> !((String) group).contains("actuator"))
+                .allMatch(
+                        group -> {
+                            String groupName = (String) group;
+                            return groupName.equals("api-gateway")
+                                    || List.of("order", "inventory", "catalog", "payment")
+                                            .contains(groupName);
+                        });
     }
 }

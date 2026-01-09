@@ -9,10 +9,14 @@ package com.example.api.gateway.web.controller;
 import com.example.api.gateway.model.GenerationResponse;
 import com.example.api.gateway.model.ServiceResult;
 import com.example.api.gateway.model.ServiceType;
+import com.example.api.gateway.util.LogSanitizer;
 import com.example.api.gateway.web.api.GenerateAPI;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,12 +49,15 @@ public class GenerateController implements GenerateAPI {
 
     private final WebClient webClient;
     private final Duration delayBetweenServices;
+    private final boolean exposeUpstreamErrors;
 
     public GenerateController(
             @LoadBalanced WebClient.Builder webClientBuilder,
-            @Value("${gateway.delay-between-services:5s}") Duration delayBetweenServices) {
+            @Value("${gateway.delay-between-services:5s}") Duration delayBetweenServices,
+            @Value("${gateway.expose-upstream-errors:false}") boolean exposeUpstreamErrors) {
         this.webClient = webClientBuilder.build();
         this.delayBetweenServices = delayBetweenServices;
+        this.exposeUpstreamErrors = exposeUpstreamErrors;
     }
 
     /**
@@ -62,7 +69,7 @@ public class GenerateController implements GenerateAPI {
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
-    public Mono<ResponseEntity<GenerationResponse>> generate() {
+    public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
         return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
                 .flatMap(
                         catalogResult -> {
@@ -140,158 +147,128 @@ public class GenerateController implements GenerateAPI {
                 .retrieve()
                 .toEntity(String.class) // Original Mono<ResponseEntity<String>>
                 .timeout(REQUEST_TIMEOUT) // Apply timeout to each attempt
-                .map(
-                        response ->
-                                new ServiceResult(
-                                        response.getStatusCode().value(), response.getBody()))
-                .retryWhen(
-                        Retry.backoff(MAX_RETRY_ATTEMPTS, RETRY_BACKOFF)
-                                .filter(
-                                        throwable -> {
-                                            if (throwable
-                                                            instanceof
-                                                            java.util.concurrent.TimeoutException
-                                                    || throwable.getCause()
-                                                            instanceof
-                                                            java.util.concurrent.TimeoutException) {
-                                                logger.debug(
-                                                        "Retry filter: TimeoutException for {}, not retrying this attempt, but retry mechanism may try again if not exhausted.",
-                                                        url);
-                                                return false;
-                                            }
-                                            if (throwable
-                                                    instanceof WebClientResponseException wce) {
-                                                logger.debug(
-                                                        "Retry filter: WebClientResponseException status {} for {}, message: '{}'",
-                                                        wce.getStatusCode(),
-                                                        url,
-                                                        wce.getMessage());
+                .map(this::toServiceResult)
+                .retryWhen(createRetrySpec(url))
+                .onErrorResume(throwable -> handleCallError(throwable, url, serviceType));
+    }
 
-                                                if (wce.getStatusCode()
-                                                        == HttpStatus.SERVICE_UNAVAILABLE) {
-                                                    logger.debug(
-                                                            "Retry filter: SERVICE_UNAVAILABLE for {}, retrying.",
-                                                            url);
-                                                    return true; // Explicitly retry 503
-                                                }
-
-                                                wce.getMessage();
-                                                String wceMessage = wce.getMessage().toLowerCase();
-                                                String wceBody = "";
-                                                try {
-                                                    String rawBody = wce.getResponseBodyAsString();
-                                                    wceBody = rawBody.toLowerCase();
-                                                } catch (Exception ex) {
-                                                    logger.warn(
-                                                            "Could not get response body for WCE in retry filter for url {}: {}",
-                                                            url,
-                                                            ex.getMessage());
-                                                }
-
-                                                boolean bodyContainsConnectionRefused =
-                                                        wceBody.contains("connection refused");
-                                                boolean messageContainsTransient =
-                                                        wceMessage.contains("transient");
-                                                boolean messageContainsConnectionRefused =
-                                                        wceMessage.contains("connection refused");
-
-                                                boolean shouldRetry =
-                                                        bodyContainsConnectionRefused
-                                                                || messageContainsTransient
-                                                                || messageContainsConnectionRefused;
-
-                                                logger.debug(
-                                                        "Retry filter: WCE (status {}) for {} - BodyCR: {}, MsgTransient: {}, MsgCR: {}. Retrying: {}",
-                                                        wce.getStatusCode(),
-                                                        url,
-                                                        bodyContainsConnectionRefused,
-                                                        messageContainsTransient,
-                                                        messageContainsConnectionRefused,
-                                                        shouldRetry);
-
-                                                return shouldRetry;
-                                            }
-                                            String message =
-                                                    throwable.getMessage() != null
-                                                            ? throwable.getMessage().toLowerCase()
-                                                            : "";
-                                            boolean retry =
-                                                    message.contains("transient")
-                                                            || message.contains(
-                                                                    "connection refused");
-                                            logger.debug(
-                                                    "Retry filter: Other throwable ({}) for {} - message: '{}', Retrying: {}",
-                                                    throwable.getClass().getSimpleName(),
-                                                    url,
-                                                    message,
-                                                    retry);
-                                            return retry;
-                                        })
-                                .onRetryExhaustedThrow(
-                                        (retryBackoffSpec, retrySignal) -> {
-                                            logger.warn(
-                                                    "Retries exhausted for {} after {} attempts. Propagating last error: {}",
-                                                    url,
-                                                    retrySignal.totalRetries(),
-                                                    retrySignal.failure().toString());
-                                            return retrySignal.failure();
-                                        }))
-                .onErrorResume(
-                        throwable -> {
+    private Retry createRetrySpec(String url) {
+        return Retry.backoff(MAX_RETRY_ATTEMPTS, RETRY_BACKOFF)
+                .jitter(0.5) // Add jitter to avoid thundering herd
+                .filter(throwable -> shouldRetry(throwable, url))
+                .onRetryExhaustedThrow(
+                        (retryBackoffSpec, retrySignal) -> {
                             logger.warn(
-                                    "Error calling {} service at URL {}: {}",
-                                    serviceType.getId(),
+                                    "Retries exhausted for {} after {} attempts. Propagating last error: {}",
                                     url,
-                                    throwable.getMessage());
-                            if (throwable instanceof java.util.concurrent.TimeoutException
-                                    || throwable.getCause()
-                                            instanceof java.util.concurrent.TimeoutException) {
-                                return Mono.just(
-                                        new ServiceResult(
-                                                HttpStatus.REQUEST_TIMEOUT.value(),
-                                                "Timeout occurred"));
-                            }
-                            if (throwable instanceof WebClientResponseException wce) {
-                                HttpStatus status = HttpStatus.resolve(wce.getStatusCode().value());
-                                if (status == null) {
-                                    status = HttpStatus.INTERNAL_SERVER_ERROR;
-                                }
-                                String responseBody = wce.getResponseBodyAsString();
-                                String detailMessage;
-                                if (!responseBody.isEmpty()) {
-                                    detailMessage = responseBody;
-                                } else {
-                                    // Body is empty, construct message from status code and status
-                                    // text
-                                    String statusText = wce.getStatusText(); // e.g., "Bad Gateway"
-                                    HttpStatus resolvedWceStatus =
-                                            HttpStatus.resolve(wce.getStatusCode().value());
-                                    if (statusText.trim().isEmpty()) {
-                                        statusText =
-                                                (resolvedWceStatus != null)
-                                                        ? resolvedWceStatus.getReasonPhrase()
-                                                        : "";
-                                    }
-                                    statusText = statusText.trim();
-                                    detailMessage =
-                                            wce.getStatusCode().value()
-                                                    + (!statusText.isEmpty()
-                                                            ? " " + statusText
-                                                            : "");
-                                }
-
-                                String errorMessage =
-                                        getErrorMessage(serviceType, wce, detailMessage);
-                                return Mono.just(new ServiceResult(status.value(), errorMessage));
-                            }
-                            // Fallback for other types of errors
-                            return Mono.just(
-                                    new ServiceResult(
-                                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                                            String.format(
-                                                    "Unexpected error calling %s service: %s",
-                                                    serviceType.getId(), throwable.getMessage())));
+                                    retrySignal.totalRetries(),
+                                    LogSanitizer.sanitizeForLog(retrySignal.failure().toString()));
+                            return retrySignal.failure();
                         });
+    }
+
+    private ServiceResult toServiceResult(ResponseEntity<String> response) {
+        return new ServiceResult(response.getStatusCode().value(), response.getBody());
+    }
+
+    private boolean shouldRetry(Throwable throwable, String url) {
+        if (isTimeout(throwable)) {
+            logger.debug(
+                    "Retry filter: TimeoutException for {}, not retrying this attempt, but retry mechanism may try again if not exhausted.",
+                    url);
+            return false;
+        }
+        if (throwable instanceof WebClientResponseException wce) {
+            logger.debug(
+                    "Retry filter: WebClientResponseException status {} for {}, message: '{}'",
+                    wce.getStatusCode(),
+                    url,
+                    LogSanitizer.sanitizeForLog(wce.getMessage()));
+
+            if (wce.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE
+                    || wce.getStatusCode() == HttpStatus.BAD_GATEWAY
+                    || wce.getStatusCode() == HttpStatus.GATEWAY_TIMEOUT
+                    || wce.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                logger.debug("Retry filter: {} for {}, retrying.", wce.getStatusCode(), url);
+                return true;
+            }
+
+            String wceMessage = safeLower(LogSanitizer.sanitizeForLog(wce.getMessage()));
+            String wceBody = safeLower(LogSanitizer.sanitizeForLog(safeLowerResponseBody(wce)));
+
+            boolean shouldRetry =
+                    wceBody.contains("connection refused")
+                            || wceMessage.contains("transient")
+                            || wceMessage.contains("connection refused");
+
+            logger.debug(
+                    "Retry filter: WCE (status {}) for {} - Retrying: {}",
+                    wce.getStatusCode(),
+                    url,
+                    shouldRetry);
+
+            return shouldRetry;
+        }
+
+        String message =
+                throwable.getMessage() != null
+                        ? LogSanitizer.sanitizeForLog(throwable.getMessage())
+                                .toLowerCase(Locale.ROOT)
+                        : "";
+        boolean retry = message.contains("transient") || message.contains("connection refused");
+        logger.debug(
+                "Retry filter: Other throwable ({}) for {} - message: '{}', Retrying: {}",
+                throwable.getClass().getSimpleName(),
+                url,
+                message,
+                retry);
+        return retry;
+    }
+
+    private String safeLowerResponseBody(WebClientResponseException wce) {
+        try {
+            String rawBody = wce.getResponseBodyAsString();
+            return safeLower(rawBody);
+        } catch (Exception ex) {
+            logger.warn(
+                    "Could not get response body for WCE in retry filter: {}",
+                    LogSanitizer.sanitizeException(ex));
+            return "";
+        }
+    }
+
+    private String safeLower(String s) {
+        return s != null ? s.toLowerCase(Locale.ROOT) : "";
+    }
+
+    private Mono<ServiceResult> handleCallError(
+            Throwable throwable, String url, ServiceType serviceType) {
+        logger.warn(
+                "Error calling {} service at URL {}: {}",
+                serviceType.getId(),
+                url,
+                LogSanitizer.sanitizeForLog(throwable.getMessage()));
+
+        if (isTimeout(throwable)) {
+            return Mono.just(
+                    new ServiceResult(HttpStatus.REQUEST_TIMEOUT.value(), "Timeout occurred"));
+        }
+
+        if (throwable instanceof WebClientResponseException wce) {
+            HttpStatus status = resolveStatusOrDefault(wce);
+            String detailMessage = extractWceDetail(wce);
+
+            String errorMessage = getErrorMessage(serviceType, wce, detailMessage);
+            return Mono.just(new ServiceResult(status.value(), errorMessage));
+        }
+
+        return Mono.just(
+                new ServiceResult(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        "Unexpected error calling %s service: %s"
+                                .formatted(
+                                        serviceType.getId(),
+                                        LogSanitizer.sanitizeForLog(throwable.getMessage()))));
     }
 
     private static String getErrorMessage(
@@ -302,10 +279,56 @@ public class GenerateController implements GenerateAPI {
         } else {
             // Reverted diagnostic change in message format
             errorMessage =
-                    String.format(
-                            "Error from %s service: %s", serviceType.getId(), detailMessage.trim());
+                    "Error from %s service: %s"
+                            .formatted(serviceType.getId(), detailMessage.trim());
         }
         return errorMessage;
+    }
+
+    private ServiceType detectFailedService(Throwable e) {
+        String exceptionMessage =
+                e.getMessage() != null
+                        ? LogSanitizer.sanitizeForLog(e.getMessage()).toLowerCase(Locale.ROOT)
+                        : "";
+        if (exceptionMessage.contains(ServiceType.CATALOG.getId())) {
+            return ServiceType.CATALOG;
+        }
+        if (exceptionMessage.contains(ServiceType.INVENTORY.getId())) {
+            return ServiceType.INVENTORY;
+        }
+        return null;
+    }
+
+    private boolean isTimeout(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof TimeoutException) return true;
+        }
+        return false;
+    }
+
+    private void putIfKnown(Map<String, String> map, ServiceType service, String value) {
+        if (service != null) {
+            map.put(service.getId(), value);
+        }
+    }
+
+    private HttpStatus resolveStatusOrDefault(WebClientResponseException wce) {
+        HttpStatus status = HttpStatus.resolve(wce.getStatusCode().value());
+        return status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
+    private String extractWceDetail(WebClientResponseException wce) {
+        String wceResponseBody = wce.getResponseBodyAsString();
+        if (!wceResponseBody.isEmpty()) {
+            return wceResponseBody;
+        }
+        String statusText = wce.getStatusText();
+        HttpStatus resolvedWceStatus = HttpStatus.resolve(wce.getStatusCode().value());
+        if (statusText.trim().isEmpty()) {
+            statusText = (resolvedWceStatus != null) ? resolvedWceStatus.getReasonPhrase() : "";
+        }
+        statusText = statusText.trim();
+        return wce.getStatusCode().value() + (!statusText.isEmpty() ? " " + statusText : "");
     }
 
     /**
@@ -315,87 +338,76 @@ public class GenerateController implements GenerateAPI {
      * @return Mono with an appropriate error response
      */
     private Mono<ResponseEntity<GenerationResponse>> handleGenerationError(Throwable e) {
-        logger.error("Error in generation process: {}", e.getMessage(), e);
+        logger.error("Error in generation process: {}", LogSanitizer.sanitizeException(e), e);
 
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String errorMessage = "An unexpected error occurred during data generation.";
         Map<String, String> serviceResponsesMap = new HashMap<>();
+        ServiceType failedService = detectFailedService(e);
 
-        // Determine which service might have failed based on the exception message
-        // This is a heuristic and might need refinement
-        String exceptionMessage = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-        ServiceType failedService = null;
-        if (exceptionMessage.contains(ServiceType.CATALOG.getId())) {
-            failedService = ServiceType.CATALOG;
-        } else if (exceptionMessage.contains(ServiceType.INVENTORY.getId())) {
-            failedService = ServiceType.INVENTORY;
-        }
-
-        if (e instanceof java.util.concurrent.TimeoutException
-                || e.getCause() instanceof java.util.concurrent.TimeoutException) {
+        if (isTimeout(e)) {
             status = HttpStatus.REQUEST_TIMEOUT;
             errorMessage = "Timeout occurred during data generation.";
-            if (failedService != null) {
-                serviceResponsesMap.put(failedService.getId(), "Timeout occurred");
-            }
+            putIfKnown(serviceResponsesMap, failedService, "Timeout occurred");
         } else if (e instanceof WebClientResponseException wce) {
-            status = HttpStatus.resolve(wce.getStatusCode().value());
-            if (status == null) {
-                status = HttpStatus.INTERNAL_SERVER_ERROR; // default if status code is unknown
-            }
-            String wceResponseBody = wce.getResponseBodyAsString();
-            String specificErrorMessage;
-            if (!wceResponseBody.isEmpty()) {
-                specificErrorMessage = wceResponseBody;
-            } else {
-                String statusText = wce.getStatusText();
-                HttpStatus resolvedWceStatus = HttpStatus.resolve(wce.getStatusCode().value());
-                if (statusText.trim().isEmpty()) {
-                    statusText =
-                            (resolvedWceStatus != null) ? resolvedWceStatus.getReasonPhrase() : "";
+            status = resolveStatusOrDefault(wce);
+            String specificErrorMessage = LogSanitizer.sanitizeForLog(extractWceDetail(wce));
+
+            // Always log the detailed upstream message at debug level (or info for
+            // visibility)
+            String requestUri = "";
+            try {
+                var req = wce.getRequest();
+                if (req != null && req.getURI() != null) {
+                    requestUri = req.getURI().toString();
                 }
-                statusText = statusText.trim();
-                specificErrorMessage =
-                        wce.getStatusCode().value()
-                                + (!statusText.isEmpty() ? " " + statusText : "");
+            } catch (Exception ex) {
+                // Swallow here; we're just trying to capture a best-effort URI for logging
             }
+            logger.debug(
+                    "Upstream error detail for URL/service: {}, detectedService={}, detail={}",
+                    requestUri,
+                    failedService,
+                    specificErrorMessage);
 
             if (status == HttpStatus.SERVICE_UNAVAILABLE) {
                 errorMessage = "Service temporarily unavailable.";
-                if (failedService != null) {
-                    serviceResponsesMap.put(
-                            failedService.getId(), "Service temporarily unavailable");
-                }
-            } else {
-                if (failedService != null) {
-                    errorMessage =
-                            String.format(
-                                    "Error generating data in %s service", failedService.getId());
+                putIfKnown(serviceResponsesMap, failedService, "Service temporarily unavailable");
+            } else if (failedService != null) {
+                // Use a generic client-facing message by default
+                errorMessage =
+                        "Error generating data in %s service".formatted(failedService.getId());
+
+                if (exposeUpstreamErrors) {
                     String serviceSpecificDetail =
-                            String.format(
-                                    "Error from %s service: %s",
-                                    failedService.getId(), specificErrorMessage.trim());
+                            "Error from %s service: %s"
+                                    .formatted(failedService.getId(), specificErrorMessage.trim());
                     serviceResponsesMap.put(failedService.getId(), serviceSpecificDetail);
                 } else {
+                    // Store only a generic marker in serviceResponsesMap to avoid leaking details
+                    serviceResponsesMap.put(
+                            failedService.getId(), "Upstream service error (hidden)");
+                }
+            } else {
+                // Unknown failed service: don't include upstream body in client message by
+                // default
+                if (exposeUpstreamErrors) {
                     errorMessage =
-                            String.format(
-                                    "Error from unknown service: %s", specificErrorMessage.trim());
-                    // If failedService is null, we don't know which key to use in
-                    // serviceResponsesMap
+                            "Error from unknown service: %s".formatted(specificErrorMessage.trim());
+                } else {
+                    errorMessage = "Error from upstream service";
                 }
             }
         } else {
-            // For other exceptions, keep generic error message
-            if (failedService != null) {
-                serviceResponsesMap.put(failedService.getId(), e.getMessage());
-            }
+            putIfKnown(
+                    serviceResponsesMap,
+                    detectFailedService(e),
+                    LogSanitizer.sanitizeForLog(e.getMessage()));
         }
 
-        // Ensure a general error message if it's still the default one and we identified a service
         if ("An unexpected error occurred during data generation.".equals(errorMessage)
                 && failedService != null) {
-            errorMessage =
-                    String.format("Error generating data in %s service", failedService.getId());
+            errorMessage = "Error generating data in %s service".formatted(failedService.getId());
         }
 
         return Mono.just(

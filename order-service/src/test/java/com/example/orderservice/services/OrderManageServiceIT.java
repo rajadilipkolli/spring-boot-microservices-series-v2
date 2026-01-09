@@ -24,7 +24,10 @@ class OrderManageServiceIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        orderRepository.deleteAll();
+        // Clean up any previous test data
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
+        // Create fresh test order for each test
         testOrder = TestData.getOrder();
         testOrder = orderRepository.save(testOrder);
     }

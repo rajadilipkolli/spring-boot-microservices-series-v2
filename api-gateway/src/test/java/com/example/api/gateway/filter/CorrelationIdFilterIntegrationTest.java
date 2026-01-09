@@ -13,31 +13,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.wiremock.integrations.testcontainers.WireMockContainer;
 
-class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
-
-    @Container
-    static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:latest-alpine")
-                    .withMappingFromResource(
-                            "correlation-test",
-                            CorrelationIdFilterIntegrationTest.class,
-                            CorrelationIdFilterIntegrationTest.class.getSimpleName()
-                                    + "/correlation-test.json");
-
-    static {
-        wireMockServer.start();
-    }
+public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("app.cors.pathPattern", () -> "/api/**");
         registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "correlation-test");
         registry.add(
-                "spring.cloud.gateway.server.webflux.routes[0].uri",
-                () -> wireMockServer.getBaseUrl());
+                "spring.cloud.gateway.server.webflux.routes[0].uri", wireMockServer::getBaseUrl);
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].predicates[0]",
                 () -> "Path=/api/correlation/**");
@@ -59,6 +43,8 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Correlation-ID")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectHeader()
                 .value(
                         "X-Correlation-ID",
@@ -85,7 +71,9 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", providedCorrelationId);
+                .valueEquals("X-Correlation-ID", providedCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -100,6 +88,8 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Correlation-ID")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectHeader()
                 .value(
                         "X-Correlation-ID",
@@ -125,6 +115,8 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Correlation-ID")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectHeader()
                 .value(
                         "X-Correlation-ID",
@@ -153,7 +145,9 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", firstCorrelationId);
+                .valueEquals("X-Correlation-ID", firstCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
 
         // Second request with different correlation ID
         webTestClient
@@ -165,6 +159,8 @@ class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", secondCorrelationId);
+                .valueEquals("X-Correlation-ID", secondCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 }

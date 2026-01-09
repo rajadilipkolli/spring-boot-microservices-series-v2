@@ -12,23 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.wiremock.integrations.testcontainers.WireMockContainer;
 
 class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
-
-    @Container
-    static final WireMockContainer wireMockServer =
-            new WireMockContainer("wiremock/wiremock:latest-alpine")
-                    .withMappingFromResource(
-                            "test-routing",
-                            ApiGatewayConfigurationIntegrationTest.class,
-                            ApiGatewayConfigurationIntegrationTest.class.getSimpleName()
-                                    + "/test-routing.json");
-
-    static {
-        wireMockServer.start();
-    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -47,6 +32,7 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
         registry.add(
                 "spring.cloud.gateway.server.webflux.routes[0].filters[0].args.replacement",
                 () -> "/${segment}");
+        registry.add("app.gateway.httpbin", wireMockServer::getBaseUrl);
     }
 
     @Test
@@ -58,6 +44,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody(String.class)
                 .consumeWith(
                         result -> {
@@ -74,6 +62,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.headers.Myheader")
                 .isEqualTo("MyURI");
@@ -88,6 +78,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.args.Param")
                 .isEqualTo("MyValue");
@@ -102,6 +94,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .exchange()
                 .expectStatus()
                 .isNotFound()
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.args.Param")
                 .doesNotExist();

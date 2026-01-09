@@ -44,15 +44,14 @@ spring:
       enabled: true
 
 ### the background-job-server and dashboard are disabled by default
-org:
-  jobrunr:
-    job-scheduler:
-      enabled: true
-    background-job-server:
-      enabled: true
-      metrics.enabled: true
-    dashboard:
-      enabled: true
-      port: 28282
-    miscellaneous:
-      allow-anonymous-data-usage: false
+jobrunr:
+  job-scheduler:
+    enabled: true
+  background-job-server:
+    enabled: true
+    metrics.enabled: true
+  dashboard:
+    enabled: true
+    port: 28282
+  miscellaneous:
+    allow-anonymous-data-usage: false
