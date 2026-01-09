@@ -14,13 +14,17 @@ import com.example.orderservice.common.AbstractIntegrationTest;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.UUID;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -28,6 +32,8 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 
 class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
+
+    private static final Logger log = LoggerFactory.getLogger(KafkaStreamsConfigIntTest.class);
 
     @Autowired private KafkaTemplate<Long, OrderDto> kafkaTemplate;
     @Autowired private KafkaTemplate<String, String> stringKafkaTemplate;
@@ -40,11 +46,18 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
         dlqConsumer.subscribe(Collections.singletonList("recovererDLQ"));
     }
 
+    @AfterAll
+    static void cleanup() {
+        if (dlqConsumer != null) {
+            dlqConsumer.close();
+        }
+    }
+
     private static Consumer<Long, String> buildTestConsumer(
             KafkaConnectionDetails connectionDetails) {
         var props = new HashMap<String, Object>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "deadletter-test-group");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "deadletter-test-group-" + UUID.randomUUID());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName());
         props.put(
@@ -96,10 +109,9 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
                             if (records.count() > 0) {
                                 records.forEach(
                                         record ->
-                                                System.out.println(
-                                                        "Found DLQ record: " + record.value()));
+                                                log.debug("Found DLQ record: {}", record.value()));
                             } else {
-                                System.out.println("No DLQ records found in this poll attempt");
+                                log.debug("No DLQ records found in this poll attempt");
                             }
 
                             assertThat(records.count())
