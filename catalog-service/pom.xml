@@ -263,6 +263,9 @@
                 <artifactId>native-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.example.catalogservice.CatalogServiceApplication</mainClass>
+                    <buildArgs>
+                        <buildArg>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger</buildArg>
+                    </buildArgs>
                 </configuration>
             </plugin>
             <plugin>
