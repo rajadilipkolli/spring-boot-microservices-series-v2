@@ -6,8 +6,9 @@
 
 package com.example.orderservice.common;
 
+import static com.example.orderservice.common.AbstractIntegrationTest.STATE_DIR;
+
 import java.time.Duration;
-import java.util.UUID;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -38,9 +39,6 @@ public class ContainersConfig {
 
     @Bean
     DynamicPropertyRegistrar dynamicPropertyRegistrar() {
-        return registry ->
-                registry.add(
-                        "spring.kafka.streams.state-dir",
-                        () -> System.getProperty("java.io.tmpdir") + "/" + UUID.randomUUID());
+        return registry -> registry.add("spring.kafka.streams.state-dir", () -> STATE_DIR);
     }
 }

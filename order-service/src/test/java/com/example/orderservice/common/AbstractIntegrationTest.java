@@ -19,6 +19,11 @@ import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import io.micrometer.observation.tck.TestObservationRegistry;
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -82,5 +87,13 @@ public abstract class AbstractIntegrationTest {
                                 .withHeader(
                                         HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                                 .withBody(String.valueOf(status))));
+    }
+
+    protected static final String STATE_DIR =
+            System.getProperty("java.io.tmpdir") + "/kafka-streams-" + UUID.randomUUID().toString();
+
+    @AfterAll
+    static void teardown() throws IOException {
+        FileUtils.deleteDirectory(new File(STATE_DIR));
     }
 }
