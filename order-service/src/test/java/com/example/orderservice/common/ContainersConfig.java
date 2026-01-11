@@ -6,14 +6,11 @@
 
 package com.example.orderservice.common;
 
-import static com.example.orderservice.common.AbstractIntegrationTest.STATE_DIR;
-
 import java.time.Duration;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -35,10 +32,5 @@ public class ContainersConfig {
     LgtmStackContainer lgtmContainer() {
         return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.14.0"))
                 .withStartupTimeout(Duration.ofMinutes(2));
-    }
-
-    @Bean
-    DynamicPropertyRegistrar dynamicPropertyRegistrar() {
-        return registry -> registry.add("spring.kafka.streams.state-dir", () -> STATE_DIR);
     }
 }
