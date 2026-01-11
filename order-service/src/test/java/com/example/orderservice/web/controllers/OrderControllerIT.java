@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -175,7 +174,6 @@ class OrderControllerIT extends AbstractIntegrationTest {
     class SaveOrder {
 
         @Test
-        @Disabled
         void shouldCreateNewOrder() throws Exception {
             OrderRequest orderRequest =
                     new OrderRequest(
@@ -188,7 +186,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(true, "Product10");
+            mockProductsExistsRequest(true, "PRODUCT10");
 
             mockMvc.perform(
                             post("/api/orders")
