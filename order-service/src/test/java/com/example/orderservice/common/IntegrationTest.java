@@ -30,7 +30,6 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles({AppConstants.PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"},
         classes = {ContainersConfig.class, PostGreSQLContainer.class})
 @AutoConfigureMockMvc
 @AutoConfigureTracing
