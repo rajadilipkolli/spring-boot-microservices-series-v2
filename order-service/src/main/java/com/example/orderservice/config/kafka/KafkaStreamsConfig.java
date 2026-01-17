@@ -89,7 +89,6 @@ class KafkaStreamsConfig {
             // Memory management
             streamsConfiguration.put(
                     StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
-            streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "2");
 
             // Enhanced monitoring
             streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");

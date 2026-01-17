@@ -66,8 +66,11 @@ public class TestData {
     }
 
     public static OrderDto getOrderDto(String source) {
+        return getOrderDto(source, 151L);
+    }
 
-        return new OrderDto(151L, 1001L, "ACCEPT", source, getOrderItemDtoList());
+    public static OrderDto getOrderDto(String source, Long orderId) {
+        return new OrderDto(orderId, 1001L, "ACCEPT", source, getOrderItemDtoList());
     }
 
     public static OrderDto getStockOrderDto(String status, Order testOrder) {

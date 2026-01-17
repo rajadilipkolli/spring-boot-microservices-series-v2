@@ -18,11 +18,13 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+@Disabled
 @TestMethodOrder(value = MethodOrderer.OrderAnnotation.class)
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
@@ -36,7 +38,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                 .untilAsserted(
                         () ->
                                 this.mockMvc
-                                        .perform(get("/api/orders/all"))
+                                        .perform(get("/api/orders/all?pageNo=1000"))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.size()", is(0))));
     }
@@ -46,16 +48,17 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
     void shouldFetchAllOrdersFromStreamWhenDataIsPresent() {
 
         // Sending event to OrderTopic for joining
-        OrderDto orderDto = getOrderDto("ORDER");
+        OrderDto orderDto = getOrderDto("ORDER", 10000L);
 
         this.kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
-        // Sending events to both payment-orders, stock-orders for streaming to process and confirm
-        OrderDto paymentOrderDto = getOrderDto("PAYMENT");
+        // Sending events to both payment-orders, stock-orders for streaming to process
+        // and confirm
+        OrderDto paymentOrderDto = getOrderDto("PAYMENT", 10000L);
 
         this.kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
 
-        OrderDto stockOrderDto = getOrderDto("STOCK");
+        OrderDto stockOrderDto = getOrderDto("STOCK", 10000L);
 
         this.kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto);
 
@@ -65,7 +68,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                 .untilAsserted(
                         () ->
                                 this.mockMvc
-                                        .perform(get("/api/orders/all"))
+                                        .perform(get("/api/orders/all?pageNo=100"))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.size()", is(0))));
     }

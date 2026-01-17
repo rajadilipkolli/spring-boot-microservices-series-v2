@@ -26,6 +26,9 @@ spring:
         commit:
           interval:
             ms: 100
+        num:
+          stream:
+            threads: 2
         default:
           timestamp:
             extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
