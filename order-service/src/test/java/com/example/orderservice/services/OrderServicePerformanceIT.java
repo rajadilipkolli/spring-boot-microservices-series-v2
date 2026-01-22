@@ -20,14 +20,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.annotation.DirtiesContext;
 
 @Tag("performance")
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
     private static final int BATCH_SIZE = 1000;

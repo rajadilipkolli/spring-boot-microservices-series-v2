@@ -36,6 +36,6 @@ class KafkaConfig {
                 TopicBuilder.name(ORDERS_TOPIC).build(),
                 TopicBuilder.name(PAYMENT_ORDERS_TOPIC).build(),
                 TopicBuilder.name(STOCK_ORDERS_TOPIC).build(),
-                TopicBuilder.name(RECOVER_DLQ_TOPIC).build());
+                TopicBuilder.name(RECOVER_DLQ_TOPIC).replicas(1).partitions(1).build());
     }
 }

@@ -31,18 +31,15 @@ import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
 
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
@@ -225,6 +222,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .hasSize(orderList.size() + 1); // Original orders plus the new one
 
             // Verify the last order in the database matches our request
+            savedOrders.sort(Comparator.comparing(Order::getId));
             Long orderId = savedOrders.getLast().getId();
             Order lastOrder = orderRepository.findOrderById(orderId).get();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
