@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.1</version>
+        <version>4.0.2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -23,7 +23,7 @@
         <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
 
         <spotless.version>3.1.0</spotless.version>
-        <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
+        <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>

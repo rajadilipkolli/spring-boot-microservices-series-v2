@@ -8,6 +8,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-          
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Start main.py in background (capture logs)
+        id: start-main
+        run: |
+          if [ -f ./main.py ]; then
+            nohup python3 ./main.py > main.log 2>&1 &
+            echo "main_pid=$!" >> $GITHUB_OUTPUT
+            echo "Started main.py with PID $!"
+          else
+            echo "main_missing=true" >> $GITHUB_OUTPUT
+            echo "main.py not found at workspace root"
+          fi
+
       - name: Run End to End Tests
         run: ./test-em-all.sh --detailed-logs start stop
+
+      - name: Stop main.py and collect logs
+        if: always()
+        run: |
+          echo "Collecting logs..."
+          if [ "${{ steps.start-main.outputs.main_missing }}" = "true" ]; then
+            echo "main.py was not present; no logs to collect" > main.log
+          else
+            if [ -n "${{ steps.start-main.outputs.main_pid }}" ]; then
+              pid=${{ steps.start-main.outputs.main_pid }}
+              echo "Stopping main.py PID $pid"
+              kill $pid || true
+              sleep 2
+            else
+              echo "No PID recorded; attempting to pkill by name"
+              pkill -f main.py || true
+              sleep 2
+            fi
+          fi
+          echo "=== tail of main.log ==="
+          tail -n +1 main.log || true
+
+      - name: Upload main.log artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: main-py-logs
+          path: main.log
+          retention-days: 3

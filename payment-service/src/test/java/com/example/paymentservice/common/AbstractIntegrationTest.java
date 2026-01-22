@@ -18,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false", "spring.cloud.discovery.enabled=false"},
+        properties = {"spring.cloud.config.enabled=false", "eureka.client.enabled=false"},
         classes = {SQLContainerConfig.class, NonSQLContainerConfig.class})
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {

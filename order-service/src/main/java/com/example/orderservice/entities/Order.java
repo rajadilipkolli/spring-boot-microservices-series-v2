@@ -33,6 +33,7 @@ public class Order extends Auditable<String> implements Serializable {
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
+    @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
     @Enumerated(EnumType.STRING)
@@ -45,20 +46,22 @@ public class Order extends Auditable<String> implements Serializable {
             value = {
                 @AttributeOverride(
                         name = "addressLine1",
-                        column = @Column(name = "delivery_address_line1")),
+                        column = @Column(name = "delivery_address_line1", nullable = false)),
                 @AttributeOverride(
                         name = "addressLine2",
                         column = @Column(name = "delivery_address_line2")),
-                @AttributeOverride(name = "city", column = @Column(name = "delivery_address_city")),
+                @AttributeOverride(
+                        name = "city",
+                        column = @Column(name = "delivery_address_city", nullable = false)),
                 @AttributeOverride(
                         name = "state",
-                        column = @Column(name = "delivery_address_state")),
+                        column = @Column(name = "delivery_address_state", nullable = false)),
                 @AttributeOverride(
                         name = "zipCode",
-                        column = @Column(name = "delivery_address_zip_code")),
+                        column = @Column(name = "delivery_address_zip_code", nullable = false)),
                 @AttributeOverride(
                         name = "country",
-                        column = @Column(name = "delivery_address_country")),
+                        column = @Column(name = "delivery_address_country", nullable = false)),
             })
     private Address deliveryAddress;
 
