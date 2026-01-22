@@ -314,7 +314,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                         List.of(new OrderItemRequest("PROD1", 2, BigDecimal.TEN)),
                         new Address("addr1", "addr2", "city", "state", "zip", "country"));
 
-        mockProductsExistsRequest(true, "PROD1", "PROD2", "PROD3");
+        mockProductsExistsRequest(true, "PROD1");
 
         // Save the initial order
         OrderResponse initialOrder = orderService.saveOrder(initialRequest);
