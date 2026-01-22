@@ -9,7 +9,7 @@ package com.example.orderservice.repositories;
 import static com.example.orderservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.orderservice.common.PostGreSQLContainer;
+import com.example.orderservice.common.OrderServicePostGreSQLContainer;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.util.TestData;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({PROFILE_TEST})
-@Import(PostGreSQLContainer.class)
+@Import(OrderServicePostGreSQLContainer.class)
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate"})
 class OrderRepositoryTest {
 
