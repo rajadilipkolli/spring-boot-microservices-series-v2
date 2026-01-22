@@ -12,6 +12,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
 import com.example.common.dtos.OrderDto;
+import com.example.orderservice.OrderServiceApplication;
 import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;
@@ -38,7 +39,11 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles({AppConstants.PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        classes = {ContainersConfig.class, OrderServicePostGreSQLContainer.class})
+        classes = {
+            OrderServiceApplication.class,
+            ContainersConfig.class,
+            OrderServicePostGreSQLContainer.class
+        })
 @AutoConfigureMockMvc
 @AutoConfigureTracing
 @EnableWireMock(
@@ -70,6 +75,13 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
+    /**
+     * Mocks the catalog service /api/catalog/exists endpoint. Resets all existing stubs before
+     * setting up the new mock.
+     *
+     * @param status whether the products exist
+     * @param productCodes the product codes to check (passed as repeated query parameters)
+     */
     public void mockProductsExistsRequest(boolean status, String... productCodes) {
         wireMockServer.resetAll();
         var mappingBuilder = get(urlPathEqualTo("/api/catalog/exists"));

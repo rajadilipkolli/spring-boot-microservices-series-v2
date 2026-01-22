@@ -337,6 +337,8 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                                 "new-zip",
                                 "new-country"));
 
+        mockProductsExistsRequest(true, "PROD2", "PROD3");
+
         // Find the order entity for updating
         var orderToUpdate = orderRepository.findById(initialOrder.orderId()).orElseThrow();
 

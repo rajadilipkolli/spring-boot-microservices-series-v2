@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
-class OrderServiceApplication {
+public class OrderServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(OrderServiceApplication.class, args);
