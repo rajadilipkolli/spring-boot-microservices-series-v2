@@ -187,7 +187,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(true, "Product10");
+            mockProductsExistsRequest(true, "PRODUCT10");
 
             mockMvc.perform(
                             post("/api/orders")

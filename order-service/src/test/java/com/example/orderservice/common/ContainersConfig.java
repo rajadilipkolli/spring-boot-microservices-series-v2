@@ -28,6 +28,7 @@ public class ContainersConfig {
 
     @Bean
     @ServiceConnection
+    @RestartScope
     LgtmStackContainer lgtmContainer() {
         return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.15.0"))
                 .withStartupTimeout(Duration.ofMinutes(2));

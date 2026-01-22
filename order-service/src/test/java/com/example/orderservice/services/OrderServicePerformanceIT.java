@@ -54,8 +54,8 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
     @Test
     void orderRetrieval_ShouldMeetPerformanceTarget() {
         // Arrange
-        insertTestOrders(TOTAL_ORDERS);
         mockProductsExistsRequest(true, "PERF-PROD");
+        insertTestOrders(TOTAL_ORDERS);
 
         // Act
         Instant start = Instant.now();
@@ -64,7 +64,7 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
         // Assert
         assertThat(responses).isNotEmpty();
-        assertThat(duration).isLessThan(Duration.ofSeconds(2)); // Performance target for retrieval
+        assertThat(duration).isLessThan(Duration.ofMillis(500)); // Performance target for retrieval
     }
 
     @Test
