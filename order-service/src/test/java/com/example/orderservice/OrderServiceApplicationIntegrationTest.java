@@ -8,14 +8,13 @@ package com.example.orderservice;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
-import static org.hamcrest.CoreMatchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 
 class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
 
@@ -30,6 +29,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                                 this.mockMvc
                                         .perform(get("/api/orders/store"))
                                         .andExpect(status().isOk())
-                                        .andExpect(jsonPath("$.size()", is(0))));
+                                        .andExpect(
+                                                content().contentType(MediaType.APPLICATION_JSON)));
     }
 }

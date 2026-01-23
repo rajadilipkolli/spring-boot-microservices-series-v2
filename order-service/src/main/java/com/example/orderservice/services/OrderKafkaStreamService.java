@@ -47,17 +47,13 @@ public class OrderKafkaStreamService {
         long startIndex = (long) pageNo * pageSize;
         long endIndex = startIndex + pageSize;
         try (KeyValueIterator<Long, OrderDto> it = getReadOnlyKeyValueStore().all()) {
-            int currentIndex = 0;
+            long currentIndex = 0;
 
             log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
 
             while (it.hasNext()) {
                 var kv = it.next();
-                log.debug(
-                        "Found entry at index {}: key={}, value={}",
-                        currentIndex,
-                        kv.key,
-                        kv.value);
+                log.debug("Found entry at index {}: key={}", currentIndex, kv.key);
 
                 if (currentIndex >= startIndex && currentIndex < endIndex) {
                     orders.add(kv.value);
