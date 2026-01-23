@@ -253,20 +253,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .pollInterval(Duration.ofSeconds(1))
                     .untilAsserted(
                             () ->
-                                    mockMvc.perform(get("/api/orders/all"))
+                                    mockMvc.perform(get("/api/orders/store/{id}", orderId))
                                             .andExpect(status().isOk())
-                                            .andExpect(jsonPath("$.size()", is(1)))
+                                            .andExpect(jsonPath("orderId", is(orderId), Long.class))
+                                            .andExpect(jsonPath("status", is("CONFIRMED")))
+                                            .andExpect(jsonPath("source", emptyOrNullString()))
+                                            .andExpect(jsonPath("customerId", is(1)))
                                             .andExpect(
                                                     jsonPath(
-                                                            "$[0].orderId",
-                                                            is(orderId),
-                                                            Long.class))
-                                            .andExpect(jsonPath("$[0].status", is("CONFIRMED")))
-                                            .andExpect(jsonPath("$[0].source", emptyOrNullString()))
-                                            .andExpect(jsonPath("$[0].customerId", is(1)))
-                                            .andExpect(
-                                                    jsonPath(
-                                                            "$[0].items.size()",
+                                                            "items.size()",
                                                             is(orderRequest.items().size()))));
         }
 
@@ -283,7 +278,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(false, "Product2");
+            mockProductsExistsRequest(false, "PRODUCT2");
 
             mockMvc.perform(
                             post("/api/orders")
@@ -461,7 +456,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
-            mockProductsExistsRequest(true, "Product1");
+            mockProductsExistsRequest(true, "PRODUCT1");
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
@@ -489,7 +484,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
-            mockProductsExistsRequest(true, "Product1");
+            mockProductsExistsRequest(true, "PRODUCT1");
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
@@ -514,7 +509,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateOrder() throws Exception {
-        mockProductsExistsRequest(true, "product1", "product4");
+        mockProductsExistsRequest(true, "PRODUCT1", "PRODUCT4");
         Order order = orderList.getFirst();
 
         OrderRequest orderRequest = TestData.getOrderRequest(order);
@@ -613,7 +608,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 "54321",
                                 "New Country"));
 
-        mockProductsExistsRequest(true, "UpdatedProduct", "SecondProduct");
+        mockProductsExistsRequest(true, "UPDATEDPRODUCT", "SECONDPRODUCT");
 
         // Perform the update
         mockMvc.perform(

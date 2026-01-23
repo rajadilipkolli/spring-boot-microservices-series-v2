@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -94,12 +95,12 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+    ResponseEntity<OrderResponse> hardcodedResponse(Long id, Integer delay, Exception ex) {
         if (ex instanceof OrderNotFoundException orderNotFoundException) {
             throw orderNotFoundException;
         }
         log.error("Exception occurred: {}", LogSanitizer.sanitizeException(ex));
-        return ResponseEntity.ok("fallback-response for id : " + id);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(OrderResponse.emptyResponse(id));
     }
 
     @PostMapping
@@ -133,12 +134,12 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/generate")
-    boolean createMockOrders() {
+    GenericResponse createMockOrders() {
         orderGeneratorService.generateOrders();
-        return true;
+        return new GenericResponse(true);
     }
 
-    @GetMapping("/all")
+    @GetMapping("/store")
     @Override
     public List<OrderDto> all(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
@@ -148,9 +149,19 @@ class OrderController implements OrderApi {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
     }
 
+    @GetMapping("/store/{id}")
+    ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+        return orderKafkaStreamService
+                .getOrdersFromStoreById(id)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new OrderNotFoundException(id));
+    }
+
     @GetMapping("/customer/{id}")
     ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
+
+    private record GenericResponse(boolean success) {}
 }

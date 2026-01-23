@@ -28,7 +28,7 @@ class OrderServiceApplicationIntegrationTest extends AbstractIntegrationTest {
                 .untilAsserted(
                         () ->
                                 this.mockMvc
-                                        .perform(get("/api/orders/all"))
+                                        .perform(get("/api/orders/store"))
                                         .andExpect(status().isOk())
                                         .andExpect(jsonPath("$.size()", is(0))));
     }

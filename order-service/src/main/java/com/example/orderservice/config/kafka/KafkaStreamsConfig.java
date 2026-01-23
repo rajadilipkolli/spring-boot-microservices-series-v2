@@ -123,7 +123,7 @@ class KafkaStreamsConfig {
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
+                .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC);
 
         paymentStream.print(Printed.toSysOut());
@@ -149,7 +149,7 @@ class KafkaStreamsConfig {
         // Add logging for visibility
         ordersTable
                 .toStream()
-                .peek((key, value) -> log.info("KTable entry for key {}: {}", key, value));
+                .peek((key, value) -> log.debug("KTable entry for key {}: {}", key, value));
 
         return ordersTable;
     }

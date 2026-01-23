@@ -12,6 +12,7 @@ import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -29,6 +30,8 @@ public class OrderKafkaStreamService {
 
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
 
+    private ReadOnlyKeyValueStore<Long, OrderDto> store = null;
+
     public OrderKafkaStreamService(StreamsBuilderFactoryBean kafkaStreamsFactory) {
         this.kafkaStreamsFactory = kafkaStreamsFactory;
     }
@@ -39,19 +42,11 @@ public class OrderKafkaStreamService {
                 pageNo,
                 pageSize);
         List<OrderDto> orders = new ArrayList<>();
-        ReadOnlyKeyValueStore<Long, OrderDto> store =
-                Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
-                        .store(
-                                StoreQueryParameters.fromNameAndType(
-                                        AppConstants.ORDERS_STORE,
-                                        QueryableStoreTypes.keyValueStore()));
 
-        // Use store.all() to get all entries regardless of key values
-        // Then manually handle pagination
-        try (KeyValueIterator<Long, OrderDto> it = store.all()) {
+        long startIndex = (long) pageNo * pageSize;
+        long endIndex = startIndex + pageSize;
+        try (KeyValueIterator<Long, OrderDto> it = getReadOnlyKeyValueStore().all()) {
             int currentIndex = 0;
-            int startIndex = pageNo * pageSize;
-            int endIndex = startIndex + pageSize;
 
             log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
 
@@ -78,5 +73,22 @@ public class OrderKafkaStreamService {
         }
 
         return orders;
+    }
+
+    public Optional<OrderDto> getOrdersFromStoreById(long orderId) {
+        log.info("Fetching order from Kafka Store with orderId :{}", orderId);
+        return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
+    }
+
+    private ReadOnlyKeyValueStore<Long, OrderDto> getReadOnlyKeyValueStore() {
+        if (store == null) {
+            store =
+                    Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
+                            .store(
+                                    StoreQueryParameters.fromNameAndType(
+                                            AppConstants.ORDERS_STORE,
+                                            QueryableStoreTypes.keyValueStore()));
+        }
+        return store;
     }
 }
