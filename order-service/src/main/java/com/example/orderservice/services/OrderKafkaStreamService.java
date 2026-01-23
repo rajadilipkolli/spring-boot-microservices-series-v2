@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
@@ -75,19 +76,23 @@ public class OrderKafkaStreamService {
         return orders;
     }
 
-    public Optional<OrderDto> getOrdersFromStoreById(long orderId) {
+    public Optional<OrderDto> getOrderFromStoreById(long orderId) {
         log.info("Fetching order from Kafka Store with orderId :{}", orderId);
         return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
     }
 
     private ReadOnlyKeyValueStore<Long, OrderDto> getReadOnlyKeyValueStore() {
         if (store == null) {
-            store =
-                    Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
-                            .store(
-                                    StoreQueryParameters.fromNameAndType(
-                                            AppConstants.ORDERS_STORE,
-                                            QueryableStoreTypes.keyValueStore()));
+            try {
+                store =
+                        Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
+                                .store(
+                                        StoreQueryParameters.fromNameAndType(
+                                                AppConstants.ORDERS_STORE,
+                                                QueryableStoreTypes.keyValueStore()));
+            } catch (InvalidStateStoreException ex) {
+                throw new IllegalStateException("Orders store not ready", ex);
+            }
         }
         return store;
     }

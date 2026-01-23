@@ -23,6 +23,6 @@ public record OrderResponse(
         List<OrderItemResponse> items) {
     public static OrderResponse emptyResponse(Long id) {
         return new OrderResponse(
-                id, null, "NOT_FOUND", null, null, null, BigDecimal.ZERO, List.of());
+                id, null, "SERVICE_UNAVAILABLE", null, null, null, BigDecimal.ZERO, List.of());
     }
 }

@@ -100,7 +100,8 @@ class OrderController implements OrderApi {
             throw orderNotFoundException;
         }
         log.error("Exception occurred: {}", LogSanitizer.sanitizeException(ex));
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(OrderResponse.emptyResponse(id));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(OrderResponse.emptyResponse(id));
     }
 
     @PostMapping
@@ -150,9 +151,9 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/store/{id}")
-    ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable Long id) {
         return orderKafkaStreamService
-                .getOrdersFromStoreById(id)
+                .getOrderFromStoreById(id)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
