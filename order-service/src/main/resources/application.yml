@@ -16,13 +16,18 @@ spring:
             add:
               type:
                 headers: true
+            trusted:
+              packages: com.example.common.dtos
+    # Configuration for dead letter queue support
+    listener:
+      missing-topics-fatal: false
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
-      producer:
-        acks: all
       application-id: ${spring.application.name}
       properties:
+        producer:
+          acks: all
         commit:
           interval:
             ms: 100
