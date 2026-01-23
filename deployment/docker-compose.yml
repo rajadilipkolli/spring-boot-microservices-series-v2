@@ -37,7 +37,7 @@ services:
       - microservice-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.14.0
+    image: grafana/otel-lgtm:0.16.0
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -91,7 +91,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5.0
+    image: quay.io/keycloak/keycloak:26.5.2
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]

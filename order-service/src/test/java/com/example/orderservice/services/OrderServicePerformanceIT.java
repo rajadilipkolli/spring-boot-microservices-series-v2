@@ -20,14 +20,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.annotation.DirtiesContext;
 
 @Tag("performance")
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
     private static final int BATCH_SIZE = 1000;
@@ -58,8 +54,8 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
     @Test
     void orderRetrieval_ShouldMeetPerformanceTarget() {
         // Arrange
-        insertTestOrders(TOTAL_ORDERS);
         mockProductsExistsRequest(true, "PERF-PROD");
+        insertTestOrders(TOTAL_ORDERS);
 
         // Act
         Instant start = Instant.now();
@@ -68,7 +64,7 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
 
         // Assert
         assertThat(responses).isNotEmpty();
-        assertThat(duration).isLessThan(Duration.ofSeconds(2)); // Performance target for retrieval
+        assertThat(duration).isLessThan(Duration.ofMillis(500)); // Performance target for retrieval
     }
 
     @Test

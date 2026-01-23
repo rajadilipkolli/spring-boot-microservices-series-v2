@@ -6,6 +6,7 @@
 
 package com.example.orderservice.config.kafka;
 
+import static com.example.orderservice.utils.AppConstants.ORDERS_STORE;
 import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.RECOVER_DLQ_TOPIC;
@@ -27,7 +28,6 @@ import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.StreamJoined;
-import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -89,7 +89,6 @@ class KafkaStreamsConfig {
             // Memory management
             streamsConfiguration.put(
                     StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
-            streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "2");
 
             // Enhanced monitoring
             streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");
@@ -124,7 +123,7 @@ class KafkaStreamsConfig {
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-                .peek((k, o) -> log.info("Output of Stream : {} for key :{}", o, k))
+                .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC);
 
         paymentStream.print(Printed.toSysOut());
@@ -133,15 +132,25 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
+    KTable<Long, OrderDto> kTable(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
-        KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
         JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
-        KStream<Long, OrderDto> stream =
-                streamsBuilder.stream(ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-        return stream.toTable(
-                Materialized.<Long, OrderDto>as(store)
-                        .withKeySerde(Serdes.Long())
-                        .withValueSerde(orderSerde));
+
+        // KTable naturally keeps only the latest value for each key
+        KTable<Long, OrderDto> ordersTable =
+                streamsBuilder.table(
+                        ORDERS_TOPIC,
+                        Consumed.with(Serdes.Long(), orderSerde),
+                        Materialized.<Long, OrderDto>as(
+                                        Stores.persistentKeyValueStore(ORDERS_STORE))
+                                .withKeySerde(Serdes.Long())
+                                .withValueSerde(orderSerde));
+
+        // Add logging for visibility
+        ordersTable
+                .toStream()
+                .peek((key, value) -> log.debug("KTable entry for key {}: {}", key, value));
+
+        return ordersTable;
     }
 }

@@ -7,7 +7,7 @@
 package com.example.orderservice;
 
 import com.example.orderservice.common.ContainersConfig;
-import com.example.orderservice.common.PostGreSQLContainer;
+import com.example.orderservice.common.OrderServicePostGreSQLContainer;
 import com.example.orderservice.utils.AppConstants;
 import org.springframework.boot.SpringApplication;
 
@@ -15,7 +15,7 @@ public class TestOrderServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.from(OrderServiceApplication::main)
-                .with(ContainersConfig.class, PostGreSQLContainer.class)
+                .with(ContainersConfig.class, OrderServicePostGreSQLContainer.class)
                 .withAdditionalProfiles(AppConstants.PROFILE_LOCAL)
                 .run(args);
     }

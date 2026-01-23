@@ -66,8 +66,11 @@ public class TestData {
     }
 
     public static OrderDto getOrderDto(String source) {
+        return getOrderDto(source, 151L);
+    }
 
-        return new OrderDto(151L, 1001L, "ACCEPT", source, getOrderItemDtoList());
+    public static OrderDto getOrderDto(String source, long orderId) {
+        return new OrderDto(orderId, 1L, "ACCEPT", source, getOrderItemDtoList());
     }
 
     public static OrderDto getStockOrderDto(String status, Order testOrder) {
@@ -89,6 +92,6 @@ public class TestData {
     }
 
     private static List<OrderItemDto> getOrderItemDtoList() {
-        return List.of(new OrderItemDto(1L, "Product1", 10, BigDecimal.TEN));
+        return List.of(new OrderItemDto(205L, "Product10", 10, BigDecimal.TEN));
     }
 }
