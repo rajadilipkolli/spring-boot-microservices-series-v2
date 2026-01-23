@@ -43,12 +43,38 @@ public class OrderKafkaStreamService {
                 Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
                         .store(
                                 StoreQueryParameters.fromNameAndType(
-                                        AppConstants.ORDERS_TOPIC,
+                                        AppConstants.ORDERS_STORE,
                                         QueryableStoreTypes.keyValueStore()));
-        long from = (long) pageNo * pageSize;
-        long to = from + pageSize;
-        try (KeyValueIterator<Long, OrderDto> it = store.range(from + 1, to)) {
-            it.forEachRemaining(kv -> orders.add(kv.value));
+
+        // Use store.all() to get all entries regardless of key values
+        // Then manually handle pagination
+        try (KeyValueIterator<Long, OrderDto> it = store.all()) {
+            int currentIndex = 0;
+            int startIndex = pageNo * pageSize;
+            int endIndex = startIndex + pageSize;
+
+            log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
+
+            while (it.hasNext()) {
+                var kv = it.next();
+                log.debug(
+                        "Found entry at index {}: key={}, value={}",
+                        currentIndex,
+                        kv.key,
+                        kv.value);
+
+                if (currentIndex >= startIndex && currentIndex < endIndex) {
+                    orders.add(kv.value);
+                }
+                currentIndex++;
+
+                // Early exit if we've collected enough
+                if (currentIndex >= endIndex) {
+                    break;
+                }
+            }
+
+            log.info("Returning {} orders out of {} total entries", orders.size(), currentIndex);
         }
 
         return orders;

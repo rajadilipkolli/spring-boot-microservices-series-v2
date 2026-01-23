@@ -6,12 +6,16 @@
 
 package com.example.orderservice.web.controllers;
 
+import static com.example.orderservice.util.TestData.getOrderDto;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
@@ -29,6 +34,7 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -224,12 +230,44 @@ class OrderControllerIT extends AbstractIntegrationTest {
             // Verify the last order in the database matches our request
             savedOrders.sort(Comparator.comparing(Order::getId));
             Long orderId = savedOrders.getLast().getId();
-            Order lastOrder = orderRepository.findOrderById(orderId).get();
+            Order lastOrder = orderRepository.findOrderById(orderId).orElseThrow();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
             assertThat(lastOrder.getItems()).hasSize(1);
             assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product10");
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
+
+            // Waiting for a short duration to ensure the order is committed before sending events
+            SECONDS.sleep(1);
+            // Sending events to both payment-orders, stock-orders for streaming to process
+            // and confirm the order is created successfully
+            OrderDto paymentOrderDto = getOrderDto("PAYMENT", orderId);
+
+            kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto).get();
+            OrderDto stockOrderDto = getOrderDto("STOCK", orderId);
+
+            kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto).get();
+
+            await().atMost(15, SECONDS)
+                    .pollDelay(1, SECONDS)
+                    .pollInterval(Duration.ofSeconds(1))
+                    .untilAsserted(
+                            () ->
+                                    mockMvc.perform(get("/api/orders/all"))
+                                            .andExpect(status().isOk())
+                                            .andExpect(jsonPath("$.size()", is(1)))
+                                            .andExpect(
+                                                    jsonPath(
+                                                            "$[0].orderId",
+                                                            is(orderId),
+                                                            Long.class))
+                                            .andExpect(jsonPath("$[0].status", is("CONFIRMED")))
+                                            .andExpect(jsonPath("$[0].source", emptyOrNullString()))
+                                            .andExpect(jsonPath("$[0].customerId", is(1)))
+                                            .andExpect(
+                                                    jsonPath(
+                                                            "$[0].items.size()",
+                                                            is(orderRequest.items().size()))));
         }
 
         @Test
