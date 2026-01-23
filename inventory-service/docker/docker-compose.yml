@@ -18,7 +18,7 @@ services:
       - inventory-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.15.0
+    image: grafana/otel-lgtm:0.16.0
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
