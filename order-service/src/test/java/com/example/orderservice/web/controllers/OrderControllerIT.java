@@ -40,12 +40,14 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+@Disabled
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;

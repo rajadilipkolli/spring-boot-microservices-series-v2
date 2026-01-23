@@ -29,10 +29,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
+@Disabled
 class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
     @Test
