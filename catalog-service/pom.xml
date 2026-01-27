@@ -43,8 +43,6 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME/>
-        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -261,25 +259,26 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+
                 <configuration>
                     <layers>
                         <enabled>true</enabled>
                     </layers>
+
                     <image>
+                        <!-- Image name stays -->
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-                        <publish>true</publish>
+
+                        <!-- Removed publish=true -->
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>18080</THC_PORT>
                         </env>
                     </image>
-                    <docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
+
+                    <!-- Removed docker publishRegistry credentials -->
                 </configuration>
+
                 <executions>
                     <execution>
                         <goals>
@@ -288,6 +287,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
