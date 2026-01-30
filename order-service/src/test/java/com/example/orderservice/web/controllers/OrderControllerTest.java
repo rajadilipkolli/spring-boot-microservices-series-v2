@@ -36,7 +36,6 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,7 +45,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
@@ -54,6 +53,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = OrderController.class)
 @ActiveProfiles(AppConstants.PROFILE_TEST)
@@ -67,7 +67,7 @@ class OrderControllerTest {
 
     @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JsonMapper jsonMapper;
 
     @Test
     void shouldFetchAllOrders() throws Exception {
@@ -232,7 +232,9 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -281,7 +283,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId", notNullValue()))
                     .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
@@ -321,13 +323,16 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -357,13 +362,16 @@ class OrderControllerTest {
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
                                             HttpHeaders.CONTENT_TYPE,
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("about:blank")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type",
+                                    is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
@@ -420,7 +428,7 @@ class OrderControllerTest {
             mockMvc.perform(
                             put("/api/orders/{id}", 1L)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(orderRequest)))
+                                    .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.orderId", is(1)))
                     .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
@@ -455,13 +463,15 @@ class OrderControllerTest {
             mockMvc.perform(
                             put("/api/orders/{id}", orderId)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(order)))
+                                    .content(jsonMapper.writeValueAsString(order)))
                     .andExpect(status().isNotFound())
                     .andExpect(
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(
@@ -499,7 +509,9 @@ class OrderControllerTest {
                             header().string(
                                             "Content-Type",
                                             is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(jsonPath("$.type", is("http://api.orders.com/errors/not-found")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
                     .andExpect(jsonPath("$.title", is("Order Not Found")))
                     .andExpect(jsonPath("$.status", is(404)))
                     .andExpect(

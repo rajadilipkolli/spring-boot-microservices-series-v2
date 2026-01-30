@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
 </p>
 ***/
 
@@ -36,6 +36,6 @@ class KafkaConfig {
                 TopicBuilder.name(ORDERS_TOPIC).build(),
                 TopicBuilder.name(PAYMENT_ORDERS_TOPIC).build(),
                 TopicBuilder.name(STOCK_ORDERS_TOPIC).build(),
-                TopicBuilder.name(RECOVER_DLQ_TOPIC).build());
+                TopicBuilder.name(RECOVER_DLQ_TOPIC).replicas(1).partitions(1).build());
     }
 }

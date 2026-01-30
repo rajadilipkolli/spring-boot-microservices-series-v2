@@ -1,0 +1,138 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "insert-sample-inventory",
+        "author": "system",
+        "context": "sample-data",
+        "changes": [
+          {
+            "insert": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "product_code",
+                    "value": "P001"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "quantity",
+                    "value": 50
+                  }
+                },
+                {
+                  "column": {
+                    "name": "reserved_items",
+                    "value": 5
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "insert": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "product_code",
+                    "value": "P002"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "quantity",
+                    "value": 30
+                  }
+                },
+                {
+                  "column": {
+                    "name": "reserved_items",
+                    "value": 2
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "insert": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "product_code",
+                    "value": "P003"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "quantity",
+                    "value": 25
+                  }
+                },
+                {
+                  "column": {
+                    "name": "reserved_items",
+                    "value": 3
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "insert": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "product_code",
+                    "value": "P004"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "quantity",
+                    "value": 40
+                  }
+                },
+                {
+                  "column": {
+                    "name": "reserved_items",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "insert": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "product_code",
+                    "value": "P005"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "quantity",
+                    "value": 100
+                  }
+                },
+                {
+                  "column": {
+                    "name": "reserved_items",
+                    "value": 10
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

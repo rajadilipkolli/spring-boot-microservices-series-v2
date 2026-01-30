@@ -28,14 +28,13 @@ import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.services.SecurityHelper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -43,6 +42,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = OrderController.class)
 @Import(TestSecurityConfig.class)
@@ -61,7 +61,7 @@ class OrderControllerTest {
     private SecurityHelper securityHelper;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     private List<OrderResponse> orderResponseList;
     private PagedResult<OrderResponse> pagedResult;
@@ -213,7 +213,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createOrderRequest)))
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId", is(123)))
                 .andExpect(jsonPath("$.customerId", is(1)))
@@ -255,7 +255,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createOrderRequest)))
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isBadRequest());
     }
 }

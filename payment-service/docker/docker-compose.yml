@@ -17,22 +17,24 @@ services:
     networks:
       - payment-network
 
-  zipkin-server:
-    image: openzipkin/zipkin
-    container_name: zipkin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.16.0
+    extra_hosts: ['host.docker.internal:host-gateway']
+    container_name: grafana-lgtm
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
     ports:
-      - "9411:9411"
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
     networks:
       - payment-network
 
   kafka:
-    image: apache/kafka-native:4.1.0
+    image: apache/kafka-native:4.1.1
     ports:
       - "9092:9092"
     healthcheck:
@@ -62,7 +64,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -70,12 +72,14 @@ services:
     ports:
       - "8888:8888"
     depends_on:
-      zipkin-server:
+      grafana-lgtm:
         condition: service_started
     networks:
       - payment-network
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: docker-dev
+      SPRING_SECURITY_USER_PASSWORD: docker-pass
 
   catalog-service:
     container_name: catalog-service
@@ -98,12 +102,12 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-21:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
@@ -117,7 +121,7 @@ services:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
   inventory-service:
@@ -140,7 +144,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
   order-service:
@@ -163,7 +167,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
 networks:

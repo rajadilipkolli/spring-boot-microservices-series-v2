@@ -1,21 +1,23 @@
-version: "3.9"
+name: api-gateway
 
 services:
 
-  zipkin-server:
-    image: openzipkin/zipkin
-    container_name: zipkin-server
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.16.0
+    extra_hosts: ['host.docker.internal:host-gateway']
+    container_name: grafana-lgtm
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
     ports:
-      - "9411:9411"
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
 
   redis:
-    image: 'redis:8.2.1-alpine'
+    image: 'redis:8.4.0-alpine'
     ports:
       - '127.0.0.1:6379:6379/tcp'
     volumes:
@@ -32,7 +34,7 @@ services:
 
   naming-server:
     container_name: naming-server
-    image: dockertmt/mmv2-service-registry-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -46,12 +48,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - EUREKA.CLIENT.SERVICEURL.DEFAULTZONE= http://localhost:8761/eureka
-      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888/
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
     restart: unless-stopped
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-17:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -61,6 +63,8 @@ services:
       - "8888:8888"
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_SECURITY_USER_NAME: docker-dev
+      SPRING_SECURITY_USER_PASSWORD: docker-pass
 
 volumes:
   redis_data:

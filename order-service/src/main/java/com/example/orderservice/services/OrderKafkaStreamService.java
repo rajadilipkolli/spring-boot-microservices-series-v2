@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
 </p>
 ***/
 
@@ -12,7 +12,9 @@ import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
@@ -29,6 +31,8 @@ public class OrderKafkaStreamService {
 
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
 
+    private ReadOnlyKeyValueStore<Long, OrderDto> store = null;
+
     public OrderKafkaStreamService(StreamsBuilderFactoryBean kafkaStreamsFactory) {
         this.kafkaStreamsFactory = kafkaStreamsFactory;
     }
@@ -39,18 +43,53 @@ public class OrderKafkaStreamService {
                 pageNo,
                 pageSize);
         List<OrderDto> orders = new ArrayList<>();
-        ReadOnlyKeyValueStore<Long, OrderDto> store =
-                Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
-                        .store(
-                                StoreQueryParameters.fromNameAndType(
-                                        AppConstants.ORDERS_TOPIC,
-                                        QueryableStoreTypes.keyValueStore()));
-        long from = (long) pageNo * pageSize;
-        long to = from + pageSize;
-        try (KeyValueIterator<Long, OrderDto> it = store.range(from + 1, to)) {
-            it.forEachRemaining(kv -> orders.add(kv.value));
+
+        long startIndex = (long) pageNo * pageSize;
+        long endIndex = startIndex + pageSize;
+        try (KeyValueIterator<Long, OrderDto> it = getReadOnlyKeyValueStore().all()) {
+            long currentIndex = 0;
+
+            log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
+
+            while (it.hasNext()) {
+                var kv = it.next();
+                log.debug("Found entry at index {}: key={}", currentIndex, kv.key);
+
+                if (currentIndex >= startIndex && currentIndex < endIndex) {
+                    orders.add(kv.value);
+                }
+                currentIndex++;
+
+                // Early exit if we've collected enough
+                if (currentIndex >= endIndex) {
+                    break;
+                }
+            }
+
+            log.info("Returning {} orders out of {} total entries", orders.size(), currentIndex);
         }
 
         return orders;
+    }
+
+    public Optional<OrderDto> getOrderFromStoreById(long orderId) {
+        log.info("Fetching order from Kafka Store with orderId :{}", orderId);
+        return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
+    }
+
+    private ReadOnlyKeyValueStore<Long, OrderDto> getReadOnlyKeyValueStore() {
+        if (store == null) {
+            try {
+                store =
+                        Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
+                                .store(
+                                        StoreQueryParameters.fromNameAndType(
+                                                AppConstants.ORDERS_STORE,
+                                                QueryableStoreTypes.keyValueStore()));
+            } catch (InvalidStateStoreException ex) {
+                throw new IllegalStateException("Orders store not ready", ex);
+            }
+        }
+        return store;
     }
 }

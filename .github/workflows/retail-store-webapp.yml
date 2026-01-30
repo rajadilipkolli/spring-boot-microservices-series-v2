@@ -22,9 +22,9 @@ jobs:
         working-directory: "retail-store-webapp"
     strategy:
       matrix:
-        java: ["21"]
+        java: ["25"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -45,9 +45,13 @@ jobs:
         run: ./mvnw clean verify
 
       - if: ${{ github.ref == 'refs/heads/main' }}
-        name: Build Image and push to docker
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
-          DOC_PASSCODE: ${{secrets.DOCKER_PASSCODE}}
-          DOC_USERNAME: ${{secrets.DOCKER_USERNAME}}
-        run: ./mvnw spring-boot:build-image -DskipTests -Dspring-boot.build-image.publish=true -DCI_DOCKER_PASSWORD=${DOC_PASSCODE} -DCI_DOCKER_USERNAME=${DOC_USERNAME}
+        name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - if: ${{ github.ref == 'refs/heads/main' }}
+        name: Build and Push Docker Image
+        run: |
+          ./mvnw spring-boot:build-image \
+            -DskipTests \
+            -Dspring-boot.build-image.publish=true \
+            -Dspring-boot.build-image.imageName=dockertmt/mmv2-retail-store-webapp:latest

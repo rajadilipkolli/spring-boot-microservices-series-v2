@@ -4,6 +4,7 @@ import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
@@ -37,7 +38,7 @@ public class CreateProductSimulation extends BaseSimulation {
     private static final int CONSTANT_USERS =
             Integer.parseInt(System.getProperty("constantUsers", "100"));
     private static final int RAMP_DURATION_SECONDS =
-            Integer.parseInt(System.getProperty("rampDuration", "30"));
+            Integer.parseInt(System.getProperty("rampDuration", "10"));
     private static final int TEST_DURATION_SECONDS =
             Integer.parseInt(System.getProperty("testDuration", "180"));
 
@@ -363,7 +364,15 @@ public class CreateProductSimulation extends BaseSimulation {
                         global().responseTime()
                                 .percentile(95)
                                 .lt(5000), // 95% of responses under 5s
-                        global().failedRequests().percent().lt(5.0) // Less than 5% failed requests
-                        );
+                        global().responseTime()
+                                .percentile(99)
+                                .lt(8000), // 99% of responses under 8s
+                        global().successfulRequests().percent().gt(95.0), // More than 95% success
+                        global().failedRequests().percent().lt(5.0), // Less than 5% failed requests
+                        // Request-specific assertions for detailed metrics
+                        details("Create product").responseTime().mean().lt(500),
+                        details("Create product").successfulRequests().percent().gt(95.0),
+                        details("Create order with product").responseTime().mean().lt(800),
+                        details("Update inventory").responseTime().mean().lt(400));
     }
 }

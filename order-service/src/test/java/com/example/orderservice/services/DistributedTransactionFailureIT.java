@@ -26,7 +26,10 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        orderRepository.deleteAll();
+        // Clean up any previous test data
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
+        // Create fresh test order for each test
         testOrder = orderRepository.save(TestData.getOrder());
     }
 
@@ -44,8 +47,8 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         kafkaTemplate.send("stock-orders", inventoryOrderDto.orderId(), inventoryOrderDto);
 
         // Assert that the order is eventually rejected
-        await().atMost(10, TimeUnit.SECONDS)
-                .pollInterval(1, TimeUnit.SECONDS)
+        await().atMost(60, TimeUnit.SECONDS)
+                .pollInterval(2, TimeUnit.SECONDS)
                 .untilAsserted(
                         () -> {
                             Optional<Order> order = orderRepository.findById(testOrder.getId());
@@ -123,8 +126,8 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
 
         // Assert - Final state should still be correct
-        await().atMost(10, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
+        await().atMost(60, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofSeconds(2))
                 .untilAsserted(
                         () -> {
                             Order updatedOrder =

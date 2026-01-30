@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
 </p>
 ***/
 
@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
-class OrderServiceApplication {
+public class OrderServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(OrderServiceApplication.class, args);

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
 </p>
 ***/
 
@@ -9,6 +9,8 @@ package com.example.orderservice.services;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.utils.LogSanitizer;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,9 +23,9 @@ public class KafkaOrderProducer {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<@NonNull Long, @NonNull OrderDto> kafkaTemplate;
 
-    public KafkaOrderProducer(KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+    public KafkaOrderProducer(KafkaTemplate<@NonNull Long, @NonNull OrderDto> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -36,15 +38,17 @@ public class KafkaOrderProducer {
                             if (ex == null) {
                                 log.info(
                                         "Sent message=[ {} ] from order service with offset=[{}] to topic {}",
-                                        persistedOrderDto,
+                                        LogSanitizer.sanitizeForLog(
+                                                String.valueOf(persistedOrderDto)),
                                         result.getRecordMetadata().offset(),
                                         AppConstants.ORDERS_TOPIC);
                             } else {
                                 log.warn(
                                         "Unable to send message=[{}] from order service to {} due to : {}",
-                                        persistedOrderDto,
+                                        LogSanitizer.sanitizeForLog(
+                                                String.valueOf(persistedOrderDto)),
                                         AppConstants.ORDERS_TOPIC,
-                                        ex.getMessage());
+                                        LogSanitizer.sanitizeException(ex));
                             }
                         });
     }

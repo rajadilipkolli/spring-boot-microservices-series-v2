@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -97,7 +97,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(
@@ -134,7 +134,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
@@ -159,7 +159,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
@@ -178,7 +178,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customer)))
+                                .content(jsonMapper.writeValueAsString(customer)))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
@@ -187,7 +187,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath(
                                 "$.type",
-                                is("https://zalando.github.io/problem/constraint-violation")))
+                                is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.violations", hasSize(4)))
@@ -214,7 +214,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value(customerId))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
@@ -239,13 +239,13 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .perform(
                         put("/api/customers/{id}", customerId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(customerRequest)))
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(
@@ -278,7 +278,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         header().string(
                                         "Content-Type",
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                .andExpect(jsonPath("$.type", is("https://api.customers.com/errors/not-found")))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(

@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.6</version>
+        <version>4.0.2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -16,8 +16,8 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <java.version>21</java.version>
-        <spotless.version>3.0.0</spotless.version>
+        <java.version>25</java.version>
+        <spotless.version>3.2.1</spotless.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -25,15 +25,14 @@
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
         <sonar-maven-plugin.version>5.2.0.4988</sonar-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
+        <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
         <jacoco.utReportFolder>${project.build.directory}/jacoco/test</jacoco.utReportFolder>
         <jacoco.utReportFile>${jacoco.utReportFolder}/test.exec</jacoco.utReportFile>
         <jacoco.itReportFolder>${project.build.directory}/jacoco/integrationTest</jacoco.itReportFolder>
         <jacoco.itReportFile>${jacoco.itReportFolder}/integrationTest.exec</jacoco.itReportFile>
 
-        <CI_DOCKER_USERNAME/>
-        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -47,7 +46,11 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
         <dependency>
             <groupId>nz.net.ultraq.thymeleaf</groupId>
@@ -63,7 +66,7 @@
        </dependency>
        <dependency>
            <groupId>org.springframework.boot</groupId>
-           <artifactId>spring-boot-starter-oauth2-client</artifactId>
+           <artifactId>spring-boot-starter-security-oauth2-client</artifactId>
        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -75,12 +78,8 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-otel</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-exporter-zipkin</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
         </dependency>
         <dependency>
             <groupId>org.webjars</groupId>
@@ -99,12 +98,12 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>font-awesome</artifactId>
-            <version>7.0.1</version>
+            <version>7.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>alpinejs</artifactId>
-            <version>3.15.0</version>
+            <version>3.15.5</version>
         </dependency>
 
         <dependency>
@@ -120,12 +119,12 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-           <groupId>org.springframework.security</groupId>
-           <artifactId>spring-security-test</artifactId>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-security-test</artifactId>
            <scope>test</scope>
         </dependency>
         <dependency>
@@ -136,13 +135,13 @@
         <dependency>
             <groupId>com.github.dasniko</groupId>
             <artifactId>testcontainers-keycloak</artifactId>
-            <version>3.8.0</version>
+            <version>4.1.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
-            <version>3.10.6</version>
+            <version>4.0.9</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -156,12 +155,6 @@
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                     </image>
-                    <docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
                 </configuration>
                 <executions>
                     <execution>
@@ -219,7 +212,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <runOrder>alphabetical</runOrder>
                     <reportsDirectory>${junit.utReportFolder}</reportsDirectory>
@@ -233,7 +225,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${maven-failsafe-plugin.version}</version>
                 <configuration>
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                     <runOrder>alphabetical</runOrder>
@@ -262,7 +253,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>properties-maven-plugin</artifactId>
-                <version>1.2.1</version>
+                <version>${properties-maven-plugin.version}</version>
                 <executions>
                     <execution>
                         <phase>initialize</phase>
