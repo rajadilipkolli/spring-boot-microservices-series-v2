@@ -45,6 +45,9 @@ spring:
   threads:
     virtual:
       enabled: true
+  testcontainers:
+    beans:
+      startup: parallel
 
 ### the background-job-server and dashboard are disabled by default
 jobrunr:
