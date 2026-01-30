@@ -46,6 +46,15 @@ jobs:
         run: ./mvnw clean verify
 
       - if: ${{ github.ref == 'refs/heads/main' }}
+        name: Verify Docker credentials
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "Error: DOCKER_USERNAME or DOCKER_PASSWORD secret is not set"
+            echo "Please add these secrets in: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - if: ${{ github.ref == 'refs/heads/main' }}
         name: Login to DockerHub
         uses: docker/login-action@v3
         with:
