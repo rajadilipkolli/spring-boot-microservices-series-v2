@@ -3,7 +3,7 @@ name: api-gateway
 services:
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.17.0
+    image: grafana/otel-lgtm:0.17.1
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
