@@ -21,7 +21,7 @@
         <java.version>25</java.version>
         <spring-cloud.version>2025.1.1</spring-cloud.version>
         <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
-        <testcontainers-jooq-codegen-maven-plugin.version>0.0.4</testcontainers-jooq-codegen-maven-plugin.version>
+        <testcontainers-jooq-codegen-maven-plugin.version>1.0.0</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>3.2.1</spotless.version>
@@ -212,7 +212,7 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.testcontainers</groupId>
+                <groupId>dev.sivalabs</groupId>
                 <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
                 <version>${testcontainers-jooq-codegen-maven-plugin.version}</version>
                 <dependencies>
