@@ -473,7 +473,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.10.0
+    image: grafana/tempo:2.10.1
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
