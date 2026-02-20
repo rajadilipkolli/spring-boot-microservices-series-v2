@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5.3
+    image: quay.io/keycloak/keycloak:26.5.4
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
