@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Inventory Service with jdk  ${{ matrix.java }}
+    name: Retail Store with jdk  ${{ matrix.java }}
     runs-on: ubuntu-latest
     defaults:
       run:
