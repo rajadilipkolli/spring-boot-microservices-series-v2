@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <spotless.version>3.2.0</spotless.version>
+        <spotless.version>3.2.1</spotless.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -33,8 +33,6 @@
         <jacoco.itReportFolder>${project.build.directory}/jacoco/integrationTest</jacoco.itReportFolder>
         <jacoco.itReportFile>${jacoco.itReportFolder}/integrationTest.exec</jacoco.itReportFile>
 
-        <CI_DOCKER_USERNAME/>
-        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -100,12 +98,12 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>font-awesome</artifactId>
-            <version>7.1.0</version>
+            <version>7.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>alpinejs</artifactId>
-            <version>3.15.4</version>
+            <version>3.15.8</version>
         </dependency>
 
         <dependency>
@@ -143,7 +141,7 @@
         <dependency>
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
-            <version>4.0.9</version>
+            <version>4.1.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -157,12 +155,6 @@
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                     </image>
-                    <docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
                 </configuration>
                 <executions>
                     <execution>

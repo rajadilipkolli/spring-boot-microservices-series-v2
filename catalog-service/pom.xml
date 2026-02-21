@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.catalogservice</groupId>
@@ -19,16 +19,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <java.version>21</java.version>
-        <spring-cloud.version>2025.1.0</spring-cloud.version>
-        <springdoc-openapi.version>2.8.5</springdoc-openapi.version>
-
+        <java.version>25</java.version>
+        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <spotless.version>3.2.0</spotless.version>
+        <spotless.version>3.2.1</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
 
         <dependency-check-maven.version>12.2.0</dependency-check-maven.version>
@@ -44,8 +43,6 @@
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
 
-        <CI_DOCKER_USERNAME/>
-        <CI_DOCKER_PASSWORD/>
     </properties>
 
     <dependencies>
@@ -265,25 +262,26 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+
                 <configuration>
                     <layers>
                         <enabled>true</enabled>
                     </layers>
+
                     <image>
+                        <!-- Image name stays -->
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-                        <publish>true</publish>
+
+                        <!-- Removed publish=true -->
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>18080</THC_PORT>
                         </env>
                     </image>
-                    <docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
+
+                    <!-- Removed docker publishRegistry credentials -->
                 </configuration>
+
                 <executions>
                     <execution>
                         <goals>
@@ -292,6 +290,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -393,7 +392,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>13.0.0</version>
+                        <version>13.2.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>

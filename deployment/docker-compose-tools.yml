@@ -45,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.4.0-alpine'
+    image: 'redis:8.6.0-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
       - '127.0.0.1:6379:6379/tcp'
@@ -61,7 +61,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.1
+    image: apache/kafka-native:4.2.0
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5.2
+    image: quay.io/keycloak/keycloak:26.5.4
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -387,7 +387,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.3.1
+    image: grafana/grafana:12.3.3
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -416,7 +416,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.6.4
+    image: grafana/loki:3.6.6
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -432,7 +432,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.6.4
+    image: grafana/promtail:3.6.6
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -473,7 +473,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.10.0
+    image: grafana/tempo:2.10.1
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -494,7 +494,7 @@ services:
       start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.30.1
+    image: prom/alertmanager:v0.31.1
     container_name: alertmanager
     ports:
       - "9093:9093"

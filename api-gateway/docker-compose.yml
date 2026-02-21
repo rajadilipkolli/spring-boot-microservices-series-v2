@@ -3,7 +3,7 @@ name: api-gateway
 services:
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.16.0
+    image: grafana/otel-lgtm:0.19.0
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -17,7 +17,7 @@ services:
       - "9090:9090" # Prometheus metrics endpoint
 
   redis:
-    image: 'redis:8.4.0-alpine'
+    image: 'redis:8.6.0-alpine'
     ports:
       - '127.0.0.1:6379:6379/tcp'
     volumes:

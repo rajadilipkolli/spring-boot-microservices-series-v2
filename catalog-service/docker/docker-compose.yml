@@ -20,7 +20,7 @@ services:
       - catalog-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.16.0
+    image: grafana/otel-lgtm:0.19.0
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -37,7 +37,7 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.1
+    image: apache/kafka-native:4.2.0
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: broker
     ports:
