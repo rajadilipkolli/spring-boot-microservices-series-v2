@@ -20,7 +20,7 @@
         <spring-cloud.version>2025.1.1</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
+        <springdoc-openapi.version>3.0.2</springdoc-openapi.version>
 
         <spotless.version>3.2.1</spotless.version>
         <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
