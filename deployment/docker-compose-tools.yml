@@ -387,7 +387,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.3.3
+    image: grafana/grafana:12.4.0
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -432,7 +432,7 @@ services:
       start_period: 90s
 
   promtail:
-    image: grafana/promtail:3.6.6
+    image: grafana/promtail:3.6.7
     container_name: promtail
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     volumes:
@@ -452,7 +452,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.9.1
+    image: prom/prometheus:v3.10.0
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:

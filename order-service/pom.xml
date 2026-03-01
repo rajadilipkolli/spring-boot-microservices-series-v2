@@ -22,7 +22,7 @@
         <spring-cloud.version>2025.1.1</spring-cloud.version>
 
         <org-mapstruct.version>1.6.3</org-mapstruct.version>
-        <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
+        <springdoc-openapi.version>3.0.2</springdoc-openapi.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>3.2.1</spotless.version>
@@ -233,7 +233,7 @@
         <dependency>
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
-            <version>4.1.0</version>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -377,7 +377,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>13.2.0</version>
+                        <version>13.3.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>
