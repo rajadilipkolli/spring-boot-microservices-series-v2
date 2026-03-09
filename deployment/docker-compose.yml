@@ -23,7 +23,7 @@ services:
   redis:
     container_name: redis
     image: 'redis:8.6.1-alpine'
-    extra_hosts: ['host.docker.internal:host-gateway']
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - '6379:6379'
     volumes:
@@ -38,7 +38,7 @@ services:
 
   grafana-lgtm:
     image: grafana/otel-lgtm:0.20.0
-    extra_hosts: ['host.docker.internal:host-gateway']
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     container_name: grafana-lgtm
     environment:
       - OTEL_METRIC_EXPORT_INTERVAL=500
@@ -60,7 +60,7 @@ services:
     ports:
       - "9092:9092"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -119,17 +119,26 @@ services:
       - KC_HTTP_ENABLED=true
       # Additional production settings
       - KC_FEATURES=token-exchange
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_TRACING_ENABLED=true
+      - KC_TELEMETRY_ENDPOINT=http://grafana-lgtm:4318
+      - KC_TELEMETRY_PROTOCOL=http/protobuf
+      - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
       - "9191:9191"
+      - "9000:9000"
     depends_on:
       postgresql:
         condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
     deploy:
       resources:
         limits:
           memory: 2gb
     healthcheck:
-      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep \"HTTP/1.1 200 OK\" <&3"]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -318,7 +327,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
-      - OAUTH2_SERVER_URL=http://keycloak:9191
+      - OAUTH2_SERVER_URL=http://localhost:9191
       - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-lgtm:4318/v1/traces
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
