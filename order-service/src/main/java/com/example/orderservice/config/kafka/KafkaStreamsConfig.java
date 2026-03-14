@@ -49,7 +49,7 @@ import org.springframework.util.Assert;
 @EnableKafkaStreams
 class KafkaStreamsConfig {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(KafkaStreamsConfig.class);
 
     private final OrderManageService orderManageService;
 
