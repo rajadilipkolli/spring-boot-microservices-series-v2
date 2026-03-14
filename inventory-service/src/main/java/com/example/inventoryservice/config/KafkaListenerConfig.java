@@ -11,6 +11,7 @@ import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -60,7 +61,7 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload String productDto) throws JacksonException {
+    public void onSaveProductEvent(@Payload @Valid String productDto) throws JacksonException {
         log.info("Received Product: {}", productDto);
         productManageService.manage(jsonMapper.readValue(productDto, ProductDto.class));
     }
