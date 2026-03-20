@@ -33,6 +33,11 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}Starting 'Store μServices' for [end-2-end] testing....${NC}\n"
 
+# Define a jq function to strip \r from output for Windows compatibility
+function jq() {
+  command jq "$@" | tr -d '\r'
+}
+
 # Default variables with fallback values using parameter expansion
 : ${HOST=localhost}
 : ${PORT=8765}
@@ -207,6 +212,8 @@ function assertCurl() {
   
   local httpCode="${result:(-3)}"
   RESPONSE='' && (( ${#result} > 3 )) && RESPONSE="${result%???}"
+  # Strip \r from RESPONSE for Windows compatibility
+  RESPONSE=$(echo "$RESPONSE" | tr -d '\r')
 
   if [[ "$httpCode" = "$expectedHttpCode" ]]; then
     if [[ "$httpCode" = "200" ]]; then
@@ -231,13 +238,17 @@ function assertEqual() {
   local actual=$2
   local testName="${3:-Value comparison}"
 
-  if [[ "$actual" = "$expected" ]]; then
-    echo -e "${GREEN}Test OK (actual value: $actual)${NC}"
-    track_test_result "$testName" "PASS" "Expected: $expected, Got: $actual"
+  # Strip \r from both expected and actual for Windows compatibility
+  local expected_clean=$(echo "$expected" | tr -d '\r')
+  local actual_clean=$(echo "$actual" | tr -d '\r')
+
+  if [[ "$actual_clean" = "$expected_clean" ]]; then
+    echo -e "${GREEN}Test OK (actual value: $actual_clean)${NC}"
+    track_test_result "$testName" "PASS" "Expected: $expected_clean, Got: $actual_clean"
     return 0
   else
-    echo -e "${RED}Test FAILED, EXPECTED VALUE: $expected, ACTUAL VALUE: $actual, WILL ABORT${NC}"
-    track_test_result "$testName" "FAIL" "Expected: $expected, Got: $actual"
+    echo -e "${RED}Test FAILED, EXPECTED VALUE: $expected_clean, ACTUAL VALUE: $actual_clean, WILL ABORT${NC}"
+    track_test_result "$testName" "FAIL" "Expected: $expected_clean, Got: $actual_clean"
     TEST_STATUS=1
     return 1
   fi
