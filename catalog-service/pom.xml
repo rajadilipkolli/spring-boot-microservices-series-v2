@@ -257,6 +257,16 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.example.catalogservice.CatalogServiceApplication</mainClass>
+                    <buildArgs>
+                        <buildArg>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger,ch.qos.logback,org.slf4j</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
 
@@ -268,15 +278,12 @@
                     <image>
                         <!-- Image name stays -->
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
-
-                        <!-- Removed publish=true -->
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>18080</THC_PORT>
+                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger,ch.qos.logback,org.slf4j</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                     </image>
-
-                    <!-- Removed docker publishRegistry credentials -->
                 </configuration>
 
                 <executions>
