@@ -6,6 +6,9 @@
 
 package com.example.catalogservice.config;
 
+import com.example.catalogservice.config.logging.LogWriter;
+import com.example.catalogservice.config.logging.Loggable;
+import com.example.catalogservice.config.logging.LoggingAspect;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.payload.ProductDto;
@@ -174,17 +177,17 @@ public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
         // Register reflection hints for custom logging
         hints.reflection()
                 .registerType(
-                        com.example.catalogservice.config.logging.Loggable.class,
+                        Loggable.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS)
                 .registerType(
-                        com.example.catalogservice.config.logging.LoggingAspect.class,
+                        LoggingAspect.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS)
                 .registerType(
-                        com.example.catalogservice.config.logging.LogWriter.class,
+                        LogWriter.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
