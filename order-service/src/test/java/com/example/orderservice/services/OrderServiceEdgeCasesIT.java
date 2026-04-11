@@ -6,8 +6,14 @@
 
 package com.example.orderservice.services;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.CoreMatchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.exception.ProductNotFoundException;
@@ -16,20 +22,17 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
     @Test
@@ -91,44 +94,47 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
         int numThreads = 5;
         int ordersPerThread = 20;
-        ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-        CountDownLatch latch = new CountDownLatch(numThreads);
+        CountDownLatch latch;
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+            latch = new CountDownLatch(numThreads);
 
-        mockProductsExistsRequest(true, "PROD1");
+            mockProductsExistsRequest(true, "PROD1");
 
-        // Act
-        for (int i = 0; i < numThreads; i++) {
-            executorService.submit(
-                    () -> {
-                        try {
-                            List<OrderRequest> requests = generateOrderRequests(ordersPerThread);
-                            List<OrderResponse> responses = orderService.saveBatchOrders(requests);
+            // Act
+            for (int i = 0; i < numThreads; i++) {
+                executorService.submit(
+                        () -> {
+                            try {
+                                List<OrderRequest> requests =
+                                        generateOrderRequests(ordersPerThread);
+                                List<OrderResponse> responses =
+                                        orderService.saveBatchOrders(requests);
 
-                            // Verify responses match requests in size
-                            assertThat(responses).hasSize(requests.size());
+                                // Verify responses match requests in size
+                                assertThat(responses).hasSize(requests.size());
 
-                            // Verify each response has a valid order ID
-                            assertThat(responses)
-                                    .allSatisfy(
-                                            response ->
-                                                    assertThat(response.orderId())
-                                                            .isNotNull()
-                                                            .isPositive());
+                                // Verify each response has a valid order ID
+                                assertThat(responses)
+                                        .allSatisfy(
+                                                response ->
+                                                        assertThat(response.orderId())
+                                                                .isNotNull()
+                                                                .isPositive());
 
-                            // Verify status is NEW for all orders
-                            assertThat(responses)
-                                    .allSatisfy(
-                                            response ->
-                                                    assertThat(response.status()).isEqualTo("NEW"));
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
+                                // Verify status is NEW for all orders
+                                assertThat(responses)
+                                        .allSatisfy(
+                                                response ->
+                                                        assertThat(response.status())
+                                                                .isEqualTo("NEW"));
+                            } finally {
+                                latch.countDown();
+                            }
+                        });
+            }
         }
 
         boolean completed = latch.await(30, TimeUnit.SECONDS);
-        executorService.shutdown();
-        executorService.awaitTermination(10, TimeUnit.SECONDS);
 
         // Assert
         assertThat(completed)
@@ -153,6 +159,17 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                             assertThat(order.items().getFirst().quantity()).isEqualTo(1);
                             assertThat(order.deliveryAddress().addressLine1()).isEqualTo("addr1");
                         });
+
+        // waiting till is kafka stream is changed from PARTITIONS_ASSIGNED to RUNNING
+        await().pollDelay(5, SECONDS)
+                .atMost(15, SECONDS)
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(
+                        () ->
+                                this.mockMvc
+                                        .perform(get("/api/orders/store"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.size()", is(10))));
     }
 
     @Test
@@ -209,7 +226,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                         new Address("123 Street", "Apt 1", "City", "State", "12345", "Country"));
 
         // Mock the product existence check to return false
-        mockProductsExistsRequest(false, "NonExistentProduct"); // Act & Assert
+        mockProductsExistsRequest(false, "NONEXISTENTPRODUCT"); // Act & Assert
         assertThatThrownBy(() -> orderService.saveOrder(request))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessageContaining("NONEXISTENTPRODUCT")
@@ -318,7 +335,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                         List.of(new OrderItemRequest("PROD1", 2, BigDecimal.TEN)),
                         new Address("addr1", "addr2", "city", "state", "zip", "country"));
 
-        mockProductsExistsRequest(true, "PROD1", "PROD2", "PROD3");
+        mockProductsExistsRequest(true, "PROD1");
 
         // Save the initial order
         OrderResponse initialOrder = orderService.saveOrder(initialRequest);
@@ -340,6 +357,8 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                                 "new-state",
                                 "new-zip",
                                 "new-country"));
+
+        mockProductsExistsRequest(true, "PROD2", "PROD3");
 
         // Find the order entity for updating
         var orderToUpdate = orderRepository.findById(initialOrder.orderId()).orElseThrow();
@@ -364,7 +383,7 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         assertThat(updatedOrder.deliveryAddress().city()).isEqualTo("new-city");
 
         // Verify prices are calculated correctly
-        BigDecimal expectedTotal = BigDecimal.valueOf(3 * 15 + 1 * 25);
+        BigDecimal expectedTotal = BigDecimal.valueOf(3 * 15 + 25);
         assertThat(updatedOrder.totalPrice()).isEqualByComparingTo(expectedTotal);
 
         // Verify the database was also updated

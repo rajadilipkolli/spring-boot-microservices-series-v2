@@ -20,7 +20,7 @@ import org.wiremock.integrations.testcontainers.WireMockContainer;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "spring.cloud.discovery.reactive.enabled=false",
-            "spring.cloud.discovery.enabled=false",
+            "eureka.client.enabled=false",
             "spring.cloud.config.enabled=false"
         },
         classes = ContainerConfig.class)
