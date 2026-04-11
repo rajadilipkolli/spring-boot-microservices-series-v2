@@ -21,10 +21,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dslContext;
