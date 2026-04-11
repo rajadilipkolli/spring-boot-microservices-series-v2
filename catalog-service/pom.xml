@@ -262,7 +262,7 @@
                 <configuration>
                     <mainClass>com.example.catalogservice.CatalogServiceApplication</mainClass>
                     <buildArgs>
-                        <buildArg>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger</buildArg>
+                        <buildArg>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger,ch.qos.logback.classic.Logger</buildArg>
                     </buildArgs>
                 </configuration>
             </plugin>
@@ -281,7 +281,7 @@
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>18080</THC_PORT>
-                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger,ch.qos.logback.classic.Logger</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                     </image>
                 </configuration>
