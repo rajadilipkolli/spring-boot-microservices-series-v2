@@ -6,6 +6,9 @@
 
 package com.example.catalogservice.config;
 
+import com.example.catalogservice.config.logging.LogWriter;
+import com.example.catalogservice.config.logging.Loggable;
+import com.example.catalogservice.config.logging.LoggingAspect;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.payload.ProductDto;
@@ -82,6 +85,109 @@ public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.ACCESS_DECLARED_FIELDS)
                 .registerType(
                         ApplicationProperties.Resilience.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for Resilience4j Properties
+        hints.reflection()
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerProperties$InstanceProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.ratelimiter.autoconfigure.RateLimiterProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.ratelimiter.autoconfigure.RateLimiterProperties$InstanceProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.retry.autoconfigure.RetryProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.retry.autoconfigure.RetryProperties$InstanceProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.timelimiter.autoconfigure.TimeLimiterProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.springboot3.timelimiter.autoconfigure.TimeLimiterProperties$InstanceProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for Resilience4j Aspects
+        hints.reflection()
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.spring6.circuitbreaker.configure.CircuitBreakerAspect"),
+                        MemberCategory.INVOKE_DECLARED_METHODS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.spring6.ratelimiter.configure.RateLimiterAspect"),
+                        MemberCategory.INVOKE_DECLARED_METHODS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.spring6.retry.configure.RetryAspect"),
+                        MemberCategory.INVOKE_DECLARED_METHODS)
+                .registerType(
+                        TypeReference.of(
+                                "io.github.resilience4j.spring6.timelimiter.configure.TimeLimiterAspect"),
+                        MemberCategory.INVOKE_DECLARED_METHODS);
+
+        // Register common Spring Cloud Hints
+        hints.reflection()
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.client.loadbalancer.LoadBalancerProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.client.loadbalancer.LoadBalancerProperties$StickySession"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for custom logging
+        hints.reflection()
+                .registerType(
+                        Loggable.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        LoggingAspect.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        LogWriter.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
