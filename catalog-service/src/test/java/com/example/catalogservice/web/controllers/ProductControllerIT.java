@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -130,6 +130,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @Test
     void shouldFetchAllProductsAsEmpty() {
+        transitionToClosedState("getInventoryByProductCodes");
+
         // Use StepVerifier to wait for deleteAll to complete
         StepVerifier.create(productRepository.deleteAll()).verifyComplete();
 
@@ -163,7 +165,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                                     assertThat(r.data()).isEmpty();
                                                 }));
 
-        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
+        checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.CLOSED);
     }
 
     @Test
