@@ -238,5 +238,21 @@ public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for Spring Cloud Config model (needed for Jackson
+        // deserialization)
+        hints.reflection()
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.config.environment.Environment"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.config.environment.PropertySource"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
     }
 }
