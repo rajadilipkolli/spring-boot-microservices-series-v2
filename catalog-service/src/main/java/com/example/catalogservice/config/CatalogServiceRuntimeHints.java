@@ -10,6 +10,9 @@ import com.example.catalogservice.config.logging.LogWriter;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.config.logging.LoggingAspect;
 import com.example.catalogservice.entities.Product;
+import com.example.catalogservice.exception.CustomResponseStatusException;
+import com.example.catalogservice.exception.ProductAlreadyExistsException;
+import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
@@ -188,6 +191,24 @@ public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.ACCESS_DECLARED_FIELDS)
                 .registerType(
                         LogWriter.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for custom exceptions
+        hints.reflection()
+                .registerType(
+                        ProductNotFoundException.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        ProductAlreadyExistsException.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        CustomResponseStatusException.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
