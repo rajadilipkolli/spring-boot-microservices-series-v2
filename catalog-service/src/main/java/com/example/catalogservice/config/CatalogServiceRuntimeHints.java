@@ -212,5 +212,31 @@ public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register resource hints for Joda-Time timezone data
+        hints.resources().registerPattern("org/joda/time/tz/data/**/*");
+
+        // Register reflection hints for Joda-Time ZoneInfoProvider (used by Jackson)
+        hints.reflection()
+                .registerType(
+                        TypeReference.of("org.joda.time.tz.ZoneInfoProvider"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+
+        // Register reflection hints for Spring Cloud Config Client properties
+        hints.reflection()
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.config.client.ConfigClientProperties"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of(
+                                "org.springframework.cloud.config.client.ConfigClientProperties$Credentials"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
     }
 }
