@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
@@ -35,7 +34,7 @@ class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
 
-    @Mock private CatalogKafkaProducer catalogKafkaProducer;
+    @Mock private OutboxService outboxService;
 
     @InjectMocks private ProductService productService;
 
@@ -72,7 +71,7 @@ class ProductServiceTest {
                                     true);
                         });
 
-        given(catalogKafkaProducer.send(any(ProductRequest.class))).willReturn(Mono.just(true));
+        given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
 
         // Mock the repository findByProductCodeAllIgnoreCase method to return empty Mono
         // This is needed for the idempotency check in saveProduct

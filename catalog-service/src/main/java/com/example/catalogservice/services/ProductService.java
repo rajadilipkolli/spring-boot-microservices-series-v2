@@ -10,7 +10,6 @@ import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
@@ -46,17 +45,17 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
-    private final CatalogKafkaProducer catalogKafkaProducer;
+    private final OutboxService outboxService;
 
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
-            CatalogKafkaProducer catalogKafkaProducer) {
+            OutboxService outboxService) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
-        this.catalogKafkaProducer = catalogKafkaProducer;
+        this.outboxService = outboxService;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
@@ -176,21 +175,38 @@ public class ProductService {
                         });
     }
 
-    /** Helper method to create and save a new product */
     @Transactional
     protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
         return Mono.just(productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->
-                                catalogKafkaProducer.send(productRequest).thenReturn(savedProduct))
+                                outboxService
+                                        .createOutboxEvent(
+                                                "PRODUCT",
+                                                savedProduct.getProductCode(),
+                                                "PRODUCT_CREATED",
+                                                savedProduct)
+                                        .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse);
     }
 
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
-        return productRepository.deleteById(id);
+        return productRepository
+                .findById(id)
+                .flatMap(
+                        product ->
+                                productRepository
+                                        .deleteById(id)
+                                        .then(
+                                                outboxService.createOutboxEvent(
+                                                        "PRODUCT",
+                                                        product.getProductCode(),
+                                                        "PRODUCT_DELETED",
+                                                        product)))
+                .then();
     }
 
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
@@ -211,7 +227,18 @@ public class ProductService {
         productMapper.mapProductWithRequest(productRequest, product);
 
         // Save the updated post object
-        return productRepository.save(product).map(productMapper::toProductResponse);
+        return productRepository
+                .save(product)
+                .flatMap(
+                        savedProduct ->
+                                outboxService
+                                        .createOutboxEvent(
+                                                "PRODUCT",
+                                                savedProduct.getProductCode(),
+                                                "PRODUCT_UPDATED",
+                                                savedProduct)
+                                        .thenReturn(savedProduct))
+                .map(productMapper::toProductResponse);
     }
 
     public Mono<Product> findById(Long id) {
