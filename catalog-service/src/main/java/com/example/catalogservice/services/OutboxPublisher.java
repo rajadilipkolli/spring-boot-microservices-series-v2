@@ -74,7 +74,7 @@ public class OutboxPublisher {
     private Mono<OutboxEvent> publishEvent(OutboxEvent event) {
         log.info("Sending outbox event to Kafka: {}", event.getId());
         return catalogKafkaProducer
-                .send(event.getPayload().toString())
+                .send(event.getAggregateId(), event.getPayload().toString())
                 .flatMap(
                         success -> {
                             if (success) {
@@ -102,7 +102,9 @@ public class OutboxPublisher {
         } else {
             log.error("Event {} failed after max retries: {}", event.getId(), error);
             event.setStatus(OutboxEventStatus.FAILED).setErrorMessage(error);
-            failedEventCounter.increment();
+            return outboxEventRepository
+                    .save(event)
+                    .doOnSuccess(saved -> failedEventCounter.increment());
         }
         return outboxEventRepository.save(event);
     }
@@ -112,7 +114,7 @@ public class OutboxPublisher {
         log.debug("Running outbox reaper");
         OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
         outboxEventRepository
-                .reapOrphanedEvents(threshold)
+                .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(
                         count -> {

@@ -37,10 +37,12 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
     @Query(
             """
             UPDATE outbox_events
-            SET status = 'PENDING', locked_at = NULL, retry_count = retry_count + 1
+            SET status = CASE WHEN retry_count + 1 >= :maxRetries THEN 'FAILED' ELSE 'PENDING' END,
+                locked_at = NULL,
+                retry_count = retry_count + 1
             WHERE status = 'PROCESSING' AND locked_at < :threshold
             """)
-    Mono<Long> reapOrphanedEvents(OffsetDateTime threshold);
+    Mono<Long> reapOrphanedEvents(OffsetDateTime threshold, int maxRetries);
 
     Mono<Long> countByStatus(OutboxEventStatus status);
 

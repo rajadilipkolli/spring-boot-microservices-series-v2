@@ -8,6 +8,7 @@ package com.example.catalogservice.config;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
@@ -133,14 +134,16 @@ public record ApplicationProperties(
     }
 
     public static class Outbox {
-        private int maxRetries = 3;
+
+        @PositiveOrZero(message = "Outbox maxRetries must be non-negative") private Integer maxRetries = 3;
+
         private Duration lockTimeout = Duration.ofMinutes(1);
 
-        public int getMaxRetries() {
+        public Integer getMaxRetries() {
             return maxRetries;
         }
 
-        public void setMaxRetries(int maxRetries) {
+        public void setMaxRetries(Integer maxRetries) {
             this.maxRetries = maxRetries;
         }
 
