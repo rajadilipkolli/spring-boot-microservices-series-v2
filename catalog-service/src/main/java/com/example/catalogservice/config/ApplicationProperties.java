@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.catalogservice.config;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
@@ -17,7 +18,8 @@ import org.springframework.validation.annotation.Validated;
 public record ApplicationProperties(
         @NotBlank(message = "Inventory Service URL cannot be blank") String inventoryServiceUrl,
         @NestedConfigurationProperty @Valid Cors cors,
-        @Valid Resilience resilience) {
+        @Valid Resilience resilience,
+        @Valid Outbox outbox) {
 
     public ApplicationProperties {
         // Default values for nested properties
@@ -26,6 +28,9 @@ public record ApplicationProperties(
         }
         if (resilience == null) {
             resilience = new Resilience();
+        }
+        if (outbox == null) {
+            outbox = new Outbox();
         }
     }
 
@@ -124,6 +129,27 @@ public record ApplicationProperties(
 
         public void setCircuitBreakerWaitDurationMs(long circuitBreakerWaitDurationMs) {
             this.circuitBreakerWaitDurationMs = circuitBreakerWaitDurationMs;
+        }
+    }
+
+    public static class Outbox {
+        private int maxRetries = 3;
+        private Duration lockTimeout = Duration.ofMinutes(1);
+
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        public void setMaxRetries(int maxRetries) {
+            this.maxRetries = maxRetries;
+        }
+
+        public Duration getLockTimeout() {
+            return lockTimeout;
+        }
+
+        public void setLockTimeout(Duration lockTimeout) {
+            this.lockTimeout = lockTimeout;
         }
     }
 }
