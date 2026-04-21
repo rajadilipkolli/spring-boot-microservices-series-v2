@@ -243,10 +243,17 @@ class OrderControllerIT extends AbstractIntegrationTest {
             // and confirm the order is created successfully
             OrderDto paymentOrderDto = getOrderDto("PAYMENT", orderId);
 
-            kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto).get();
+            kafkaTemplate
+                    .send(
+                            "payment-orders",
+                            String.valueOf(paymentOrderDto.orderId()),
+                            paymentOrderDto)
+                    .get();
             OrderDto stockOrderDto = getOrderDto("STOCK", orderId);
 
-            kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto).get();
+            kafkaTemplate
+                    .send("stock-orders", String.valueOf(stockOrderDto.orderId()), stockOrderDto)
+                    .get();
 
             await().atMost(15, SECONDS)
                     .pollDelay(1, SECONDS)
