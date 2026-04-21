@@ -55,7 +55,7 @@ public class R2dbcConfig {
             try {
                 return jsonMapper.readTree(source.asString());
             } catch (Exception e) {
-                return null;
+                throw new IllegalArgumentException("Unable to deserialize outbox event payload", e);
             }
         }
     }

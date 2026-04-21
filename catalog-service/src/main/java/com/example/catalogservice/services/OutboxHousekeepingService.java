@@ -36,7 +36,7 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.failed", failedCount);
     }
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelayString = "${application.outbox.housekeeping-delay:10000}")
     public void updateMetrics() {
         outboxEventRepository
                 .countByStatus(OutboxEventStatus.PENDING)
@@ -46,7 +46,7 @@ public class OutboxHousekeepingService {
                 .then(outboxEventRepository.countByStatus(OutboxEventStatus.FAILED))
                 .doOnNext(failedCount::set)
                 .subscribeOn(Schedulers.boundedElastic())
-                .subscribe();
+                .subscribe(v -> {}, ex -> log.warn("Failed to refresh outbox metrics", ex));
     }
 
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
