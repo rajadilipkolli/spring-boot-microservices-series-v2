@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -51,7 +51,8 @@ class KafkaListenerConfig {
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
-    public void onEvent(OrderDto orderDto) {
+    public void onEvent(String orderDtoStr) throws JacksonException {
+        OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info("Received Order: {}", orderDto);
         if ("NEW".equals(orderDto.status())) {
             orderManageService.reserve(orderDto);
@@ -67,7 +68,7 @@ class KafkaListenerConfig {
     }
 
     @DltHandler
-    public void dlt(OrderDto orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+    public void dlt(String orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("Received dead-letter message : {} from topic {}", orderDto, topic);
     }
 }
