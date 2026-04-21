@@ -14,6 +14,7 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,6 +34,7 @@ public class OutboxPublisher {
     private final ApplicationProperties properties;
     private final Counter publishedEventCounter;
     private final Counter failedEventCounter;
+    private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
@@ -53,13 +55,16 @@ public class OutboxPublisher {
                         .register(meterRegistry);
     }
 
-    @Scheduled(fixedRateString = "${application.outbox.publish-delay:5000}")
+    @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
     public void scheduledPublish() {
-        this.publishEvents()
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(
-                        event -> log.debug("Published outbox event: {}", event.getId()),
-                        ex -> log.error("Error occurred while publishing outbox events", ex));
+        if (isPublishing.compareAndSet(false, true)) {
+            this.publishEvents()
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doFinally(signalType -> isPublishing.set(false))
+                    .subscribe(
+                            event -> log.debug("Published outbox event: {}", event.getId()),
+                            ex -> log.error("Error occurred while publishing outbox events", ex));
+        }
     }
 
     public Flux<OutboxEvent> publishEvents() {

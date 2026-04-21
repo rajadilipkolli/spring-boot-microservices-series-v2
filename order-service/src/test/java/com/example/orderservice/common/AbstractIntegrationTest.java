@@ -62,7 +62,7 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     @InjectWireMock("catalog-service")
     protected WireMockServer wireMockServer;
