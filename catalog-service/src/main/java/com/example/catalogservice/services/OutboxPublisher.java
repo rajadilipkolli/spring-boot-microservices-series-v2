@@ -53,7 +53,7 @@ public class OutboxPublisher {
                         .register(meterRegistry);
     }
 
-    @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
+    @Scheduled(fixedRateString = "${application.outbox.publish-delay:5000}")
     public void scheduledPublish() {
         this.publishEvents()
                 .subscribeOn(Schedulers.boundedElastic())

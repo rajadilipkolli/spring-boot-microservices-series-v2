@@ -55,7 +55,7 @@ public class OutboxHousekeepingService {
         log.info("Starting cleanup of published events older than {}", threshold);
         outboxEventRepository
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
-                .doOnSuccess(v -> log.info("Successfully cleaned up old published events"))
+                .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe();
