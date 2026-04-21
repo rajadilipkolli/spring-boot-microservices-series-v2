@@ -18,8 +18,19 @@ import reactor.core.publisher.Mono;
 public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEvent, UUID> {
 
     @Query(
-            "SELECT * FROM outbox_events WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT :limit FOR UPDATE SKIP LOCKED")
-    Flux<OutboxEvent> findPendingEvents(int limit);
+            """
+            UPDATE outbox_events
+            SET status = 'PROCESSING'
+            WHERE id IN (
+                SELECT id FROM outbox_events
+                WHERE status = 'PENDING'
+                ORDER BY created_at ASC
+                LIMIT :limit
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING *
+            """)
+    Flux<OutboxEvent> claimPendingEvents(int limit);
 
     Mono<Long> countByStatus(OutboxEventStatus status);
 

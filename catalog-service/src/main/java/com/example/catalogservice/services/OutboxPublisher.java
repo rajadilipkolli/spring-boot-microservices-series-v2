@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2026 Raja Kolli.
 </p>
 ***/
 
@@ -60,7 +60,7 @@ public class OutboxPublisher {
     @Transactional
     public Flux<OutboxEvent> publishEvents() {
         return outboxEventRepository
-                .findPendingEvents(100)
+                .claimPendingEvents(100)
                 .doOnNext(event -> log.info("Processing pending outbox event: {}", event.getId()))
                 .flatMap(
                         event -> {
