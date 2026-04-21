@@ -54,5 +54,5 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
 
     Mono<Long> countByStatus(OutboxEventStatus status);
 
-    Mono<Void> deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus status, OffsetDateTime time);
+    Mono<Integer> deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus status, OffsetDateTime time);
 }
