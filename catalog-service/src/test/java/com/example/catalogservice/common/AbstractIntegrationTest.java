@@ -10,7 +10,9 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.catalogservice.config.TestKafkaListenerConfig;
+import com.example.catalogservice.repositories.OutboxEventRepository;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.catalogservice.services.OutboxPublisher;
 import com.example.catalogservice.services.ProductService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,4 +41,10 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected ProductRepository productRepository;
 
     @Autowired protected ProductService productService;
+
+    @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
+
+    @Autowired protected OutboxPublisher outboxPublisher;
+
+    @Autowired protected OutboxEventRepository outboxEventRepository;
 }
