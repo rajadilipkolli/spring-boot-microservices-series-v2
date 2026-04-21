@@ -39,6 +39,8 @@ public class OutboxEvent implements Persistable<UUID> {
 
     private String errorMessage;
 
+    private OffsetDateTime lockedAt;
+
     public OutboxEvent() {}
 
     public UUID getId() {
@@ -128,6 +130,15 @@ public class OutboxEvent implements Persistable<UUID> {
 
     public OutboxEvent setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+        return this;
+    }
+
+    public OffsetDateTime getLockedAt() {
+        return lockedAt;
+    }
+
+    public OutboxEvent setLockedAt(OffsetDateTime lockedAt) {
+        this.lockedAt = lockedAt;
         return this;
     }
 

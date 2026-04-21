@@ -508,12 +508,13 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.35.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->
                             <file>${project.basedir}/license-header</file>
                         </licenseHeader>
+                        <formatAnnotations />
                     </java>
                 </configuration>
                 <executions>
