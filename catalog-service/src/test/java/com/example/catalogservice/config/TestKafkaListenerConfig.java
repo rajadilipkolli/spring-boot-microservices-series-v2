@@ -6,7 +6,9 @@
 
 package com.example.catalogservice.config;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -18,15 +20,19 @@ public class TestKafkaListenerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(TestKafkaListenerConfig.class);
 
-    private final CountDownLatch latch = new CountDownLatch(10);
+    private final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
 
     @KafkaListener(id = "products", topics = "productTopic", groupId = "product")
     public void onSaveProductEvent(@Payload String productDto) {
-        log.info("Received Product: {}", productDto);
-        latch.countDown();
+        log.info("Received Product Payload: {}", productDto);
+        messages.offer(productDto);
     }
 
-    public CountDownLatch getLatch() {
-        return latch;
+    public String pollPayload(long timeout, TimeUnit unit) throws InterruptedException {
+        return messages.poll(timeout, unit);
+    }
+
+    public void reset() {
+        messages.clear();
     }
 }

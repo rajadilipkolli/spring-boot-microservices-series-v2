@@ -26,10 +26,10 @@ public class PaymentOrderManageService {
     private static final Logger log = LoggerFactory.getLogger(PaymentOrderManageService.class);
 
     private final CustomerRepository customerRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public PaymentOrderManageService(
-            CustomerRepository customerRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+            CustomerRepository customerRepository, KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.customerRepository = customerRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -64,7 +64,10 @@ public class PaymentOrderManageService {
                     LogSanitizer.sanitizeForLog(String.valueOf(customer)));
             customerRepository.save(customer);
             orderDto = orderDto.withSource(AppConstants.SOURCE);
-            kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.orderId(), orderDto);
+            kafkaTemplate.send(
+                    AppConstants.PAYMENT_ORDERS_TOPIC,
+                    String.valueOf(orderDto.orderId()),
+                    orderDto);
             log.info(
                     "Sent Reserved Order: {} to topic :{}",
                     LogSanitizer.sanitizeForLog(String.valueOf(orderDto)),

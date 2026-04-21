@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -23,16 +23,19 @@ public class KafkaOrderProducer {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private final KafkaTemplate<@NonNull Long, @NonNull OrderDto> kafkaTemplate;
+    private final KafkaTemplate<@NonNull String, @NonNull OrderDto> kafkaTemplate;
 
-    public KafkaOrderProducer(KafkaTemplate<@NonNull Long, @NonNull OrderDto> kafkaTemplate) {
+    public KafkaOrderProducer(KafkaTemplate<@NonNull String, @NonNull OrderDto> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     @Async
     public void sendOrder(OrderDto persistedOrderDto) {
         kafkaTemplate
-                .send(AppConstants.ORDERS_TOPIC, persistedOrderDto.orderId(), persistedOrderDto)
+                .send(
+                        AppConstants.ORDERS_TOPIC,
+                        String.valueOf(persistedOrderDto.orderId()),
+                        persistedOrderDto)
                 .whenComplete(
                         (result, ex) -> {
                             if (ex == null) {

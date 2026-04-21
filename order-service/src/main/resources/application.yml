@@ -8,7 +8,7 @@ spring:
     name: order-service
   kafka:
     producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring:
@@ -33,7 +33,7 @@ spring:
           timestamp:
             extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
           key:
-            serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+            serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
         spring:
@@ -45,6 +45,9 @@ spring:
   threads:
     virtual:
       enabled: true
+  testcontainers:
+    beans:
+      startup: parallel
 
 ### the background-job-server and dashboard are disabled by default
 jobrunr:

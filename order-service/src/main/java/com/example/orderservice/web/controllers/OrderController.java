@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -151,11 +151,11 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/store/{id}")
-    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable Long id) {
+    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable String id) {
         return orderKafkaStreamService
                 .getOrderFromStoreById(id)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new OrderNotFoundException(id));
+                .orElseThrow(() -> new OrderNotFoundException(Long.valueOf(id)));
     }
 
     @GetMapping("/customer/{id}")

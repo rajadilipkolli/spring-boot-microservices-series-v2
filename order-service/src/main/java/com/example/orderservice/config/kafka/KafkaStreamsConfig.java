@@ -106,23 +106,23 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
+    KStream<String, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
         Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
 
         // Log important config information for troubleshooting
         log.info(
                 "Starting Kafka Stream configuration. This might help diagnose Spring Boot 3.4.0 issues");
 
-        KStream<Long, OrderDto> paymentStream =
+        KStream<String, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
-                        PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+                        PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
 
         paymentStream
                 .join(
                         kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
+                        StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC);
 
@@ -132,18 +132,18 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    KTable<Long, OrderDto> kTable(StreamsBuilder streamsBuilder) {
+    KTable<String, OrderDto> kTable(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
         JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
 
         // KTable naturally keeps only the latest value for each key
-        KTable<Long, OrderDto> ordersTable =
+        KTable<String, OrderDto> ordersTable =
                 streamsBuilder.table(
                         ORDERS_TOPIC,
-                        Consumed.with(Serdes.Long(), orderSerde),
-                        Materialized.<Long, OrderDto>as(
+                        Consumed.with(Serdes.String(), orderSerde),
+                        Materialized.<String, OrderDto>as(
                                         Stores.persistentKeyValueStore(ORDERS_STORE))
-                                .withKeySerde(Serdes.Long())
+                                .withKeySerde(Serdes.String())
                                 .withValueSerde(orderSerde));
 
         // Add logging for visibility
