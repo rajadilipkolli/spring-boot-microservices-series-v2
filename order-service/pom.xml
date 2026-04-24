@@ -352,6 +352,7 @@
                         <include>**/*IntTest*</include>
                         <include>**/*IntegrationTest*</include>
                     </includes>
+					<excludedGroups>performance</excludedGroups>
                 </configuration>
                 <executions>
                     <execution>
