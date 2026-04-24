@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -31,10 +31,11 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public InventoryOrderManageService(
-            InventoryRepository inventoryRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+            InventoryRepository inventoryRepository,
+            KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -63,7 +64,9 @@ public class InventoryOrderManageService {
                     productCodeList);
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
             kafkaTemplate.send(
-                    AppConstants.STOCK_ORDERS_TOPIC, rejectedOrderDto.orderId(), rejectedOrderDto);
+                    AppConstants.STOCK_ORDERS_TOPIC,
+                    String.valueOf(rejectedOrderDto.orderId()),
+                    rejectedOrderDto);
             LOGGER.info(
                     "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
                     rejectedOrderDto,
@@ -119,7 +122,9 @@ public class InventoryOrderManageService {
         // Send order to Kafka
         OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
         kafkaTemplate.send(
-                AppConstants.STOCK_ORDERS_TOPIC, orderWithSource.orderId(), orderWithSource);
+                AppConstants.STOCK_ORDERS_TOPIC,
+                String.valueOf(orderWithSource.orderId()),
+                orderWithSource);
         LOGGER.info(
                 "Sent Order with status {} : {} from inventory service to topic {}",
                 orderWithSource.status(),

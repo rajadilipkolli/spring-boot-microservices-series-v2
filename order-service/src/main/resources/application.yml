@@ -8,7 +8,7 @@ spring:
     name: order-service
   kafka:
     producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring:
@@ -33,7 +33,7 @@ spring:
           timestamp:
             extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
           key:
-            serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+            serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
         spring:
@@ -42,6 +42,15 @@ spring:
               packages: 'com.example.common.dtos'
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
+  modulith:
+    events:
+# to enable auto initialization need to add the dependency spring-modulith-starter-jpa and a datasource configuration
+#      jdbc:
+#        schema-initialization:
+#          enabled: true
+      republish-outstanding-events-on-restart: true
+      completion-mode: archive
+
   threads:
     virtual:
       enabled: true

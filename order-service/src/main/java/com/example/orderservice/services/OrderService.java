@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -10,6 +10,7 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.events.OrderCreatedEvent;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
@@ -26,15 +27,17 @@ import java.util.concurrent.CompletableFuture;
 import org.jobrunr.jobs.annotations.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 @Loggable
 @Observed(name = "orderService")
 public class OrderService {
@@ -44,17 +47,17 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CatalogService catalogService;
-    private final KafkaOrderProducer kafkaOrderProducer;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
             CatalogService catalogService,
-            KafkaOrderProducer kafkaOrderProducer) {
+            ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
-        this.kafkaOrderProducer = kafkaOrderProducer;
+        this.eventPublisher = eventPublisher;
     }
 
     public PagedResult<OrderResponse> findAllOrders(
@@ -94,7 +97,7 @@ public class OrderService {
             Order savedOrder = this.orderRepository.save(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            kafkaOrderProducer.sendOrder(persistedOrderDto);
+            eventPublisher.publishEvent(new OrderCreatedEvent(persistedOrderDto));
             return this.orderMapper.toResponse(savedOrder);
         } else {
             log.debug(
@@ -124,10 +127,13 @@ public class OrderService {
 
             List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
 
-            // Send messages to Kafka in parallel
-            savedOrders.parallelStream()
-                    .map(this.orderMapper::toDto)
-                    .forEach(kafkaOrderProducer::sendOrder);
+            // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
+            // OrderEventPublisher
+            savedOrders.forEach(
+                    order -> {
+                        OrderDto dto = orderMapper.toDto(order);
+                        eventPublisher.publishEvent(new OrderCreatedEvent(dto));
+                    });
 
             return savedOrders.stream().map(this.orderMapper::toResponse).toList();
         } else {
@@ -209,7 +215,7 @@ public class OrderService {
                     log.info(
                             "Retrying Order :{}",
                             LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                    kafkaOrderProducer.sendOrder(persistedOrderDto);
+                    eventPublisher.publishEvent(new OrderCreatedEvent(persistedOrderDto));
                 });
     }
 }

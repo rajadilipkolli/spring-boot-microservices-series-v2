@@ -20,14 +20,14 @@ public class NonSQLContainersConfig {
     @Bean
     @ServiceConnection
     LgtmStackContainer lgtmContainer() {
-        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.19.0"))
+        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.26.0"))
                 .withStartupTimeout(Duration.ofMinutes(2));
     }
 
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.1.1"))
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.2.0"))
                 .withReuse(true);
     }
 }
