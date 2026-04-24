@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -27,6 +27,7 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.Stores;
 import org.jspecify.annotations.NonNull;
@@ -119,12 +120,13 @@ class KafkaStreamsConfig {
 
         paymentStream
                 .join(
-                        kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
+                        kafkaStreamBuilder.stream(
+                                STOCK_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde)),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
-                .to(ORDERS_TOPIC);
+                .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
 
         paymentStream.print(Printed.toSysOut());
 
