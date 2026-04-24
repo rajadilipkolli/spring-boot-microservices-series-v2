@@ -1,5 +1,6 @@
 --liquibase formatted sql
-
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-dbms type:postgresql
 --changeset raja:03-event_publication_ddl
 CREATE TABLE IF NOT EXISTS event_publication
 (
@@ -32,3 +33,10 @@ CREATE TABLE IF NOT EXISTS event_publication_archive
     );
 CREATE INDEX IF NOT EXISTS event_publication_archive_serialized_event_hash_idx ON event_publication_archive USING hash(serialized_event);
 CREATE INDEX IF NOT EXISTS event_publication_archive_by_completion_date_idx ON event_publication_archive (completion_date);
+
+--rollback DROP INDEX IF EXISTS event_publication_archive_by_completion_date_idx;
+--rollback DROP INDEX IF EXISTS event_publication_archive_serialized_event_hash_idx;
+--rollback DROP TABLE IF EXISTS event_publication_archive;
+--rollback DROP INDEX IF EXISTS event_publication_by_completion_date_idx;
+--rollback DROP INDEX IF EXISTS event_publication_serialized_event_hash_idx;
+--rollback DROP TABLE IF EXISTS event_publication;

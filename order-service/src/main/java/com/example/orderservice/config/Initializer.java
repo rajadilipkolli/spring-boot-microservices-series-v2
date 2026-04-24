@@ -31,7 +31,8 @@ class Initializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
-        BackgroundJob.scheduleRecurrently(Cron.minutely(), orderService::retryNewOrders);
+        BackgroundJob.scheduleRecurrently(
+                "retry-new-orders", Cron.minutely(), orderService::retryNewOrders);
         BackgroundJob.scheduleRecurrently(
                 "outbox-relay", Cron.minutely(), outboxRelayService::processIncompletePublications);
         log.info("Completed scheduling recurring jobs: retryNewOrders, outbox-relay");

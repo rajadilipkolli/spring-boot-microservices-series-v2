@@ -134,11 +134,6 @@ public class OrderService {
                         OrderDto dto = orderMapper.toDto(order);
                         eventPublisher.publishEvent(new OrderCreatedEvent(dto));
                     });
-            savedOrders.forEach(
-                    order -> {
-                        OrderDto dto = orderMapper.toDto(order);
-                        eventPublisher.publishEvent(new OrderCreatedEvent(dto));
-                    });
 
             return savedOrders.stream().map(this.orderMapper::toResponse).toList();
         } else {
