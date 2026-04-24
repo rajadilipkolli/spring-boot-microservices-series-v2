@@ -42,6 +42,15 @@ spring:
               packages: 'com.example.common.dtos'
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
+  modulith:
+    events:
+# to enable auto initialization need to add the dependency spring-modulith-starter-jpa and a datasource configuration
+#      jdbc:
+#        schema-initialization:
+#          enabled: true
+      republish-outstanding-events-on-restart: true
+      completion-mode: archive
+
   threads:
     virtual:
       enabled: true
