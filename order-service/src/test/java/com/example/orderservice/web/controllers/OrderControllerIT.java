@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -52,6 +52,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        testKafkaListenerConfig.reset();
         orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch();
 
@@ -237,16 +238,35 @@ class OrderControllerIT extends AbstractIntegrationTest {
             assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product10");
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
 
+            // Verify Kafka message
+            await().atMost(Duration.ofSeconds(10))
+                    .pollInterval(Duration.ofSeconds(1))
+                    .untilAsserted(
+                            () -> {
+                                OrderDto orderDto = testKafkaListenerConfig.pollPayload(1, SECONDS);
+                                assertThat(orderDto).isNotNull();
+                                assertThat(orderDto.orderId()).isEqualTo(orderId);
+                                assertThat(orderDto.customerId()).isEqualTo(1L);
+                                assertThat(orderDto.status()).isEqualTo("NEW");
+                            });
+
             // Waiting for a short duration to ensure the order is committed before sending events
             SECONDS.sleep(1);
             // Sending events to both payment-orders, stock-orders for streaming to process
             // and confirm the order is created successfully
             OrderDto paymentOrderDto = getOrderDto("PAYMENT", orderId);
 
-            kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto).get();
+            kafkaTemplate
+                    .send(
+                            "payment-orders",
+                            String.valueOf(paymentOrderDto.orderId()),
+                            paymentOrderDto)
+                    .get();
             OrderDto stockOrderDto = getOrderDto("STOCK", orderId);
 
-            kafkaTemplate.send("stock-orders", stockOrderDto.orderId(), stockOrderDto).get();
+            kafkaTemplate
+                    .send("stock-orders", String.valueOf(stockOrderDto.orderId()), stockOrderDto)
+                    .get();
 
             await().atMost(15, SECONDS)
                     .pollDelay(1, SECONDS)

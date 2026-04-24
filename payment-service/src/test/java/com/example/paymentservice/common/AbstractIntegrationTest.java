@@ -27,7 +27,7 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected JsonMapper jsonMapper;
 
-    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     @Autowired protected CustomerRepository customerRepository;
 

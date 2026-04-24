@@ -17,7 +17,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - microservice-network
 
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.0
+    image: quay.io/keycloak/keycloak:26.6.1
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -165,7 +165,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
@@ -400,7 +400,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.4.2
+    image: grafana/grafana:13.0.1
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
@@ -465,7 +465,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.11.1
+    image: prom/prometheus:v3.11.2
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -486,7 +486,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.10.3
+    image: grafana/tempo:2.10.5
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
