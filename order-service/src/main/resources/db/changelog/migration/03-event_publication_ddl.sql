@@ -1,3 +1,6 @@
+--liquibase formatted sql
+
+--changeset raja:03-event_publication_ddl
 CREATE TABLE IF NOT EXISTS event_publication
 (
     id                     UUID NOT NULL,

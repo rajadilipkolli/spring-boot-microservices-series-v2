@@ -8,6 +8,7 @@ package com.example.orderservice.events;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
+import java.util.concurrent.TimeUnit;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -22,10 +23,10 @@ public class OrderEventPublisher {
     }
 
     @ApplicationModuleListener
-    public void onOrderCreated(OrderCreatedEvent event) {
+    public void onOrderCreated(OrderCreatedEvent event) throws Exception {
         OrderDto order = event.order();
         kafkaTemplate
                 .send(AppConstants.ORDERS_TOPIC, String.valueOf(order.orderId()), order)
-                .join();
+                .get(10, TimeUnit.SECONDS);
     }
 }

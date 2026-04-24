@@ -127,7 +127,13 @@ public class OrderService {
 
             List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
 
-            // Send messages to Kafka in parallel
+            // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
+            // OrderEventPublisher
+            savedOrders.forEach(
+                    order -> {
+                        OrderDto dto = orderMapper.toDto(order);
+                        eventPublisher.publishEvent(new OrderCreatedEvent(dto));
+                    });
             savedOrders.forEach(
                     order -> {
                         OrderDto dto = orderMapper.toDto(order);
