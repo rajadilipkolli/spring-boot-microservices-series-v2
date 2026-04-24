@@ -1,156 +1,102 @@
 # Gatling Performance Tests Suite for Microservices
 
-This module contains comprehensive Gatling performance tests for the Spring Boot microservices architecture. These tests validate various aspects of the system including functionality, performance, and resilience.
+This module contains a modernized Gatling performance testing suite designed for high-concurrency validation of the Spring Boot microservices architecture.
+
+## Overview
+
+The test suite has been refactored to use a **three-phase injection profile** (Ramp-up, Steady-state, Ramp-down) and centralized lifecycle management. All simulations now perform pre-flight health checks and data initialization in the `before()` hook, ensuring a stable environment for performance measurements.
 
 ## Prerequisites
 
-1. All microservices must be running (catalog-service, inventory-service, order-service, etc.)
-2. API Gateway must be accessible at http://localhost:8765 (configurable)
-3. JDK 25 or later
+1. **Microservices Environment**: Ensure all services (Catalog, Inventory, Order, Payment) and the API Gateway are running.
+2. **API Gateway**: Must be accessible at `http://localhost:8765` (default).
+3. **Java 25**: Required for Gatling and the microservices.
+4. **Maven**: Used for test execution and dependency management.
 
-## Available Test Suites
+## Available Simulations
 
-This test suite contains several specialized simulations:
+| Simulation | Description | Use Case |
+|------------|-------------|----------|
+| `CreateProductSimulation` | Single-user end-to-end workflow validation. | Verifies core business logic: Create Product -> Get Product -> Update Inventory -> Place Order. |
+| `StressTestSimulation` | High-load multi-path user journey testing. | Simulates realistic user behavior including browsing, searching, and purchasing under heavy load. |
+| `ResilienceTestSimulation` | Service resilience and error handling. | Tests how the system handles invalid data and high concurrency on shared resources. |
+| `ApiGatewayResilienceSimulation` | Gateway-level resilience patterns. | Specifically targets rate limiting and circuit breaker behavior at the API Gateway level. |
 
-| Simulation                     | Description                 | Use Case                                   |
-|--------------------------------|-----------------------------|--------------------------------------------|
-| ServiceHealthCheckSimulation   | Health check validation     | Verifies all services are up and running   |
-| CreateProductSimulation        | End-to-end workflow testing | Validates core business functionality      |
-| ResilienceTestSimulation       | Error handling & validation | Tests system's response to invalid inputs  |
-| StressTestSimulation           | High load testing           | Tests system under realistic user patterns |
-| ApiGatewayResilienceSimulation | API Gateway patterns        | Tests rate limiting and circuit breakers   |
+## Load Profiles
 
-## Test Configuration
+All simulations follow a standard three-phase load pattern to provide reliable and repeatable metrics:
 
-The tests can be configured using system properties:
+1. **Ramp-up Phase**: Gradually increases user injection from 0 to the target rate over a specified duration (default: 30-60s). This allows the JVM and connection pools to warm up.
+2. **Steady-state Phase**: Maintains a constant load for a fixed duration (default: 2-10m) to measure sustained performance and stability.
+3. **Ramp-down Phase**: Gradually reduces the load to 0, allowing for clean termination and final metric collection.
 
-| Property               | Description                       | Default               | Applicable Tests                                  |
-|------------------------|-----------------------------------|-----------------------|---------------------------------------------------|
-| baseUrl                | Base URL for the API Gateway      | http://localhost:8765 | All                                               |
-| rampUsers              | Users to ramp up                  | 5                     | CreateProductSimulation                           |
-| constantUsers          | Users per second                  | 30                    | CreateProductSimulation                           |
-| rampDuration           | Ramp-up time (seconds)            | 30                    | CreateProductSimulation                           |
-| testDuration           | Test duration (seconds)           | 60                    | CreateProductSimulation, ResilienceTestSimulation |
-| maxUsers               | Maximum concurrent users          | 100                   | StressTestSimulation                              |
-| rampDurationMinutes    | Ramp time (minutes)               | 5                     | StressTestSimulation                              |
-| plateauDurationMinutes | Steady state time (minutes)       | 10                    | StressTestSimulation                              |
-| burstUsers             | Burst users for API Gateway tests | 50                    | ApiGatewayResilienceSimulation                    |
-| sustainSeconds         | Sustained test duration           | 30                    | ApiGatewayResilienceSimulation                    |
+## Configuration Properties
+
+Tests can be customized using Maven system properties:
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `baseUrl` | Base URL for the API Gateway | `http://localhost:8765` |
+| `rampUsers` | Total users injected during ramp-up | `20` |
+| `constantUsers` | Target users per second during steady-state | `50` |
+| `rampDuration` | Duration of ramp-up phase (seconds) | `30` |
+| `testDuration` | Duration of steady-state phase (seconds) | `180` |
+| `maxUsers` | Maximum users (used in Stress/Resilience) | `50` |
+| `targetRate` | Target injection rate for resilience tests | `10` |
 
 ## Running the Tests
 
-### JMeter Alternative
+### Using the Shell Scripts (Recommended)
 
-For users who prefer Apache JMeter, a sample test plan is provided in the `jmeter` directory. To use it:
-
-1. Open JMeter and load `jmeter/product-workflow-test-plan.jmx`
-2. Update variables as needed (BASE_URL, PORT)
-3. Run the test plan
-
-### Using the Provided Scripts
+The provided scripts perform automatic pre-flight health checks before starting Gatling.
 
 #### Windows (PowerShell):
-
 ```powershell
-# Run default tests
+# Standard test run (3-5 minutes)
 .\run-tests.ps1
 
-# Run quick tests (minimal load)
+# Quick smoke test (1-2 minutes)
 .\run-tests.ps1 -TestProfile quick
 
-# Run high load tests
-.\run-tests.ps1 -TestProfile heavy -Users 50 -Duration 300
-
-# Run API Gateway resilience tests
-.\run-tests.ps1 -TestProfile gateway -Users 30 -Duration 60
-
-# Run stress tests
-.\run-tests.ps1 -TestProfile stress -Users 100 -Duration 300
+# Sustained stability test (10+ minutes)
+.\run-tests.ps1 -TestProfile extended -Users 100
 ```
 
 #### Linux/macOS (Bash):
-
 ```bash
-# Make the script executable
 chmod +x run-tests.sh
 
-# Run default tests
-./run-tests.sh
+# Run standard profile
+./run-tests.sh -p standard
 
-# Run quick tests
-./run-tests.sh -p quick
-
-# Run high load tests
-./run-tests.sh -p heavy -n 50 -d 300
+# Run with custom users and duration
+./run-tests.sh -n 100 -d 600
 ```
 
 ### Using Maven Directly
 
 ```bash
-# Run with default profile
-mvn gatling:test
-
-# Run resilience tests
-mvn gatling:test -P resilience -DbaseUrl=http://localhost:8765 -Dusers=20 -DtestDuration=60
-
-# Run stress tests
-mvn gatling:test -P stress -DmaxUsers=50 -DrampDurationMinutes=2 -DplateauDurationMinutes=5
-
-# Run all tests
-mvn gatling:test -P all
+mvn clean gatling:test -Dgatling.simulationClass=simulation.StressTestSimulation -DconstantUsers=20
 ```
 
-### From Your IDE
+## Troubleshooting
 
-Run any of the simulation classes as a Java application:
-- `CreateProductSimulation`
-- `ResilienceTestSimulation`
-- `StressTestSimulation`
-- `ApiGatewayResilienceSimulation`
+### Pre-flight Health Checks Failed
+If the runner scripts abort, check if the services are healthy at the actuator endpoints:
+- Gateway: `http://localhost:8765/actuator/health`
+- Catalog: `http://localhost:8765/catalog-service/actuator/health`
 
-## Test Reports
+Common causes:
+- Service not registered with Discovery (wait 30-60s after startup).
+- Database connection issues (check microservice logs).
 
-After running the tests, Gatling generates comprehensive HTML reports in the `target/gatling` directory:
+### Kafka Initialization Issues
+The `ResilienceTestSimulation` and `CreateProductSimulation` perform a warm-up request in the `before()` hook to initialize Kafka topics. If you see timeouts in the first few requests of a run:
+- Ensure Kafka/Zookeeper containers are healthy.
+- Increase the sleep duration in the `warmUpKafka()` method in `BaseSimulation.java`.
 
-- **Dashboard:** Overall test metrics and summary statistics
-- **Requests:** Detailed breakdown of each API request performance
-- **Charts:** Response time distribution and percentiles
-- **Global Information:** Cumulative statistics for the entire test
+### High Error Rate (503/504)
+During `StressTestSimulation`, 503 (Service Unavailable) or 504 (Gateway Timeout) errors are often intentional indicators of system capacity limits. Check the Gatling reports for the specific bottleneck.
 
-## Key Performance Indicators
-
-- **Response Time:** Mean, median, p95, p99, min, max
-- **Throughput:** Requests per second
-- **Success Rate:** Percentage of successful requests
-- **Error Rate:** Percentage of failed requests
-- **Active Users:** Concurrent user count during test
-
-## Best Practices for Performance Testing
-
-1. **Dedicated Environment:** Run tests in an isolated environment
-2. **Realistic Data:** Use data that mirrors production patterns
-3. **Warm-up Period:** Allow JVM services to warm up before measuring
-4. **Multiple Test Runs:** Perform several runs to account for variance
-5. **Resource Monitoring:** Monitor CPU, memory, and network during tests
-6. **Incremental Load:** Gradually increase load to find breaking points
-7. **Regular Baselines:** Establish performance baselines regularly
-
-## Test Flows
-
-### Create Product Workflow
-1. Create a product in the catalog service
-2. Get the created product
-3. Get the product's inventory
-4. Update the product's inventory
-5. Create an order using the product
-
-### Stress Test User Journeys
-1. **Casual Browsers:** Browse catalog and view products
-2. **Active Searchers:** Search for products and occasionally place orders
-3. **Power Shoppers:** Browse, view and purchase products frequently
-
-### Resilience Patterns
-1. Validation error handling
-2. Rate limiting behavior
-3. Circuit breaker activation
-4. Service degradation under load
+---
+*Note: While Apache JMeter plans are provided in the `jmeter/` directory, **Gatling is the primary load testing tool** for this project and provides the most comprehensive resilience metrics.*

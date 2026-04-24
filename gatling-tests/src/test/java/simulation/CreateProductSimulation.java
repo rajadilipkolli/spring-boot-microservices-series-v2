@@ -1,15 +1,12 @@
 package simulation;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
-import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
-import static io.gatling.javaapi.core.CoreDsl.feed;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
-import static io.gatling.javaapi.core.CoreDsl.nothingFor;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.header;
@@ -19,8 +16,11 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,46 @@ import org.slf4j.LoggerFactory;
 public class CreateProductSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
+
+    @Override
+    public void before() {
+        super.before(); // Run health checks
+        warmUpKafka();
+    }
+
+    private void warmUpKafka() {
+        LOGGER.info("Performing Kafka warm-up by creating an initial product...");
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            String productJson =
+                    """
+                {
+                  "productCode": "WARMUP-001",
+                  "productName": "Warm-up Product",
+                  "price": 1.0,
+                  "description": "Kafka Warm-up Product"
+                }
+                """;
+
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(productJson))
+                            .build();
+
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 201) {
+                LOGGER.info("Kafka warm-up successful. Waiting for initialization...");
+                Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
+            } else {
+                LOGGER.warn("Kafka warm-up returned status: {}", response.statusCode());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Kafka warm-up failed: {}", e.getMessage());
+        }
+    }
 
     // Configuration parameters - optimized for sustainable throughput
     private static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "5"));
@@ -174,93 +214,37 @@ public class CreateProductSimulation extends BaseSimulation {
     // Main scenario combining all steps
     private final ScenarioBuilder productWorkflow =
             scenario("E2E Product Creation Workflow")
-                    .during(Duration.ofSeconds(TEST_DURATION_SECONDS))
-                    .on(
-                            feed(enhancedProductFeeder())
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Starting Workflow for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .exec(createProduct)
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Finished createProduct for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .pause(Duration.ofMillis(500)) // Increased pause for realistic
-                                    // behavior
-                                    .exec(getProduct)
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Finished getProduct for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .pause(Duration.ofMillis(500)) // Increased pause for realistic
-                                    // behavior
-                                    .exec(getInventory)
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Finished getInventory for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .pause(Duration.ofMillis(500)) // Increased pause before the
-                                    // critical update
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Executing safeguard for user: {}",
-                                                        session.userId());
-                                                // Add safeguard to skip inventory update if
-                                                // inventory info is
-                                                // missing or invalid
-                                                if (session.contains("inventoryResponseBody")
-                                                        && session.getString(
-                                                                        "inventoryResponseBody")
-                                                                != null
-                                                        && !Objects.requireNonNull(
-                                                                        session.getString(
-                                                                                "inventoryResponseBody"))
-                                                                .trim()
-                                                                .isEmpty()) {
-                                                    return session;
-                                                } else {
-                                                    LOGGER.warn(
-                                                            "Skipping inventory update due to missing inventory data");
-                                                    // Return marked as failed so we don't attempt
-                                                    // to create an
-                                                    // order based on invalid inventory
-                                                    return session.markAsFailed();
-                                                }
-                                            })
-                                    .exec(updateInventory)
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Finished updateInventory for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .pause(Duration.ofMillis(500)) // Increased pause for realistic
-                                    // behavior
-                                    .exec(createOrder)
-                                    .exec(
-                                            session -> {
-                                                LOGGER.info(
-                                                        ">>> Finished createOrder for user: {}",
-                                                        session.userId());
-                                                return session;
-                                            })
-                                    .pause(Duration.ofSeconds(1)) // Think time between iterations
-                            );
+                    .feed(enhancedProductFeeder())
+                    .exec(
+                            session -> {
+                                LOGGER.info(">>> Starting Workflow for user: {}", session.userId());
+                                return session;
+                            })
+                    .exec(createProduct)
+                    .pause(Duration.ofMillis(500))
+                    .exec(getProduct)
+                    .pause(Duration.ofMillis(500))
+                    .exec(getInventory)
+                    .pause(Duration.ofMillis(500))
+                    .exec(
+                            session -> {
+                                // Safeguard to skip inventory update if inventory info is missing
+                                if (session.contains("inventoryResponseBody")
+                                        && session.getString("inventoryResponseBody") != null) {
+                                    return session;
+                                } else {
+                                    LOGGER.warn("Skipping workflow due to missing inventory data");
+                                    return session.markAsFailed();
+                                }
+                            })
+                    .exec(updateInventory)
+                    .pause(Duration.ofMillis(500))
+                    .exec(createOrder)
+                    .exec(
+                            session -> {
+                                LOGGER.info(">>> Finished Workflow for user: {}", session.userId());
+                                return session;
+                            });
 
     /**
      * Prepares the inventory update request by generating a new inventory quantity
@@ -380,31 +364,16 @@ public class CreateProductSimulation extends BaseSimulation {
     /** Simulation setup with configurable load profile */
     public CreateProductSimulation() {
 
-        runHealthChecks();
-
-        LOGGER.info(
-                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
-                KAFKA_INIT_DELAY_SECONDS);
+        int targetRate = CONSTANT_USERS;
+        Duration rampDuration = Duration.ofSeconds(30);
+        Duration steadyStateDuration = Duration.ofMinutes(2);
 
         // Global assertions to validate overall service performance
         this.setUp(
                         productWorkflow.injectOpen(
-                                // Initial single user for Kafka initialization
-                                atOnceUsers(1),
-                                // Wait for Kafka initialization to complete
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
-                                // 1. Ramp-up phase: gradually increase arrival rate
-                                rampUsersPerSec(1)
-                                        .to(CONSTANT_USERS)
-                                        .during(Duration.ofSeconds(RAMP_DURATION_SECONDS)),
-                                // 2. Steady-state phase: maintain constant arrival rate (middle
-                                // period)
-                                constantUsersPerSec(CONSTANT_USERS)
-                                        .during(Duration.ofSeconds(TEST_DURATION_SECONDS)),
-                                // 3. Ramp-down phase: gradually decrease arrival rate
-                                rampUsersPerSec(CONSTANT_USERS)
-                                        .to(1)
-                                        .during(Duration.ofSeconds(RAMP_DURATION_SECONDS))))
+                                rampUsersPerSec(0).to(targetRate).during(rampDuration),
+                                constantUsersPerSec(targetRate).during(steadyStateDuration),
+                                rampUsersPerSec(targetRate).to(0).during(rampDuration)))
                 .protocols(httpProtocol)
                 .assertions(
                         // Add global performance SLA assertions
