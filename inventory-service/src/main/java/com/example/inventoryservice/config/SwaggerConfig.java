@@ -13,6 +13,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-        info = @Info(title = "inventory-service", version = "v1"),
-        servers = @Server(url = "${server.servlet.contextPath}"))
+        info = @Info(
+                title = "inventory Service API",
+                version = "v1",
+                description = "Swagger documentation for inventory Service"
+        )
+)
 class SwaggerConfig {}

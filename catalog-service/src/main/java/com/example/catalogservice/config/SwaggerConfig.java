@@ -13,6 +13,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-        info = @Info(title = "catalog-service", version = "v1"),
-        servers = @Server(url = "${spring.webflux.base-path}"))
+        info = @Info(
+                title = "Catalog Service API",
+                version = "v1",
+                description = "Swagger documentation for Catalog Service"
+        )
+)
 public class SwaggerConfig {}
