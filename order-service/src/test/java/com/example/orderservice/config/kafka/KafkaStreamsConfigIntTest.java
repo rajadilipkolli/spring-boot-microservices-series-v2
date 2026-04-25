@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
+import com.example.orderservice.utils.AppConstants;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +20,6 @@ import java.util.UUID;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.junit.jupiter.api.AfterAll;
@@ -38,7 +38,7 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
     @BeforeAll
     static void setup(@Autowired KafkaConnectionDetails connectionDetails) {
         dlqConsumer = buildTestConsumer(connectionDetails);
-        dlqConsumer.subscribe(Collections.singletonList("recovererDLQ"));
+        dlqConsumer.subscribe(Collections.singletonList(AppConstants.RECOVER_DLQ_TOPIC));
     }
 
     @BeforeEach
@@ -66,16 +66,14 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "deadletter-test-group-" + UUID.randomUUID());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 100);
 
-        ConsumerFactory<String, String> cf =
-                new DefaultKafkaConsumerFactory<>(
-                        props, new StringDeserializer(), new StringDeserializer());
+        ConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(props);
         return cf.createConsumer("deadletter-test-consumer");
     }
 
@@ -86,12 +84,12 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
 
         // Method 1: Send a completely invalid payload (not even JSON)
         // This will definitely cause a deserialization error in the streams processing
-        stringKafkaTemplate.send("payment-orders", "NOT_A_JSON_PAYLOAD");
+        stringKafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, "NOT_A_JSON_PAYLOAD");
 
         // Method 2: Also try with a malformed OrderDto object
         // This should fail deserialization because it's invalid JSON
         String invalidJson = "{\"orderId\": 1, \"customerId\": "; // Incomplete JSON
-        stringKafkaTemplate.send("payment-orders", invalidJson);
+        stringKafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, invalidJson);
 
         // Make sure messages are sent
         stringKafkaTemplate.flush();
