@@ -67,4 +67,43 @@ class InventoryServiceTest {
         verify(inventoryJOOQRepository, times(101)).findByProductCode(anyString());
         verify(inventoryRepository, times(101)).save(any(Inventory.class));
     }
+
+    @Test
+    void testSaveInventory() {
+        InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
+        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(false);
+        given(inventoryMapper.toEntity(any(InventoryRequest.class)))
+                .willReturn(
+                        new Inventory()
+                                .setProductCode("ProductCode1")
+                                .setAvailableQuantity(100)
+                                .setReservedItems(0));
+        given(inventoryRepository.save(any(Inventory.class)))
+                .willReturn(
+                        new Inventory()
+                                .setId(1L)
+                                .setProductCode("ProductCode1")
+                                .setAvailableQuantity(100)
+                                .setReservedItems(0));
+
+        Inventory savedInventory = inventoryService.saveInventory(inventoryRequest);
+
+        assertThat(savedInventory).isNotNull();
+        assertThat(savedInventory.getId()).isEqualTo(1L);
+        assertThat(savedInventory.getProductCode()).isEqualTo("ProductCode1");
+    }
+
+    @Test
+    void testSaveInventory_Conflict() {
+        InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
+        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(true);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> inventoryService.saveInventory(inventoryRequest))
+                .isInstanceOf(
+                        com.example.inventoryservice.exception.ProductAlreadyExistsException.class)
+                .hasMessageContaining("Product with code ProductCode1 already exists");
+
+        verify(inventoryRepository, never()).save(any(Inventory.class));
+    }
 }

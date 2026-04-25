@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -23,6 +23,8 @@ public interface InventoryJOOQRepository {
     Optional<Inventory> findByProductCode(String productCode);
 
     List<Inventory> findByProductCodeIn(List<String> productCodes);
+
+    boolean existsByProductCode(String productCode);
 
     int deleteByProductCode(String productCode);
 }

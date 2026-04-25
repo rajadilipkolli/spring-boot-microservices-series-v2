@@ -94,6 +94,15 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
+    public boolean existsByProductCode(String productCode) {
+        return dslContext.fetchExists(
+                dslContext
+                        .selectOne()
+                        .from(INVENTORY)
+                        .where(INVENTORY.PRODUCT_CODE.eq(productCode)));
+    }
+
+    @Override
     @Transactional
     public int deleteByProductCode(String productCode) {
         return dslContext
