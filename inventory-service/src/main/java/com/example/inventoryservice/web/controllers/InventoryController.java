@@ -12,6 +12,7 @@ import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/inventory")
 @Loggable
+@Validated
 class InventoryController {
 
     private final InventoryService inventoryService;
@@ -59,7 +61,8 @@ class InventoryController {
     // @Bulkhead(name = "inventory-api")
     ResponseEntity<Inventory> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
-        // If delay is specified, block for the requested seconds — used by tests to simulate slow
+        // If delay is specified, block for the requested seconds — used by tests to
+        // simulate slow
         // responses
         if (delay != null && delay > 0) {
             try {
@@ -87,15 +90,29 @@ class InventoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    Inventory createInventory(@RequestBody @Validated InventoryRequest inventoryRequest) {
+    Inventory createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
         return inventoryService.saveInventory(inventoryRequest);
     }
 
     @PutMapping("/{id}")
     ResponseEntity<Inventory> updateInventory(
-            @PathVariable Long id, @RequestBody @Validated InventoryRequest inventoryRequest) {
+            @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest) {
         return inventoryService
                 .updateInventoryById(id, inventoryRequest)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/product/{productCode}")
+    ResponseEntity<Inventory> updateInventoryByProductCode(
+            @PathVariable String productCode,
+            @RequestBody @Valid InventoryRequest inventoryRequest) {
+        if (inventoryRequest.productCode() != null
+                && !inventoryRequest.productCode().equals(productCode)) {
+            return ResponseEntity.badRequest().build();
+        }
+        return inventoryService
+                .updateInventoryByProductCode(productCode, inventoryRequest)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

@@ -8,6 +8,7 @@ package com.example.inventoryservice.services;
 
 import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.exception.ProductAlreadyExistsException;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.PagedResult;
@@ -17,6 +18,7 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -62,8 +64,18 @@ public class InventoryService {
 
     @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
+        if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
+            throw new ProductAlreadyExistsException(inventoryRequest.productCode());
+        }
         Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
-        return inventoryRepository.save(inventory);
+        try {
+            return inventoryRepository.save(inventory);
+        } catch (DataIntegrityViolationException ex) {
+            if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
+                throw new ProductAlreadyExistsException(inventoryRequest.productCode());
+            }
+            throw ex;
+        }
     }
 
     @Transactional
@@ -106,6 +118,13 @@ public class InventoryService {
     @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
         return findInventoryById(id)
+                .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
+    }
+
+    @Transactional
+    public Optional<Inventory> updateInventoryByProductCode(
+            String productCode, InventoryRequest inventoryRequest) {
+        return findInventoryByProductCode(productCode)
                 .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
     }
 }

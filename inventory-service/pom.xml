@@ -337,6 +337,25 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>target/generated-sources/jooq</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
@@ -568,7 +587,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.35.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->
