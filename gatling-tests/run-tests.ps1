@@ -3,7 +3,7 @@
 param (
     [string]$TestProfile = "standard",
     [string]$BaseUrl = "http://localhost:8765",
-    [int]$Users = 10,
+    [int]$Users = 50,
     [int]$Duration = 300,
     [switch]$Help
 )
@@ -35,7 +35,7 @@ if ($Help) {
     exit 0
 }
 
-function Check-Health {
+function Test-ServiceHealth {
     param ([string]$ServiceUrl)
     $MaxAttempts = 10
     $Attempt = 1
@@ -44,7 +44,7 @@ function Check-Health {
     Write-Host "Checking health for $ServiceUrl..."
     while ($Attempt -le $MaxAttempts) {
         try {
-            $Response = Invoke-RestMethod -Uri "$BaseUrl$ServiceUrl" -Method Get
+            [void](Invoke-RestMethod -Uri "$BaseUrl$ServiceUrl" -Method Get)
             Write-Host "Service $ServiceUrl is UP!"
             return $true
         } catch {
@@ -62,7 +62,7 @@ Write-Host "Starting pre-flight health checks..."
 $Services = @("/actuator/health", "/catalog-service/actuator/health", "/inventory-service/actuator/health", "/order-service/actuator/health", "/payment-service/actuator/health")
 
 foreach ($Service in $Services) {
-    if (-not (Check-Health -ServiceUrl $Service)) {
+    if (-not (Test-ServiceHealth -ServiceUrl $Service)) {
         Write-Host "Pre-flight checks failed. Aborting." -ForegroundColor Red
         exit 1
     }
@@ -72,36 +72,36 @@ Write-Host "All services are healthy. Proceeding with tests."
 # Set Maven command based on the selected profile
 switch ($TestProfile) {
     "quick" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=2 -DconstantUsers=5 -DrampDuration=15 -DtestDuration=60"
-        Write-Host "Running quick test profile (1-2 min)..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=2 -DconstantUsers=$Users -DrampDuration=15 -DtestDuration=$Duration"
+        Write-Host "Running quick test profile (using users=$Users, duration=${Duration}s)..."
     }
     "standard" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=20 -DconstantUsers=$Users -DrampDuration=30 -DtestDuration=180"
-        Write-Host "Running standard test profile (3-5 min)..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=20 -DconstantUsers=$Users -DrampDuration=30 -DtestDuration=$Duration"
+        Write-Host "Running standard test profile (using users=$Users, duration=${Duration}s)..."
     }
     "extended" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=50 -DconstantUsers=$Users -DrampDuration=60 -DtestDuration=600"
-        Write-Host "Running extended test profile (10+ min)..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=50 -DconstantUsers=$Users -DrampDuration=60 -DtestDuration=$Duration"
+        Write-Host "Running extended test profile (using users=$Users, duration=${Duration}s)..."
     }
     "resilience" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DtargetRate=10 -P resilience"
-        Write-Host "Running resilience test profile..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DconstantUsers=$Users -DtestDuration=$Duration -P resilience"
+        Write-Host "Running resilience test profile (using users=$Users, duration=${Duration}s)..."
     }
     "stress" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DmaxUsers=$Users -DplateauDurationMinutes=5 -P stress"
-        Write-Host "Running stress test profile..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DconstantUsers=$Users -DtestDuration=$Duration -P stress"
+        Write-Host "Running stress test profile (using users=$Users, duration=${Duration}s)..."
     }
     "gateway" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DburstUsers=$Users -P gateway"
-        Write-Host "Running API gateway resilience tests..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DburstUsersPerSec=$Users -DtestDuration=$Duration -P gateway"
+        Write-Host "Running API gateway resilience tests (using burstUsersPerSec=$Users, duration=${Duration}s)..."
     }
     "all" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -P all"
-        Write-Host "Running all test simulations..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DconstantUsers=$Users -DtestDuration=$Duration -P all"
+        Write-Host "Running all test simulations (using users=$Users, duration=${Duration}s)..."
     }
     default {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=10 -DconstantUsers=$Users -DrampDuration=30 -DtestDuration=120"
-        Write-Host "Running default test profile..."
+        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=10 -DconstantUsers=$Users -DrampDuration=30 -DtestDuration=$Duration"
+        Write-Host "Running default test profile (using users=$Users, duration=${Duration}s)..."
     }
 }
 

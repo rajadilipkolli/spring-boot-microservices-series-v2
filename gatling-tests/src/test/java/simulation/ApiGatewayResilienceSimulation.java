@@ -20,9 +20,13 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(ApiGatewayResilienceSimulation.class);
 
-    private static final int BURST_USERS = CONSTANT_USERS;
     private static final Duration RAMP_DURATION = Duration.ofSeconds(RAMP_DURATION_SECONDS);
     private static final Duration SUSTAIN_DURATION = Duration.ofSeconds(TEST_DURATION_SECONDS);
+
+    // Derived burst rates
+    private static final double RATE_LIMIT_RATE = BURST_USERS_PER_SEC * 0.2;
+    private static final double CIRCUIT_BREAKER_RATE = BURST_USERS_PER_SEC * 0.4;
+    private static final double MIXED_LOAD_RATE = (double) BURST_USERS_PER_SEC;
 
     // Counter to track rate limiting responses
     private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
@@ -83,24 +87,24 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
             scenario("Circuit Breaker Test").exec(errorTriggeringRequests);
 
     private final ScenarioBuilder mixedLoadScenario =
-            scenario("Mixed Gateway Load Test").exec(mixedRequests);
+            scenario("Mixed Gateway Load Test").feed(enhancedProductFeeder()).exec(mixedRequests);
 
     public ApiGatewayResilienceSimulation() {
         LOGGER.info("Starting ApiGatewayResilienceSimulation with 3-phase injection profile");
 
         setUp(
                         rateLimitingScenario.injectOpen(
-                                rampUsersPerSec(0).to(BURST_USERS / 10.0).during(RAMP_DURATION),
-                                constantUsersPerSec(BURST_USERS / 10.0).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(BURST_USERS / 10.0).to(0).during(RAMP_DURATION)),
+                                rampUsersPerSec(0).to(RATE_LIMIT_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(RATE_LIMIT_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(RATE_LIMIT_RATE).to(0).during(RAMP_DURATION)),
                         circuitBreakerScenario.injectOpen(
-                                rampUsersPerSec(0).to(BURST_USERS / 5.0).during(RAMP_DURATION),
-                                constantUsersPerSec(BURST_USERS / 5.0).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(BURST_USERS / 5.0).to(0).during(RAMP_DURATION)),
+                                rampUsersPerSec(0).to(CIRCUIT_BREAKER_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(CIRCUIT_BREAKER_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(CIRCUIT_BREAKER_RATE).to(0).during(RAMP_DURATION)),
                         mixedLoadScenario.injectOpen(
-                                rampUsersPerSec(0).to(BURST_USERS / 2.0).during(RAMP_DURATION),
-                                constantUsersPerSec(BURST_USERS / 2.0).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(BURST_USERS / 2.0).to(0).during(RAMP_DURATION)))
+                                rampUsersPerSec(0).to(MIXED_LOAD_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(MIXED_LOAD_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(MIXED_LOAD_RATE).to(0).during(RAMP_DURATION)))
                 .protocols(httpProtocol)
                 .maxDuration(
                         RAMP_DURATION

@@ -32,17 +32,16 @@ All simulations follow a standard three-phase load pattern to provide reliable a
 
 ## Configuration Properties
 
-Tests can be customized using Maven system properties:
+The following properties can be customized via Maven system properties. Note that the **runner scripts** (`run-tests.sh` and `run-tests.ps1`) provide their own high-load defaults, which override the baseline defaults defined in the Java code.
 
-| Property | Description | Default |
-|----------|-------------|---------|
-| `baseUrl` | Base URL for the API Gateway | `http://localhost:8765` |
-| `rampUsers` | Total users injected during ramp-up | `20` |
-| `constantUsers` | Target users per second during steady-state | `50` |
-| `rampDuration` | Duration of ramp-up phase (seconds) | `30` |
-| `testDuration` | Duration of steady-state phase (seconds) | `180` |
-| `maxUsers` | Maximum users (used in Stress/Resilience) | `50` |
-| `targetRate` | Target injection rate for resilience tests | `10` |
+| Property | Description | Script Default | Simulation Default |
+|----------|-------------|----------------|-------------------|
+| `baseUrl` | Base URL for the API Gateway | `http://localhost:8765` | `http://localhost:8765` |
+| `constantUsers` | Target users per second during steady-state | `50` | `10` |
+| `rampDuration` | Duration of ramp-up phase (seconds) | `30` | `30` |
+| `testDuration` | Duration of steady-state phase (seconds) | `300` | `60` |
+| `burstUsersPerSec` | Target rate for API Gateway tests | `50` | `30` |
+| `kafkaInitDelay` | Delay for Kafka initialization (seconds) | `N/A` | `10` |
 
 ## Running the Tests
 
@@ -93,7 +92,7 @@ Common causes:
 ### Kafka Initialization Issues
 The `ResilienceTestSimulation` and `CreateProductSimulation` perform a warm-up request in the `before()` hook to initialize Kafka topics. If you see timeouts in the first few requests of a run:
 - Ensure Kafka/Zookeeper containers are healthy.
-- Increase the sleep duration in the `warmUpKafka()` method in `BaseSimulation.java`.
+- Check the `warmUpKafka()` implementation in `ResilienceTestSimulation.java` or `CreateProductSimulation.java` and increase the sleep duration if necessary (or update the `kafkaInitDelay` system property).
 
 ### High Error Rate (503/504)
 During `StressTestSimulation`, 503 (Service Unavailable) or 504 (Gateway Timeout) errors are often intentional indicators of system capacity limits. Check the Gatling reports for the specific bottleneck.

@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,9 @@ public class ResilienceTestSimulation extends BaseSimulation {
     private static final Duration RAMP_DURATION = Duration.ofSeconds(RAMP_DURATION_SECONDS);
     private static final Duration STEADY_STATE_DURATION = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
+    private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
+    private final AtomicInteger serviceUnavailableCount = new AtomicInteger(0);
+
     @Override
     public void before() {
         super.before(); // Run health checks
@@ -38,16 +42,16 @@ public class ResilienceTestSimulation extends BaseSimulation {
     }
 
     private void warmUpKafka() {
+        LOGGER.info("Performing Kafka warm-up for resilience tests...");
+        HttpClient client = HttpClient.newHttpClient();
         try {
-            LOGGER.info("Performing Kafka warm-up for resilience tests...");
-            try (HttpClient client = HttpClient.newHttpClient()) {
-                HttpRequest request =
-                        HttpRequest.newBuilder()
-                                .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
-                                .header("Content-Type", "application/json")
-                                .POST(
-                                        HttpRequest.BodyPublishers.ofString(
-                                                """
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
+                            .header("Content-Type", "application/json")
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            """
                                 {
                                   "productCode": "WARMUP-RES",
                                   "productName": "Warmup Product",
@@ -55,11 +59,19 @@ public class ResilienceTestSimulation extends BaseSimulation {
                                   "description": "Kafka Warmup"
                                 }
                                 """))
-                                .build();
-                client.send(request, HttpResponse.BodyHandlers.ofString());
-                LOGGER.info("Kafka warm-up request sent.");
+                            .build();
+            client.send(request, HttpResponse.BodyHandlers.ofString());
+            LOGGER.info("Kafka warm-up request sent.");
+
+            try {
                 Thread.sleep(5000); // Wait for Kafka init
+            } catch (InterruptedException e) {
+                LOGGER.error("Warm-up sleep interrupted: {}", e.getMessage());
+                Thread.currentThread().interrupt();
             }
+        } catch (InterruptedException e) {
+            LOGGER.error("Warm-up interrupted: {}", e.getMessage());
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             LOGGER.warn("Kafka warm-up failed: {}", e.getMessage());
         }
@@ -73,15 +85,12 @@ public class ResilienceTestSimulation extends BaseSimulation {
                                 Map<String, Object> data = new HashMap<>();
                                 data.put(
                                         "productCode",
-                                        "P" + String.format("%06d", random.nextInt(1000, 2000)));
+                                        "P"
+                                                + String.format("%06d", random.nextInt(1000, 2000))
+                                                + "-"
+                                                + System.nanoTime());
                                 data.put("productName", "Resilience-" + random.nextInt(1, 1000));
                                 data.put("price", random.nextDouble(10, 1000));
-                                data.put("quantity", random.nextInt(1, 100));
-                                data.put("customerId", random.nextInt(1, 100));
-                                data.put("street", "Resilience St");
-                                data.put("city", "Test City");
-                                data.put("zipCode", "12345");
-                                data.put("country", "USA");
                                 return data;
                             })
                     .iterator();
@@ -132,10 +141,25 @@ public class ResilienceTestSimulation extends BaseSimulation {
     ChainBuilder triggerCircuitBreaker =
             repeat(5)
                     .on(
-                            exec(
-                                    http("Circuit breaker probe")
+                            exec(http("Circuit breaker probe")
                                             .get("/catalog-service/api/catalog")
-                                            .check(status().saveAs("responseStatus"))));
+                                            .check(
+                                                    status().in(200, 429, 503)
+                                                            .saveAs("responseStatus")))
+                                    .exec(
+                                            session -> {
+                                                String statusStr =
+                                                        session.getString("responseStatus");
+                                                if (statusStr != null) {
+                                                    int status = Integer.parseInt(statusStr);
+                                                    if (status == 429) {
+                                                        rateLimitedCount.incrementAndGet();
+                                                    } else if (status == 503) {
+                                                        serviceUnavailableCount.incrementAndGet();
+                                                    }
+                                                }
+                                                return session;
+                                            }));
 
     ScenarioBuilder resilienceScenario =
             scenario("Resilience Test Workflow")
@@ -167,5 +191,13 @@ public class ResilienceTestSimulation extends BaseSimulation {
                                 .percent()
                                 .lt(25.0) // Expected failures in resilience test
                         );
+    }
+
+    @Override
+    public void after() {
+        LOGGER.info(
+                "Resilience Test completed. Rate limited responses: {}, Service unavailable responses: {}",
+                rateLimitedCount.get(),
+                serviceUnavailableCount.get());
     }
 }

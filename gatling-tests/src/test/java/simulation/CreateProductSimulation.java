@@ -42,7 +42,8 @@ public class CreateProductSimulation extends BaseSimulation {
 
     private void warmUpKafka() {
         LOGGER.info("Performing Kafka warm-up by creating an initial product...");
-        try (HttpClient client = HttpClient.newHttpClient()) {
+        HttpClient client = HttpClient.newHttpClient();
+        try {
             String productJson =
                     """
                 {
@@ -65,10 +66,18 @@ public class CreateProductSimulation extends BaseSimulation {
 
             if (response.statusCode() == 201) {
                 LOGGER.info("Kafka warm-up successful. Waiting for initialization...");
-                Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
+                try {
+                    Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
+                } catch (InterruptedException e) {
+                    LOGGER.error("Warm-up sleep interrupted: {}", e.getMessage());
+                    Thread.currentThread().interrupt();
+                }
             } else {
                 LOGGER.warn("Kafka warm-up returned status: {}", response.statusCode());
             }
+        } catch (InterruptedException e) {
+            LOGGER.error("Warm-up interrupted: {}", e.getMessage());
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             LOGGER.error("Kafka warm-up failed: {}", e.getMessage());
         }
@@ -219,17 +228,7 @@ public class CreateProductSimulation extends BaseSimulation {
                     .pause(Duration.ofSeconds(2))
                     .exec(getInventory)
                     .pause(Duration.ofSeconds(2))
-                    .exec(
-                            session -> {
-                                // Safeguard to skip inventory update if inventory info is missing
-                                if (session.contains("inventoryResponseBody")
-                                        && session.getString("inventoryResponseBody") != null) {
-                                    return session;
-                                } else {
-                                    LOGGER.warn("Skipping workflow due to missing inventory data");
-                                    return session.markAsFailed();
-                                }
-                            })
+                    .exitHereIfFailed()
                     .exec(updateInventory)
                     .pause(Duration.ofSeconds(2))
                     .exec(createOrder)

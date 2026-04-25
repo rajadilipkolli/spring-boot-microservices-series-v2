@@ -42,7 +42,7 @@ public class ScenarioBuilders {
     /** Chain to update inventory for a product. */
     public static ChainBuilder updateInventoryChain() {
         return exec(http("Update inventory")
-                        .post("/inventory-service/api/inventory")
+                        .put("/inventory-service/api/inventory/product/#{productCode}")
                         .body(
                                 StringBody(
                                         """
@@ -52,7 +52,7 @@ public class ScenarioBuilders {
                     }
                     """))
                         .asJson()
-                        .check(status().is(201)))
+                        .check(status().is(200)))
                 .pause(1);
     }
 

@@ -47,6 +47,8 @@ public abstract class BaseSimulation extends Simulation {
             Integer.parseInt(System.getProperty("rampDuration", "30"));
     protected static final int TEST_DURATION_SECONDS =
             Integer.parseInt(System.getProperty("testDuration", "60"));
+    protected static final int BURST_USERS_PER_SEC =
+            Integer.parseInt(System.getProperty("burstUsersPerSec", "30"));
 
     // Common HTTP protocol configuration
     protected final HttpProtocolBuilder httpProtocol =
@@ -70,7 +72,10 @@ public abstract class BaseSimulation extends Simulation {
                             // Product information
                             data.put(
                                     "productCode",
-                                    "P" + String.format("%06d", random.nextInt(10, 100_000)));
+                                    "P"
+                                            + String.format("%06d", random.nextInt(10, 100_000))
+                                            + "-"
+                                            + System.nanoTime());
                             data.put("productName", "Product-" + random.nextInt(1000, 10000));
                             data.put("customerId", random.nextInt(1, 1000));
                             data.put("price", random.nextDouble(10, 1000));

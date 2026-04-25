@@ -3,7 +3,7 @@
 # Default values
 TEST_PROFILE="standard"
 BASE_URL="http://localhost:8765"
-USERS=10
+USERS=50
 DURATION=300
 
 # Parse command line arguments
@@ -99,36 +99,36 @@ echo "All services are healthy. Proceeding with tests."
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
     "quick")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=5 -DrampDuration=15 -DtestDuration=60"
-        echo "Running quick test profile (1-2 min)..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=$USERS -DrampDuration=15 -DtestDuration=$DURATION"
+        echo "Running quick test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "standard")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=20 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=180"
-        echo "Running standard test profile (3-5 min)..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=20 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=$DURATION"
+        echo "Running standard test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "extended")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=50 -DconstantUsers=$USERS -DrampDuration=60 -DtestDuration=600"
-        echo "Running extended test profile (10+ min)..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=50 -DconstantUsers=$USERS -DrampDuration=60 -DtestDuration=$DURATION"
+        echo "Running extended test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "resilience")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DtargetRate=10 -P resilience"
-        echo "Running resilience test profile..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P resilience"
+        echo "Running resilience test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "stress")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DmaxUsers=$USERS -DplateauDurationMinutes=5 -P stress"
-        echo "Running stress test profile..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P stress"
+        echo "Running stress test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "gateway")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DburstUsers=$USERS -P gateway"
-        echo "Running API gateway resilience tests..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DburstUsersPerSec=$USERS -DtestDuration=$DURATION -P gateway"
+        echo "Running API gateway resilience tests (using burstUsersPerSec=$USERS, duration=${DURATION}s)..."
         ;;
     "all")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -P all"
-        echo "Running all test simulations..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P all"
+        echo "Running all test simulations (using users=$USERS, duration=${DURATION}s)..."
         ;;
     *)
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=10 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=120"
-        echo "Running default test profile..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=10 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=$DURATION"
+        echo "Running default test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
 esac
 
@@ -137,10 +137,10 @@ CMD="./mvnw clean gatling:test $MAVEN_PARAMS"
 echo "Executing: $CMD"
 eval $CMD
 
-# Find the latest report
-LATEST_REPORT=$(find target/gatling -type d -name "*" | sort -r | head -n 1)
+# Find the latest report by modification time (ignoring the parent directory)
+LATEST_REPORT=$(ls -td target/gatling/*/ 2>/dev/null | head -n 1 | sed 's/\/$//')
 if [ -n "$LATEST_REPORT" ] && [ -f "$LATEST_REPORT/index.html" ]; then
     echo "Report generated at: $LATEST_REPORT/index.html"
 else
-    echo "No test report found."
+    echo "No test report found in target/gatling/."
 fi

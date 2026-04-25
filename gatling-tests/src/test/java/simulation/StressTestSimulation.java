@@ -6,6 +6,9 @@ import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 
+import io.gatling.javaapi.core.Assertion;
+import io.gatling.javaapi.core.Choice;
+import io.gatling.javaapi.core.ScenarioBuilder;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -39,42 +42,60 @@ public class StressTestSimulation extends BaseSimulation {
     }
 
     private void seedTestData() {
+        LOGGER.info("Generating catalog test data for stress test scenarios");
+        HttpClient client = HttpClient.newHttpClient();
         try {
-            LOGGER.info("Generating catalog test data for stress test scenarios");
-            try (HttpClient client = HttpClient.newHttpClient()) {
-                HttpRequest request =
-                        HttpRequest.newBuilder()
-                                .uri(URI.create(BASE_URL + "/catalog-service/api/catalog/generate"))
-                                .GET()
-                                .header("Content-Type", "application/json")
-                                .build();
-                HttpResponse<String> response =
-                        client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    LOGGER.info("Catalog test data successfully generated.");
-                    request =
-                            HttpRequest.newBuilder()
-                                    .uri(
-                                            URI.create(
-                                                    BASE_URL
-                                                            + "/inventory-service/api/inventory/generate"))
-                                    .GET()
-                                    .header("Content-Type", "application/json")
-                                    .build();
-                    response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                    if (response.statusCode() == 200) {
-                        LOGGER.info("Inventory test data successfully generated.");
-                    }
-                }
+            String catalogUri = BASE_URL + "/catalog-service/api/catalog/generate";
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(catalogUri))
+                            .GET()
+                            .header("Content-Type", "application/json")
+                            .build();
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                String message =
+                        String.format(
+                                "Failed to generate catalog data. URI: %s, Status: %d, Body: %s",
+                                catalogUri, response.statusCode(), response.body());
+                LOGGER.error(message);
+                throw new RuntimeException(message);
             }
+            LOGGER.info("Catalog test data successfully generated.");
+
+            String inventoryUri = BASE_URL + "/inventory-service/api/inventory/generate";
+            request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(inventoryUri))
+                            .GET()
+                            .header("Content-Type", "application/json")
+                            .build();
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                String message =
+                        String.format(
+                                "Failed to generate inventory data. URI: %s, Status: %d, Body: %s",
+                                inventoryUri, response.statusCode(), response.body());
+                LOGGER.error(message);
+                throw new RuntimeException(message);
+            }
+            LOGGER.info("Inventory test data successfully generated.");
+        } catch (InterruptedException e) {
+            LOGGER.error("Test data seeding interrupted", e);
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Test data seeding interrupted", e);
         } catch (Exception e) {
-            LOGGER.error("Error generating test data: {}", e.getMessage());
+            LOGGER.error("Error generating test data", e);
+            throw new RuntimeException("Error generating test data", e);
         }
     }
 
     // Assertions configuration
-    private io.gatling.javaapi.core.Assertion[] getDefaultAssertions() {
-        return new io.gatling.javaapi.core.Assertion[] {
+    private Assertion[] getDefaultAssertions() {
+        return new Assertion[] {
             // Global performance assertions
             global().responseTime().mean().lt(MEAN_RESPONSE_TIME_MS),
             global().responseTime().percentile(95).lt(P95_RESPONSE_TIME_MS),
@@ -86,16 +107,16 @@ public class StressTestSimulation extends BaseSimulation {
             details("Place order").responseTime().percentile(95).lt(3000),
 
             // Catalog and search assertions
-            details("Browse catalog.*").successfulRequests().percent().gt(95.0),
-            details("Browse catalog.*").responseTime().percentile(95).lt(2000),
-            details("Search for product.*").successfulRequests().percent().gt(95.0),
-            details("Search for product.*").responseTime().percentile(95).lt(2000),
+            details("Browse catalog").successfulRequests().percent().gt(95.0),
+            details("Browse catalog").responseTime().percentile(95).lt(2000),
+            details("Search products").successfulRequests().percent().gt(95.0),
+            details("Search products").responseTime().percentile(95).lt(2000),
 
             // Product detail and inventory assertions
-            details("View product detail").successfulRequests().percent().gt(95.0),
-            details("View product detail").responseTime().percentile(95).lt(2000),
-            details("Check inventory for product").successfulRequests().percent().gt(95.0),
-            details("Check inventory for product").responseTime().percentile(95).lt(2000)
+            details("Get product detail").successfulRequests().percent().gt(95.0),
+            details("Get product detail").responseTime().percentile(95).lt(2000),
+            details("Update inventory").successfulRequests().percent().gt(95.0),
+            details("Update inventory").responseTime().percentile(95).lt(2000)
         };
     }
 
@@ -104,20 +125,18 @@ public class StressTestSimulation extends BaseSimulation {
         LOGGER.info("Starting StressTestSimulation with 3-phase injection profile");
 
         // Initialize main load test scenario
-        io.gatling.javaapi.core.ScenarioBuilder mainLoadScenario =
+        ScenarioBuilder mainLoadScenario =
                 scenario("Main Load Test")
                         .feed(enhancedProductFeeder())
                         .randomSwitch()
                         .on(
-                                new io.gatling.javaapi.core.Choice.WithWeight(
-                                        30.0, ScenarioBuilders.browseChain()),
-                                new io.gatling.javaapi.core.Choice.WithWeight(
+                                new Choice.WithWeight(30.0, ScenarioBuilders.browseChain()),
+                                new Choice.WithWeight(
                                         30.0,
                                         ScenarioBuilders.createProductChain()
                                                 .exec(ScenarioBuilders.getProductChain())),
-                                new io.gatling.javaapi.core.Choice.WithWeight(
-                                        20.0, ScenarioBuilders.searchChain()),
-                                new io.gatling.javaapi.core.Choice.WithWeight(
+                                new Choice.WithWeight(20.0, ScenarioBuilders.searchChain()),
+                                new Choice.WithWeight(
                                         20.0,
                                         ScenarioBuilders.createProductChain()
                                                 .exec(ScenarioBuilders.updateInventoryChain())
