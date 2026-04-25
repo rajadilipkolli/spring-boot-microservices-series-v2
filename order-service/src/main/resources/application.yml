@@ -16,30 +16,26 @@ spring:
             add:
               type:
                 headers: true
+            trusted:
+              packages: com.example.common.dtos
+    # Configuration for dead letter queue support
+    listener:
+      missing-topics-fatal: false
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
-      producer:
-        acks: all
       application-id: ${spring.application.name}
       properties:
-        commit:
-          interval:
-            ms: 100
-        num:
-          stream:
-            threads: 2
-        default:
-          timestamp:
-            extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
-          key:
-            serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-          value:
-            serde: org.springframework.kafka.support.serializer.JsonSerde
-        spring:
-          json:
-            trusted:
-              packages: 'com.example.common.dtos'
+        producer.acks: all
+        commit.interval.ms: 1000
+        request.timeout.ms: 60000
+        statestore.cache.max.bytes: 10485760
+        metrics.recording.level: INFO
+        num.stream.threads: 2
+        default.timestamp.extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
+        spring.json.trusted.packages: 'com.example.common.dtos'
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
   modulith:

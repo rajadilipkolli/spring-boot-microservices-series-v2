@@ -15,8 +15,11 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
-import java.util.Properties;
+import java.util.Map;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -30,27 +33,27 @@ import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.apache.kafka.streams.state.Stores;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
+import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
+import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
-import org.springframework.kafka.support.serializer.JacksonJsonSerde;
-import org.springframework.util.Assert;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableKafkaStreams
 class KafkaStreamsConfig {
 
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(KafkaStreamsConfig.class);
 
     private final OrderManageService orderManageService;
 
@@ -58,61 +61,102 @@ class KafkaStreamsConfig {
         this.orderManageService = orderManageService;
     }
 
-    @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE)
-    StreamsBuilderFactoryBeanConfigurer configurer(
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+    KafkaStreamsConfiguration streamsConfig(
+            KafkaProperties kafkaProperties,
+            KafkaConnectionDetails kafkaConnectionDetails,
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
-        return factoryBean -> {
-            factoryBean.setStateListener(
-                    (newState, oldState) ->
-                            log.info(
-                                    "Kafka Streams state transition from {} to {}",
-                                    oldState,
-                                    newState));
+        Map<String, Object> props = kafkaProperties.buildStreamsProperties();
 
-            Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
-            Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
+        // Force the bootstrap servers from the environment (crucial for tests)
+        props.put(
+                StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
+                kafkaConnectionDetails.getBootstrapServers());
 
-            // Enhanced error handling
-            streamsConfiguration.put(
-                    StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-                    RecoveringDeserializationExceptionHandler.class);
-            streamsConfiguration.put(
-                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
-                    deadLetterPublishingRecoverer);
+        props.put(StreamsConfig.RECEIVE_BUFFER_CONFIG, -1);
+        props.put(
+                StreamsConfig.SECURITY_PROTOCOL_CONFIG,
+                kafkaConnectionDetails.getSecurityProtocol());
 
-            // Performance and reliability optimizations
-            streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
-            streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
-            streamsConfiguration.put(
-                    StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
+        // Deserialization Exception Handler configuration
+        props.put(
+                StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                RecoveringDeserializationExceptionHandler.class);
+        props.put(
+                RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
+                deadLetterPublishingRecoverer);
 
-            // Memory management
-            streamsConfiguration.put(
-                    StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
+        log.info(
+                "Kafka Streams properties initialized with RecoveringDeserializationExceptionHandler and bootstrap servers: {}",
+                kafkaConnectionDetails.getBootstrapServers());
 
-            // Enhanced monitoring
-            streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");
+        return new KafkaStreamsConfiguration(props);
+    }
 
-            log.info("Kafka Streams configured with enhanced error handling and monitoring");
-        };
+    @Bean
+    StreamsBuilderFactoryBeanConfigurer configurer() {
+        return factoryBean ->
+                factoryBean.setStateListener(
+                        (newState, oldState) ->
+                                log.info(
+                                        "Kafka Streams state transition from {} to {}",
+                                        oldState,
+                                        newState));
     }
 
     @Bean
     DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(
-            ProducerFactory<byte[], byte[]> producerFactory) {
+            KafkaProperties kafkaProperties, KafkaConnectionDetails connectionDetails) {
+        Map<String, Object> props = kafkaProperties.buildProducerProperties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+
+        DefaultKafkaProducerFactory<byte[], byte[]> factory =
+                new DefaultKafkaProducerFactory<>(props);
+        KafkaTemplate<byte[], byte[]> template = new KafkaTemplate<>(factory);
+
         return new DeadLetterPublishingRecoverer(
-                new KafkaTemplate<>(producerFactory),
-                (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
+                template,
+                (record, ex) -> {
+                    log.info(
+                            "Recoverer called for record: {} with exception: {}",
+                            record,
+                            ex.getMessage());
+                    return new TopicPartition(RECOVER_DLQ_TOPIC, -1);
+                });
     }
 
     @Bean
-    KStream<String, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+    public Serde<OrderDto> orderSerde(JsonMapper jsonMapper) {
+        return Serdes.serdeFrom(
+                (topic, data) -> {
+                    try {
+                        return jsonMapper.writeValueAsBytes(data);
+                    } catch (Exception e) {
+                        throw new SerializationException("Serialization failed", e);
+                    }
+                },
+                (topic, data) -> {
+                    if (data == null) {
+                        return null;
+                    }
+                    try {
+                        return jsonMapper.readValue(data, OrderDto.class);
+                    } catch (Exception e) {
+                        // Explicitly throw SerializationException to trigger the
+                        // DeserializationExceptionHandler
+                        log.debug("Deserialization failed for topic {}: {}", topic, e.getMessage());
+                        throw new SerializationException("Deserialization failed", e);
+                    }
+                });
+    }
 
-        // Log important config information for troubleshooting
-        log.info(
-                "Starting Kafka Stream configuration. This might help diagnose Spring Boot 3.4.0 issues");
+    @Bean
+    KStream<String, OrderDto> stream(
+            StreamsBuilder kafkaStreamBuilder, Serde<OrderDto> orderSerde) {
+
+        log.info("Initializing Kafka Stream with payment and stock topics");
 
         KStream<String, OrderDto> paymentStream =
                 kafkaStreamBuilder.stream(
@@ -134,9 +178,8 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    KTable<String, OrderDto> kTable(StreamsBuilder streamsBuilder) {
-        log.info("Inside fetching KTable values");
-        JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+    KTable<String, OrderDto> kTable(StreamsBuilder streamsBuilder, Serde<OrderDto> orderSerde) {
+        log.info("Initializing KTable for orders store");
 
         // KTable naturally keeps only the latest value for each key
         KTable<String, OrderDto> ordersTable =
