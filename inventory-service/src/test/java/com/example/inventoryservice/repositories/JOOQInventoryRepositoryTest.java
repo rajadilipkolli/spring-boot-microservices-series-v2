@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -58,5 +58,13 @@ class JOOQInventoryRepositoryTest {
                         .fetchInto(Inventory.class);
 
         assertThat(findAvailableInventory).isNotEmpty().hasSize(1);
+
+        boolean exists =
+                dslContext.fetchExists(
+                        dslContext
+                                .selectOne()
+                                .from(INVENTORY)
+                                .where(INVENTORY.PRODUCT_CODE.eq("product2")));
+        assertThat(exists).isTrue();
     }
 }
