@@ -64,8 +64,10 @@ public class CreateProductSimulation extends BaseSimulation {
             HttpResponse<String> response =
                     client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() == 201) {
-                LOGGER.info("Kafka warm-up successful. Waiting for initialization...");
+            if (response.statusCode() == 201 || response.statusCode() == 409) {
+                LOGGER.info(
+                        "Kafka warm-up successful (status: {}). Waiting for initialization...",
+                        response.statusCode());
                 try {
                     Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
                 } catch (InterruptedException e) {
