@@ -107,6 +107,10 @@ class InventoryController {
     ResponseEntity<Inventory> updateInventoryByProductCode(
             @PathVariable String productCode,
             @RequestBody @Valid InventoryRequest inventoryRequest) {
+        if (inventoryRequest.productCode() != null
+                && !inventoryRequest.productCode().equals(productCode)) {
+            return ResponseEntity.badRequest().build();
+        }
         return inventoryService
                 .updateInventoryByProductCode(productCode, inventoryRequest)
                 .map(ResponseEntity::ok)

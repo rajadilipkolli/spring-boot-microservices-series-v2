@@ -7,12 +7,18 @@
 package com.example.inventoryservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.exception.ProductAlreadyExistsException;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
@@ -98,10 +104,8 @@ class InventoryServiceTest {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
         given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(true);
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> inventoryService.saveInventory(inventoryRequest))
-                .isInstanceOf(
-                        com.example.inventoryservice.exception.ProductAlreadyExistsException.class)
+        assertThatThrownBy(() -> inventoryService.saveInventory(inventoryRequest))
+                .isInstanceOf(ProductAlreadyExistsException.class)
                 .hasMessageContaining("Product with code ProductCode1 already exists");
 
         verify(inventoryRepository, never()).save(any(Inventory.class));

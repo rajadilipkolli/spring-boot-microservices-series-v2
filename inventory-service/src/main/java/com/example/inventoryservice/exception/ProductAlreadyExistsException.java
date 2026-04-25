@@ -13,16 +13,18 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.ErrorResponseException;
 
 public class ProductAlreadyExistsException extends ErrorResponseException {
+
+    private static final HttpStatus STATUS = HttpStatus.CONFLICT;
+
     public ProductAlreadyExistsException(String productCode) {
         super(
-                HttpStatus.CONFLICT,
+                STATUS,
                 asProblemDetail("Product with code " + productCode + " already exists"),
                 null);
     }
 
     private static ProblemDetail asProblemDetail(String message) {
-        ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, message);
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(STATUS, message);
         problemDetail.setTitle("Product Already Exists");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/already-exists"));
         problemDetail.setProperty("errorCategory", "Generic");

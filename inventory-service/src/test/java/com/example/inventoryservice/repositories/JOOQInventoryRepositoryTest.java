@@ -66,5 +66,13 @@ class JOOQInventoryRepositoryTest {
                                 .from(INVENTORY)
                                 .where(INVENTORY.PRODUCT_CODE.eq("product2")));
         assertThat(exists).isTrue();
+
+        exists =
+                dslContext.fetchExists(
+                        dslContext
+                                .selectOne()
+                                .from(INVENTORY)
+                                .where(INVENTORY.PRODUCT_CODE.eq("product200")));
+        assertThat(exists).isFalse();
     }
 }
