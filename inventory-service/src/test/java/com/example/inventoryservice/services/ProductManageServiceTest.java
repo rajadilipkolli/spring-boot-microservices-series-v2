@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.ProductDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import org.instancio.Instancio;
 import org.instancio.junit.InstancioExtension;
@@ -30,6 +31,7 @@ class ProductManageServiceTest {
     @Captor private ArgumentCaptor<Inventory> argumentCaptor;
 
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private InventoryJOOQRepository inventoryJOOQRepository;
 
     @InjectMocks private ProductManageService productManageService;
 
@@ -39,6 +41,7 @@ class ProductManageServiceTest {
 
         ProductDto productDto = Instancio.create(ProductDto.class);
 
+        given(inventoryJOOQRepository.existsByProductCode(productDto.code())).willReturn(false);
         given(inventoryRepository.save(argumentCaptor.capture()))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 

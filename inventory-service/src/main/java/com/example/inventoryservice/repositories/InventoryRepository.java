@@ -13,6 +13,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     List<Inventory> findByProductCodeIn(List<String> productCodes);
-
-    boolean existsByProductCode(String productCode);
 }
