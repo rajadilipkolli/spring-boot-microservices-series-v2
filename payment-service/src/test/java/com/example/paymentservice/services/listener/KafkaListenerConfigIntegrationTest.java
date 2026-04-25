@@ -64,7 +64,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -90,7 +90,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // When
         kafkaTemplate.send(
                 "orders",
-                orderDto.orderId(),
+                String.valueOf(orderDto.orderId()),
                 TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
         // Then
@@ -113,7 +113,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -136,7 +136,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
         // When
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto.withSource("PAYMENT"));
+        kafkaTemplate.send(
+                "orders", String.valueOf(orderDto.orderId()), orderDto.withSource("PAYMENT"));
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)

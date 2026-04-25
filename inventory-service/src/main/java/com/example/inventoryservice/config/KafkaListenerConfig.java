@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -11,6 +11,7 @@ import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;
 import com.example.inventoryservice.utils.AppConstants;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -50,7 +51,8 @@ class KafkaListenerConfig {
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
-    public void onEvent(OrderDto orderDto) {
+    public void onEvent(String orderDtoStr) throws JacksonException {
+        OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info("Received Order: {}", orderDto);
         if ("NEW".equals(orderDto.status())) {
             orderManageService.reserve(orderDto);
@@ -60,13 +62,13 @@ class KafkaListenerConfig {
     }
 
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
-    public void onSaveProductEvent(@Payload String productDto) throws JacksonException {
+    public void onSaveProductEvent(@Payload @Valid String productDto) throws JacksonException {
         log.info("Received Product: {}", productDto);
         productManageService.manage(jsonMapper.readValue(productDto, ProductDto.class));
     }
 
     @DltHandler
-    public void dlt(OrderDto orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+    public void dlt(String orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("Received dead-letter message : {} from topic {}", orderDto, topic);
     }
 }

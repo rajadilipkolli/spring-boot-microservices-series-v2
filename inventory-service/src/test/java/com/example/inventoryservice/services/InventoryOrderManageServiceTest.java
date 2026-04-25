@@ -1,14 +1,16 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,7 +39,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 class InventoryOrderManageServiceTest {
 
     @Mock private InventoryRepository inventoryRepository;
-    @Mock private KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     @Captor ArgumentCaptor<Collection<Inventory>> argumentCaptor;
 
@@ -75,7 +77,8 @@ class InventoryOrderManageServiceTest {
                 assertThat(inv.getAvailableQuantity()).isEqualTo(5);
             }
         }
-        verify(kafkaTemplate).send(AppConstants.STOCK_ORDERS_TOPIC, result.orderId(), result);
+        verify(kafkaTemplate)
+                .send(AppConstants.STOCK_ORDERS_TOPIC, String.valueOf(result.orderId()), result);
     }
 
     @Test
@@ -104,9 +107,9 @@ class InventoryOrderManageServiceTest {
         verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(kafkaTemplate, times(1))
                 .send(
-                        org.mockito.ArgumentMatchers.eq(AppConstants.STOCK_ORDERS_TOPIC),
-                        org.mockito.ArgumentMatchers.eq(orderDto.orderId()),
-                        org.mockito.ArgumentMatchers.any(OrderDto.class));
+                        eq(AppConstants.STOCK_ORDERS_TOPIC),
+                        eq(String.valueOf(orderDto.orderId())),
+                        any(OrderDto.class));
         verify(inventoryRepository, times(0)).saveAll(anyList());
         verifyNoMoreInteractions(inventoryRepository);
     }
@@ -132,8 +135,8 @@ class InventoryOrderManageServiceTest {
         ArgumentCaptor<OrderDto> orderDtoCaptor = ArgumentCaptor.forClass(OrderDto.class);
         verify(kafkaTemplate, times(1))
                 .send(
-                        org.mockito.ArgumentMatchers.eq(AppConstants.STOCK_ORDERS_TOPIC),
-                        org.mockito.ArgumentMatchers.eq(orderDto.orderId()),
+                        eq(AppConstants.STOCK_ORDERS_TOPIC),
+                        eq(String.valueOf(orderDto.orderId())),
                         orderDtoCaptor.capture());
         assertThat(orderDtoCaptor.getValue().status()).isEqualTo("REJECT");
         verify(inventoryRepository, times(0)).saveAll(anyList());

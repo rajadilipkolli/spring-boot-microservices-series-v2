@@ -121,6 +121,15 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    @ExceptionHandler(ProductAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleProductAlreadyExistsException(
+            ProductAlreadyExistsException ex, WebRequest request) {
+        log.warn("Product already exists: {}", ex.getMessage());
+        ProblemDetail problemDetail = ex.getBody();
+        addCorrelationId(problemDetail, request);
+        return ResponseEntity.status(ex.getStatusCode()).body(problemDetail);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
         log.error("Unexpected error occurred: ", ex);

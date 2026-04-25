@@ -1,0 +1,74 @@
+# https://docs.liquibase.com/concepts/changelogs/yaml-format.html
+databaseChangeLog:
+  -  property:
+       dbms:  postgresql
+       name:  jsonb.type
+       value:  jsonb
+  -  property:
+       dbms:  "!postgresql"
+       name:  jsonb.type
+       value:  text
+  - changeSet:
+      author: rajakolli
+      id: createTable-outbox_events
+      context: Creates DDL Script for outbox_events
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - tableExists:
+                tableName: outbox_events
+      createTable:
+        columns:
+          - column:
+              constraints:
+                nullable: 'false'
+                primaryKey: 'true'
+                primaryKeyName: pk_outbox_events
+              name: id
+              type: UUID
+          - column:
+              constraints:
+                nullable: 'false'
+              name: aggregate_type
+              type: varchar(255)
+          - column:
+              constraints:
+                nullable: 'false'
+              name: aggregate_id
+              type: varchar(255)
+          - column:
+              constraints:
+                nullable: 'false'
+              name: event_type
+              type: varchar(255)
+          - column:
+              constraints:
+                nullable: 'false'
+              name: payload
+              type: ${jsonb.type}
+          - column:
+              constraints:
+                nullable: 'false'
+              name: status
+              type: varchar(50)
+          - column:
+              constraints:
+                nullable: 'false'
+              name: created_at
+              type: TIMESTAMP WITH TIME ZONE
+          - column:
+              name: processed_at
+              type: TIMESTAMP WITH TIME ZONE
+          - column:
+              constraints:
+                nullable: 'false'
+              name: retry_count
+              type: INT
+              defaultValueNumeric: '0'
+          - column:
+              name: error_message
+              type: text
+          - column:
+              name: locked_at
+              type: TIMESTAMP WITH TIME ZONE
+        tableName: outbox_events

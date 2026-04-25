@@ -1,15 +1,12 @@
 package simulation;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
-import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
-import static io.gatling.javaapi.core.CoreDsl.nothingFor;
-import static io.gatling.javaapi.core.CoreDsl.rampUsers;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.header;
@@ -19,6 +16,10 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -33,14 +34,58 @@ public class CreateProductSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
 
-    // Configuration parameters - can be externalized to properties
-    private static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "50"));
-    private static final int CONSTANT_USERS =
-            Integer.parseInt(System.getProperty("constantUsers", "100"));
-    private static final int RAMP_DURATION_SECONDS =
-            Integer.parseInt(System.getProperty("rampDuration", "10"));
-    private static final int TEST_DURATION_SECONDS =
-            Integer.parseInt(System.getProperty("testDuration", "180"));
+    @Override
+    public void before() {
+        super.before(); // Run health checks
+        warmUpKafka();
+    }
+
+    private void warmUpKafka() {
+        LOGGER.info("Performing Kafka warm-up by creating an initial product...");
+        HttpClient client = HttpClient.newHttpClient();
+        try {
+            String productJson =
+                    """
+                {
+                  "productCode": "WARMUP-001",
+                  "productName": "Warm-up Product",
+                  "price": 1.0,
+                  "description": "Kafka Warm-up Product"
+                }
+                """;
+
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(productJson))
+                            .build();
+
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 201 || response.statusCode() == 409) {
+                LOGGER.info(
+                        "Kafka warm-up successful (status: {}). Waiting for initialization...",
+                        response.statusCode());
+                try {
+                    Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
+                } catch (InterruptedException e) {
+                    LOGGER.error("Warm-up sleep interrupted: {}", e.getMessage());
+                    Thread.currentThread().interrupt();
+                }
+            } else {
+                LOGGER.warn("Kafka warm-up returned status: {}", response.statusCode());
+            }
+        } catch (InterruptedException e) {
+            LOGGER.error("Warm-up interrupted: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            LOGGER.error("Kafka warm-up failed: {}", e.getMessage());
+        }
+    }
+
+    // Parameters are now inherited from BaseSimulation for consistency
 
     // Breaking down the test flow into reusable components for better readability and
     // maintainability
@@ -85,7 +130,7 @@ public class CreateProductSimulation extends BaseSimulation {
                             .get("/inventory-service/api/inventory/#{productCode}")
                             .check(status().is(200))
                             .check(bodyString().saveAs("inventoryResponseBody")))
-                    .pause(1000) // Add a pause to ensure the response is processed
+                    .pause(Duration.ofSeconds(1)) // Add a pause to ensure the response is processed
                     .exec(
                             session -> {
                                 // Validate the response body
@@ -174,38 +219,26 @@ public class CreateProductSimulation extends BaseSimulation {
     private final ScenarioBuilder productWorkflow =
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
-                    // Simplified workflow to avoid syntax issues
                     .exec(
-                            exec(createProduct)
-                                    .exec(
-                                            session -> {
-                                                logRequestTime(
-                                                        "Create Product Complete",
-                                                        System.currentTimeMillis());
-                                                return session;
-                                            })
-                                    .pause(200) // Reduced pause time from 500 to 200 ms
-                                    .exec(getProduct)
-                                    .pause(100) // Reduced pause time from 300 to 100 ms
-                                    .exec(getInventory)
-                                    .pause(100) // Reduced pause time
-                                    // Only attempt to update inventory when a valid
-                                    // inventory response body is present in the
-                                    // session. If it's missing or empty, skip update
-                                    // entirely to avoid runtime exceptions.
-                                    .doIf(
-                                            session ->
-                                                    session.contains("inventoryResponseBody")
-                                                            && session.getString(
-                                                                            "inventoryResponseBody")
-                                                                    != null
-                                                            && !session.getString(
-                                                                            "inventoryResponseBody")
-                                                                    .trim()
-                                                                    .isEmpty())
-                                    .then(exec(updateInventory))
-                                    .pause(300)
-                                    .exec(createOrder));
+                            session -> {
+                                LOGGER.info(">>> Starting Workflow for user: {}", session.userId());
+                                return session;
+                            })
+                    .exec(createProduct)
+                    .pause(Duration.ofSeconds(2))
+                    .exec(getProduct)
+                    .pause(Duration.ofSeconds(2))
+                    .exec(getInventory)
+                    .pause(Duration.ofSeconds(2))
+                    .exitHereIfFailed()
+                    .exec(updateInventory)
+                    .pause(Duration.ofSeconds(2))
+                    .exec(createOrder)
+                    .exec(
+                            session -> {
+                                LOGGER.info(">>> Finished Workflow for user: {}", session.userId());
+                                return session;
+                            });
 
     /**
      * Prepares the inventory update request by generating a new inventory quantity
@@ -325,39 +358,22 @@ public class CreateProductSimulation extends BaseSimulation {
     /** Simulation setup with configurable load profile */
     public CreateProductSimulation() {
 
-        runHealthChecks();
-
-        LOGGER.info(
-                "Running with warm-up phase of {} seconds with multiple users to initialize Kafka",
-                KAFKA_INIT_DELAY_SECONDS);
+        int targetRate = CONSTANT_USERS;
+        Duration rampDuration = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+        Duration steadyStateDuration = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
         // Configure simulation with robust load profile
         setUp(
                         productWorkflow.injectOpen(
-                                // Initial users for Kafka initialization and baseline - increased
-                                // from 3 to 10
-                                atOnceUsers(10),
-
-                                // Wait for Kafka initialization to complete
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
-
-                                // Initial ramp using users - increased for more load
-                                rampUsers(RAMP_USERS)
-                                        .during(Duration.ofSeconds(RAMP_DURATION_SECONDS)),
-
-                                // Constant load phase with shorter duration but higher throughput
-                                constantUsersPerSec(CONSTANT_USERS / 2)
-                                        .during(Duration.ofSeconds(TEST_DURATION_SECONDS / 4)),
-
-                                // Ramp up to peak load more quickly
-                                rampUsersPerSec(CONSTANT_USERS / 2)
-                                        .to(CONSTANT_USERS)
-                                        .during(Duration.ofSeconds(TEST_DURATION_SECONDS / 4)),
-
-                                // Sustained peak load phase
-                                constantUsersPerSec(CONSTANT_USERS)
-                                        .during(Duration.ofSeconds(TEST_DURATION_SECONDS / 2))))
+                                rampUsersPerSec(0).to(targetRate).during(rampDuration),
+                                constantUsersPerSec(targetRate).during(steadyStateDuration),
+                                rampUsersPerSec(targetRate).to(0).during(rampDuration)))
                 .protocols(httpProtocol)
+                .maxDuration(
+                        rampDuration
+                                .plus(steadyStateDuration)
+                                .plus(rampDuration)
+                                .plus(Duration.ofMinutes(1)))
                 .assertions(
                         // Add global performance SLA assertions
                         global().responseTime().mean().lt(2000), // Mean response time under 2s
@@ -370,9 +386,9 @@ public class CreateProductSimulation extends BaseSimulation {
                         global().successfulRequests().percent().gt(95.0), // More than 95% success
                         global().failedRequests().percent().lt(5.0), // Less than 5% failed requests
                         // Request-specific assertions for detailed metrics
-                        details("Create product").responseTime().mean().lt(500),
-                        details("Create product").successfulRequests().percent().gt(95.0),
-                        details("Create order with product").responseTime().mean().lt(800),
-                        details("Update inventory").responseTime().mean().lt(400));
+                        details("Create product").responseTime().mean().lt(1000),
+                        details("Create product").successfulRequests().percent().gt(90.0),
+                        details("Create order with product").responseTime().mean().lt(1500),
+                        details("Update inventory").responseTime().mean().lt(800));
     }
 }

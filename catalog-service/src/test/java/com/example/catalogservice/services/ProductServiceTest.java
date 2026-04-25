@@ -6,12 +6,13 @@
 
 package com.example.catalogservice.services;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.atLeastOnce;
 
 import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
@@ -35,7 +36,7 @@ class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
 
-    @Mock private CatalogKafkaProducer catalogKafkaProducer;
+    @Mock private OutboxService outboxService;
 
     @InjectMocks private ProductService productService;
 
@@ -72,7 +73,7 @@ class ProductServiceTest {
                                     true);
                         });
 
-        given(catalogKafkaProducer.send(any(ProductRequest.class))).willReturn(Mono.just(true));
+        given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
 
         // Mock the repository findByProductCodeAllIgnoreCase method to return empty Mono
         // This is needed for the idempotency check in saveProduct
@@ -88,10 +89,13 @@ class ProductServiceTest {
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();
 
+        then(productMapper).should(atLeastOnce()).toEntity(productCaptor.capture());
+        then(outboxService).should(atLeastOnce()).createOutboxEvent(any(), any(), any(), any());
+
         // Assert that each product's price is within the expected range
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
-        assertTrue(
-                capturedProducts.stream()
-                        .allMatch(product -> product.price() >= 1 && product.price() <= 100));
+        assertThat(capturedProducts)
+                .isNotEmpty()
+                .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
     }
 }

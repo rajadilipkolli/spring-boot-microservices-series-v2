@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.OrderServiceApplication;
+import com.example.orderservice.config.TestKafkaListenerConfig;
 import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;
@@ -42,7 +43,8 @@ import tools.jackson.databind.json.JsonMapper;
         classes = {
             OrderServiceApplication.class,
             ContainersConfig.class,
-            OrderServicePostGreSQLContainer.class
+            OrderServicePostGreSQLContainer.class,
+            TestKafkaListenerConfig.class
         })
 @AutoConfigureMockMvc
 @AutoConfigureTracing
@@ -62,7 +64,9 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
+
+    @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
 
     @InjectWireMock("catalog-service")
     protected WireMockServer wireMockServer;

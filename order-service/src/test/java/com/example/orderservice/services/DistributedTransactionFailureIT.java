@@ -39,12 +39,14 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("REJECT", testOrder);
 
         // Send payment rejection
-        kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
+        kafkaTemplate.send(
+                "payment-orders", String.valueOf(paymentOrderDto.orderId()), paymentOrderDto);
 
         // Send a successful inventory response
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
-        kafkaTemplate.send("stock-orders", inventoryOrderDto.orderId(), inventoryOrderDto);
+        kafkaTemplate.send(
+                "stock-orders", String.valueOf(inventoryOrderDto.orderId()), inventoryOrderDto);
 
         // Assert that the order is eventually rejected
         await().atMost(60, TimeUnit.SECONDS)
@@ -83,7 +85,7 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
         // Act - Only send payment response, missing inventory response
-        kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
+        kafkaTemplate.send("payment-orders", String.valueOf(testOrder.getId()), paymentOrderDto);
 
         // Assert - Order should stay in NEW state
         await().atMost(10, TimeUnit.SECONDS)
@@ -122,8 +124,8 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
         // Act - Send messages in reverse order
-        kafkaTemplate.send("stock-orders", testOrder.getId(), inventoryOrderDto);
-        kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
+        kafkaTemplate.send("stock-orders", String.valueOf(testOrder.getId()), inventoryOrderDto);
+        kafkaTemplate.send("payment-orders", String.valueOf(testOrder.getId()), paymentOrderDto);
 
         // Assert - Final state should still be correct
         await().atMost(60, TimeUnit.SECONDS)
