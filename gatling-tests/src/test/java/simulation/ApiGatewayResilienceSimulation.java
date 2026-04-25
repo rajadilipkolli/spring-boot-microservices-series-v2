@@ -1,13 +1,18 @@
 package simulation;
 
-import static io.gatling.javaapi.core.CoreDsl.*;
-import static io.gatling.javaapi.http.HttpDsl.*;
+import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
+import static io.gatling.javaapi.core.CoreDsl.repeat;
+import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.http.HttpDsl.http;
+import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,18 +26,26 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(ApiGatewayResilienceSimulation.class);
 
-    // Configuration for gateway resilience tests
-    private static final int BURST_USERS = Integer.parseInt(System.getProperty("burstUsers", "50"));
-    private static final int SUSTAIN_SECONDS =
-            Integer.parseInt(System.getProperty("sustainSeconds", "30"));
+    private static final Duration RAMP_DURATION = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+    private static final Duration SUSTAIN_DURATION = Duration.ofSeconds(TEST_DURATION_SECONDS);
+
+    // Derived burst rates
+    private static final double RATE_LIMIT_RATE = BURST_USERS_PER_SEC * 0.2;
+    private static final double CIRCUIT_BREAKER_RATE = BURST_USERS_PER_SEC * 0.4;
+    private static final double MIXED_LOAD_RATE = (double) BURST_USERS_PER_SEC;
 
     // Counter to track rate limiting responses
     private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
     private final AtomicInteger serviceUnavailableCount = new AtomicInteger(0);
 
+    @Override
+    public void before() {
+        super.before(); // Run health checks
+    }
+
     // Define a rapid-fire request chain to trigger rate limiting
     private final ChainBuilder rapidRequests =
-            repeat(10)
+            repeat(5)
                     .on(
                             exec(http("Rapid catalog request")
                                             .get("/catalog-service/api/catalog")
@@ -42,16 +55,10 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
                                                 int status =
                                                         Integer.parseInt(
                                                                 session.getString("status"));
-                                                if (status == 429) { // Too Many Requests
+                                                if (status == 429) {
                                                     rateLimitedCount.incrementAndGet();
-                                                    LOGGER.info(
-                                                            "Rate limit triggered: {}",
-                                                            rateLimitedCount.get());
-                                                } else if (status == 503) { // Service Unavailable
+                                                } else if (status == 503) {
                                                     serviceUnavailableCount.incrementAndGet();
-                                                    LOGGER.info(
-                                                            "Circuit breaker triggered: {}",
-                                                            serviceUnavailableCount.get());
                                                 }
                                                 return session;
                                             })
@@ -62,102 +69,54 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
             exec(http("Trigger error path")
                             .get("/catalog-service/api/catalog/error")
                             .check(status().saveAs("errorStatus")))
-                    .exec(
-                            session -> {
-                                int status = Integer.parseInt(session.getString("errorStatus"));
-                                LOGGER.debug("Error path returned status: {}", status);
-                                return session;
-                            })
                     .pause(Duration.ofMillis(200));
 
-    // Define a mixed request pattern
+    // Define a mixed request pattern using ScenarioBuilders
     private final ChainBuilder mixedRequests =
-            exec(
-                    randomSwitch()
-                            .on(
-                                    List.of(
-                                            new Choice.WithWeight(
-                                                    50.0,
-                                                    exec(
-                                                            http("Get product")
-                                                                    .get(
-                                                                            "/catalog-service/api/catalog/P000001")
-                                                                    .check(
-                                                                            status().saveAs(
-                                                                                            "productStatus")))),
-                                            new Choice.WithWeight(
-                                                    50.0,
-                                                    exec(
-                                                            http("List products")
-                                                                    .get(
-                                                                            "/catalog-service/api/catalog")
-                                                                    .check(
-                                                                            status().saveAs(
-                                                                                            "catalogStatus")))),
-                                            new Choice.WithWeight(
-                                                    50.0,
-                                                    exec(
-                                                            http("Get inventory")
-                                                                    .get(
-                                                                            "/inventory-service/api/inventory/P000001")
-                                                                    .check(
-                                                                            status().saveAs(
-                                                                                            "inventoryStatus")))),
-                                            new Choice.WithWeight(
-                                                    50.0,
-                                                    exec(
-                                                            http("Get orders")
-                                                                    .get(
-                                                                            "/order-service/api/orders")
-                                                                    .check(
-                                                                            status().saveAs(
-                                                                                            "orderStatus")))))));
+            randomSwitch()
+                    .on(
+                            new Choice.WithWeight(30.0, ScenarioBuilders.browseChain()),
+                            new Choice.WithWeight(30.0, ScenarioBuilders.getProductChain()),
+                            new Choice.WithWeight(20.0, ScenarioBuilders.searchChain()),
+                            new Choice.WithWeight(
+                                    20.0,
+                                    exec(
+                                            http("Get inventory")
+                                                    .get("/inventory-service/api/inventory/P000001")
+                                                    .check(status().is(200)))));
 
     // Define the scenarios
-    private final ScenarioBuilder rateLimitingTest =
-            scenario("API Gateway Rate Limiting Test")
-                    .exec(rapidRequests)
-                    .pause(Duration.ofSeconds(2))
-                    .exec(rapidRequests);
+    private final ScenarioBuilder rateLimitingScenario =
+            scenario("API Gateway Rate Limiting Test").exec(rapidRequests);
 
-    private final ScenarioBuilder circuitBreakerTest =
-            scenario("Circuit Breaker Test")
-                    .exec(errorTriggeringRequests)
-                    .pause(Duration.ofSeconds(1))
-                    .repeat(5)
-                    .on(errorTriggeringRequests);
+    private final ScenarioBuilder circuitBreakerScenario =
+            scenario("Circuit Breaker Test").exec(errorTriggeringRequests);
 
-    private final ScenarioBuilder mixedLoadTest =
-            scenario("Mixed Gateway Load Test")
-                    .during(Duration.ofSeconds(SUSTAIN_SECONDS))
-                    .on(exec(mixedRequests).pause(Duration.ofMillis(200), Duration.ofMillis(500)));
+    private final ScenarioBuilder mixedLoadScenario =
+            scenario("Mixed Gateway Load Test").feed(enhancedProductFeeder()).exec(mixedRequests);
 
-    // Set up the simulation
     public ApiGatewayResilienceSimulation() {
-        runHealthChecks();
-
-        LOGGER.info(
-                "Running with warm-up phase of {} seconds with a single user to initialize Kafka",
-                KAFKA_INIT_DELAY_SECONDS);
+        LOGGER.info("Starting ApiGatewayResilienceSimulation with 3-phase injection profile");
 
         setUp(
-                        // Initial simulation with single user for Kafka initialization
-                        mixedLoadTest.injectOpen(
-                                atOnceUsers(1),
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS))),
-                        // Other scenarios start after initialization
-                        rateLimitingTest.injectOpen(
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 2)),
-                                atOnceUsers(BURST_USERS / 2)),
-                        circuitBreakerTest.injectOpen(
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS + 10)),
-                                rampUsers(BURST_USERS / 4).during(Duration.ofSeconds(5))),
-                        mixedLoadTest.injectOpen(
-                                nothingFor(Duration.ofSeconds(KAFKA_INIT_DELAY_SECONDS)),
-                                rampUsers(BURST_USERS).during(Duration.ofSeconds(10)),
-                                constantUsersPerSec((double) BURST_USERS / 10)
-                                        .during(Duration.ofSeconds(SUSTAIN_SECONDS))))
-                .protocols(httpProtocol);
+                        rateLimitingScenario.injectOpen(
+                                rampUsersPerSec(0).to(RATE_LIMIT_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(RATE_LIMIT_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(RATE_LIMIT_RATE).to(0).during(RAMP_DURATION)),
+                        circuitBreakerScenario.injectOpen(
+                                rampUsersPerSec(0).to(CIRCUIT_BREAKER_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(CIRCUIT_BREAKER_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(CIRCUIT_BREAKER_RATE).to(0).during(RAMP_DURATION)),
+                        mixedLoadScenario.injectOpen(
+                                rampUsersPerSec(0).to(MIXED_LOAD_RATE).during(RAMP_DURATION),
+                                constantUsersPerSec(MIXED_LOAD_RATE).during(SUSTAIN_DURATION),
+                                rampUsersPerSec(MIXED_LOAD_RATE).to(0).during(RAMP_DURATION)))
+                .protocols(httpProtocol)
+                .maxDuration(
+                        RAMP_DURATION
+                                .plus(SUSTAIN_DURATION)
+                                .plus(RAMP_DURATION)
+                                .plus(Duration.ofMinutes(1)));
     }
 
     @Override
