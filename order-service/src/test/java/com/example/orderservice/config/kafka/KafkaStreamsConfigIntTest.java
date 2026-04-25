@@ -9,7 +9,6 @@ package com.example.orderservice.config.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,16 +28,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
 
 class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
-
-    @Autowired private KafkaTemplate<String, OrderDto> kafkaTemplate;
-    @Autowired private KafkaTemplate<String, String> stringKafkaTemplate;
-    @Autowired private StreamsBuilderFactoryBean streamsBuilderFactoryBean;
 
     private static Consumer<String, String> dlqConsumer;
 
@@ -96,12 +89,9 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
         stringKafkaTemplate.send("payment-orders", "NOT_A_JSON_PAYLOAD");
 
         // Method 2: Also try with a malformed OrderDto object
-        // This will fail deserialization because customerId is expected to be a number
-        // but we'll
-        // send something else if we use string template
-        String invalidDtoJson =
-                "{\"orderId\": 1, \"customerId\": \"INVALID\", \"status\": \"NEW\", \"source\": \"test\"}";
-        stringKafkaTemplate.send("payment-orders", invalidDtoJson);
+        // This should fail deserialization because it's invalid JSON
+        String invalidJson = "{\"orderId\": 1, \"customerId\": "; // Incomplete JSON
+        stringKafkaTemplate.send("payment-orders", invalidJson);
 
         // Make sure messages are sent
         stringKafkaTemplate.flush();
@@ -119,6 +109,6 @@ class KafkaStreamsConfigIntTest extends AbstractIntegrationTest {
                         });
 
         // Verify content of the DLQ message
-        assertThat(dlqRecords.get(0).value()).contains("NOT_A_JSON_PAYLOAD");
+        assertThat(dlqRecords.getFirst().value()).contains("NOT_A_JSON_PAYLOAD");
     }
 }
