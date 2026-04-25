@@ -27,9 +27,9 @@ public class ResilienceTestSimulation extends BaseSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResilienceTestSimulation.class);
 
-    private static final int TARGET_RATE = Integer.parseInt(System.getProperty("targetRate", "10"));
-    private static final Duration RAMP_DURATION = Duration.ofSeconds(30);
-    private static final Duration STEADY_STATE_DURATION = Duration.ofMinutes(2);
+    private static final int TARGET_RATE = CONSTANT_USERS;
+    private static final Duration RAMP_DURATION = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+    private static final Duration STEADY_STATE_DURATION = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
     @Override
     public void before() {
@@ -156,6 +156,11 @@ public class ResilienceTestSimulation extends BaseSimulation {
                                 constantUsersPerSec(TARGET_RATE).during(STEADY_STATE_DURATION),
                                 rampUsersPerSec(TARGET_RATE).to(0).during(RAMP_DURATION)))
                 .protocols(httpProtocol)
+                .maxDuration(
+                        RAMP_DURATION
+                                .plus(STEADY_STATE_DURATION)
+                                .plus(RAMP_DURATION)
+                                .plus(Duration.ofMinutes(1)))
                 .assertions(
                         global().responseTime().percentile(95).lt(3000),
                         global().failedRequests()

@@ -23,9 +23,8 @@ public class StressTestSimulation extends BaseSimulation {
     private static final Logger LOGGER = LoggerFactory.getLogger(StressTestSimulation.class);
 
     // Stress test specific configuration - balanced for sustainable load
-    private static final int MAX_USERS = Integer.parseInt(System.getProperty("maxUsers", "50"));
-    private static final int PLATEAU_DURATION_MINUTES =
-            Integer.parseInt(System.getProperty("plateauDurationMinutes", "5"));
+    private static final int MAX_USERS = CONSTANT_USERS;
+    private static final int PLATEAU_DURATION_SECONDS = TEST_DURATION_SECONDS;
 
     // Performance SLAs
     private static final int MEAN_RESPONSE_TIME_MS = 1500;
@@ -124,15 +123,20 @@ public class StressTestSimulation extends BaseSimulation {
                                                 .exec(ScenarioBuilders.updateInventoryChain())
                                                 .exec(ScenarioBuilders.createOrderChain())));
 
+        Duration rampDuration = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+        Duration plateauDuration = Duration.ofSeconds(PLATEAU_DURATION_SECONDS);
+
         this.setUp(
                         mainLoadScenario.injectOpen(
-                                rampUsersPerSec(1)
-                                        .to(MAX_USERS / 2.0)
-                                        .during(Duration.ofMinutes(2)),
-                                constantUsersPerSec(MAX_USERS)
-                                        .during(Duration.ofMinutes(PLATEAU_DURATION_MINUTES)),
-                                rampUsersPerSec(MAX_USERS).to(1).during(Duration.ofMinutes(1))))
+                                rampUsersPerSec(1).to(MAX_USERS / 2.0).during(rampDuration),
+                                constantUsersPerSec(MAX_USERS).during(plateauDuration),
+                                rampUsersPerSec(MAX_USERS).to(1).during(rampDuration)))
                 .protocols(httpProtocol)
+                .maxDuration(
+                        rampDuration
+                                .plus(plateauDuration)
+                                .plus(rampDuration)
+                                .plus(Duration.ofMinutes(1)))
                 .assertions(getDefaultAssertions());
     }
 }

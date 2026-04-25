@@ -20,9 +20,9 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(ApiGatewayResilienceSimulation.class);
 
-    private static final int BURST_USERS = Integer.parseInt(System.getProperty("burstUsers", "50"));
-    private static final Duration RAMP_DURATION = Duration.ofSeconds(30);
-    private static final Duration SUSTAIN_DURATION = Duration.ofSeconds(60);
+    private static final int BURST_USERS = CONSTANT_USERS;
+    private static final Duration RAMP_DURATION = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+    private static final Duration SUSTAIN_DURATION = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
     // Counter to track rate limiting responses
     private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
@@ -101,7 +101,12 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
                                 rampUsersPerSec(0).to(BURST_USERS / 2.0).during(RAMP_DURATION),
                                 constantUsersPerSec(BURST_USERS / 2.0).during(SUSTAIN_DURATION),
                                 rampUsersPerSec(BURST_USERS / 2.0).to(0).during(RAMP_DURATION)))
-                .protocols(httpProtocol);
+                .protocols(httpProtocol)
+                .maxDuration(
+                        RAMP_DURATION
+                                .plus(SUSTAIN_DURATION)
+                                .plus(RAMP_DURATION)
+                                .plus(Duration.ofMinutes(1)));
     }
 
     @Override

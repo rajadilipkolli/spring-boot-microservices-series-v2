@@ -39,6 +39,15 @@ public abstract class BaseSimulation extends Simulation {
     // JSON object mapper for serialization/deserialization
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    // Common load parameters with default values
+    protected static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "5"));
+    protected static final int CONSTANT_USERS =
+            Integer.parseInt(System.getProperty("constantUsers", "10"));
+    protected static final int RAMP_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("rampDuration", "30"));
+    protected static final int TEST_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("testDuration", "60"));
+
     // Common HTTP protocol configuration
     protected final HttpProtocolBuilder httpProtocol =
             http.baseUrl(BASE_URL)

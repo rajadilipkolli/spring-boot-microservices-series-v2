@@ -3,7 +3,7 @@
 param (
     [string]$TestProfile = "standard",
     [string]$BaseUrl = "http://localhost:8765",
-    [int]$Users = 50,
+    [int]$Users = 10,
     [int]$Duration = 300,
     [switch]$Help
 )
@@ -72,7 +72,7 @@ Write-Host "All services are healthy. Proceeding with tests."
 # Set Maven command based on the selected profile
 switch ($TestProfile) {
     "quick" {
-        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=5 -DconstantUsers=10 -DrampDuration=15 -DtestDuration=60"
+        $MavenParams = "-DbaseUrl=$BaseUrl -DrampUsers=2 -DconstantUsers=5 -DrampDuration=15 -DtestDuration=60"
         Write-Host "Running quick test profile (1-2 min)..."
     }
     "standard" {

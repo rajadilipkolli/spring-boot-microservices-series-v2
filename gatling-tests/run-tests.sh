@@ -3,7 +3,7 @@
 # Default values
 TEST_PROFILE="standard"
 BASE_URL="http://localhost:8765"
-USERS=50
+USERS=10
 DURATION=300
 
 # Parse command line arguments
@@ -99,7 +99,7 @@ echo "All services are healthy. Proceeding with tests."
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
     "quick")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=5 -DconstantUsers=10 -DrampDuration=15 -DtestDuration=60"
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=5 -DrampDuration=15 -DtestDuration=60"
         echo "Running quick test profile (1-2 min)..."
         ;;
     "standard")

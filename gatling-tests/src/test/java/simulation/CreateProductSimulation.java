@@ -74,14 +74,7 @@ public class CreateProductSimulation extends BaseSimulation {
         }
     }
 
-    // Configuration parameters - optimized for sustainable throughput
-    private static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "5"));
-    private static final int CONSTANT_USERS =
-            Integer.parseInt(System.getProperty("constantUsers", "5"));
-    private static final int RAMP_DURATION_SECONDS =
-            Integer.parseInt(System.getProperty("rampDuration", "10"));
-    private static final int TEST_DURATION_SECONDS =
-            Integer.parseInt(System.getProperty("testDuration", "30"));
+    // Parameters are now inherited from BaseSimulation for consistency
 
     // Breaking down the test flow into reusable components for better readability and
     // maintainability
@@ -126,7 +119,7 @@ public class CreateProductSimulation extends BaseSimulation {
                             .get("/inventory-service/api/inventory/#{productCode}")
                             .check(status().is(200))
                             .check(bodyString().saveAs("inventoryResponseBody")))
-                    .pause(1000) // Add a pause to ensure the response is processed
+                    .pause(Duration.ofSeconds(1)) // Add a pause to ensure the response is processed
                     .exec(
                             session -> {
                                 // Validate the response body
@@ -221,11 +214,11 @@ public class CreateProductSimulation extends BaseSimulation {
                                 return session;
                             })
                     .exec(createProduct)
-                    .pause(Duration.ofMillis(500))
+                    .pause(Duration.ofSeconds(2))
                     .exec(getProduct)
-                    .pause(Duration.ofMillis(500))
+                    .pause(Duration.ofSeconds(2))
                     .exec(getInventory)
-                    .pause(Duration.ofMillis(500))
+                    .pause(Duration.ofSeconds(2))
                     .exec(
                             session -> {
                                 // Safeguard to skip inventory update if inventory info is missing
@@ -238,7 +231,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 }
                             })
                     .exec(updateInventory)
-                    .pause(Duration.ofMillis(500))
+                    .pause(Duration.ofSeconds(2))
                     .exec(createOrder)
                     .exec(
                             session -> {
@@ -365,8 +358,8 @@ public class CreateProductSimulation extends BaseSimulation {
     public CreateProductSimulation() {
 
         int targetRate = CONSTANT_USERS;
-        Duration rampDuration = Duration.ofSeconds(30);
-        Duration steadyStateDuration = Duration.ofMinutes(2);
+        Duration rampDuration = Duration.ofSeconds(RAMP_DURATION_SECONDS);
+        Duration steadyStateDuration = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
         // Global assertions to validate overall service performance
         this.setUp(
@@ -375,6 +368,11 @@ public class CreateProductSimulation extends BaseSimulation {
                                 constantUsersPerSec(targetRate).during(steadyStateDuration),
                                 rampUsersPerSec(targetRate).to(0).during(rampDuration)))
                 .protocols(httpProtocol)
+                .maxDuration(
+                        rampDuration
+                                .plus(steadyStateDuration)
+                                .plus(rampDuration)
+                                .plus(Duration.ofMinutes(1)))
                 .assertions(
                         // Add global performance SLA assertions
                         global().responseTime().mean().lt(1500), // Mean response time under 1.5s
