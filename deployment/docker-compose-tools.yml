@@ -507,7 +507,7 @@ services:
       start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.32.0
+    image: prom/alertmanager:v0.32.1
     container_name: alertmanager
     ports:
       - "9093:9093"
