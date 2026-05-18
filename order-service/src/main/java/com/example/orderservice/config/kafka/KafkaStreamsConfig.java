@@ -16,6 +16,7 @@ import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Properties;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.SerializationException;
@@ -39,14 +40,15 @@ import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
-import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
-import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
+import org.springframework.util.Assert;
 import tools.jackson.databind.json.JsonMapper;
 
 @Configuration(proxyBeanMethods = false)
@@ -61,47 +63,28 @@ class KafkaStreamsConfig {
         this.orderManageService = orderManageService;
     }
 
-    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
-    KafkaStreamsConfiguration streamsConfig(
-            KafkaProperties kafkaProperties,
-            KafkaConnectionDetails kafkaConnectionDetails,
-            DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
-        Map<String, Object> props = kafkaProperties.buildStreamsProperties();
-
-        // Force the bootstrap servers from the environment (crucial for tests)
-        props.put(
-                StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
-                kafkaConnectionDetails.getBootstrapServers());
-
-        props.put(StreamsConfig.RECEIVE_BUFFER_CONFIG, -1);
-        props.put(
-                StreamsConfig.SECURITY_PROTOCOL_CONFIG,
-                kafkaConnectionDetails.getSecurityProtocol());
-
-        // Deserialization Exception Handler configuration
-        props.put(
-                StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-                RecoveringDeserializationExceptionHandler.class);
-        props.put(
-                RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
-                deadLetterPublishingRecoverer);
-
-        log.info(
-                "Kafka Streams properties initialized with RecoveringDeserializationExceptionHandler and bootstrap servers: {}",
-                kafkaConnectionDetails.getBootstrapServers());
-
-        return new KafkaStreamsConfiguration(props);
-    }
-
     @Bean
-    StreamsBuilderFactoryBeanConfigurer configurer() {
-        return factoryBean ->
-                factoryBean.setStateListener(
-                        (newState, oldState) ->
-                                log.info(
-                                        "Kafka Streams state transition from {} to {}",
-                                        oldState,
-                                        newState));
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    StreamsBuilderFactoryBeanConfigurer configurer(
+            DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
+        return factoryBean -> {
+            factoryBean.setStateListener(
+                    (newState, oldState) ->
+                            log.info(
+                                    "Kafka Streams state transition from {} to {}",
+                                    oldState,
+                                    newState));
+            Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
+            Assert.notNull(streamsConfiguration, () -> "streamsConfiguration must not be null");
+
+            // Deserialization Exception Handler configuration
+            streamsConfiguration.put(
+                    StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                    RecoveringDeserializationExceptionHandler.class);
+            streamsConfiguration.put(
+                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
+                    deadLetterPublishingRecoverer);
+        };
     }
 
     @Bean
