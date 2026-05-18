@@ -16,10 +16,6 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 
-/**
- * Kafka configuration class focused on topic creation. Rest of the producer configuration is
- * handled through application.yml
- */
 @Configuration(proxyBeanMethods = false)
 @EnableKafka
 class KafkaConfig {
