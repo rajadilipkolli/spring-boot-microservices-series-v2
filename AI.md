@@ -13,10 +13,10 @@ This is a microservices-based system built with:
 ## 📜 Development Skills & Playbooks
 To ensure consistency and follow project-specific standards, specialized playbooks are stored in the `.ai/skills/` directory. **Always refer to these files before performing the following tasks:**
 
-1.  **Native Hints**: [implement_native_hints.md](file:///c:/tools/git/spring-boot-microservices-series-v2/.ai/skills/implement_native_hints.skill.md) – How to register reflection/proxy hints for GraalVM.
-2.  **New Microservice**: [add_new_microservice.md](file:///c:/tools/git/spring-boot-microservices-series-v2/.ai/skills/add_new_microservice.skill.md) – Step-by-step scaffolding of a new service.
-3.  **Architecture**: [solve_modulith_violations.md](file:///c:/tools/git/spring-boot-microservices-series-v2/.ai/skills/solve_modulith_violations.skill.md) – Resolving Spring Modulith violations.
-4.  **Database**: [manage_database_migration.md](file:///c:/tools/git/spring-boot-microservices-series-v2/.ai/skills/manage_database_migration.skill.md) – Using Liquibase across XML/YAML/JSON formats.
+1.  **Native Hints**: [implement_native_hints.md](./.ai/skills/implement_native_hints.skill.md) – How to register reflection/proxy hints for GraalVM.
+2.  **New Microservice**: [add_new_microservice.md](./.ai/skills/add_new_microservice.skill.md) – Step-by-step scaffolding of a new service.
+3.  **Architecture**: [solve_modulith_violations.md](./.ai/skills/solve_modulith_violations.skill.md) – Resolving Spring Modulith violations.
+4.  **Database**: [manage_database_migration.md](./.ai/skills/manage_database_migration.skill.md) – Using Liquibase across XML/YAML/JSON formats.
 
 ## 🛠️ Global Constraints
 - **Formatting**: Use Google Java Format (AOSP style) enforced by Spotless.

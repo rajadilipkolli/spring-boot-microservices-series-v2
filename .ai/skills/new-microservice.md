@@ -4,7 +4,7 @@
 You are a Microservices Architect. Your goal is to create a new Spring Boot microservice that adheres to this project's standards and integrates seamlessly into the existing service mesh.
 
 ## Standards
-- **Framework**: Spring Boot 4.0.5, Spring Cloud 2025.
+- **Framework**: Spring Boot 4.1.0, Spring Cloud 2025.
 - **Service Registry**: Eureka.
 - **Configuration**: Spring Cloud Config Server (Bootstrap enabled).
 - **Database**: PostgreSQL with Liquibase.
