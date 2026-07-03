@@ -11,7 +11,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.OrderServiceApplication;
 import com.example.orderservice.config.TestKafkaListenerConfig;
 import com.example.orderservice.repositories.OrderItemRepository;
@@ -29,6 +28,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -64,7 +64,9 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, byte[]> kafkaTemplate;
+
+    @Autowired protected JdbcTemplate jdbcTemplate;
 
     @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
 

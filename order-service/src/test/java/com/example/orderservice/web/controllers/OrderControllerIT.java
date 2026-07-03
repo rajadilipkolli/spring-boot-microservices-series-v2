@@ -260,12 +260,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .send(
                             "payment-orders",
                             String.valueOf(paymentOrderDto.orderId()),
-                            paymentOrderDto)
+                            toJsonBytes(paymentOrderDto))
                     .get();
             OrderDto stockOrderDto = getOrderDto("STOCK", orderId);
 
             kafkaTemplate
-                    .send("stock-orders", String.valueOf(stockOrderDto.orderId()), stockOrderDto)
+                    .send(
+                            "stock-orders",
+                            String.valueOf(stockOrderDto.orderId()),
+                            toJsonBytes(stockOrderDto))
                     .get();
 
             await().atMost(15, SECONDS)
@@ -681,5 +684,13 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
+    }
+
+    private byte[] toJsonBytes(OrderDto orderDto) {
+        try {
+            return jsonMapper.writeValueAsBytes(orderDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

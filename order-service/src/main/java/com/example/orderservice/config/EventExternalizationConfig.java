@@ -6,7 +6,7 @@
 
 package com.example.orderservice.config;
 
-import com.example.common.dtos.OrderDto;
+import com.example.orderservice.events.OrderCreatedEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.modulith.events.EventExternalizationConfiguration;
@@ -20,20 +20,22 @@ import org.springframework.modulith.events.RoutingTarget;
 // outside
 // the `com.example.orderservice` module boundaries, the `@Externalized` annotation will not be
 // processed
-// automatically. We must explicitly instruct Modulith to route this event type to the target topic.
+// automatically and Modulith will not record its publication in the outbox table.
+// Thus, we wrap it in an `OrderCreatedEvent` inside the module, and explicitly instruct Modulith
+// to route this event type to the target topic and map its payload to `OrderDto`.
 @Configuration(proxyBeanMethods = false)
 class EventExternalizationConfig {
 
     @Bean
     EventExternalizationConfiguration eventExternalizationConfiguration() {
         return EventExternalizationConfiguration.externalizing()
-                .selectByType(OrderDto.class)
+                .selectByType(OrderCreatedEvent.class)
                 .route(
-                        OrderDto.class,
+                        OrderCreatedEvent.class,
                         event ->
                                 RoutingTarget.forTarget("orders")
-                                        .andKey(String.valueOf(event.orderId())))
-                .mapping(OrderDto.class, event -> event)
+                                        .andKey(String.valueOf(event.order().orderId())))
+                .mapping(OrderCreatedEvent.class, OrderCreatedEvent::order)
                 .build();
     }
 }

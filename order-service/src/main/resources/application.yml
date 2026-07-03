@@ -9,13 +9,7 @@ spring:
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring:
-          json:
-            add:
-              type:
-                headers: true
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
@@ -39,15 +33,15 @@ spring:
         spring:
           json:
             trusted:
-              packages: 'com.example.common.dtos'
+              packages: '*'
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
   modulith:
     events:
-# to enable auto initialization need to add the dependency spring-modulith-starter-jpa and a datasource configuration
-#      jdbc:
-#        schema-initialization:
-#          enabled: true
+      # to enable auto initialization need to add the dependency spring-modulith-starter-jpa and a datasource configuration
+      #      jdbc:
+      #        schema-initialization:
+      #          enabled: true
       externalization:
         enabled: true
         mode: outbox

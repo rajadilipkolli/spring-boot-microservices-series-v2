@@ -22,20 +22,16 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 class OrderExternalizationIT extends AbstractIntegrationTest {
-
-    @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
         testKafkaListenerConfig.reset();
         orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch();
-        jdbcTemplate.execute("DELETE FROM event_publication");
+        jdbcTemplate.execute("DELETE FROM jobrunr_jobs");
     }
 
     @Test
@@ -70,14 +66,14 @@ class OrderExternalizationIT extends AbstractIntegrationTest {
                             assertThat(orderDto.status()).isEqualTo("NEW");
                         });
 
-        // Verify Modulith Outbox Event Publication
+        // Verify JobRunr Outbox Event Publication
         await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
                             Integer count =
                                     jdbcTemplate.queryForObject(
-                                            "SELECT count(*) FROM event_publication WHERE completion_date IS NOT NULL",
+                                            "SELECT count(*) FROM jobrunr_jobs WHERE state = 'SUCCEEDED'",
                                             Integer.class);
                             assertThat(count).isGreaterThanOrEqualTo(1);
                         });
