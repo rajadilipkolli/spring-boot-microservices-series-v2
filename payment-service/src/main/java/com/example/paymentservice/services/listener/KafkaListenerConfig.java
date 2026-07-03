@@ -18,6 +18,7 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 @EnableKafka
@@ -27,11 +28,14 @@ public class KafkaListenerConfig {
     private static final Logger log = LoggerFactory.getLogger(KafkaListenerConfig.class);
 
     private final PaymentOrderManageService paymentOrderManageService;
+    private final JsonMapper jsonMapper;
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
-    public KafkaListenerConfig(PaymentOrderManageService paymentOrderManageService) {
+    public KafkaListenerConfig(
+            PaymentOrderManageService paymentOrderManageService, JsonMapper jsonMapper) {
         this.paymentOrderManageService = paymentOrderManageService;
+        this.jsonMapper = jsonMapper;
     }
 
     // retries if processing of event fails
@@ -48,7 +52,8 @@ public class KafkaListenerConfig {
             exclude = {CustomerNotFoundException.class},
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
-    public void onEvent(OrderDto orderDto) {
+    public void onEvent(String orderDtoStr) throws tools.jackson.core.JacksonException {
+        OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,
@@ -66,13 +71,13 @@ public class KafkaListenerConfig {
      * retries This method is invoked when a message reaches the dead letter topic after exhausting
      * retry attempts
      *
-     * @param orderDto The failed order message that reached the DLT
+     * @param orderDtoStr The failed order message that reached the DLT
      * @param topic The Kafka topic from which the dead letter message was received
      */
     @DltHandler
-    public void dlt(OrderDto orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+    public void dlt(String orderDtoStr, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         // Log the failed message and topic at error level for monitoring/debugging
-        log.error("Received dead-letter message : {} from topic {}", orderDto, topic);
+        log.error("Received dead-letter message : {} from topic {}", orderDtoStr, topic);
         // Decrement latch to signal that a DLT message was processed
         // This is useful for testing and monitoring DLT handling
         deadLetterLatch.countDown();
