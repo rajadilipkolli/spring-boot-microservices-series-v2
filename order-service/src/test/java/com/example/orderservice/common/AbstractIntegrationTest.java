@@ -11,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
+import com.example.common.dtos.OrderDto;
 import com.example.orderservice.OrderServiceApplication;
 import com.example.orderservice.config.TestKafkaListenerConfig;
 import com.example.orderservice.repositories.OrderItemRepository;
@@ -100,5 +101,13 @@ public abstract class AbstractIntegrationTest {
                                 .withHeader(
                                         HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                                 .withBody(String.valueOf(status))));
+    }
+
+    protected byte[] toJsonBytes(OrderDto orderDto) {
+        try {
+            return jsonMapper.writeValueAsBytes(orderDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

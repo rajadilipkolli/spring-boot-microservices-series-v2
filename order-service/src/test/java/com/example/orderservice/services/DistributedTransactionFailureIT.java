@@ -146,12 +146,4 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
                             assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
                         });
     }
-
-    private byte[] toJsonBytes(OrderDto orderDto) {
-        try {
-            return jsonMapper.writeValueAsBytes(orderDto);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

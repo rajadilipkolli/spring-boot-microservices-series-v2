@@ -7,6 +7,7 @@
 package com.example.orderservice.config;
 
 import com.example.orderservice.events.OrderCreatedEvent;
+import com.example.orderservice.utils.AppConstants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.modulith.events.EventExternalizationConfiguration;
@@ -33,7 +34,7 @@ class EventExternalizationConfig {
                 .route(
                         OrderCreatedEvent.class,
                         event ->
-                                RoutingTarget.forTarget("orders")
+                                RoutingTarget.forTarget(AppConstants.ORDERS_TOPIC)
                                         .andKey(String.valueOf(event.order().orderId())))
                 .mapping(OrderCreatedEvent.class, OrderCreatedEvent::order)
                 .build();

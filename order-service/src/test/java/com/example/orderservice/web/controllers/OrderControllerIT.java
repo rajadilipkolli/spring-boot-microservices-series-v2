@@ -685,12 +685,4 @@ class OrderControllerIT extends AbstractIntegrationTest {
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
     }
-
-    private byte[] toJsonBytes(OrderDto orderDto) {
-        try {
-            return jsonMapper.writeValueAsBytes(orderDto);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

@@ -17,7 +17,9 @@ import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -103,12 +105,8 @@ class KafkaStreamsConfig {
     @Bean
     DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaProperties properties) {
         Map<String, Object> props = properties.buildProducerProperties();
-        props.put(
-                org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                org.apache.kafka.common.serialization.ByteArraySerializer.class);
-        props.put(
-                org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                org.apache.kafka.common.serialization.ByteArraySerializer.class);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
 
         DefaultKafkaProducerFactory<byte[], byte[]> factory =
                 new DefaultKafkaProducerFactory<>(props);
