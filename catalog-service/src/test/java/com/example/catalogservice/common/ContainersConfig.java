@@ -23,14 +23,14 @@ public class ContainersConfig {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.0"))
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.1"))
                 .withReuse(true);
     }
 
     @Bean
     @ServiceConnection
     LgtmStackContainer lgtmContainer() {
-        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.26.0"))
+        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.28.0"))
                 .withStartupTimeout(Duration.ofMinutes(2));
     }
 
