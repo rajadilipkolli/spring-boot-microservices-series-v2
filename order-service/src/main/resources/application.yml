@@ -48,6 +48,9 @@ spring:
 #      jdbc:
 #        schema-initialization:
 #          enabled: true
+      externalization:
+        enabled: true
+        mode: outbox
       republish-outstanding-events-on-restart: true
       completion-mode: archive
 
@@ -64,6 +67,7 @@ jobrunr:
     enabled: true
   background-job-server:
     enabled: true
+    poll-interval-in-seconds: 10
     metrics.enabled: true
   dashboard:
     enabled: true
