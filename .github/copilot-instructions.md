@@ -1,5 +1,8 @@
 ## Repository Overview
 
+> **Note:** For IDE-agnostic AI agent rules and skill playbooks, please also refer to [`AI.md`](../../AI.md) and the `.ai/skills/` directory in the root of the project.
+
+
 This repository implements a Spring Boot microservices reference architecture (API Gateway, Config Server, Eureka service registry, multiple domain services) wired together with Docker Compose for local development. Services communicate primarily via HTTP through the API Gateway and asynchronously via Kafka. Databases are PostgreSQL, and Liquibase is used for schema management.
 
 Keep guidance short and actionable — why an agent is here: to edit, extend, or debug services while preserving cross-service contracts and Docker-based local workflows.
