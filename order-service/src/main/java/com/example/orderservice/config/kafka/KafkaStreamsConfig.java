@@ -78,7 +78,7 @@ class KafkaStreamsConfig {
                     StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                     RecoveringDeserializationExceptionHandler.class);
             streamsConfiguration.put(
-                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
+                    RecoveringDeserializationExceptionHandler.RECOVERER,
                     deadLetterPublishingRecoverer);
 
             // Performance and reliability optimizations

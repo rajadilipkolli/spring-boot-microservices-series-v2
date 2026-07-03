@@ -12,7 +12,9 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.modulith.events.Externalized;
 
+@Externalized("orders::#{orderId()}")
 public record OrderDto(
         Long orderId,
         @Positive(message = "CustomerId should be positive") Long customerId,
