@@ -73,7 +73,7 @@ class OrderExternalizationIT extends AbstractIntegrationTest {
                         () -> {
                             Integer count =
                                     jdbcTemplate.queryForObject(
-                                            "SELECT count(*) FROM jobrunr_jobs WHERE state = 'SUCCEEDED'",
+                                            "SELECT count(*) FROM jobrunr_jobs WHERE state = 'SUCCEEDED' AND jobsignature LIKE '%externalize%'",
                                             Integer.class);
                             assertThat(count).isGreaterThanOrEqualTo(1);
                         });
