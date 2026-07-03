@@ -29,6 +29,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -64,7 +65,9 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, byte[]> kafkaTemplate;
+
+    @Autowired protected JdbcTemplate jdbcTemplate;
 
     @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
 
@@ -98,5 +101,13 @@ public abstract class AbstractIntegrationTest {
                                 .withHeader(
                                         HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                                 .withBody(String.valueOf(status))));
+    }
+
+    protected byte[] toJsonBytes(OrderDto orderDto) {
+        try {
+            return jsonMapper.writeValueAsBytes(orderDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -15,8 +15,11 @@ import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 import com.example.common.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Properties;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -33,14 +36,15 @@ import org.apache.kafka.streams.state.Stores;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
 import org.springframework.kafka.support.serializer.JacksonJsonSerde;
@@ -78,7 +82,7 @@ class KafkaStreamsConfig {
                     StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                     RecoveringDeserializationExceptionHandler.class);
             streamsConfiguration.put(
-                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
+                    RecoveringDeserializationExceptionHandler.RECOVERER,
                     deadLetterPublishingRecoverer);
 
             // Performance and reliability optimizations
@@ -99,10 +103,16 @@ class KafkaStreamsConfig {
     }
 
     @Bean
-    DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(
-            ProducerFactory<byte[], byte[]> producerFactory) {
+    DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaProperties properties) {
+        Map<String, Object> props = properties.buildProducerProperties();
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+
+        DefaultKafkaProducerFactory<byte[], byte[]> factory =
+                new DefaultKafkaProducerFactory<>(props);
+
         return new DeadLetterPublishingRecoverer(
-                new KafkaTemplate<>(producerFactory),
+                new KafkaTemplate<>(factory),
                 (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
     }
 

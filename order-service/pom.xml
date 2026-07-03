@@ -92,6 +92,14 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-jpa</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-jobrunr</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -244,6 +252,11 @@
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
             <version>4.2.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -517,7 +530,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.35.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader> <!-- specify either content or file, but not both -->
