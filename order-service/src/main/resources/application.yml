@@ -61,7 +61,7 @@ jobrunr:
     enabled: true
   background-job-server:
     enabled: true
-    poll-interval-in-seconds: 10
+    poll-interval-in-seconds: 1
     metrics.enabled: true
   dashboard:
     enabled: true

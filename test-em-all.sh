@@ -46,8 +46,8 @@ function jq() {
 : ${CUSTOMER_NAME=dockerCustomer001}
 : ${SERVICE_WAIT_TIMEOUT=100}
 : ${INITIAL_SLEEP_TIME=45}
-: ${RETRY_SLEEP_TIME=10}
-: ${ORDER_PROCESSING_SLEEP_TIME=10}
+: ${RETRY_SLEEP_TIME=5}
+: ${ORDER_PROCESSING_SLEEP_TIME=3}
 : ${KAFKA_STARTUP_SLEEP_TIME=8}
 : ${DETAILED_LOGS=false}
 : ${PARALLEL_SETUP=false}
@@ -991,6 +991,11 @@ waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/ac
 waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
 waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
 waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+
+log_info "Warming up services via API Gateway /api/generate endpoint..."
+curl -s -k "http://$HOST:$PORT/api/generate" > /dev/null 2>&1
+log_info "Sleeping for 10 sec for warmup processing to complete..."
+sleep 10
 
 log_info "Setting up test data..."
 setupTestData || error_exit "Test data setup failed!"
