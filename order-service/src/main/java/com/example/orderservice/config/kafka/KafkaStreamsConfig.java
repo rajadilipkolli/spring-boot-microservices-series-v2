@@ -12,7 +12,7 @@ import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.RECOVER_DLQ_TOPIC;
 import static com.example.orderservice.utils.AppConstants.STOCK_ORDERS_TOPIC;
 
-import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.services.OrderManageService;
 import java.time.Duration;
 import java.util.Map;

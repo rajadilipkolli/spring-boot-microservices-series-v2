@@ -11,9 +11,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.OrderServiceApplication;
 import com.example.orderservice.config.TestKafkaListenerConfig;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;

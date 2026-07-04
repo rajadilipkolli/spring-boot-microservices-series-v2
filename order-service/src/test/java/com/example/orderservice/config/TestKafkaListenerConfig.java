@@ -6,7 +6,7 @@
 
 package com.example.orderservice.config;
 
-import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

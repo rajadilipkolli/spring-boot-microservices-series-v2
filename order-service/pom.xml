@@ -103,7 +103,8 @@
 
         <dependency>
             <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot3</artifactId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>2.4.0</version>
         </dependency>
         <!-- To fix Spring Cloud LoadBalancer is currently working with the default
 			cache. You can switch to using Caffeine cache, by adding it -->

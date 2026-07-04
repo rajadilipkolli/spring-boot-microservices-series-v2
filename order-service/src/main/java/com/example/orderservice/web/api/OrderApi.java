@@ -6,7 +6,7 @@
 
 package com.example.orderservice.web.api;
 
-import com.example.common.dtos.OrderDto;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

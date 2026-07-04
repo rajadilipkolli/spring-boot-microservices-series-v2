@@ -9,10 +9,10 @@ package com.example.orderservice.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.util.TestData;
 import java.time.Duration;
 import java.util.Optional;
