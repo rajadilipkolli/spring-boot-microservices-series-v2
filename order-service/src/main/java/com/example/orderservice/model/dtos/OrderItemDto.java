@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.common.dtos;
+package com.example.orderservice.model.dtos;
 
 import java.io.Serial;
 import java.io.Serializable;

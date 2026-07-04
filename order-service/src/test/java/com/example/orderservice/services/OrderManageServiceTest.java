@@ -14,8 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;

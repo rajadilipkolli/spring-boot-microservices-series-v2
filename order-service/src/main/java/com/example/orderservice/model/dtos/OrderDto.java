@@ -1,18 +1,21 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
-package com.example.common.dtos;
+package com.example.orderservice.model.dtos;
 
+import com.example.orderservice.utils.AppConstants;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.modulith.events.Externalized;
 
+@Externalized(AppConstants.ORDERS_TOPIC + "::#{orderId()}")
 public record OrderDto(
         Long orderId,
         @Positive(message = "CustomerId should be positive") Long customerId,

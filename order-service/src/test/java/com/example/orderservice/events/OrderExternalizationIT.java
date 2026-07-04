@@ -12,9 +12,9 @@ import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.model.Address;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;

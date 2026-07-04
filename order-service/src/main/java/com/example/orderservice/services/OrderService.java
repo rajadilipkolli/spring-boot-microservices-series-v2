@@ -6,13 +6,12 @@
 
 package com.example.orderservice.services;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.events.OrderCreatedEvent;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
@@ -97,7 +96,7 @@ public class OrderService {
             Order savedOrder = this.orderRepository.save(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            eventPublisher.publishEvent(new OrderCreatedEvent(persistedOrderDto));
+            eventPublisher.publishEvent(persistedOrderDto);
             return this.orderMapper.toResponse(savedOrder);
         } else {
             log.debug(
@@ -132,7 +131,7 @@ public class OrderService {
             savedOrders.forEach(
                     order -> {
                         OrderDto dto = orderMapper.toDto(order);
-                        eventPublisher.publishEvent(new OrderCreatedEvent(dto));
+                        eventPublisher.publishEvent(dto);
                     });
 
             return savedOrders.stream().map(this.orderMapper::toResponse).toList();
@@ -215,7 +214,7 @@ public class OrderService {
                     log.info(
                             "Retrying Order :{}",
                             LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                    eventPublisher.publishEvent(new OrderCreatedEvent(persistedOrderDto));
+                    eventPublisher.publishEvent(persistedOrderDto);
                 });
     }
 }

@@ -61,7 +61,7 @@ jobrunr:
     enabled: true
   background-job-server:
     enabled: true
-    poll-interval-in-seconds: 5
+    poll-interval-in-seconds: 5  #This is the minimum interval in seconds between two polls for new jobs. Default is 15 seconds.
     metrics.enabled: true
   dashboard:
     enabled: true
