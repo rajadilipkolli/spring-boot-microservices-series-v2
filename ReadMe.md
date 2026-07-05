@@ -100,7 +100,7 @@ This project implements a **microservices pattern** where different functionalit
 
 ### Architecture Highlights:
 - 🌐 **API Gateway** as the single entry point
-- 📋 **Service Registry** for dynamic service discovery  
+- 📋 **Service Registry** for dynamic service discovery
 - ⚙️ **Configuration Server** for centralized config management
 - 📨 **Event-driven communication** via Kafka
 - 📊 **Distributed monitoring** and tracing
@@ -448,7 +448,7 @@ src/main/resources/db/changelog/
 **🐘 PostgreSQL Services**
 - 📚 Catalog Service
 - 📦 Inventory Service
-- 🛍️ Order Service  
+- 🛍️ Order Service
 - 💳 Payment Service
 
 *Features: ACID compliance, complex queries, relational integrity*

@@ -485,14 +485,12 @@ public Serde<OrderDto> orderDtoSerde() {
   },
   "key": 12345,
   "value": {
-    "@class": "com.example.inventoryservice.model.payload.OrderDto",
     "orderId": 12345,
     "customerId": 67890,
     "status": "CONFIRMED",
     "source": null,
     "items": [
       {
-        "@class": "com.example.inventoryservice.model.payload.OrderItemDto",
         "productCode": "LAPTOP_001",
         "productName": "Gaming Laptop",
         "productPrice": 1299.99,
@@ -520,7 +518,7 @@ Message Header (Variable length):
 
 # JSON payload as bytes
 Value Bytes: [0x7B, 0x22, 0x40, 0x63, 0x6C, 0x61, 0x73, 0x73, ...]
-Decoded: {"@class":"com.example.inventoryservice.model.payload.OrderDto",...}
+Decoded: {"orderId":12345,"customerId":67890,...}
 ```
 
 ## ⏰ Window Processing

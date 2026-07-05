@@ -778,7 +778,7 @@ COMMIT_INTERVAL_MS_CONFIG: "1000" // Flush dirty entries every second
 This comprehensive data analysis covers:
 
 - **📊 Complete data flow** from API to storage layers
-- **📄 Real sample data** showing actual message structures  
+- **📄 Real sample data** showing actual message structures
 - **💾 Storage mechanisms** including cache, RocksDB, and changelog
 - **🔄 Data transformations** through stream processing
 - **🗂️ Serialization formats** and binary representations

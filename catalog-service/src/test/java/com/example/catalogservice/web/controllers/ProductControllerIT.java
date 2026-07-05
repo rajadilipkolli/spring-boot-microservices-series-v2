@@ -73,6 +73,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
+        mockWebServer.setDispatcher(new mockwebserver3.QueueDispatcher());
         testKafkaListenerConfig.reset();
         List<Product> productList =
                 List.of(
