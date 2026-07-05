@@ -52,7 +52,7 @@ Update `src/main/resources/db/changelog/db.changelog-master.xml` to include the 
 ### 4. Verify with Tests
 Verify the migration by running the service's integration test suite:
 ```powershell
-.\mvnw.cmd verify -Dtest=*IntTest
+.\mvnw.cmd verify -Dit.test=*IntTest
 ```
 This ensures the migration applies successfully to a Testcontainers PostgreSQL instance.
 

@@ -8,10 +8,10 @@ package com.example.inventoryservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;

@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.config;
 
-import com.example.common.dtos.OrderDto;
+import com.example.inventoryservice.model.payload.OrderDto;
 import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

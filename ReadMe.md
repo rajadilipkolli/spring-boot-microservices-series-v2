@@ -100,7 +100,7 @@ This project implements a **microservices pattern** where different functionalit
 
 ### Architecture Highlights:
 - 🌐 **API Gateway** as the single entry point
-- 📋 **Service Registry** for dynamic service discovery  
+- 📋 **Service Registry** for dynamic service discovery
 - ⚙️ **Configuration Server** for centralized config management
 - 📨 **Event-driven communication** via Kafka
 - 📊 **Distributed monitoring** and tracing
@@ -448,7 +448,7 @@ src/main/resources/db/changelog/
 **🐘 PostgreSQL Services**
 - 📚 Catalog Service
 - 📦 Inventory Service
-- 🛍️ Order Service  
+- 🛍️ Order Service
 - 💳 Payment Service
 
 *Features: ACID compliance, complex queries, relational integrity*
@@ -609,6 +609,7 @@ We welcome contributions from the community! Here's how you can help:
 - 🧪 **Testing:** Add tests for new functionality
 - 🎨 **Code Style:** Follow existing code conventions
 - 💬 **Discussion:** Open an issue first for significant changes
+- 🏗️ **Kafka Event Contract:** Kafka event DTOs are resolved by explicit consumer-side typing (`JsonSerde<T>` / manual `readValue(..., Dto.class)`), not by the `type`/`__TypeId__` header. Producers must not add type headers.
 
 ### 🤗 Community Standards
 

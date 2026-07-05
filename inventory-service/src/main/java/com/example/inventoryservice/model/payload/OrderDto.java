@@ -1,5 +1,10 @@
-/*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
-package com.example.common.dtos;
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.model.payload;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
@@ -30,5 +35,12 @@ public record OrderDto(
             return this;
         }
         return new OrderDto(orderId(), customerId(), status, source(), items());
+    }
+
+    public OrderDto withStatusAndSource(String status, String source) {
+        if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
+            return this;
+        }
+        return new OrderDto(orderId(), customerId(), status, source, items());
     }
 }

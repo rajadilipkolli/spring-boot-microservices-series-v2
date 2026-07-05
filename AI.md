@@ -21,7 +21,7 @@ To ensure consistency and follow project-specific standards, specialized playboo
 ## 🛠️ Global Constraints
 - **Formatting**: Use Google Java Format (AOSP style) enforced by Spotless.
 - **Linting**: Checkstyle must pass on every build.
-- **Testing**: Use Testcontainers for integration tests; verify with `./mvnw.cmd verify`.
+- **Testing**: Use Testcontainers for integration tests; verify with `./mvnw verify` (Mac/Linux) or `mvnw.cmd verify` (Windows).
 - **Modularity**: Respect package-private visibility where required by Spring Modulith.
 
 Please use these resources to provide accurate and idiomatic assistance.

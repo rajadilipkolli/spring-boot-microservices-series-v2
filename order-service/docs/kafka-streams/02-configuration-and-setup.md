@@ -106,13 +106,7 @@ spring:
             serde: org.apache.kafka.common.serialization.Serdes$LongSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
-        
-        # 🔒 SECURITY & SERIALIZATION
-        spring:
-          json:
-            trusted:
-              packages: 'com.example.common.dtos'
-        
+
         # 🎯 PROCESSING GUARANTEE
         processing.guarantee: exactly_once_v2
 ```
@@ -403,10 +397,6 @@ public StreamsUncaughtExceptionHandler streamsUncaughtExceptionHandler() {
 // JSON serialization for OrderDto
 JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
 
-// Trusted packages for security
-streamsConfiguration.put(
-    "spring.json.trusted.packages", 
-    "com.example.common.dtos");
 ```
 
 ### Custom Serde Configuration
@@ -416,9 +406,8 @@ streamsConfiguration.put(
 public Serde<OrderDto> orderDtoSerde() {
     JsonSerde<OrderDto> serde = new JsonSerde<>(OrderDto.class);
     
-    // Configure JsonMapper
+    // Configure JsonMapper to ignore type headers
     serde.configure(Map.of(
-        JsonDeserializer.TRUSTED_PACKAGES, "com.example.common.dtos",
         JsonDeserializer.USE_TYPE_INFO_HEADERS, false,
         JsonSerializer.ADD_TYPE_INFO_HEADERS, false
     ), false);
@@ -426,6 +415,10 @@ public Serde<OrderDto> orderDtoSerde() {
     return serde;
 }
 ```
+
+> [!NOTE]
+> **Event Contract Decoupling**
+> We explicitly disable type-info headers (`USE_TYPE_INFO_HEADERS=false`, `ADD_TYPE_INFO_HEADERS=false` or `noTypeInfo()`) to ensure consumers explicitly deserialize payloads rather than relying on producer-provided class metadata (e.g. `__TypeId__`). This decouples our microservices and improves resilience by not tightly binding consumers to producer package structures.
 
 ### Serialization Best Practices
 
