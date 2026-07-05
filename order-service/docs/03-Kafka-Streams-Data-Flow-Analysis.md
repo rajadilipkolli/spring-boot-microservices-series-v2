@@ -652,10 +652,6 @@ graph TB
 // From KafkaStreamsConfig.java
 JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
 
-// Trusted packages configuration
-streamsConfiguration.put(
-    "spring.json.trusted.packages", 
-    "com.example.common.dtos");
 ```
 
 ### Serialized Data Examples
@@ -663,14 +659,12 @@ streamsConfiguration.put(
 #### JSON Serialized OrderDto
 ```json
 {
-  "@class": "com.example.inventoryservice.model.payload.OrderDto",
   "orderId": 12345,
   "customerId": 67890,
   "status": "CONFIRMED",
   "source": null,
   "items": [
     {
-      "@class": "com.example.inventoryservice.model.payload.OrderItemDto",
       "productCode": "LAPTOP_001",
       "productName": "Gaming Laptop",
       "productPrice": 1299.99,

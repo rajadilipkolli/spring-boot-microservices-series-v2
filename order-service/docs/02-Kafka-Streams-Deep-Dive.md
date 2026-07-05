@@ -136,12 +136,12 @@ paymentStream
 
 #### 2. **KStream vs KTable**
 - **KStream**: Represents a **stream of records** (insert-only)
-  - Each record is an independent event
-  - Suitable for event logs, transactions
-  
+    - Each record is an independent event
+    - Suitable for event logs, transactions
+
 - **KTable**: Represents a **changelog stream** (upsert semantics)
-  - Latest value for each key
-  - Suitable for current state, aggregations
+    - Latest value for each key
+    - Suitable for current state, aggregations
 
 ```java
 // KStream: Every order event
@@ -294,24 +294,24 @@ paymentStream
 ### Key Benefits in This Project
 
 1. **Automatic Event Correlation**
-   - No manual caching or correlation logic
-   - Built-in join operations handle complexity
+    - No manual caching or correlation logic
+    - Built-in join operations handle complexity
 
 2. **Time Window Management**
-   - 10-second window for payment + inventory events
-   - Automatic cleanup of expired windows
+    - 10-second window for payment + inventory events
+    - Automatic cleanup of expired windows
 
 3. **Exactly-Once Processing**
-   - Prevents duplicate order processing
-   - Critical for financial transactions
+    - Prevents duplicate order processing
+    - Critical for financial transactions
 
 4. **Fault Tolerance**
-   - Automatic recovery from failures
-   - State store replication
+    - Automatic recovery from failures
+    - State store replication
 
 5. **Scalability**
-   - Horizontal scaling through partitioning
-   - Load balancing across instances
+    - Horizontal scaling through partitioning
+    - Load balancing across instances
 
 ---
 

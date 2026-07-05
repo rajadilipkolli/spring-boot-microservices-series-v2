@@ -12,7 +12,9 @@ import static org.awaitility.Awaitility.await;
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.util.MockTestData;
+import com.example.inventoryservice.utils.AppConstants;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -54,11 +56,8 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         inventoryJOOQRepository.deleteByProductCode("P001");
 
         // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
-        com.example.inventoryservice.model.payload.ProductDto productDto =
-                new com.example.inventoryservice.model.payload.ProductDto(
-                        "P001", "Product 1", "Description 1", 10.0);
-        kafkaTemplate.send(
-                com.example.inventoryservice.utils.AppConstants.PRODUCT_TOPIC, "1001", productDto);
+        ProductDto productDto = new ProductDto("P001", "Product 1", "Description 1", 10.0);
+        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, "1001", productDto);
 
         await().untilAsserted(
                         () -> {
