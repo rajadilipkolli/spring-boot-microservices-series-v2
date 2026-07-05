@@ -1,8 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli. ***/
 package com.example.paymentservice.util;
 
-import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.payload.OrderDto;
 
 public class TestData {
     public static Customer getCustomer() {

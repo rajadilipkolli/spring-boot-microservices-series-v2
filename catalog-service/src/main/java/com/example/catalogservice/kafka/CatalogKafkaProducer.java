@@ -15,6 +15,14 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+/**
+ * Kafka producer for catalog events.
+ *
+ * <p>Note: StringSerializer + use-native-encoding=true is deliberately chosen on the
+ * inventory-out-0 binding to pre-serialize the JSON payload and avoid Kafka type-header
+ * (__TypeId__) leakage. The contentType=application/json binding property is decorative under
+ * native encoding.
+ */
 @Service
 @Loggable
 public class CatalogKafkaProducer {

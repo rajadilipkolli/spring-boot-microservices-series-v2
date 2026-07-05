@@ -1,5 +1,5 @@
 /*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
-package com.example.common.dtos;
+package com.example.paymentservice.model.payload;
 
 import java.io.Serial;
 import java.io.Serializable;

@@ -118,7 +118,7 @@ class KafkaStreamsConfig {
 
     @Bean
     KStream<String, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+        Serde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
 
         // Log important config information for troubleshooting
         log.info(
@@ -146,7 +146,8 @@ class KafkaStreamsConfig {
     @Bean
     KTable<String, OrderDto> kTable(StreamsBuilder streamsBuilder) {
         log.info("Inside fetching KTable values");
-        JacksonJsonSerde<@NonNull OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<@NonNull OrderDto> orderSerde =
+                new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
 
         // KTable naturally keeps only the latest value for each key
         KTable<String, OrderDto> ordersTable =

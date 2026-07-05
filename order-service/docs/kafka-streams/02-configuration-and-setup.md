@@ -427,6 +427,10 @@ public Serde<OrderDto> orderDtoSerde() {
 }
 ```
 
+> [!NOTE]
+> **Event Contract Decoupling**
+> We explicitly disable type-info headers (`USE_TYPE_INFO_HEADERS=false`, `ADD_TYPE_INFO_HEADERS=false` or `noTypeInfo()`) to ensure consumers explicitly deserialize payloads rather than relying on producer-provided class metadata (e.g. `__TypeId__`). This decouples our microservices and improves resilience by not tightly binding consumers to producer package structures.
+
 ### Serialization Best Practices
 
 ```java

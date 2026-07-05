@@ -6,8 +6,8 @@
 
 package com.example.inventoryservice.util;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
 import java.math.BigDecimal;
 import java.util.List;
 

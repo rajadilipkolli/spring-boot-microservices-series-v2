@@ -4,7 +4,7 @@ package com.example.paymentservice.common;
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-import com.example.common.dtos.OrderDto;
+import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
 import org.springframework.beans.factory.annotation.Autowired;

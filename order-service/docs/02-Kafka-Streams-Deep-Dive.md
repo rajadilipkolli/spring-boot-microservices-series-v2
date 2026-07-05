@@ -432,9 +432,6 @@ streamsConfiguration.put(
   "originalOffset": 12345,
   "exception": "JsonParseException: Unexpected character...",
   "timestamp": "2024-01-15T10:30:00Z",
-  "headers": {
-    "__TypeId__": "com.example.common.dtos.OrderDto"
-  },
   "value": "corrupted-json-payload"
 }
 ```

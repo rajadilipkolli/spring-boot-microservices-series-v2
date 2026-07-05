@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.config;
 
-import com.example.common.dtos.OrderDto;
+import com.example.inventoryservice.model.payload.OrderDto;
 import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.services.InventoryOrderManageService;
 import com.example.inventoryservice.services.ProductManageService;

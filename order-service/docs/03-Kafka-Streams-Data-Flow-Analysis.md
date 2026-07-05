@@ -663,14 +663,14 @@ streamsConfiguration.put(
 #### JSON Serialized OrderDto
 ```json
 {
-  "@class": "com.example.common.dtos.OrderDto",
+  "@class": "com.example.inventoryservice.model.payload.OrderDto",
   "orderId": 12345,
   "customerId": 67890,
   "status": "CONFIRMED",
   "source": null,
   "items": [
     {
-      "@class": "com.example.common.dtos.OrderItemDto",
+      "@class": "com.example.inventoryservice.model.payload.OrderItemDto",
       "productCode": "LAPTOP_001",
       "productName": "Gaming Laptop",
       "productPrice": 1299.99,

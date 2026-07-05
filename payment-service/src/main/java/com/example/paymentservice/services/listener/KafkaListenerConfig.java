@@ -1,9 +1,9 @@
 /*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
-import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
 import java.util.concurrent.CountDownLatch;

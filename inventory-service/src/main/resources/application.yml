@@ -29,11 +29,11 @@ spring:
           json:
             add:
               type:
-                headers: true
+                headers: false
   threads:
     virtual:
       enabled: true
   http:
-      clients.imperative.factory: jdk
+    clients.imperative.factory: jdk
   main:
     web-application-type: servlet

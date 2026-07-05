@@ -609,6 +609,7 @@ We welcome contributions from the community! Here's how you can help:
 - 🧪 **Testing:** Add tests for new functionality
 - 🎨 **Code Style:** Follow existing code conventions
 - 💬 **Discussion:** Open an issue first for significant changes
+- 🏗️ **Kafka Event Contract:** Kafka event DTOs are resolved by explicit consumer-side typing (`JsonSerde<T>` / manual `readValue(..., Dto.class)`), not by the `type`/`__TypeId__` header. Producers must not add type headers.
 
 ### 🤗 Community Standards
 
