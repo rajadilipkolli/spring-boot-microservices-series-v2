@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/catalog-service-cache/api/cacheable"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Cache-Control": "max-age=60"
+    },
+    "body": "{\"message\": \"cached response\"}"
+  }
+}
