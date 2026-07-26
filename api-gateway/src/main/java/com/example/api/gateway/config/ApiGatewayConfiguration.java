@@ -30,7 +30,10 @@ class ApiGatewayConfiguration {
                                                                 .addRequestHeader(
                                                                         "MyHeader", "MyURI")
                                                                 .addRequestParameter(
-                                                                        "Param", "MyValue"))
+                                                                        "Param", "MyValue")
+                                                                .addResponseHeader(
+                                                                        "X-Response-Header",
+                                                                        "Transformed"))
                                         .uri(httpbinUri))
                 .route(
                         p ->
