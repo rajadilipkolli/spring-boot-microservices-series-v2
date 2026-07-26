@@ -1,4 +1,7 @@
 {
+  "scenarioName": "Cache Scenario",
+  "requiredScenarioState": "Started",
+  "newScenarioState": "Hit",
   "request": {
     "method": "GET",
     "url": "/catalog-service-cache/api/cacheable"

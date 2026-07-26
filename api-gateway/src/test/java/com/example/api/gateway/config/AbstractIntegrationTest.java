@@ -64,6 +64,11 @@ public abstract class AbstractIntegrationTest {
                             CacheAndTransformationIntegrationTest.class.getSimpleName()
                                     + "/catalog-service-cache.json")
                     .withMappingFromResource(
+                            "catalog-service-cache-second",
+                            CacheAndTransformationIntegrationTest.class,
+                            CacheAndTransformationIntegrationTest.class.getSimpleName()
+                                    + "/catalog-service-cache-second.json")
+                    .withMappingFromResource(
                             "transform-service",
                             CacheAndTransformationIntegrationTest.class,
                             CacheAndTransformationIntegrationTest.class.getSimpleName()

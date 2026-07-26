@@ -22,7 +22,7 @@ spring:
         webflux:
           filter:
             local-response-cache:
-              enabled: true
+              enabled: false
           discovery:
             locator:
               enabled: true

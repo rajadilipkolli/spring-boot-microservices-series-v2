@@ -13,7 +13,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 @Order(1)
@@ -44,16 +43,7 @@ public class CorrelationIdGatewayFilterFactory extends AbstractGatewayFilterFact
                             .build();
 
             // Add correlation ID to response
-            String finalCorrelationId = correlationId;
-            exchange.getResponse()
-                    .beforeCommit(
-                            () -> {
-                                exchange.getResponse()
-                                        .getHeaders()
-                                        .add(CORRELATION_ID_HEADER, finalCorrelationId);
-                                return Mono.empty();
-                            });
-
+            exchange.getResponse().getHeaders().add(CORRELATION_ID_HEADER, correlationId);
             return chain.filter(exchange.mutate().request(request).build());
         };
     }
