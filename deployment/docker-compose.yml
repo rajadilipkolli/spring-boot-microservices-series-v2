@@ -22,7 +22,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.8.0-alpine'
+    image: 'redis:8.8.1-alpine'
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - '6379:6379'
@@ -37,7 +37,7 @@ services:
       - microservice-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.29.1
+    image: grafana/otel-lgtm:0.29.2
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     container_name: grafana-lgtm
     environment:
