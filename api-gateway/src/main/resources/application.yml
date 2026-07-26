@@ -20,9 +20,12 @@ spring:
     gateway:
       server:
         webflux:
-          filter:
+          global-filter:
             local-response-cache:
               enabled: false
+          filter:
+            local-response-cache:
+              enabled: true
           discovery:
             locator:
               enabled: true
