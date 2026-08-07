@@ -142,7 +142,7 @@
         <dependency>
             <groupId>org.jobrunr</groupId>
             <artifactId>jobrunr-spring-boot-4-starter</artifactId>
-            <version>8.8.0</version>
+            <version>8.8.1</version>
         </dependency>
 
 
