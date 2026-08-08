@@ -170,21 +170,21 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8888:8888"
     depends_on:
       tempo:
         condition: service_healthy
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=config-server
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_SECURITY_USER_NAME=dockerUser
+      - SPRING_SECURITY_USER_PASSWORD=dockerSecret
     networks:
       - microservice-network
-    environment:
-      SPRING_PROFILES_ACTIVE: native
-      SPRING_SECURITY_USER_NAME: dockerUser
-      SPRING_SECURITY_USER_PASSWORD: dockerSecret
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   naming-server:
     container_name: naming-server
@@ -193,7 +193,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8761:8761"
     networks:
@@ -205,11 +205,10 @@ services:
         condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=naming-server
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   api-gateway:
     container_name: api-gateway
@@ -231,18 +230,17 @@ services:
       tempo:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=api-gateway
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   catalog-service:
     container_name: catalog-service
@@ -264,17 +262,16 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
       api-gateway:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=catalog-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   inventory-service:
     container_name: inventory-service
@@ -296,15 +293,14 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=inventory-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   order-service:
     container_name: order-service
@@ -327,15 +323,14 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=order-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   payment-service:
     container_name: payment-service
@@ -357,14 +352,13 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
-      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://tempo:4318
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=payment-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   retailstore-webapp:
@@ -375,7 +369,8 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
       - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=retail-store-webapp
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin1234
     ports:
@@ -393,9 +388,6 @@ services:
       resources:
         limits:
           memory: 700m
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
     restart: unless-stopped
 
   ## Observability
@@ -405,7 +397,7 @@ services:
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
       loki:
-        condition: service_healthy
+        condition: service_started
       prometheus:
         condition: service_healthy
       tempo:
@@ -437,32 +429,6 @@ services:
       - "3100:3100"
     networks:
       - microservice-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3100/ready || exit 1" ]
-      interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 90s
-
-  promtail:
-    image: grafana/promtail:3.6.11
-    container_name: promtail
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    volumes:
-      - ./config/promtail/promtail.yml:/etc/promtail/config.yml
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      loki:
-        condition: service_healthy
-    networks:
-      - microservice-network
-    healthcheck:
-      test: [ "CMD", "ls", "/etc/promtail/config.yml" ]
-      interval: 15s
-      timeout: 5s
-      retries: 3
 
   prometheus:
     image: prom/prometheus:v3.13.2
@@ -486,7 +452,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:3.0.2
+    image: grafana/tempo:2.4.0
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -505,6 +471,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+      
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    networks:
+      - microservice-network
+    depends_on:
+      grafana:
+        condition: service_started
 
   alertmanager:
     image: prom/alertmanager:v0.33.1
