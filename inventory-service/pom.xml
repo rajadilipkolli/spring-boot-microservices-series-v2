@@ -530,6 +530,7 @@
                         <exclude>**/dtos/*</exclude>
                         <exclude>**/exceptions/*</exclude>
                         <exclude>**/*Constants*</exclude>
+                        <exclude>**/agent/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>
