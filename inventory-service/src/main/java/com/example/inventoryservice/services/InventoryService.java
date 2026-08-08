@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -97,21 +98,25 @@ public class InventoryService {
         return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
     }
 
-    @Transactional
     public void updateGeneratedInventory() {
         IntStream.rangeClosed(0, 100)
                 .forEach(
                         operand -> {
-                            int randomQuantity = RAND.nextInt(10_000) + 1;
-                            Optional<Inventory> inventoryByProductCode =
-                                    findInventoryByProductCode("ProductCode" + operand);
-                            inventoryByProductCode.ifPresent(
-                                    inventoryFromDB ->
-                                            updateInventory(
-                                                    inventoryFromDB,
-                                                    new InventoryRequest(
-                                                            "ProductCode" + operand,
-                                                            randomQuantity)));
+                            try {
+                                int randomQuantity = RAND.nextInt(10_000) + 1;
+                                Optional<Inventory> inventoryByProductCode =
+                                        findInventoryByProductCode("ProductCode" + operand);
+                                inventoryByProductCode.ifPresent(
+                                        inventoryFromDB ->
+                                                updateInventory(
+                                                        inventoryFromDB,
+                                                        new InventoryRequest(
+                                                                "ProductCode" + operand,
+                                                                randomQuantity)));
+                            } catch (OptimisticLockingFailureException e) {
+                                // Ignore optimistic locking failures when concurrently updating
+                                // random inventory
+                            }
                         });
     }
 
