@@ -215,6 +215,18 @@ Credential management checklist
 - **Metrics Generation**: Automatic service graphs and span metrics
 - **Storage**: Local file system (suitable for development)
 
+> [!IMPORTANT]
+> **Tempo 3.x Configuration Requirements**
+> The `config/tempo/tempo.yml` must use the Tempo 3.x schema and target `grafana/tempo:3.0.2` in monolithic mode.
+> 
+> Key 3.x-specific requirements include:
+> - No `ingester` or `compactor` sections.
+> - No `local_blocks` processor in `metrics_generator`.
+> - The `overrides` block must use the scoped overrides structure (e.g., `defaults.metrics_generator.processors`).
+> - The block format must be set to `vParquet4` or later (`storage.trace.block.version: vParquet4`).
+>
+> **Note**: Any future `grafana/tempo` image bump requires re-checking the config schema against the Tempo migration docs to prevent startup failures.
+
 ## 🎯 Data Sources (Auto-configured)
 
 ### 📊 Prometheus

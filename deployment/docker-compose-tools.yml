@@ -207,7 +207,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=naming-server
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   api-gateway:
@@ -452,7 +452,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.10.7
+    image: grafana/tempo:3.0.2
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -466,7 +466,7 @@ services:
     networks:
       - microservice-network
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3100/ready" ]
+      test: [ "CMD", "/tempo", "-version" ]
       interval: 10s
       timeout: 5s
       retries: 3

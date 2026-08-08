@@ -9,25 +9,20 @@ distributor:
     otlp:
       protocols:
         grpc:
+          endpoint: 0.0.0.0:4317
         http:
+          endpoint: 0.0.0.0:4318
     jaeger:
       protocols:
-        thrift_http:
-        grpc:
-        thrift_binary:
-        thrift_compact:
+        thrift_http: null
+        grpc: null
+        thrift_binary: null
+        thrift_compact: null
     zipkin:
       endpoint: 0.0.0.0:9411
-
-ingester:
-  trace_idle_period: 10s
-  max_block_bytes: 1_000_000
-  max_block_duration: 5m
-
 querier:
   search:
     query_timeout: 30s
-
 metrics_generator:
   registry:
     external_labels:
@@ -35,20 +30,13 @@ metrics_generator:
   storage:
     path: /tmp/tempo/generator/wal
     remote_write:
-      - url: http://host.docker.internal:9090/api/v1/write
-        send_exemplars: true
-  traces_storage:
-    path: /tmp/tempo/generator/traces
-  processor:
-    local_blocks:
-      filter_server_spans: false
-
+    - url: http://host.docker.internal:9090/api/v1/write
+      send_exemplars: true
 query_frontend:
   metrics:
     concurrent_jobs: 8
-    target_bytes_per_job: 1.25e+09
+    target_bytes_per_job: 1250000000.0
     max_duration: 3h
-
 storage:
   trace:
     backend: local
@@ -56,9 +44,14 @@ storage:
       path: /tmp/tempo/wal
     local:
       path: /tmp/tempo/blocks
-
+    block:
+      version: vParquet4
 overrides:
-  metrics_generator_processors: [service-graphs, span-metrics, local-blocks]
-
+  defaults:
+    metrics_generator:
+      processors:
+      - service-graphs
+      - span-metrics
 usage_report:
   reporting_enabled: false
+stream_over_http_enabled: true
