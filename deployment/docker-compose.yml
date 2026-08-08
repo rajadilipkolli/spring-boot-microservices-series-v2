@@ -53,7 +53,7 @@ services:
       - microservice-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.100.0
+    image: otel/opentelemetry-collector-contrib:0.158.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
@@ -165,7 +165,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8888:8888"
     depends_on:
@@ -188,7 +188,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
     ports:
       - "8761:8761"
     networks:
@@ -201,7 +201,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=naming-server
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   api-gateway:
@@ -388,7 +388,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1050m
 
 networks:
   microservice-network:
