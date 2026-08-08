@@ -247,7 +247,7 @@
                 <executions>
                     <execution>
                         <id>copy-opentelemetry-agent</id>
-                        <phase>generate-resources</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
