@@ -41,7 +41,6 @@ metrics_generator:
     path: /tmp/tempo/generator/traces
   processor:
     local_blocks:
-      flush_to_storage: true
       filter_server_spans: false
 
 query_frontend:
