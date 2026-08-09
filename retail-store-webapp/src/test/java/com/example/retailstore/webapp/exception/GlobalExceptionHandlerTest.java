@@ -42,8 +42,7 @@ class GlobalExceptionHandlerTest {
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
         // Act
-        org.springframework.mock.web.MockHttpServletRequest request =
-                new org.springframework.mock.web.MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleValidationExceptions(ex, request);
         ProblemDetail result = (ProblemDetail) responseEntity.getBody();
@@ -70,8 +69,7 @@ class GlobalExceptionHandlerTest {
         ConstraintViolationException ex = new ConstraintViolationException("message", violations);
 
         // Act
-        org.springframework.mock.web.MockHttpServletRequest request =
-                new org.springframework.mock.web.MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         ResponseEntity<?> responseEntity =
                 (ResponseEntity<?>) exceptionHandler.handleConstraintViolationException(ex, request);
@@ -93,8 +91,7 @@ class GlobalExceptionHandlerTest {
                 HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null);
 
         // Act
-        org.springframework.mock.web.MockHttpServletRequest request =
-                new org.springframework.mock.web.MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleHttpException(ex, request);
         ProblemDetail result = (ProblemDetail) responseEntity.getBody();
@@ -112,8 +109,7 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("unexpected error");
 
         // Act
-        org.springframework.mock.web.MockHttpServletRequest request =
-                new org.springframework.mock.web.MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/test");
         ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleGenericException(ex, request);
         ProblemDetail result = (ProblemDetail) responseEntity.getBody();
