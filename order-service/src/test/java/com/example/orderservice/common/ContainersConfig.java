@@ -6,12 +6,10 @@
 
 package com.example.orderservice.common;
 
-import java.time.Duration;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -24,13 +22,5 @@ public class ContainersConfig {
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.1"))
                 .withReuse(true);
-    }
-
-    @Bean
-    @ServiceConnection
-    @RestartScope
-    LgtmStackContainer lgtmContainer() {
-        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.30.1"))
-                .withStartupTimeout(Duration.ofMinutes(2));
     }
 }
