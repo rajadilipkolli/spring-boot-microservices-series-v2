@@ -258,4 +258,21 @@ class OrderControllerTest {
                         .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @WithMockUser(username = "test-username")
+    void createOrder_shouldRejectInvalidOrderItemRequest() throws Exception {
+        CustomerRequest customerRequest =
+                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 5000);
+        // Invalid order item: blank product code, negative quantity, negative price
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, new BigDecimal("-10.00")));
+        Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
+        CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
+
+        mockMvc.perform(post("/api/orders")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
+                .andExpect(status().isBadRequest());
+    }
 }

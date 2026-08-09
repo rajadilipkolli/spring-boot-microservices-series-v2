@@ -9,4 +9,4 @@ public record CustomerRequest(
         @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid") String email,
         @NotBlank(message = "Customer Phone number is required") String phone,
         String address,
-        int amountAvailable) {}
+        Integer amountAvailable) {}
