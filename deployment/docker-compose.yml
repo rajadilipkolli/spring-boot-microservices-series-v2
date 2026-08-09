@@ -134,7 +134,7 @@ services:
       - KC_HEALTH_ENABLED=true
       - KC_METRICS_ENABLED=true
       - KC_TRACING_ENABLED=true
-      - KC_TELEMETRY_ENDPOINT=http://grafana-lgtm:4318
+      - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
       - KC_TELEMETRY_PROTOCOL=http/protobuf
       - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
@@ -365,6 +365,7 @@ services:
       - OTEL_SERVICE_NAME=retail-store-webapp
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
       - "8080:8080"
     networks:
@@ -389,6 +390,15 @@ services:
       resources:
         limits:
           memory: 1400m
+
+  retailstore-webapp-proxy:
+    image: alpine/socat
+    container_name: retailstore-webapp-proxy
+    command: tcp-listen:9191,fork,bind=127.0.0.1 tcp-connect:keycloak:9191
+    network_mode: "service:retailstore-webapp"
+    depends_on:
+      retailstore-webapp:
+        condition: service_started
 
 networks:
   microservice-network:
