@@ -51,7 +51,7 @@ class InventoryController {
             return inventoryServiceClient.getInventories(page);
         } catch (Exception e) {
             log.error("Error fetching inventories: {}", LogSanitizer.sanitizeException(e));
-            throw new InvalidRequestException("Failed to fetch inventoryies. Please try again later.");
+            throw new InvalidRequestException("Failed to fetch inventories. Please try again later.");
         }
     }
 

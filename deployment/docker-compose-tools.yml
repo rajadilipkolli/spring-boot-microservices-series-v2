@@ -176,6 +176,8 @@ services:
     depends_on:
       tempo:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=config-server
@@ -230,6 +232,8 @@ services:
       tempo:
         condition: service_healthy
       loki:
+        condition: service_started
+      otel-collector:
         condition: service_started
       redis:
         condition: service_healthy
@@ -381,9 +385,19 @@ services:
     depends_on:
       keycloak:
         condition: service_started
+      redis:
+        condition: service_healthy
       naming-server:
         condition: service_started
       api-gateway:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
         condition: service_started
     deploy:
       resources:

@@ -61,7 +61,9 @@ public class ProductService {
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
-    @Cacheable(cacheNames = "products", key = "{#pageNo, #pageSize, #sortBy, #sortDir}")
+    @Cacheable(
+            cacheNames = "products",
+            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
@@ -197,6 +199,7 @@ public class ProductService {
 
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Void> deleteProductById(Long id) {
         return productRepository
                 .findById(id)
@@ -251,6 +254,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Boolean> generateProducts() {
         return Flux.range(0, 101)
                 .flatMap(
