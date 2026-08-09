@@ -61,7 +61,7 @@ public class ProductService {
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
-    @Cacheable(cacheNames = "products", key = "#pageNo")
+    @Cacheable(cacheNames = "products", key = "{#pageNo, #pageSize, #sortBy, #sortDir}")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);

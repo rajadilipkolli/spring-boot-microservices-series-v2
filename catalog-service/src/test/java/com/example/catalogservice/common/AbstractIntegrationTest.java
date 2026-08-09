@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -47,4 +48,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OutboxPublisher outboxPublisher;
 
     @Autowired protected OutboxEventRepository outboxEventRepository;
+
+    @Autowired protected CacheManager cacheManager;
 }
