@@ -170,7 +170,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "8888:8888"
     depends_on:
@@ -193,7 +193,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "8761:8761"
     networks:
@@ -217,7 +217,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "8765:8765"
     networks:
@@ -249,7 +249,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18080:18080"
     networks:
@@ -280,7 +280,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18181:18181"
     networks:
@@ -299,7 +299,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=inventory-service
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     restart: unless-stopped
 
   order-service:
@@ -309,7 +309,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18282:18282"
       - "28282:28282"
