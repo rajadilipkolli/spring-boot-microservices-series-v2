@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -39,7 +40,11 @@ class GlobalExceptionHandlerTest {
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
         // Act
-        ProblemDetail result = exceptionHandler.handleValidationExceptions(ex);
+        org.springframework.mock.web.MockHttpServletRequest request =
+                new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleValidationExceptions(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -63,7 +68,12 @@ class GlobalExceptionHandlerTest {
         ConstraintViolationException ex = new ConstraintViolationException("message", violations);
 
         // Act
-        ProblemDetail result = exceptionHandler.handleConstraintViolationException(ex);
+        org.springframework.mock.web.MockHttpServletRequest request =
+                new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity =
+                (ResponseEntity<?>) exceptionHandler.handleConstraintViolationException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -81,7 +91,11 @@ class GlobalExceptionHandlerTest {
                 HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null);
 
         // Act
-        ProblemDetail result = exceptionHandler.handleHttpException(ex);
+        org.springframework.mock.web.MockHttpServletRequest request =
+                new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleHttpException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -96,7 +110,11 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("unexpected error");
 
         // Act
-        ProblemDetail result = exceptionHandler.handleGenericException(ex);
+        org.springframework.mock.web.MockHttpServletRequest request =
+                new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleGenericException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
