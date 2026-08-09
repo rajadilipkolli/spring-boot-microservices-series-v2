@@ -22,13 +22,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
     @Test
     void testProducts() {
         // Example stub for catalog service
-        gatewayServiceMock.stubFor(
-                get(urlEqualTo("/catalog-service/api/catalog?pageNo=0"))
-                        .willReturn(
-                                aResponse()
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
+        gatewayServiceMock.stubFor(get(urlEqualTo("/catalog-service/api/catalog?pageNo=0"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
                             {
                               "data": [
                                 {
@@ -93,13 +90,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
     @Test
     void testCreateProduct() {
         // Example stub for catalog service
-        gatewayServiceMock.stubFor(
-                post(urlEqualTo("/catalog-service/api/catalog"))
-                        .willReturn(
-                                aResponse()
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
+        gatewayServiceMock.stubFor(post(urlEqualTo("/catalog-service/api/catalog"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
                             {
                               "id": 100,
                               "productCode": "NEWPROD001",

@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.config;
 
+import com.example.retailstore.webapp.services.SecurityHelper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -22,6 +23,11 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class TestSecurityConfig {
+
+    @Bean
+    public SecurityHelper securityHelper(OAuth2AuthorizedClientService authorizedClientService) {
+        return new SecurityHelper(authorizedClientService);
+    }
 
     @Bean
     @Primary

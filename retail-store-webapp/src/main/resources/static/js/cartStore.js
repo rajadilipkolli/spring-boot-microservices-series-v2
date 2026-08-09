@@ -1,10 +1,40 @@
-const RETAILSTORE_STATE_KEY = "RETAILSTORE_STATE";
+let cachedCartKey = null;
+const authChannel = new BroadcastChannel('retailstore_auth_channel');
+
+const getCartKey = function() {
+    const userMeta = document.querySelector('meta[name="_user_identifier"]');
+    const userIdentifier = (userMeta && userMeta.content) ? userMeta.content : 'ANONYMOUS';
+    const newKey = "RETAILSTORE_STATE_" + userIdentifier;
+    
+    if (cachedCartKey && cachedCartKey !== newKey) {
+        authChannel.postMessage(newKey);
+    }
+    cachedCartKey = newKey;
+    return newKey;
+};
+
+getCartKey();
+authChannel.postMessage(cachedCartKey);
+
+authChannel.onmessage = function(event) {
+    if (getCartKey() !== event.data) {
+        window.location.reload();
+    }
+};
+
+window.addEventListener('storage', function(e) {
+    if (e.key === getCartKey()) {
+        updateCartItemCount();
+        document.dispatchEvent(new CustomEvent('cart-updated', { detail: getCart() }));
+    }
+});
 
 const getCart = function() {
-    let cart = localStorage.getItem(RETAILSTORE_STATE_KEY)
+    let key = getCartKey();
+    let cart = localStorage.getItem(key)
     if (!cart) {
         cart = JSON.stringify({items:[], totalAmount:0 });
-        localStorage.setItem(RETAILSTORE_STATE_KEY, cart)
+        localStorage.setItem(key, cart)
     }
     return JSON.parse(cart)
 }
@@ -23,7 +53,7 @@ const addProductToCart = function(product) {
         });
     }
     cart.totalAmount = getCartTotal();
-    localStorage.setItem(RETAILSTORE_STATE_KEY, JSON.stringify(cart));
+    localStorage.setItem(getCartKey(), JSON.stringify(cart));
     updateCartItemCount();
     document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
@@ -41,13 +71,13 @@ const updateProductQuantity = function(code, quantity) {
         }
     }
     cart.totalAmount = getCartTotal();
-    localStorage.setItem(RETAILSTORE_STATE_KEY, JSON.stringify(cart));
+    localStorage.setItem(getCartKey(), JSON.stringify(cart));
     updateCartItemCount();
     document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
 
 const deleteCart = function() {
-    localStorage.removeItem(RETAILSTORE_STATE_KEY)
+    localStorage.removeItem(getCartKey())
     updateCartItemCount();
 }
 

@@ -13,6 +13,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import tools.jackson.databind.json.JsonMapper;
 
 @ActiveProfiles({PROFILE_TEST})
@@ -24,6 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
 public abstract class AbstractIntegrationTest {
 
     @Autowired protected MockMvc mockMvc;
+
+    @Autowired protected MockMvcTester mockMvcTester;
 
     @Autowired protected JsonMapper jsonMapper;
 

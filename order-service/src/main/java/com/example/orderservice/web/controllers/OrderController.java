@@ -159,7 +159,8 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/customer/{id}")
-    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }

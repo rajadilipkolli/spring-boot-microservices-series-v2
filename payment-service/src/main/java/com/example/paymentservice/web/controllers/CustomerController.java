@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import com.example.paymentservice.config.logging.Loggable;
@@ -63,6 +63,14 @@ class CustomerController {
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new CustomerNotFoundException(name));
+    }
+
+    @GetMapping("/by-email")
+    ResponseEntity<CustomerResponse> getCustomerByEmail(@RequestParam String email) {
+        return customerService
+                .findCustomerByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> CustomerNotFoundException.forEmail(email));
     }
 
     @PostMapping

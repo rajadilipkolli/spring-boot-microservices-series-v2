@@ -117,8 +117,9 @@ class InventoryControllerTest {
                     String location = result.getResponse().getHeader("Location");
                     assertThat(location)
                             .isNotNull()
-                            .satisfiesAnyOf(loc -> assertThat(loc).endsWith("/login"), loc -> assertThat(loc)
-                                    .contains("/oauth2/authorization/"));
+                            .satisfiesAnyOf(
+                                    loc -> assertThat(loc).endsWith("/login"),
+                                    loc -> assertThat(loc).contains("/oauth2/authorization/"));
                 });
     }
 

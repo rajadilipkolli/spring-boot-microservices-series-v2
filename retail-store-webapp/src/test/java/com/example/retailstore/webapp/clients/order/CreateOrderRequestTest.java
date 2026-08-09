@@ -21,8 +21,7 @@ class CreateOrderRequestTest {
     @Test
     void testDeserialize() throws Exception {
         // Setup
-        String jsonContent =
-                """
+        String jsonContent = """
                 {
                     "customer": {
                         "name": "retail",
