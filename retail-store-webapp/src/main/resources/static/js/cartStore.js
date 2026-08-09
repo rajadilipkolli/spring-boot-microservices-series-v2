@@ -28,16 +28,23 @@ async function saveCart(cart) {
     if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
 
     try {
-        await fetch('/api/cart', {
+        const response = await fetch('/api/cart', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(cart)
         });
-        authChannel.postMessage('CART_UPDATED');
-        updateCartItemCountUI(cart.items ? cart.items.length : 0);
-        document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+        if (response.ok) {
+            const updatedCart = await response.json();
+            authChannel.postMessage('CART_UPDATED');
+            updateCartItemCountUI(updatedCart.items ? updatedCart.items.length : 0);
+            document.dispatchEvent(new CustomEvent('cart-updated', { detail: updatedCart }));
+        } else {
+            throw new Error(`Failed to save cart: ${response.status}`);
+        }
     } catch (e) {
         console.error("Failed to save cart", e);
+        // On conflict, refresh cart
+        authChannel.postMessage('CART_UPDATED');
     }
 }
 
@@ -75,19 +82,31 @@ async function updateProductQuantity(code, quantity) {
 }
 
 async function deleteCart() {
+    let cart = await fetchCart();
     const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
     const headers = {};
     if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
 
+    let url = '/api/cart';
+    if (cart && cart.revision) {
+        url += `?revision=${encodeURIComponent(cart.revision)}`;
+    }
+
     try {
-        await fetch('/api/cart', { method: 'DELETE', headers });
-        authChannel.postMessage('CART_UPDATED');
-        let emptyCart = { items: [], totalAmount: 0 };
-        updateCartItemCountUI(0);
-        document.dispatchEvent(new CustomEvent('cart-updated', { detail: emptyCart }));
+        const response = await fetch(url, { method: 'DELETE', headers });
+        if (response.ok) {
+            authChannel.postMessage('CART_UPDATED');
+            let emptyCart = { items: [], totalAmount: 0 };
+            updateCartItemCountUI(0);
+            document.dispatchEvent(new CustomEvent('cart-updated', { detail: emptyCart }));
+        } else {
+            throw new Error(`Failed to delete cart: ${response.status}`);
+        }
     } catch (e) {
         console.error("Failed to delete cart", e);
+        // On conflict, refresh cart
+        authChannel.postMessage('CART_UPDATED');
     }
 }
 
@@ -101,15 +120,16 @@ function updateCartItemCountUI(count) {
     if (badge) badge.innerText = '(' + count + ')';
 }
 
-// Initial load
-fetchCart().then(cart => {
-    updateCartItemCountUI(cart.items ? cart.items.length : 0);
-    // document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
-});
-
 // Since Alpine calls getCartTotal occasionally or synchronously, we return totalAmount if available, but mostly it's fetched asynchronously.
 // To avoid breaking legacy code that expects getCart() synchronously:
 let localCachedCart = { items: [], totalAmount: 0 };
+
+// Initial load
+fetchCart().then(cart => {
+    localCachedCart = cart;
+    updateCartItemCountUI(cart.items ? cart.items.length : 0);
+});
+
 document.addEventListener('cart-updated', (e) => {
     localCachedCart = e.detail;
 });

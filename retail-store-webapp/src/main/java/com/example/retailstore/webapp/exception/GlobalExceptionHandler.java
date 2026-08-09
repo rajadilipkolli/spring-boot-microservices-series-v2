@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     Object handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     Object handleConstraintViolationException(ConstraintViolationException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Constraint Violation");
@@ -62,15 +62,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({HttpClientErrorException.class, HttpServerErrorException.class})
     Object handleHttpException(Exception ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
-
-        log.error("HTTP error occurred: {}", LogSanitizer.sanitizeException(ex));
         HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof HttpClientErrorException clientError) {
             status = clientError.getStatusCode();
         } else if (ex instanceof HttpServerErrorException serverError) {
             status = serverError.getStatusCode();
         }
+
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), status);
+
+        log.error("HTTP error occurred: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
         problemDetail.setTitle("Service Error");
@@ -82,7 +83,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidRequestException.class)
     Object handleInvalidRequestException(InvalidRequestException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Bad Request");
@@ -94,7 +95,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     Object handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.NOT_FOUND);
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problemDetail.setTitle("Not Found");
@@ -106,7 +107,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public Object handleSpringAccessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.FORBIDDEN);
 
         log.warn(
                 "Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}",
@@ -121,9 +122,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     Object handleGenericException(Exception ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex);
-
         log.error("Unexpected error occurred: {}", LogSanitizer.sanitizeException(ex));
+
+        if (!isApiRequest(request))
+            return renderUiError(
+                    "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
@@ -136,9 +140,10 @@ public class GlobalExceptionHandler {
         return request.getRequestURI().startsWith("/api/");
     }
 
-    private ModelAndView renderUiError(Exception ex) {
+    private ModelAndView renderUiError(String message, HttpStatusCode status) {
         ModelAndView mav = new ModelAndView("error");
-        mav.addObject("message", ex.getMessage());
+        mav.setStatus(status);
+        mav.addObject("message", message);
         return mav;
     }
 }

@@ -15,10 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.servlet.ModelAndView;
 
 class GlobalExceptionHandlerTest {
 
@@ -121,5 +123,22 @@ class GlobalExceptionHandlerTest {
         assertThat(result.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThat(result.getTitle()).isEqualTo("Internal Server Error");
         assertThat(result.getDetail()).isEqualTo("An unexpected error occurred. Please try again later.");
+    }
+
+    @Test
+    void handleGenericException_uiPath_shouldReturnModelAndView() {
+        // Arrange
+        Exception ex = new RuntimeException("unexpected error");
+
+        // Act
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/orders");
+        ModelAndView result = (ModelAndView) exceptionHandler.handleGenericException(ex, request);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getViewName()).isEqualTo("error");
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getModel()).containsEntry("message", "An unexpected error occurred. Please try again later.");
     }
 }

@@ -9,9 +9,13 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.AuthenticatedPrincipalOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
@@ -24,8 +28,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 public class TestSecurityConfig {
 
     @Bean
-    public SecurityHelper securityHelper(
-            org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager authorizedClientManager) {
+    public SecurityHelper securityHelper(OAuth2AuthorizedClientManager authorizedClientManager) {
         return new SecurityHelper(authorizedClientManager);
     }
 
@@ -37,16 +40,13 @@ public class TestSecurityConfig {
 
     @Bean
     @Primary
-    public org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager authorizedClientManager(
+    public OAuth2AuthorizedClientManager authorizedClientManager(
             ClientRegistrationRepository clientRegistrationRepository) {
-        org.springframework.security.oauth2.client.OAuth2AuthorizedClientService authorizedClientService =
+        OAuth2AuthorizedClientService authorizedClientService =
                 new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
-        org.springframework.security.oauth2.client.web.AuthenticatedPrincipalOAuth2AuthorizedClientRepository
-                authorizedClientRepository =
-                        new org.springframework.security.oauth2.client.web
-                                .AuthenticatedPrincipalOAuth2AuthorizedClientRepository(authorizedClientService);
-        return new org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager(
-                clientRegistrationRepository, authorizedClientRepository);
+        AuthenticatedPrincipalOAuth2AuthorizedClientRepository authorizedClientRepository =
+                new AuthenticatedPrincipalOAuth2AuthorizedClientRepository(authorizedClientService);
+        return new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
     }
 
     private ClientRegistration testClientRegistration() {

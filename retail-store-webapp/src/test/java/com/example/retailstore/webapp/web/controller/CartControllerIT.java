@@ -8,6 +8,7 @@ import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.model.CartItem;
 import com.example.retailstore.webapp.model.CartState;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,7 +21,7 @@ class CartControllerIT extends AbstractIntegrationTest {
         MockHttpSession session = new MockHttpSession();
 
         CartItem item = new CartItem("PROD-1", "Product 1", 10.0, 1);
-        CartState cart = new CartState(List.of(item), 10.0);
+        CartState cart = new CartState(List.of(item), 10.0, UUID.randomUUID().toString());
         String requestJson = jsonMapper.writeValueAsString(cart);
 
         // 1. Add item to cart
