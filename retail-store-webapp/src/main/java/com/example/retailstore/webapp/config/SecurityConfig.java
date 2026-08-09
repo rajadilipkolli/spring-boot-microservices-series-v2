@@ -37,8 +37,11 @@ class SecurityConfig {
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .csrf(
+                        csrf -> csrf.ignoringRequestMatchers("/api/register") // Allow registration without CSRF
+                                .csrfTokenRepository(
+                                        CookieCsrfTokenRepository.withHttpOnlyFalse()) // Store token in a cookie
+                        )
                 .oauth2Login(oauth2 -> oauth2.loginPage("/login")
                         .defaultSuccessUrl("/", true)
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))
