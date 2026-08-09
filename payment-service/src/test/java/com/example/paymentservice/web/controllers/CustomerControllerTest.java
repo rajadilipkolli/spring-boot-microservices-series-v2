@@ -1,7 +1,8 @@
-/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,10 +35,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = CustomerController.class)
@@ -45,6 +48,8 @@ import tools.jackson.databind.json.JsonMapper;
 class CustomerControllerTest {
 
     @Autowired private MockMvc mockMvc;
+
+    @Autowired private MockMvcTester mockMvcTester;
 
     @MockitoBean private CustomerService customerService;
 
@@ -186,9 +191,15 @@ class CustomerControllerTest {
             given(customerService.findCustomerByEmail(email))
                     .willReturn(Optional.of(customerResponse));
 
-            mockMvc.perform(get("/api/customers/by-email").param("email", email))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.name", is(customerResponse.name())));
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.OK)
+                    .bodyJson()
+                    .extractingPath("$.name")
+                    .isEqualTo(customerResponse.name());
         }
 
         @Test
@@ -196,20 +207,29 @@ class CustomerControllerTest {
             String email = "notfound@email.com";
             given(customerService.findCustomerByEmail(email)).willReturn(Optional.empty());
 
-            mockMvc.perform(get("/api/customers/by-email").param("email", email))
-                    .andExpect(status().isNotFound())
-                    .andExpect(
-                            header().string(
-                                            HttpHeaders.CONTENT_TYPE,
-                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
-                    .andExpect(
-                            jsonPath(
-                                    "$.type", is("https://api.microservices.com/errors/not-found")))
-                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
-                    .andExpect(jsonPath("$.status", is(404)))
-                    .andExpect(
-                            jsonPath("$.detail")
-                                    .value("Customer with Email 'notfound@email.com' not found"));
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.NOT_FOUND)
+                    .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                    .bodyJson()
+                    .satisfies(
+                            json -> {
+                                assertThat(json)
+                                        .extractingPath("$.type")
+                                        .isEqualTo(
+                                                "https://api.microservices.com/errors/not-found");
+                                assertThat(json)
+                                        .extractingPath("$.title")
+                                        .isEqualTo("Customer Not Found");
+                                assertThat(json).extractingPath("$.status").isEqualTo(404);
+                                assertThat(json)
+                                        .extractingPath("$.detail")
+                                        .isEqualTo(
+                                                "Customer with Email 'notfound@email.com' not found");
+                            });
         }
     }
 

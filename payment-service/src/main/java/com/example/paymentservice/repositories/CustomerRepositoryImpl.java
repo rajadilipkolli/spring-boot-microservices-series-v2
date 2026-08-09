@@ -72,14 +72,19 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     @Override
     public Optional<Customer> findByEmail(String customerEmail) {
+        String normalizedEmail =
+                customerEmail == null ? null : customerEmail.toLowerCase(Locale.ROOT);
         return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.equalIgnoreCase(customerEmail))
+                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(normalizedEmail))
                 .map(r -> r.into(Customer.class));
     }
 
     @Override
     @Transactional
     public Customer save(Customer customer) {
+        if (customer.getEmail() != null) {
+            customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
+        }
         if (customer.getId() == null) {
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext
