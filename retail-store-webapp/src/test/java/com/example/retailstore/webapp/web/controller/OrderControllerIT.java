@@ -27,7 +27,7 @@ import org.springframework.http.MediaType;
 class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
-    void testCreateOrder() throws Exception {
+    void testCreateOrder() {
         CustomerRequest customerRequest =
                 new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 0);
         Address address = new Address("Line1", "Line2", "City", "State", "Zip", "Country");
@@ -70,15 +70,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void testGetOrder() throws Exception {
+    void testGetOrder() {
         OrderResponse orderResponse = new OrderResponse();
         orderResponse.setOrderId(1L);
         orderResponse.setCustomerId(2L);
         CustomerResponse customerResponse =
-                new CustomerResponse(2L, "Test User", "testEmail@gmail.com", "1234567890", "Test Address", 0);
+                new CustomerResponse(2L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
         orderResponse.setCustomer(customerResponse); // Set the customer in the expected response
         gatewayServiceMock.stubFor(
-                get(urlEqualTo("/payment-service/api/customers/by-email?email=testEmail%40gmail.com"))
+                get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
                         .willReturn(aResponse()
                                 .withStatus(HttpStatus.OK.value())
                                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -93,7 +93,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders/1")
-                .with(oidcLogin().idToken(token -> token.claim("email", "testEmail@gmail.com")))
+                .with(oidcLogin().idToken(token -> token.claim("email", "testemail@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -104,7 +104,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void testGetOrders() throws Exception {
+    void testGetOrders() {
         PagedResult<OrderResponse> pagedResult =
                 new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);
 
@@ -145,12 +145,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void testGetOrder_Forbidden() throws Exception {
+    void testGetOrder_Forbidden() {
         OrderResponse orderResponse = new OrderResponse();
         orderResponse.setOrderId(1L);
         orderResponse.setCustomerId(2L);
         CustomerResponse orderCustomer =
-                new CustomerResponse(2L, "Test User", "testEmail@gmail.com", "1234567890", "Test Address", 0);
+                new CustomerResponse(2L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
         orderResponse.setCustomer(orderCustomer);
 
         CustomerResponse loggedInCustomer =
