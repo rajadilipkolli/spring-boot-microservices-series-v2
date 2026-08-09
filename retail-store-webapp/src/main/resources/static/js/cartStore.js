@@ -1,8 +1,33 @@
+let cachedCartKey = null;
+const authChannel = new BroadcastChannel('retailstore_auth_channel');
+
 const getCartKey = function() {
     const userMeta = document.querySelector('meta[name="_user_identifier"]');
     const userIdentifier = (userMeta && userMeta.content) ? userMeta.content : 'ANONYMOUS';
-    return "RETAILSTORE_STATE_" + userIdentifier;
+    const newKey = "RETAILSTORE_STATE_" + userIdentifier;
+    
+    if (cachedCartKey && cachedCartKey !== newKey) {
+        authChannel.postMessage(newKey);
+    }
+    cachedCartKey = newKey;
+    return newKey;
 };
+
+getCartKey();
+authChannel.postMessage(cachedCartKey);
+
+authChannel.onmessage = function(event) {
+    if (getCartKey() !== event.data) {
+        window.location.reload();
+    }
+};
+
+window.addEventListener('storage', function(e) {
+    if (e.key === getCartKey()) {
+        updateCartItemCount();
+        document.dispatchEvent(new CustomEvent('cart-updated', { detail: getCart() }));
+    }
+});
 
 const getCart = function() {
     let key = getCartKey();

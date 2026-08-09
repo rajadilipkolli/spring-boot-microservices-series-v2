@@ -17,9 +17,11 @@ public class KeycloakProperties {
     private String adminClientId;
     private String adminClientSecret;
 
-    @NotBlank(message = "Keycloak admin username must not be blank") private String adminUsername;
+    @NotBlank(message = "Keycloak admin username must not be blank")
+    private String adminUsername;
 
-    @NotBlank(message = "Keycloak admin password must not be blank") private String adminPassword;
+    @NotBlank(message = "Keycloak admin password must not be blank")
+    private String adminPassword;
 
     // Getters and Setters
     public String getServerUrl() {

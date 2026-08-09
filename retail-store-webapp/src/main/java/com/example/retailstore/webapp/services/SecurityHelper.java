@@ -1,5 +1,6 @@
 package com.example.retailstore.webapp.services;
 
+import java.util.Locale;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -46,10 +47,14 @@ public class SecurityHelper {
 
     public String getLoggedInUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof OAuth2AuthenticationToken)) {
+        if (authentication == null) {
             return null;
         }
-        DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
-        return principal.getEmail();
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
+            String email = principal.getEmail();
+            return email != null ? email.toLowerCase(Locale.ROOT) : null;
+        }
+        return authentication.getName().toLowerCase(Locale.ROOT);
     }
 }

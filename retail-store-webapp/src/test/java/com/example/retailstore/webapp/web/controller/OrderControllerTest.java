@@ -41,6 +41,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -50,6 +51,9 @@ class OrderControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private MockMvcTester mockMvcTester;
 
     @MockitoBean
     private OrderServiceClient orderServiceClient;
@@ -169,7 +173,7 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
-    void getOrder_shouldReturnForbiddenWhenCustomerIdDoesNotMatch() throws Exception {
+    void getOrder_shouldReturnNotFoundWhenCustomerIdDoesNotMatch() throws Exception {
         String orderNumber = "ORDER-123";
         OrderResponse orderResponse = orderResponseList.getFirst();
         // The mock user has customerId = 1 (from setUp), we mock the order to belong to customerId = 999
@@ -283,10 +287,13 @@ class OrderControllerTest {
         Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
-        mockMvc.perform(post("/api/orders")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
-                .andExpect(status().isBadRequest());
+        mockMvcTester
+                .post()
+                .uri("/api/orders")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonMapper.writeValueAsString(createOrderRequest))
+                .assertThat()
+                .hasStatus(HttpStatus.BAD_REQUEST);
     }
 }

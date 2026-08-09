@@ -11,7 +11,7 @@
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
-    <meta name="_user_identifier" sec:authorize="isAuthenticated()" th:content="${#authentication.name}"/>
+    <meta name="_user_identifier" sec:authorize="isAuthenticated()" th:content="${@securityHelper.getLoggedInUserEmail()}"/>
     <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css">
     <link rel="stylesheet" href="/webjars/font-awesome/css/all.css">
     <link rel="stylesheet" href="/css/styles.css">
