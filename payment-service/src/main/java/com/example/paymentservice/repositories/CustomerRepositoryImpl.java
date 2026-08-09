@@ -73,7 +73,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Override
     public Optional<Customer> findByEmail(String customerEmail) {
         return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(customerEmail))
+                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.equalIgnoreCase(customerEmail))
                 .map(r -> r.into(Customer.class));
     }
 

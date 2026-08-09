@@ -62,9 +62,22 @@ class OrderController {
         log.info("Fetching order details for orderNumber: {}", LogSanitizer.sanitizeForLog(orderNumber));
         try {
             OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
-            CustomerResponse customerResponse = customerServiceClient.getCustomerById(orderResponse.getCustomerId());
-            orderResponse.updateCustomerDetails(customerResponse);
+            String email = securityHelper.getLoggedInUserEmail();
+            CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
+
+            if (!orderResponse.getCustomerId().equals(loggedInCustomer.customerId())) {
+                log.warn(
+                        "User {} attempted to fetch order {} belonging to customer {}",
+                        email,
+                        orderNumber,
+                        orderResponse.getCustomerId());
+                throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
+            }
+
+            orderResponse.updateCustomerDetails(loggedInCustomer);
             return orderResponse;
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error(
                     "Error fetching order {}: {}",
@@ -83,7 +96,9 @@ class OrderController {
     @ResponseBody
     PagedResult<OrderResponse> getOrders() {
         log.info("Fetching orders");
-        return orderServiceClient.getOrders(getHeaders());
+        String email = securityHelper.getLoggedInUserEmail();
+        CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
+        return orderServiceClient.getOrdersByCustomer(getHeaders(), loggedInCustomer.customerId());
     }
 
     private Map<String, ?> getHeaders() {
@@ -96,10 +111,10 @@ class OrderController {
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
         log.info("Creating order: {}", LogSanitizer.sanitizeForLog(String.valueOf(orderRequest)));
         try {
-            CustomerResponse customerResponse = customerServiceClient.getCustomerByName(
-                    orderRequest.customer().name());
+            String email = securityHelper.getLoggedInUserEmail();
+            CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
 
-            OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(customerResponse.customerId());
+            OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(loggedInCustomer.customerId());
             return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
         } catch (InvalidRequestException e) {
             throw e;

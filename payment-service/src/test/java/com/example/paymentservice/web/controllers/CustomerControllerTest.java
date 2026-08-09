@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
@@ -176,6 +176,40 @@ class CustomerControllerTest {
                     .andExpect(
                             jsonPath("$.detail")
                                     .value("Customer with Name 'junitCustomer' not found"));
+        }
+
+        @Test
+        void shouldFindCustomerByEmail() throws Exception {
+            String email = "junit@email.com";
+            CustomerResponse customerResponse =
+                    new CustomerResponse(1L, "text 1", email, "9876543210", "junitAddress", 100);
+            given(customerService.findCustomerByEmail(email))
+                    .willReturn(Optional.of(customerResponse));
+
+            mockMvc.perform(get("/api/customers/by-email").param("email", email))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is(customerResponse.name())));
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingCustomerByEmail() throws Exception {
+            String email = "notfound@email.com";
+            given(customerService.findCustomerByEmail(email)).willReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/customers/by-email").param("email", email))
+                    .andExpect(status().isNotFound())
+                    .andExpect(
+                            header().string(
+                                            HttpHeaders.CONTENT_TYPE,
+                                            is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                    .andExpect(
+                            jsonPath(
+                                    "$.type", is("https://api.microservices.com/errors/not-found")))
+                    .andExpect(jsonPath("$.title", is("Customer Not Found")))
+                    .andExpect(jsonPath("$.status", is(404)))
+                    .andExpect(
+                            jsonPath("$.detail")
+                                    .value("Customer with Email 'notfound@email.com' not found"));
         }
     }
 

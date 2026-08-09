@@ -71,6 +71,10 @@ public class CustomerService {
         return customerRepository.findByName(name);
     }
 
+    public Optional<CustomerResponse> findCustomerByEmail(String email) {
+        return customerRepository.findByEmail(email).map(customerMapper::toResponse);
+    }
+
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
         Optional<Customer> customerByEmail =

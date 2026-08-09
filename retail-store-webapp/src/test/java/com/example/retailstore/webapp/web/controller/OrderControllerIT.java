@@ -6,7 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 
 import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
@@ -40,7 +40,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         OrderConfirmationDTO orderConfirmationDTO = new OrderConfirmationDTO(1L, 1L, "CONFIRMED");
 
         // Mock Customer Service
-        gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/name/Test%20User"))
+        gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=test%40example.com"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -59,7 +59,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .content(jsonMapper.writeValueAsString(createOrderRequest))
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(csrf())
-                .with(user("user").roles("USER"))
+                .with(oidcLogin().idToken(token -> token.claim("email", "test@example.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -77,11 +77,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
         CustomerResponse customerResponse =
                 new CustomerResponse(2L, "Test User", "testEmail@gmail.com", "1234567890", "Test Address", 0);
         orderResponse.setCustomer(customerResponse); // Set the customer in the expected response
-        gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/2"))
-                .willReturn(aResponse()
-                        .withStatus(HttpStatus.OK.value())
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(jsonMapper.writeValueAsString(customerResponse))));
+        gatewayServiceMock.stubFor(
+                get(urlEqualTo("/payment-service/api/customers/by-email?email=testEmail%40gmail.com"))
+                        .willReturn(aResponse()
+                                .withStatus(HttpStatus.OK.value())
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .withBody(jsonMapper.writeValueAsString(customerResponse))));
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/1"))
                 .willReturn(aResponse()
@@ -92,7 +93,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders/1")
-                .with(user("user").roles("USER"))
+                .with(oidcLogin().idToken(token -> token.claim("email", "testEmail@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -107,7 +108,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
         PagedResult<OrderResponse> pagedResult =
                 new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);
 
-        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders")) // Removed query params from mock URL
+        CustomerResponse customerResponse =
+                new CustomerResponse(4L, "Empty User", "empty@gmail.com", "1234567890", "Test Address", 0);
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=empty%40gmail.com"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(jsonMapper.writeValueAsString(customerResponse))));
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/customer/4"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -116,7 +126,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders")
-                .with(user("user").roles("USER"))
+                .with(oidcLogin().idToken(token -> token.claim("email", "empty@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -132,5 +142,37 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     assertThat(response.hasNext()).isFalse();
                     assertThat(response.hasPrevious()).isFalse();
                 });
+    }
+
+    @Test
+    void testGetOrder_Forbidden() throws Exception {
+        OrderResponse orderResponse = new OrderResponse();
+        orderResponse.setOrderId(1L);
+        orderResponse.setCustomerId(2L);
+        CustomerResponse orderCustomer =
+                new CustomerResponse(2L, "Test User", "testEmail@gmail.com", "1234567890", "Test Address", 0);
+        orderResponse.setCustomer(orderCustomer);
+
+        CustomerResponse loggedInCustomer =
+                new CustomerResponse(3L, "Other User", "other@gmail.com", "1234567890", "Test Address", 0);
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=other%40gmail.com"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(jsonMapper.writeValueAsString(loggedInCustomer))));
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/1"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(jsonMapper.writeValueAsString(orderResponse))));
+
+        mockMvcTester
+                .get()
+                .uri("/api/orders/1")
+                .with(oidcLogin().idToken(token -> token.claim("email", "other@gmail.com")))
+                .assertThat()
+                .hasStatus(HttpStatus.NOT_FOUND);
     }
 }

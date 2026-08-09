@@ -1,10 +1,15 @@
-const RETAILSTORE_STATE_KEY = "RETAILSTORE_STATE";
+const getCartKey = function() {
+    const userMeta = document.querySelector('meta[name="_user_identifier"]');
+    const userIdentifier = (userMeta && userMeta.content) ? userMeta.content : 'ANONYMOUS';
+    return "RETAILSTORE_STATE_" + userIdentifier;
+};
 
 const getCart = function() {
-    let cart = localStorage.getItem(RETAILSTORE_STATE_KEY)
+    let key = getCartKey();
+    let cart = localStorage.getItem(key)
     if (!cart) {
         cart = JSON.stringify({items:[], totalAmount:0 });
-        localStorage.setItem(RETAILSTORE_STATE_KEY, cart)
+        localStorage.setItem(key, cart)
     }
     return JSON.parse(cart)
 }
@@ -23,7 +28,7 @@ const addProductToCart = function(product) {
         });
     }
     cart.totalAmount = getCartTotal();
-    localStorage.setItem(RETAILSTORE_STATE_KEY, JSON.stringify(cart));
+    localStorage.setItem(getCartKey(), JSON.stringify(cart));
     updateCartItemCount();
     document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
@@ -41,13 +46,13 @@ const updateProductQuantity = function(code, quantity) {
         }
     }
     cart.totalAmount = getCartTotal();
-    localStorage.setItem(RETAILSTORE_STATE_KEY, JSON.stringify(cart));
+    localStorage.setItem(getCartKey(), JSON.stringify(cart));
     updateCartItemCount();
     document.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
 
 const deleteCart = function() {
-    localStorage.removeItem(RETAILSTORE_STATE_KEY)
+    localStorage.removeItem(getCartKey())
     updateCartItemCount();
 }
 

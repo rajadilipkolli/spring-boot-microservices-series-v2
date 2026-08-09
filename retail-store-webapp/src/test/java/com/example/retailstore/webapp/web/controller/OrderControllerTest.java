@@ -119,7 +119,8 @@ class OrderControllerTest {
 
         // Mock customer service client for cart
         when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
-        when(customerServiceClient.getCustomerById(any(Long.class))).thenReturn(customerResponse); // Added this line
+        when(customerServiceClient.getCustomerById(any(Long.class))).thenReturn(customerResponse);
+        when(customerServiceClient.getCustomerByEmail(anyString())).thenReturn(customerResponse);
     }
 
     @Test
@@ -168,6 +169,19 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
+    void getOrder_shouldReturnForbiddenWhenCustomerIdDoesNotMatch() throws Exception {
+        String orderNumber = "ORDER-123";
+        OrderResponse orderResponse = orderResponseList.getFirst();
+        // The mock user has customerId = 1 (from setUp), we mock the order to belong to customerId = 999
+        orderResponse.setCustomerId(999L);
+        when(orderServiceClient.getOrder(anyMap(), anyString())).thenReturn(orderResponse);
+
+        mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
+                .andExpect(status().isNotFound()); // OrderController converts mismatch to 404 ResourceNotFoundException
+    }
+
+    @Test
+    @WithMockUser
     void showOrders_shouldRenderOrdersPage() throws Exception {
         mockMvc.perform(get("/orders").with(csrf())).andExpect(status().isOk()).andExpect(view().name("orders"));
     }
@@ -175,7 +189,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrders_shouldReturnPagedOrders() throws Exception {
-        when(orderServiceClient.getOrders(anyMap())).thenReturn(pagedResult);
+        when(orderServiceClient.getOrdersByCustomer(anyMap(), any(Long.class))).thenReturn(pagedResult);
 
         mockMvc.perform(get("/api/orders").with(csrf()))
                 .andExpect(status().isOk())
@@ -234,7 +248,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrders_shouldHandleErrorWhenServiceFails() throws Exception {
-        when(orderServiceClient.getOrders(anyMap()))
+        when(orderServiceClient.getOrdersByCustomer(anyMap(), any(Long.class)))
                 .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
@@ -249,8 +263,25 @@ class OrderControllerTest {
         Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
-        when(customerServiceClient.getCustomerByName(anyString()))
+        when(customerServiceClient.getCustomerByEmail(anyString()))
                 .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Customer not found"));
+
+        mockMvc.perform(post("/api/orders")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(createOrderRequest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "test-username")
+    void createOrder_shouldRejectInvalidOrderItemRequest() throws Exception {
+        CustomerRequest customerRequest =
+                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 5000);
+        // Invalid order item: blank product code, negative quantity, negative price
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, new BigDecimal("-10.00")));
+        Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
+        CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
         mockMvc.perform(post("/api/orders")
                         .with(csrf())
