@@ -14,10 +14,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.servlet.ModelAndView;
 
 class GlobalExceptionHandlerTest {
 
@@ -39,7 +42,10 @@ class GlobalExceptionHandlerTest {
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
         // Act
-        ProblemDetail result = exceptionHandler.handleValidationExceptions(ex);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleValidationExceptions(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -63,7 +69,11 @@ class GlobalExceptionHandlerTest {
         ConstraintViolationException ex = new ConstraintViolationException("message", violations);
 
         // Act
-        ProblemDetail result = exceptionHandler.handleConstraintViolationException(ex);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity =
+                (ResponseEntity<?>) exceptionHandler.handleConstraintViolationException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -81,7 +91,10 @@ class GlobalExceptionHandlerTest {
                 HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null);
 
         // Act
-        ProblemDetail result = exceptionHandler.handleHttpException(ex);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleHttpException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -96,12 +109,32 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("unexpected error");
 
         // Act
-        ProblemDetail result = exceptionHandler.handleGenericException(ex);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleGenericException(ex, request);
+        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
         assertThat(result.getTitle()).isEqualTo("Internal Server Error");
         assertThat(result.getDetail()).isEqualTo("An unexpected error occurred. Please try again later.");
+    }
+
+    @Test
+    void handleGenericException_uiPath_shouldReturnModelAndView() {
+        // Arrange
+        Exception ex = new RuntimeException("unexpected error");
+
+        // Act
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/orders");
+        ModelAndView result = (ModelAndView) exceptionHandler.handleGenericException(ex, request);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getViewName()).isEqualTo("error");
+        assertThat(result.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.getModel()).containsEntry("message", "An unexpected error occurred. Please try again later.");
     }
 }
