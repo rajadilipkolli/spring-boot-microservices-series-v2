@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -59,6 +61,7 @@ public class ProductService {
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
+    @Cacheable(cacheNames = "products", key = "{#pageNo, #pageSize, #sortBy, #sortDir}")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
@@ -149,6 +152,7 @@ public class ProductService {
     // saves product to db and sends message that new product is available for inventory
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository

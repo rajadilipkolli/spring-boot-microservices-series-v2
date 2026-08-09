@@ -73,6 +73,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
+        if (cacheManager.getCache("products") != null) {
+            cacheManager.getCache("products").clear();
+        }
         mockWebServer.setDispatcher(new mockwebserver3.QueueDispatcher());
         testKafkaListenerConfig.reset();
         List<Product> productList =
