@@ -446,7 +446,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", product.getProductCode())
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -479,7 +479,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("fetchInStock", true)
                                         .build(product.getProductCode()))
                 .exchange()
@@ -520,7 +520,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isOk()
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(Boolean.TRUE);
     }
 
@@ -541,7 +542,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isOk()
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(Boolean.FALSE);
     }
 

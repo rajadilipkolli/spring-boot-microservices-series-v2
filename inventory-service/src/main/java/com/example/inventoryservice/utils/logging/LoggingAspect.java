@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.inventoryservice.config.logging;
+package com.example.inventoryservice.utils.logging;
 
 import com.example.inventoryservice.utils.AppConstants;
 import java.lang.reflect.Method;
@@ -49,8 +49,8 @@ class LoggingAspect {
 
     @Pointcut(
             """
-                @within(com.example.inventoryservice.config.logging.Loggable)
-                || @annotation(com.example.inventoryservice.config.logging.Loggable)
+                @within(com.example.inventoryservice.utils.logging.Loggable)
+                || @annotation(com.example.inventoryservice.utils.logging.Loggable)
             """)
     public void applicationPackagePointcut() {
         // pointcut definition

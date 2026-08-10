@@ -363,7 +363,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that communication between catalog-service and inventory service is established
-    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/productCode/$PROD_CODE_1?fetchInStock=true" || return 1
+    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/product-code/$PROD_CODE_1?fetchInStock=true" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
     assertEqual true $(echo ${RESPONSE} | jq .inStock) || return 1
 
@@ -402,7 +402,7 @@ function testCircuitBreaker() {
     local SERVICES_TEST=("catalog-service" "inventory-service" "order-service")
     for s in "${SERVICES_TEST[@]}"; do
       if [[ "$s" == "catalog-service" ]]; then
-        url="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
+        url="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
       elif [[ "$s" == "order-service" ]]; then
         ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
         if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
@@ -482,8 +482,8 @@ function testCircuitBreaker() {
 
     # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
     if [[ "$svc" == "catalog-service" ]]; then
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}"
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}"
       NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
     elif [[ "$svc" == "order-service" ]]; then
       # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
@@ -992,8 +992,8 @@ waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-servic
 waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
 waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
 
-log_info "Warming up services via API Gateway /api/generate endpoint..."
-curl -s -k "http://$HOST:$PORT/api/generate" > /dev/null 2>&1
+log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
+curl -X POST -s -k "http://$HOST:$PORT/api/v1/generate" > /dev/null 2>&1
 log_info "Sleeping for 10 sec for warmup processing to complete..."
 sleep 10
 

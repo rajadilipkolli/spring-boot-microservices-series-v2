@@ -11,6 +11,7 @@ import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.utils.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -100,7 +102,8 @@ public class InventoryServiceProxy {
                             return uriBuilder.build();
                         })
                 .retrieve()
-                .bodyToFlux(InventoryResponse.class);
+                .bodyToMono(new ParameterizedTypeReference<PagedResult<InventoryResponse>>() {})
+                .flatMapIterable(PagedResult::data);
     }
 
     private Flux<InventoryResponse> getInventoryByProductCodesFallBack(Exception e) {

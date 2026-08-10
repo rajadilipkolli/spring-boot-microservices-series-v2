@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,14 +37,18 @@ public class OutboxPublisher {
     private final Counter failedEventCounter;
     private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
+    private final OutboxPublisher self;
+
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
             CatalogKafkaProducer catalogKafkaProducer,
             ApplicationProperties properties,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            @Lazy OutboxPublisher self) {
         this.outboxEventRepository = outboxEventRepository;
         this.catalogKafkaProducer = catalogKafkaProducer;
         this.properties = properties;
+        this.self = self;
 
         this.publishedEventCounter =
                 Counter.builder("outbox.events.published.count")
@@ -68,7 +73,7 @@ public class OutboxPublisher {
     }
 
     public Flux<OutboxEvent> publishEvents() {
-        return this.claimEvents().flatMap(this::publishEvent);
+        return this.self.claimEvents().flatMap(this::publishEvent);
     }
 
     @Transactional

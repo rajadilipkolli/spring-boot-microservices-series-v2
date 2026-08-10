@@ -6,12 +6,12 @@
 
 package com.example.inventoryservice.services;
 
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.OrderDto;
 import com.example.inventoryservice.model.payload.OrderItemDto;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import com.example.inventoryservice.utils.logging.Loggable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

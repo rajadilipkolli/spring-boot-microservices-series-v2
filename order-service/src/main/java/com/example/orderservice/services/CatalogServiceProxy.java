@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -23,5 +23,7 @@ import org.springframework.web.service.annotation.HttpExchange;
 public interface CatalogServiceProxy {
 
     @GetExchange("/api/catalog/exists")
-    boolean productsExistsByCodes(@RequestParam List<String> productCodes);
+    ProductExistsResponse productsExistsByCodes(@RequestParam List<String> productCodes);
+
+    record ProductExistsResponse(boolean exists) {}
 }

@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -104,7 +105,7 @@ class OrderController implements OrderApi {
                 .body(OrderResponse.emptyResponse(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
@@ -134,7 +135,7 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    @GetMapping("/generate")
+    @PostMapping("/generate")
     GenericResponse createMockOrders() {
         orderGeneratorService.generateOrders();
         return new GenericResponse(true);

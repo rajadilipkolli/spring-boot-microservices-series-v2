@@ -100,7 +100,7 @@ public abstract class AbstractIntegrationTest {
                         aResponse()
                                 .withHeader(
                                         HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                .withBody(String.valueOf(status))));
+                                .withBody("{\"exists\": " + status + "}")));
     }
 
     protected byte[] toJsonBytes(OrderDto orderDto) {

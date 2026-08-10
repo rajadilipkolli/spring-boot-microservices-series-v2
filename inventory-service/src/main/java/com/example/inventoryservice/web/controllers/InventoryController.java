@@ -6,16 +6,17 @@
 
 package com.example.inventoryservice.web.controllers;
 
-import com.example.inventoryservice.config.logging.Loggable;
-import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.request.InventoryRequest;
+import com.example.inventoryservice.model.response.InventoryResponse;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
+import com.example.inventoryservice.utils.logging.Loggable;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,13 +37,17 @@ import org.springframework.web.bind.annotation.RestController;
 class InventoryController {
 
     private final InventoryService inventoryService;
+    private final com.example.inventoryservice.mapper.InventoryMapper inventoryMapper;
 
-    InventoryController(InventoryService inventoryService) {
+    InventoryController(
+            InventoryService inventoryService,
+            com.example.inventoryservice.mapper.InventoryMapper inventoryMapper) {
         this.inventoryService = inventoryService;
+        this.inventoryMapper = inventoryMapper;
     }
 
     @GetMapping
-    PagedResult<Inventory> getAllInventories(
+    PagedResult<InventoryResponse> getAllInventories(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -59,7 +64,7 @@ class InventoryController {
     // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     // @RateLimiter(name = "default")
     // @Bulkhead(name = "inventory-api")
-    ResponseEntity<Inventory> getInventoryByProductCode(
+    ResponseEntity<InventoryResponse> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
         // If delay is specified, block for the requested seconds — used by tests to
         // simulate slow
@@ -73,38 +78,51 @@ class InventoryController {
         }
         return inventoryService
                 .findInventoryByProductCode(productCode)
+                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/product")
-    ResponseEntity<List<Inventory>> getInventoryByProductCodes(@RequestParam List<String> codes) {
-        return ResponseEntity.ok(inventoryService.getInventoryByProductCodes(codes));
+    ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
+            @RequestParam List<String> codes,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+                    int pageNo,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+                    int pageSize,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+                    String sortBy,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+                    String sortDir) {
+        return ResponseEntity.ok(
+                inventoryService.getInventoryByProductCodes(
+                        codes, pageNo, pageSize, sortBy, sortDir));
     }
 
-    @GetMapping("/generate")
+    @PostMapping("/generate")
     boolean updateInventoryWithRandomValue() {
         inventoryService.updateGeneratedInventory();
         return true;
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    Inventory createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
-        return inventoryService.saveInventory(inventoryRequest);
+    InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
+        return inventoryMapper.toResponse(inventoryService.saveInventory(inventoryRequest));
     }
 
-    @PutMapping("/{id}")
-    ResponseEntity<Inventory> updateInventory(
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<InventoryResponse> updateInventory(
             @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest) {
         return inventoryService
                 .updateInventoryById(id, inventoryRequest)
+                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/product/{productCode}")
-    ResponseEntity<Inventory> updateInventoryByProductCode(
+    @PutMapping(value = "/product/{productCode}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<InventoryResponse> updateInventoryByProductCode(
             @PathVariable String productCode,
             @RequestBody @Valid InventoryRequest inventoryRequest) {
         if (inventoryRequest.productCode() != null
@@ -113,18 +131,19 @@ class InventoryController {
         }
         return inventoryService
                 .updateInventoryByProductCode(productCode, inventoryRequest)
+                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<Inventory> deleteInventory(@PathVariable Long id) {
+    ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
         return inventoryService
                 .findInventoryById(id)
                 .map(
                         inventory -> {
                             inventoryService.deleteInventoryById(id);
-                            return ResponseEntity.ok(inventory);
+                            return ResponseEntity.ok(inventoryMapper.toResponse(inventory));
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

@@ -6,20 +6,23 @@
 
 package com.example.inventoryservice.services;
 
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.exception.ProductAlreadyExistsException;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
+import com.example.inventoryservice.model.response.InventoryResponse;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.logging.Loggable;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -39,16 +42,20 @@ public class InventoryService {
 
     private final InventoryJOOQRepository inventoryJOOQRepository;
 
+    private final InventoryService self;
+
     public InventoryService(
             InventoryRepository inventoryRepository,
             InventoryMapper inventoryMapper,
-            InventoryJOOQRepository inventoryJOOQRepository) {
+            InventoryJOOQRepository inventoryJOOQRepository,
+            @Lazy InventoryService self) {
         this.inventoryRepository = inventoryRepository;
         this.inventoryMapper = inventoryMapper;
         this.inventoryJOOQRepository = inventoryJOOQRepository;
+        this.self = self;
     }
 
-    public PagedResult<Inventory> findAllInventories(
+    public PagedResult<InventoryResponse> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
 
         Sort sort =
@@ -56,11 +63,13 @@ public class InventoryService {
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return new PagedResult<>(inventoryJOOQRepository.findAll(pageable));
+        Page<InventoryResponse> page =
+                inventoryJOOQRepository.findAll(pageable).map(inventoryMapper::toResponse);
+        return new PagedResult<>(page);
     }
 
     public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryJOOQRepository.findById(id);
+        return inventoryRepository.findById(id);
     }
 
     @Transactional
@@ -91,11 +100,21 @@ public class InventoryService {
     }
 
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
-        return this.inventoryJOOQRepository.findByProductCode(productCode);
+        return this.inventoryRepository.findByProductCode(productCode);
     }
 
-    public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
-        return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
+    public PagedResult<InventoryResponse> getInventoryByProductCodes(
+            List<String> productCodes, int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Page<InventoryResponse> page =
+                this.inventoryJOOQRepository
+                        .findByProductCodeIn(productCodes, pageable)
+                        .map(inventoryMapper::toResponse);
+        return new PagedResult<>(page);
     }
 
     public void updateGeneratedInventory() {
@@ -108,7 +127,7 @@ public class InventoryService {
                                         findInventoryByProductCode("ProductCode" + operand);
                                 inventoryByProductCode.ifPresent(
                                         inventoryFromDB ->
-                                                updateInventory(
+                                                self.updateInventory(
                                                         inventoryFromDB,
                                                         new InventoryRequest(
                                                                 "ProductCode" + operand,
@@ -123,13 +142,13 @@ public class InventoryService {
     @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
         return findInventoryById(id)
-                .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
+                .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
     }
 
     @Transactional
     public Optional<Inventory> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
         return findInventoryByProductCode(productCode)
-                .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
+                .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
     }
 }

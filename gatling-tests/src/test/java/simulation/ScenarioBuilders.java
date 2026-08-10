@@ -21,13 +21,13 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-                    {
-                      "productCode": "#{productCode}",
-                      "productName": "#{productName}",
-                      "price": #{price},
-                      "description": "Performance test product"
-                    }
-                    """))
+            {
+              "productCode": "#{productCode}",
+              "productName": "#{productName}",
+              "price": #{price},
+              "description": "Performance test product"
+            }
+            """))
                         .asJson()
                         .check(status().is(201))
                         .check(header("location").saveAs("productLocation")))
@@ -37,7 +37,7 @@ public class ScenarioBuilders {
     /** Chain to retrieve product details by product code. */
     public static ChainBuilder getProductChain() {
         return exec(http("Get product detail")
-                        .get("/catalog-service/api/catalog/productCode/#{productCode}")
+                        .get("/catalog-service/api/catalog/product-code/#{productCode}")
                         .check(status().is(200)))
                 .pause(1);
     }
@@ -49,11 +49,11 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-                    {
-                      "productCode": "#{productCode}",
-                      "quantity": #{quantity}
-                    }
-                    """))
+            {
+              "productCode": "#{productCode}",
+              "availableQuantity": #{quantity}
+            }
+            """))
                         .asJson()
                         .check(status().is(200)))
                 .pause(1);
@@ -66,23 +66,23 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-                    {
-                      "customerId": #{customerId},
-                      "shippingAddress": {
-                        "street": "#{street}",
-                        "city": "#{city}",
-                        "zipCode": "#{zipCode}",
-                        "country": "#{country}"
-                      },
-                      "items": [
-                        {
-                          "productCode": "#{productCode}",
-                          "quantity": #{quantity},
-                          "productPrice": #{price}
-                        }
-                      ]
-                    }
-                    """))
+            {
+              "customerId": #{customerId},
+              "shippingAddress": {
+                "street": "#{street}",
+                "city": "#{city}",
+                "zipCode": "#{zipCode}",
+                "country": "#{country}"
+              },
+              "items": [
+                {
+                  "productCode": "#{productCode}",
+                  "quantity": #{quantity},
+                  "productPrice": #{price}
+                }
+              ]
+            }
+            """))
                         .asJson()
                         .check(status().is(201)))
                 .pause(1);

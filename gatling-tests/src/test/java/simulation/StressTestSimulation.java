@@ -49,7 +49,7 @@ public class StressTestSimulation extends BaseSimulation {
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(catalogUri))
-                            .GET()
+                            .POST(HttpRequest.BodyPublishers.noBody())
                             .header("Content-Type", "application/json")
                             .build();
             HttpResponse<String> response =
@@ -69,7 +69,7 @@ public class StressTestSimulation extends BaseSimulation {
             request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(inventoryUri))
-                            .GET()
+                            .POST(HttpRequest.BodyPublishers.noBody())
                             .header("Content-Type", "application/json")
                             .build();
             response = client.send(request, HttpResponse.BodyHandlers.ofString());

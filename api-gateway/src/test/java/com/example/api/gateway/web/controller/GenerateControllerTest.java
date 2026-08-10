@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,13 +28,16 @@ import reactor.test.StepVerifier;
 
 /** Unit tests for the {@link GenerateController} class. */
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"unchecked"})
 class GenerateControllerTest {
 
     @Mock private WebClient.Builder webClientBuilder;
     @Mock private WebClient webClient;
-    @Mock private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-    @Mock private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock private WebClient.RequestBodySpec requestBodySpec;
+
     @Mock private WebClient.ResponseSpec responseSpec;
 
     private GenerateController controller;
@@ -56,10 +60,9 @@ class GenerateControllerTest {
     }
 
     @SuppressWarnings("unchecked")
-    private java.util.Map<String, String> getServiceResponses(Object body) {
+    private Map<String, String> getServiceResponses(Object body) {
         try {
-            return (java.util.Map<String, String>)
-                    body.getClass().getMethod("serviceResponses").invoke(body);
+            return (Map<String, String>) body.getClass().getMethod("serviceResponses").invoke(body);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -69,10 +72,10 @@ class GenerateControllerTest {
     void setup() {
         when(webClientBuilder.build()).thenReturn(webClient);
 
-        // Common mocking for webClient.get().uri(...).retrieve()
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        // Common mocking for webClient.post().uri(...).retrieve()
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
 
         // Use Duration.ZERO for tests to avoid unnecessary delays
         controller = new GenerateController(webClientBuilder, Duration.ZERO, false);

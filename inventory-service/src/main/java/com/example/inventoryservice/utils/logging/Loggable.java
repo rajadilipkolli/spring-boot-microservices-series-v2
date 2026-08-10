@@ -4,7 +4,7 @@
 </p>
 ***/
 
-package com.example.inventoryservice.config.logging;
+package com.example.inventoryservice.utils.logging;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
