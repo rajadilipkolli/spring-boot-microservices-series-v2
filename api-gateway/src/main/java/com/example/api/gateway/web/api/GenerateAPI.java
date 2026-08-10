@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import reactor.core.publisher.Mono;
 
 @Tag(
@@ -21,7 +21,7 @@ import reactor.core.publisher.Mono;
         description = "API for orchestrating data generation across services")
 public interface GenerateAPI {
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Generate sample data across services",
             description =

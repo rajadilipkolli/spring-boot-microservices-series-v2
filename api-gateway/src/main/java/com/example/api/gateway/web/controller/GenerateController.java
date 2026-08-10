@@ -24,7 +24,7 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -34,7 +34,7 @@ import reactor.util.retry.Retry;
 
 /** Controller that orchestrates data generation calls to microservices. */
 @RestController
-@RequestMapping("/api/generate")
+@RequestMapping("/api/v1/generate")
 public class GenerateController implements GenerateAPI {
 
     private static final Logger logger = LoggerFactory.getLogger(GenerateController.class);
@@ -67,7 +67,7 @@ public class GenerateController implements GenerateAPI {
      *
      * @return Mono with response message containing results from both services
      */
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
         return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
@@ -142,7 +142,7 @@ public class GenerateController implements GenerateAPI {
      */
     private Mono<ServiceResult> callMicroservice(String url, ServiceType serviceType) {
         return webClient
-                .get()
+                .post()
                 .uri(url)
                 .retrieve()
                 .toEntity(String.class) // Original Mono<ResponseEntity<String>>
