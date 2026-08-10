@@ -19,13 +19,14 @@ import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -38,9 +39,23 @@ class ProductServiceTest {
 
     @Mock private OutboxService outboxService;
 
-    @InjectMocks private ProductService productService;
+    @Mock private InventoryServiceProxy inventoryServiceProxy;
+
+    private ProductService productService;
 
     @Captor private ArgumentCaptor<ProductRequest> productCaptor;
+
+    @BeforeEach
+    void setUp() {
+        productService =
+                new ProductService(
+                        productRepository,
+                        productMapper,
+                        inventoryServiceProxy,
+                        outboxService,
+                        null);
+        ReflectionTestUtils.setField(productService, "self", productService);
+    }
 
     @Test
     void testGenerateProducts() {

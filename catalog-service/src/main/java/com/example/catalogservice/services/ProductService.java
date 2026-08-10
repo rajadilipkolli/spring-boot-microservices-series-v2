@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -49,21 +50,25 @@ public class ProductService {
     private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
 
+    private final ProductService self;
+
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
-            OutboxService outboxService) {
+            OutboxService outboxService,
+            @Lazy ProductService self) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
+        this.self = self;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
     @Cacheable(
             cacheNames = "products",
-            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir")
+            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
@@ -160,7 +165,7 @@ public class ProductService {
         return productRepository
                 .findByProductCodeAllIgnoreCase(productRequest.productCode())
                 .map(productMapper::toProductResponse)
-                .switchIfEmpty(createAndSaveProduct(productRequest))
+                .switchIfEmpty(Mono.defer(() -> self.createAndSaveProduct(productRequest)))
                 // Catch DuplicateKeyException from unique constraint violation
                 .onErrorResume(
                         DuplicateKeyException.class,
@@ -182,7 +187,7 @@ public class ProductService {
     }
 
     @Transactional
-    protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
+    public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
         return Mono.just(productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
                 .flatMap(
@@ -230,6 +235,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
         // Update the post object with data from postRequest
         productMapper.mapProductWithRequest(productRequest, product);

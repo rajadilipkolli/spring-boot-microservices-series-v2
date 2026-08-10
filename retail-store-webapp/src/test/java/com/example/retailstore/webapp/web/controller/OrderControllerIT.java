@@ -169,7 +169,20 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     assertThat(res.getOrderId()).isEqualTo(102L);
                     assertThat(res.getCustomerId()).isEqualTo(405L);
                     assertThat(res.getTotalPrice()).isEqualByComparingTo(new BigDecimal("3299.97"));
+                    assertThat(res.getStatus()).isEqualTo("CONFIRMED");
+                    assertThat(res.getCreatedDate())
+                            .isEqualTo(java.time.LocalDateTime.parse("2026-08-09T11:01:00.157888"));
+                    assertThat(res.getDeliveryAddress().addressLine1()).isEqualTo("Apt. 668 05736 Feeney Brooks");
+                    assertThat(res.getDeliveryAddress().addressLine2()).isEqualTo("Port Salvatoreside");
+                    assertThat(res.getDeliveryAddress().city()).isEqualTo("WI 14512");
+                    assertThat(res.getDeliveryAddress().state()).isEqualTo("TS");
+                    assertThat(res.getDeliveryAddress().zipCode()).isEqualTo("500072");
+                    assertThat(res.getDeliveryAddress().country()).isEqualTo("India");
                     assertThat(res.getItems()).hasSize(2);
+                    assertThat(res.getItems().get(0).itemId()).isEqualTo(202L);
+                    assertThat(res.getItems().get(0).price()).isEqualByComparingTo(new BigDecimal("1299.99"));
+                    assertThat(res.getItems().get(1).itemId()).isEqualTo(203L);
+                    assertThat(res.getItems().get(1).price()).isEqualByComparingTo(new BigDecimal("899.99"));
                 });
     }
 
