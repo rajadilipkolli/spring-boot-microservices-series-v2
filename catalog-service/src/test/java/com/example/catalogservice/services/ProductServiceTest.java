@@ -108,7 +108,7 @@ class ProductServiceTest {
         given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
 
         // Use StepVerifier to test the method
-        StepVerifier.create(productService.generateProducts())
+        StepVerifier.create(productService.generateProducts("test-batch-123"))
                 .expectSubscription()
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();

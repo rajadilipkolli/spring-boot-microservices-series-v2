@@ -500,11 +500,12 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts()).willReturn(Mono.just(true));
+        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(true));
 
         webTestClient
                 .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -515,11 +516,12 @@ class ProductControllerTest {
 
     @Test
     void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts()).willReturn(Mono.just(false));
+        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(false));
 
         webTestClient
                 .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()

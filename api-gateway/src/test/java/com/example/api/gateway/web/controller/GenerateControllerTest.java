@@ -72,9 +72,10 @@ class GenerateControllerTest {
     void setup() {
         when(webClientBuilder.build()).thenReturn(webClient);
 
-        // Common mocking for webClient.post().uri(...).retrieve()
+        // Common mocking for webClient.post().uri(...).header(...).retrieve()
         when(webClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
 
         // Use Duration.ZERO for tests to avoid unnecessary delays

@@ -367,10 +367,10 @@ class InventoryControllerTest {
     @Test
     void testUpdateInventoryWithRandomValue() throws Exception {
         // Setup
-        doNothing().when(inventoryService).updateGeneratedInventory();
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class));
 
         // Execute & Verify
-        mockMvc.perform(post("/api/inventory/generate"))
+        mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
                 .andExpect(
                         result ->
@@ -380,14 +380,16 @@ class InventoryControllerTest {
                                         .isTrue());
 
         // Verify interactions
-        verify(inventoryService, times(1)).updateGeneratedInventory();
+        verify(inventoryService, times(1)).updateGeneratedInventory(any(String.class));
     }
 
     @Test
     void shouldReturn500WhenGenerationFails() throws Exception {
-        doThrow(new RuntimeException("failure")).when(inventoryService).updateGeneratedInventory();
+        doThrow(new RuntimeException("failure"))
+                .when(inventoryService)
+                .updateGeneratedInventory(any(String.class));
 
-        mockMvc.perform(post("/api/inventory/generate"))
+        mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isInternalServerError());
     }
 }

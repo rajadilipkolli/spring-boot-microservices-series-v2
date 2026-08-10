@@ -76,7 +76,7 @@ class InventoryServiceTest {
                 .save(any(Inventory.class));
 
         // Execute the method to test
-        inventoryService.updateGeneratedInventory();
+        inventoryService.updateGeneratedInventory("test-batch-123");
 
         // Verify interactions
         verify(inventoryRepository, times(101)).findByProductCode(anyString());

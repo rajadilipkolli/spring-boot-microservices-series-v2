@@ -117,20 +117,24 @@ public class InventoryService {
         return new PagedResult<>(page);
     }
 
-    public void updateGeneratedInventory() {
+    public void updateGeneratedInventory(String idempotencyKey) {
         IntStream.rangeClosed(0, 100)
                 .forEach(
                         operand -> {
                             try {
                                 int randomQuantity = RAND.nextInt(10_000) + 1;
                                 Optional<Inventory> inventoryByProductCode =
-                                        findInventoryByProductCode("ProductCode" + operand);
+                                        findInventoryByProductCode(
+                                                "ProductCode_" + idempotencyKey + "_" + operand);
                                 inventoryByProductCode.ifPresent(
                                         inventoryFromDB ->
                                                 self.updateInventory(
                                                         inventoryFromDB,
                                                         new InventoryRequest(
-                                                                "ProductCode" + operand,
+                                                                "ProductCode_"
+                                                                        + idempotencyKey
+                                                                        + "_"
+                                                                        + operand,
                                                                 randomQuantity)));
                             } catch (OptimisticLockingFailureException e) {
                                 // Ignore optimistic locking failures when concurrently updating

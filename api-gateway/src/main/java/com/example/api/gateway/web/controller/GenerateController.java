@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -70,7 +71,9 @@ public class GenerateController implements GenerateAPI {
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
-        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
+        String batchId = UUID.randomUUID().toString();
+
+        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG, batchId)
                 .flatMap(
                         catalogResult -> {
                             if (catalogResult.status() == HttpStatus.OK.value()) {
@@ -81,7 +84,8 @@ public class GenerateController implements GenerateAPI {
                                                 catalogData ->
                                                         callMicroservice(
                                                                         INVENTORY_SERVICE_URL,
-                                                                        ServiceType.INVENTORY)
+                                                                        ServiceType.INVENTORY,
+                                                                        batchId)
                                                                 .map(
                                                                         inventoryResult ->
                                                                                 createResponseEntity(
@@ -140,10 +144,12 @@ public class GenerateController implements GenerateAPI {
      * @param serviceType The type of service being called (for error messages)
      * @return Mono containing the service result
      */
-    private Mono<ServiceResult> callMicroservice(String url, ServiceType serviceType) {
+    private Mono<ServiceResult> callMicroservice(
+            String url, ServiceType serviceType, String batchId) {
         return webClient
                 .post()
                 .uri(url)
+                .header("Idempotency-Key", batchId)
                 .retrieve()
                 .toEntity(String.class) // Original Mono<ResponseEntity<String>>
                 .timeout(REQUEST_TIMEOUT) // Apply timeout to each attempt
