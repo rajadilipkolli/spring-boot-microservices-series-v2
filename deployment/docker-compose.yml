@@ -145,6 +145,8 @@ services:
         condition: service_healthy
       grafana-lgtm:
         condition: service_started
+      otel-collector:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -171,6 +173,8 @@ services:
     depends_on:
       grafana-lgtm:
         condition: service_started
+      otel-collector:
+        condition: service_started
     networks:
       - microservice-network
     environment:
@@ -195,6 +199,8 @@ services:
       - microservice-network
     depends_on:
       config-server:
+        condition: service_started
+      otel-collector:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker

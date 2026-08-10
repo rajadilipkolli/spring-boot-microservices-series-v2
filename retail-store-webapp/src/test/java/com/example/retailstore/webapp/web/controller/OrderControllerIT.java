@@ -104,6 +104,89 @@ class OrderControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void testGetOrderWithLiteralJsonFromOrderService() {
+        String literalJsonResponse = """
+                {
+                  "orderId": 102,
+                  "customerId": 405,
+                  "status": "CONFIRMED",
+                  "source": null,
+                  "deliveryAddress": {
+                    "addressLine1": "Apt. 668 05736 Feeney Brooks",
+                    "addressLine2": "Port Salvatoreside",
+                    "city": "WI 14512",
+                    "state": "TS",
+                    "zipCode": "500072",
+                    "country": "India"
+                  },
+                  "createdDate": "2026-08-09T11:01:00.157888",
+                  "totalPrice": 3299.97,
+                  "items": [
+                    {
+                      "itemId": 202,
+                      "productId": "P003",
+                      "quantity": 1,
+                      "productPrice": 1299.99,
+                      "price": 1299.99
+                    },
+                    {
+                      "itemId": 203,
+                      "productId": "P002",
+                      "quantity": 1,
+                      "productPrice": 899.99,
+                      "price": 899.99
+                    }
+                  ]
+                }
+                """;
+
+        CustomerResponse customerResponse =
+                new CustomerResponse(405L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
+
+        gatewayServiceMock.stubFor(
+                get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
+                        .willReturn(aResponse()
+                                .withStatus(HttpStatus.OK.value())
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .withBody(jsonMapper.writeValueAsString(customerResponse))));
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/102"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(literalJsonResponse)));
+
+        mockMvcTester
+                .get()
+                .uri("/api/orders/102")
+                .with(oidcLogin().idToken(token -> token.claim("email", "testemail@gmail.com")))
+                .assertThat()
+                .hasStatus(HttpStatus.OK)
+                .hasContentType(MediaType.APPLICATION_JSON)
+                .bodyJson()
+                .convertTo(OrderResponse.class)
+                .satisfies(res -> {
+                    assertThat(res.getOrderId()).isEqualTo(102L);
+                    assertThat(res.getCustomerId()).isEqualTo(405L);
+                    assertThat(res.getTotalPrice()).isEqualByComparingTo(new BigDecimal("3299.97"));
+                    assertThat(res.getStatus()).isEqualTo("CONFIRMED");
+                    assertThat(res.getCreatedDate())
+                            .isEqualTo(java.time.LocalDateTime.parse("2026-08-09T11:01:00.157888"));
+                    assertThat(res.getDeliveryAddress().addressLine1()).isEqualTo("Apt. 668 05736 Feeney Brooks");
+                    assertThat(res.getDeliveryAddress().addressLine2()).isEqualTo("Port Salvatoreside");
+                    assertThat(res.getDeliveryAddress().city()).isEqualTo("WI 14512");
+                    assertThat(res.getDeliveryAddress().state()).isEqualTo("TS");
+                    assertThat(res.getDeliveryAddress().zipCode()).isEqualTo("500072");
+                    assertThat(res.getDeliveryAddress().country()).isEqualTo("India");
+                    assertThat(res.getItems()).hasSize(2);
+                    assertThat(res.getItems().get(0).itemId()).isEqualTo(202L);
+                    assertThat(res.getItems().get(0).price()).isEqualByComparingTo(new BigDecimal("1299.99"));
+                    assertThat(res.getItems().get(1).itemId()).isEqualTo(203L);
+                    assertThat(res.getItems().get(1).price()).isEqualByComparingTo(new BigDecimal("899.99"));
+                });
+    }
+
+    @Test
     void testGetOrders() {
         PagedResult<OrderResponse> pagedResult =
                 new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);

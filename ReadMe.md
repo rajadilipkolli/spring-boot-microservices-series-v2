@@ -330,6 +330,34 @@ Access all microservice APIs through a unified interface:
 
 > 💡 **Pro Tip:** Use the dropdown menu in Swagger UI to switch between different service APIs
 
+## 🔐 Keycloak Security Configuration
+
+To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+
+### 1. Create the ADMIN Client Role
+1. Open the Keycloak Admin Console (`http://localhost:9191`).
+2. Select the `retailstore` realm.
+3. Go to **Clients** -> click on **`retailstore-webapp`**.
+4. Go to the **Roles** tab and click **Create Role**.
+5. Name the role **`ADMIN`** and click **Save**.
+
+### 2. Map the Client Role to the ID Token
+By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
+1. On the left menu, go to **Client Scopes**.
+2. Click on the **`roles`** scope in the list.
+3. Go to the **Mappers** tab.
+4. Click on the **`client roles`** mapper.
+5. Toggle **ON** both **Add to ID token** and **Add to userinfo**.
+6. Click **Save**.
+
+### 3. Assign the Role to Your User
+1. On the left menu, go to **Users**.
+2. Search for your user (e.g., `raja`) and click on the username.
+3. Go to the **Role mapping** tab.
+4. Click **Assign role**.
+5. From the dropdown at the top, select **Filter by clients**.
+6. Find `retailstore-webapp ADMIN`, check the box, and click **Assign**.
+
 ## 📊 Observability
 
 ### 📈 Metrics & Monitoring with Prometheus & Grafana

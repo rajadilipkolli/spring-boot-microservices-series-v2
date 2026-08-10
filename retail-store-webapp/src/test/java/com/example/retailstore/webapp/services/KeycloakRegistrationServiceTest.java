@@ -12,7 +12,7 @@ import static org.mockito.Mockito.verify;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
-import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
+import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;

@@ -5,6 +5,9 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet author="system" id="insert-sample-orders" context="sample-data">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM orders</sqlCheck>
+        </preConditions>
         <!-- Sample Order 1 -->
         <insert tableName="orders">
             <column name="customer_id" value="401"/>

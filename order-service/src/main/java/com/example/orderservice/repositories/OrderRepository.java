@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -37,7 +37,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o.id from Order o where o.customerId = :customerId")
     Page<Long> findAllOrdersByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("update Order o set o.status =:status, o.source =:source where o.id = :id")
     int updateOrderStatusAndSourceById(

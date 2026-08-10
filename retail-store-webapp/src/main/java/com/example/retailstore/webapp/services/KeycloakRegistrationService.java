@@ -2,7 +2,7 @@ package com.example.retailstore.webapp.services;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
-import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
+import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
