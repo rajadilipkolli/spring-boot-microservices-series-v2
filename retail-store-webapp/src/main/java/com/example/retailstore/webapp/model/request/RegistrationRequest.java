@@ -1,4 +1,4 @@
-package com.example.retailstore.webapp.web.model.request;
+package com.example.retailstore.webapp.model.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

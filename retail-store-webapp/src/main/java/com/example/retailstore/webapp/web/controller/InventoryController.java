@@ -55,7 +55,7 @@ class InventoryController {
         }
     }
 
-    @PutMapping("/inventory")
+    @PutMapping(value = "/inventory", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     @PreAuthorize("hasRole('ADMIN')")
     InventoryResponse updateInventory(@Valid @RequestBody InventoryResponse inventoryResponse) {
