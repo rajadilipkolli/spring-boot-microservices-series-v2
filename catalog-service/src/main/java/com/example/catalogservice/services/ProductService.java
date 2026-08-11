@@ -261,7 +261,7 @@ public class ProductService {
 
     @Transactional
     @CacheEvict(cacheNames = "products", allEntries = true)
-    public Mono<Boolean> generateProducts() {
+    public Mono<Boolean> generateProducts(String idempotencyKey) {
         return Flux.range(0, 101)
                 .flatMap(
                         i ->
@@ -269,9 +269,12 @@ public class ProductService {
                                         .map(
                                                 randomPrice ->
                                                         new ProductRequest(
-                                                                "ProductCode" + i,
-                                                                "Gen Product" + i,
-                                                                "Gen Prod Description" + i,
+                                                                "ProductCode_"
+                                                                        + idempotencyKey
+                                                                        + "_"
+                                                                        + i,
+                                                                "Gen Product " + i,
+                                                                "Gen Prod Description " + i,
                                                                 null,
                                                                 (double) randomPrice)))
                 .flatMap(this::saveProduct)

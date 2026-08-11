@@ -88,7 +88,7 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        if (productsExistsAndInStock(productCodes)) {
+        if (productsExistsAndInStock(productCodes).exists()) {
             log.debug(
                     "ProductCodes :{} exists in db, hence proceeding",
                     LogSanitizer.sanitizeCollection(productCodes));
@@ -117,7 +117,7 @@ public class OrderService {
                         .distinct()
                         .toList();
 
-        if (productsExistsAndInStock(allProductCodes)) {
+        if (productsExistsAndInStock(allProductCodes).exists()) {
             log.debug(
                     "All ProductCodes exist in db, proceeding with batch save: {}",
                     LogSanitizer.sanitizeCollection(allProductCodes));
@@ -143,7 +143,8 @@ public class OrderService {
         }
     }
 
-    private boolean productsExistsAndInStock(List<String> productIds) {
+    private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
+            List<String> productIds) {
         return catalogService.productsExistsByCodes(productIds);
     }
 

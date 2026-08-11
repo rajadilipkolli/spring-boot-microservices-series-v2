@@ -11,6 +11,7 @@ import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
+import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.utils.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -91,16 +93,32 @@ public class InventoryServiceProxy {
         log.info(
                 "Fetching inventory information for productCodes : {}",
                 LogSanitizer.sanitizeCollection(productCodeList));
+        return fetchInventoryPage(productCodeList, 0)
+                .expand(
+                        page -> {
+                            if (page.hasNext()) {
+                                return fetchInventoryPage(productCodeList, page.pageNumber() + 1);
+                            }
+                            return Mono.empty();
+                        })
+                .flatMapIterable(PagedResult::data);
+    }
+
+    private Mono<PagedResult<InventoryResponse>> fetchInventoryPage(
+            List<String> productCodeList, int pageNo) {
         return webClient
                 .get()
                 .uri(
                         uriBuilder -> {
                             uriBuilder.path("/api/inventory/product");
                             uriBuilder.queryParam("codes", productCodeList);
+                            if (pageNo > 0) {
+                                uriBuilder.queryParam("pageNo", pageNo);
+                            }
                             return uriBuilder.build();
                         })
                 .retrieve()
-                .bodyToFlux(InventoryResponse.class);
+                .bodyToMono(new ParameterizedTypeReference<PagedResult<InventoryResponse>>() {});
     }
 
     private Flux<InventoryResponse> getInventoryByProductCodesFallBack(Exception e) {

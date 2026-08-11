@@ -24,11 +24,12 @@ import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
@@ -37,12 +38,20 @@ class InventoryServiceTest {
     @Mock private InventoryMapper inventoryMapper;
     @Mock private InventoryJOOQRepository inventoryJOOQRepository;
 
-    @InjectMocks private InventoryService inventoryService;
+    private InventoryService inventoryService;
+
+    @BeforeEach
+    void setUp() {
+        inventoryService =
+                new InventoryService(
+                        inventoryRepository, inventoryMapper, inventoryJOOQRepository, null);
+        ReflectionTestUtils.setField(inventoryService, "self", inventoryService);
+    }
 
     @Test
     void testUpdateGeneratedInventory() {
         // Mock the behavior of dependencies
-        given(inventoryJOOQRepository.findByProductCode(anyString()))
+        given(inventoryRepository.findByProductCode(anyString()))
                 .willReturn(
                         Optional.of(
                                 new Inventory()
@@ -67,10 +76,10 @@ class InventoryServiceTest {
                 .save(any(Inventory.class));
 
         // Execute the method to test
-        inventoryService.updateGeneratedInventory();
+        inventoryService.updateGeneratedInventory("test-batch-123");
 
         // Verify interactions
-        verify(inventoryJOOQRepository, times(101)).findByProductCode(anyString());
+        verify(inventoryRepository, times(101)).findByProductCode(anyString());
         verify(inventoryRepository, times(101)).save(any(Inventory.class));
     }
 

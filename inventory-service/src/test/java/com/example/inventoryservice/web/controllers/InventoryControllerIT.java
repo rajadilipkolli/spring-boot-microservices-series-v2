@@ -81,25 +81,29 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 inventoryList.stream().map(Inventory::getProductCode).toArray(String[]::new);
 
         this.mockMvc
-                .perform(get("/api/inventory/product").param("codes", productCodeList))
+                .perform(
+                        get("/api/inventory/product")
+                                .param("codes", productCodeList)
+                                .param("pageSize", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(inventoryList.size())))
+                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
                 .andExpect(
-                        jsonPath("$[0].productCode")
+                        jsonPath("$.data[0].productCode")
                                 .value(inventoryList.getFirst().getProductCode()))
                 .andExpect(
-                        jsonPath("$[0].availableQuantity")
+                        jsonPath("$.data[0].availableQuantity")
                                 .value(inventoryList.getFirst().getAvailableQuantity()))
                 .andExpect(
-                        jsonPath("$[0].reservedItems")
+                        jsonPath("$.data[0].reservedItems")
                                 .value(inventoryList.getFirst().getReservedItems()))
                 .andExpect(
-                        jsonPath("$[1].productCode").value(inventoryList.get(1).getProductCode()))
+                        jsonPath("$.data[1].productCode")
+                                .value(inventoryList.get(1).getProductCode()))
                 .andExpect(
-                        jsonPath("$[1].availableQuantity")
+                        jsonPath("$.data[1].availableQuantity")
                                 .value(inventoryList.get(1).getAvailableQuantity()))
                 .andExpect(
-                        jsonPath("$[1].reservedItems")
+                        jsonPath("$.data[1].reservedItems")
                                 .value(inventoryList.get(1).getReservedItems()));
     }
 

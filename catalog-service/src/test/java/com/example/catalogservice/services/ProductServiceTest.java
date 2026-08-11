@@ -11,12 +11,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.spy;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +28,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -47,14 +52,18 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
-        productService =
-                new ProductService(
-                        productRepository,
-                        productMapper,
-                        inventoryServiceProxy,
-                        outboxService,
-                        null);
-        ReflectionTestUtils.setField(productService, "self", productService);
+        ProductService spy =
+                spy(
+                        new ProductService(
+                                productRepository,
+                                productMapper,
+                                inventoryServiceProxy,
+                                outboxService,
+                                null));
+        ProxyFactory proxyFactory = new ProxyFactory(spy);
+        ProductService proxy = (ProductService) proxyFactory.getProxy();
+        ReflectionTestUtils.setField(spy, "self", proxy);
+        productService = spy;
     }
 
     @Test
@@ -99,7 +108,7 @@ class ProductServiceTest {
         given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
 
         // Use StepVerifier to test the method
-        StepVerifier.create(productService.generateProducts())
+        StepVerifier.create(productService.generateProducts("test-batch-123"))
                 .expectSubscription()
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();
@@ -112,5 +121,41 @@ class ProductServiceTest {
         assertThat(capturedProducts)
                 .isNotEmpty()
                 .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
+    }
+
+    @Test
+    void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
+        ProductRequest request = new ProductRequest("P001", "name", "desc", null, 10.0);
+        Product product = new Product().setId(1L).setProductCode("P001");
+        ProductResponse response =
+                new ProductResponse(1L, "P001", "name", "desc", null, 10.0, true);
+
+        given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
+        given(productMapper.toEntity(request)).willReturn(product);
+        given(productRepository.save(product)).willReturn(Mono.just(product));
+        given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
+        given(productMapper.toProductResponse(product)).willReturn(response);
+
+        StepVerifier.create(productService.saveProduct(request))
+                .expectNext(response)
+                .verifyComplete();
+
+        // Verify the proxy routed to the self method
+        then(productService).should().createAndSaveProduct(request);
+
+        // Verify annotations for Transactional and CacheEvict are present to confirm cache
+        // invalidation logic
+        Method method = ProductService.class.getMethod("saveProduct", ProductRequest.class);
+        assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
+
+        CacheEvict cacheEvict = method.getAnnotation(CacheEvict.class);
+        assertThat(cacheEvict).isNotNull();
+        assertThat(cacheEvict.cacheNames()).contains("products");
+        assertThat(cacheEvict.allEntries()).isTrue();
+
+        // Verify createAndSaveProduct is transactional
+        Method createMethod =
+                ProductService.class.getMethod("createAndSaveProduct", ProductRequest.class);
+        assertThat(createMethod.isAnnotationPresent(Transactional.class)).isTrue();
     }
 }

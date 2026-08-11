@@ -30,16 +30,19 @@ public class CatalogService {
         this.applicationProperties = applicationProperties;
     }
 
-    @CircuitBreaker(name = "default", fallbackMethod = "productsExistsDefaultValue")
-    public boolean productsExistsByCodes(List<String> productCodes) {
+    @CircuitBreaker(name = "catalog-service", fallbackMethod = "productsExistsDefaultValue")
+    public CatalogServiceProxy.ProductExistsResponse productsExistsByCodes(
+            List<String> productCodes) {
         return catalogServiceProxy.productsExistsByCodes(productCodes);
     }
 
-    boolean productsExistsDefaultValue(List<String> productCodes, Exception e) {
+    CatalogServiceProxy.ProductExistsResponse productsExistsDefaultValue(
+            List<String> productCodes, Exception e) {
         log.error(
                 "While fetching status for productCodes :{}, Exception Occurred : {}",
                 LogSanitizer.sanitizeCollection(productCodes),
                 LogSanitizer.sanitizeException(e));
-        return applicationProperties.byPassCircuitBreaker();
+        return new CatalogServiceProxy.ProductExistsResponse(
+                applicationProperties.byPassCircuitBreaker());
     }
 }

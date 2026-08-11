@@ -14,6 +14,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +46,15 @@ public class StressTestSimulation extends BaseSimulation {
     private void seedTestData() {
         LOGGER.info("Generating catalog test data for stress test scenarios");
         HttpClient client = HttpClient.newHttpClient();
+        String batchId = UUID.randomUUID().toString();
         try {
             String catalogUri = BASE_URL + "/catalog-service/api/catalog/generate";
             HttpRequest request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(catalogUri))
-                            .GET()
+                            .POST(HttpRequest.BodyPublishers.noBody())
                             .header("Content-Type", "application/json")
+                            .header("Idempotency-Key", batchId)
                             .build();
             HttpResponse<String> response =
                     client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -69,8 +73,9 @@ public class StressTestSimulation extends BaseSimulation {
             request =
                     HttpRequest.newBuilder()
                             .uri(URI.create(inventoryUri))
-                            .GET()
+                            .POST(HttpRequest.BodyPublishers.noBody())
                             .header("Content-Type", "application/json")
+                            .header("Idempotency-Key", batchId)
                             .build();
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
 

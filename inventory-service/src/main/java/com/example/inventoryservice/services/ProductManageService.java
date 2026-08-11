@@ -6,11 +6,11 @@
 
 package com.example.inventoryservice.services;
 
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.logging.Loggable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 

@@ -37,7 +37,7 @@ class OrderGeneratorServiceTest {
         int expectedBatchCount = expectedOrderCount / 100; // BATCH_SIZE = 100
 
         // Act
-        orderGeneratorService.generateOrders();
+        orderGeneratorService.generateOrders("dummy-key");
 
         // Assert
         // Capture all batch calls and verify their structure
@@ -62,7 +62,7 @@ class OrderGeneratorServiceTest {
     @Test
     void shouldGenerateValidOrderRequests() {
         // Act
-        orderGeneratorService.generateOrders();
+        orderGeneratorService.generateOrders("dummy-key");
 
         // Assert
         verify(orderService, atLeastOnce()).saveBatchOrders(orderRequestsCaptor.capture());
@@ -116,7 +116,7 @@ class OrderGeneratorServiceTest {
         // Act
         try {
             for (int i = 0; i < numThreads; i++) {
-                executorService.submit(() -> orderGeneratorService.generateOrders());
+                executorService.submit(() -> orderGeneratorService.generateOrders("dummy-key"));
             }
         } finally {
             executorService.shutdown();

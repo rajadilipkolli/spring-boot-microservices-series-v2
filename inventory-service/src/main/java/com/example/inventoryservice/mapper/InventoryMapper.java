@@ -8,6 +8,7 @@ package com.example.inventoryservice.mapper;
 
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.request.InventoryRequest;
+import com.example.inventoryservice.model.response.InventoryResponse;
 import org.mapstruct.InheritConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -23,4 +24,6 @@ public interface InventoryMapper {
     @InheritConfiguration
     void updateInventoryFromRequest(
             InventoryRequest inventoryRequest, @MappingTarget Inventory inventory);
+
+    InventoryResponse toResponse(Inventory inventory);
 }
