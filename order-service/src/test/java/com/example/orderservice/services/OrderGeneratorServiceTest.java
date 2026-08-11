@@ -116,7 +116,9 @@ class OrderGeneratorServiceTest {
         // Act
         try {
             for (int i = 0; i < numThreads; i++) {
-                executorService.submit(() -> orderGeneratorService.generateOrders("dummy-key"));
+                final int threadId = i;
+                executorService.submit(
+                        () -> orderGeneratorService.generateOrders("dummy-key-" + threadId));
             }
         } finally {
             executorService.shutdown();
@@ -152,5 +154,23 @@ class OrderGeneratorServiceTest {
         assertThat(totalOrders)
                 .isEqualTo(numThreads * 10_000)
                 .as("Total orders should match expectations");
+    }
+
+    @Test
+    void shouldBeIdempotentOnSameKey() {
+        // Arrange
+        String idempotencyKey = "idempotent-key-123";
+
+        // Act
+        // Call it multiple times with the same key
+        orderGeneratorService.generateOrders(idempotencyKey);
+        orderGeneratorService.generateOrders(idempotencyKey);
+        orderGeneratorService.generateOrders(idempotencyKey);
+
+        // Assert
+        // Only one generation (10_000 orders / 100 per batch = 100 batches) should have been
+        // triggered
+        int expectedBatches = 10_000 / 100;
+        verify(orderService, times(expectedBatches)).saveBatchOrders(anyList());
     }
 }

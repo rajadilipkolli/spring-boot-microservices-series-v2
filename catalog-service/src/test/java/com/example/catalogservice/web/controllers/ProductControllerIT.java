@@ -868,10 +868,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            List.of(
-                                    new InventoryResponse("P001", 5),
-                                    new InventoryResponse("P002", 3),
-                                    new InventoryResponse("P003", 10))));
+                            new PagedResult<>(
+                                    List.of(
+                                            new InventoryResponse("P001", 5),
+                                            new InventoryResponse("P002", 3),
+                                            new InventoryResponse("P003", 0)),
+                                    3,
+                                    1,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
 
             webTestClient
                     .get()
@@ -898,10 +906,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            List.of(
-                                    new InventoryResponse("P001", 5),
-                                    new InventoryResponse("P002", 3),
-                                    new InventoryResponse("P003", 0))));
+                            new PagedResult<>(
+                                    List.of(
+                                            new InventoryResponse("P001", 5),
+                                            new InventoryResponse("P002", 3),
+                                            new InventoryResponse("P003", 0)),
+                                    3,
+                                    1,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
 
             webTestClient
                     .get()
@@ -925,7 +941,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         @Test
         void shouldReturnEmptyResultsWhenNoProductsMatchSearch() {
-            mockBackendEndpoint(200, jsonMapper.writeValueAsString(List.of()));
+            mockBackendEndpoint(
+                    200,
+                    jsonMapper.writeValueAsString(
+                            new PagedResult<>(List.of(), 0, 1, 0, true, true, false, false)));
 
             webTestClient
                     .get()

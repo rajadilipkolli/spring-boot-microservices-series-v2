@@ -13,6 +13,8 @@ import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.scheduling.annotation.Async;
@@ -26,6 +28,8 @@ public class OrderGeneratorService {
     private static final int BATCH_SIZE = 100;
     private static final SecureRandom RAND = new SecureRandom();
 
+    private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
+
     private final OrderService orderService;
 
     public OrderGeneratorService(OrderService orderService) {
@@ -34,6 +38,10 @@ public class OrderGeneratorService {
 
     @Async
     public void generateOrders(String idempotencyKey) {
+        if (!processedIdempotencyKeys.add(idempotencyKey)) {
+            return;
+        }
+
         IntStream.range(0, NUM_ORDERS)
                 .boxed()
                 .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))
