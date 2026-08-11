@@ -24,6 +24,8 @@ public interface InventoryJOOQRepository {
 
     Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable);
 
+    List<Inventory> findByProductCodeIn(List<String> productCodes);
+
     boolean existsByProductCode(String productCode);
 
     int deleteByProductCode(String productCode);

@@ -228,7 +228,7 @@ sequenceDiagram
     
     rect rgba(34, 197, 94, 0.3)
         Note over Client, CatalogAPI: <span style="color: white">Product Generation & Utilities</span>
-        Client->>Gateway: POST /catalog-service/api/catalog/generate
+        Client->>Gateway: POST /catalog-service/api/catalog/generate<br/>Header: Idempotency-Key (required)<br/>Retries must reuse the same key
         Gateway->>CatalogAPI: Trigger product generation
         CatalogAPI->>CatalogAPI: @Transactional + Flux.range(0, 101)<br/>(reactive stream generation)
         
@@ -312,7 +312,7 @@ sequenceDiagram
 | `/api/catalog` | POST | Create product | Idempotent creation, Kafka events |
 | `/api/catalog/{id}` | PUT | Update product | Reactive updates |
 | `/api/catalog/{id}` | DELETE | Delete product | Safe deletion |
-| `/api/catalog/generate` | POST | Generate test products | Reactive bulk creation |
+| `/api/catalog/generate` | POST | Generate test products | Reactive bulk creation, requires Idempotency-Key |
 
 ## Reactive Event Flow & Integration
 

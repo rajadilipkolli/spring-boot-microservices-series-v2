@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.web.controllers;
 
+import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
 import com.example.inventoryservice.model.response.InventoryResponse;
 import com.example.inventoryservice.model.response.PagedResult;
@@ -38,11 +39,9 @@ import org.springframework.web.bind.annotation.RestController;
 class InventoryController {
 
     private final InventoryService inventoryService;
-    private final com.example.inventoryservice.mapper.InventoryMapper inventoryMapper;
+    private final InventoryMapper inventoryMapper;
 
-    InventoryController(
-            InventoryService inventoryService,
-            com.example.inventoryservice.mapper.InventoryMapper inventoryMapper) {
+    InventoryController(InventoryService inventoryService, InventoryMapper inventoryMapper) {
         this.inventoryService = inventoryService;
         this.inventoryMapper = inventoryMapper;
     }

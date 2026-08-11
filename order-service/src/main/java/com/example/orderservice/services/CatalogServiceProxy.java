@@ -22,6 +22,12 @@ import org.springframework.web.service.annotation.HttpExchange;
 @Loggable
 public interface CatalogServiceProxy {
 
+    /**
+     * Checks if all provided product codes exist in the catalog.
+     *
+     * @param productCodes the list of product codes to check
+     * @return the wrapped boolean result indicating if all products exist
+     */
     @GetExchange("/api/catalog/exists")
     ProductExistsResponse productsExistsByCodes(@RequestParam List<String> productCodes);
 

@@ -380,7 +380,7 @@ class InventoryControllerTest {
                                         .isTrue());
 
         // Verify interactions
-        verify(inventoryService, times(1)).updateGeneratedInventory(any(String.class));
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123");
     }
 
     @Test

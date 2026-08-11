@@ -69,7 +69,7 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
 
         // Capture initial state of all products
         Map<String, Inventory> initialState =
-                inventoryRepository
+                inventoryJOOQRepository
                         .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
                         .stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
@@ -80,7 +80,7 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
         // Verify each product's changes
         for (String productCode : expectedChanges.keySet()) {
             Inventory initial = initialState.get(productCode);
-            Inventory updated = inventoryRepository.findById(initial.getId()).orElseThrow();
+            Inventory updated = inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
 
             int[] changes = expectedChanges.get(productCode);
             int availableQtyChange = changes[0];

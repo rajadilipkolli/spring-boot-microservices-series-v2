@@ -18,6 +18,8 @@ import com.example.inventoryservice.utils.logging.Loggable;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private static final SecureRandom RAND = new SecureRandom();
+
+    private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
+
     private final InventoryRepository inventoryRepository;
 
     private final InventoryMapper inventoryMapper;
@@ -118,6 +123,10 @@ public class InventoryService {
     }
 
     public void updateGeneratedInventory(String idempotencyKey) {
+        if (!processedIdempotencyKeys.add(idempotencyKey)) {
+            return;
+        }
+
         IntStream.rangeClosed(0, 100)
                 .forEach(
                         operand -> {

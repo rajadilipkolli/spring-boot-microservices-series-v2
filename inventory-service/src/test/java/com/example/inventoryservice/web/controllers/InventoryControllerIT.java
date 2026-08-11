@@ -81,7 +81,10 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 inventoryList.stream().map(Inventory::getProductCode).toArray(String[]::new);
 
         this.mockMvc
-                .perform(get("/api/inventory/product").param("codes", productCodeList))
+                .perform(
+                        get("/api/inventory/product")
+                                .param("codes", productCodeList)
+                                .param("pageSize", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
                 .andExpect(

@@ -33,7 +33,7 @@ public class OrderGeneratorService {
     }
 
     @Async
-    public void generateOrders() {
+    public void generateOrders(String idempotencyKey) {
         IntStream.range(0, NUM_ORDERS)
                 .boxed()
                 .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))

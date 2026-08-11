@@ -100,6 +100,20 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
+    public List<Inventory> findByProductCodeIn(List<String> productCodes) {
+        return dslContext
+                .select(
+                        INVENTORY.ID,
+                        INVENTORY.PRODUCT_CODE,
+                        INVENTORY.QUANTITY,
+                        INVENTORY.RESERVED_ITEMS,
+                        INVENTORY.VERSION)
+                .from(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                .fetchInto(Inventory.class);
+    }
+
+    @Override
     public boolean existsByProductCode(String productCode) {
         return dslContext.fetchExists(
                 dslContext
@@ -139,8 +153,9 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     private TableField<InventoryRecord, Object> getTableField(String sortFieldName) {
         TableField<InventoryRecord, Object> sortField;
         try {
-            Field tableField =
-                    INVENTORY.getClass().getField(sortFieldName.toUpperCase(Locale.ROOT));
+            String jooqFieldName =
+                    sortFieldName.replaceAll("([a-z])([A-Z]+)", "$1_$2").toUpperCase(Locale.ROOT);
+            Field tableField = INVENTORY.getClass().getField(jooqFieldName);
             sortField = (TableField<InventoryRecord, Object>) tableField.get(INVENTORY);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             String errorMessage = "Could not find table field: %s".formatted(sortFieldName);

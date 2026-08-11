@@ -44,6 +44,8 @@ public class GenerateController implements GenerateAPI {
             "lb://CATALOG-SERVICE/catalog-service/api/catalog/generate";
     private static final String INVENTORY_SERVICE_URL =
             "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate";
+    private static final String ORDER_SERVICE_URL =
+            "lb://ORDER-SERVICE/order-service/api/orders/generate";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final Duration RETRY_BACKOFF = Duration.ofMillis(500);
@@ -86,11 +88,50 @@ public class GenerateController implements GenerateAPI {
                                                                         INVENTORY_SERVICE_URL,
                                                                         ServiceType.INVENTORY,
                                                                         batchId)
-                                                                .map(
-                                                                        inventoryResult ->
-                                                                                createResponseEntity(
-                                                                                        catalogData,
-                                                                                        inventoryResult)));
+                                                                .flatMap(
+                                                                        inventoryResult -> {
+                                                                            if (inventoryResult
+                                                                                            .status()
+                                                                                    == HttpStatus.OK
+                                                                                            .value()) {
+                                                                                return Mono.just(
+                                                                                                inventoryResult)
+                                                                                        .delayElement(
+                                                                                                this
+                                                                                                        .delayBetweenServices)
+                                                                                        .flatMap(
+                                                                                                invData ->
+                                                                                                        callMicroservice(
+                                                                                                                        ORDER_SERVICE_URL,
+                                                                                                                        ServiceType
+                                                                                                                                .ORDER,
+                                                                                                                        batchId)
+                                                                                                                .map(
+                                                                                                                        orderResult ->
+                                                                                                                                createResponseEntity(
+                                                                                                                                        catalogData,
+                                                                                                                                        invData,
+                                                                                                                                        orderResult)));
+                                                                            } else {
+                                                                                return Mono.just(
+                                                                                        ResponseEntity
+                                                                                                .status(
+                                                                                                        inventoryResult
+                                                                                                                .status())
+                                                                                                .body(
+                                                                                                        new GenerationResponse(
+                                                                                                                "error",
+                                                                                                                "Error generating data in inventory service",
+                                                                                                                Map
+                                                                                                                        .of(
+                                                                                                                                "catalog",
+                                                                                                                                        catalogData
+                                                                                                                                                .response(),
+                                                                                                                                "inventory",
+                                                                                                                                        inventoryResult
+                                                                                                                                                .response()))));
+                                                                            }
+                                                                        }));
                             } else {
                                 // Don't call inventory service if catalog failed
                                 return Mono.just(
@@ -108,32 +149,28 @@ public class GenerateController implements GenerateAPI {
                 .onErrorResume(this::handleGenerationError);
     }
 
-    /**
-     * Creates an appropriate response entity based on the result of the inventory service call.
-     *
-     * @param catalogData The result from the catalog service call
-     * @param inventoryResult The result from the inventory service call
-     * @return ResponseEntity with appropriate status and body
-     */
+    /** Creates an appropriate response entity based on the results of the service calls. */
     private ResponseEntity<GenerationResponse> createResponseEntity(
-            ServiceResult catalogData, ServiceResult inventoryResult) {
-        if (inventoryResult.status() == HttpStatus.OK.value()) {
+            ServiceResult catalogData, ServiceResult inventoryData, ServiceResult orderResult) {
+        if (orderResult.status() == HttpStatus.OK.value()) {
             return ResponseEntity.ok(
                     new GenerationResponse(
                             "success",
                             "Generation process completed successfully",
                             Map.of(
                                     "catalog", catalogData.response(),
-                                    "inventory", inventoryResult.response())));
+                                    "inventory", inventoryData.response(),
+                                    "order", orderResult.response())));
         } else {
-            return ResponseEntity.status(inventoryResult.status())
+            return ResponseEntity.status(orderResult.status())
                     .body(
                             new GenerationResponse(
                                     "error",
-                                    "Error generating data in inventory service",
+                                    "Error generating data in order service",
                                     Map.of(
                                             "catalog", catalogData.response(),
-                                            "inventory", inventoryResult.response())));
+                                            "inventory", inventoryData.response(),
+                                            "order", orderResult.response())));
         }
     }
 

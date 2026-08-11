@@ -68,7 +68,7 @@ public class ScenarioBuilders {
                                         """
             {
               "customerId": #{customerId},
-              "shippingAddress": {
+              "deliveryAddress": {
                 "street": "#{street}",
                 "city": "#{city}",
                 "zipCode": "#{zipCode}",

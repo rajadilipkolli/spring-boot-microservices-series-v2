@@ -9,6 +9,7 @@ package com.example.inventoryservice.services;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.OrderDto;
 import com.example.inventoryservice.model.payload.OrderItemDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import com.example.inventoryservice.utils.logging.Loggable;
@@ -31,12 +32,15 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public InventoryOrderManageService(
             InventoryRepository inventoryRepository,
+            InventoryJOOQRepository inventoryJOOQRepository,
             KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -51,9 +55,9 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
-        // Using JPA repository instead of JOOQ
+        // Using JOOQ repository for reading unpaged list
         List<Inventory> inventoryListFromDB =
-                inventoryRepository.findByProductCodeIn(productCodeList);
+                inventoryJOOQRepository.findByProductCodeIn(productCodeList);
 
         // Check if all requested products exist in the inventory
         if (inventoryListFromDB.size() != productCodeList.size()) {
@@ -141,7 +145,7 @@ public class InventoryOrderManageService {
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
         Map<String, Inventory> inventoryMap =
-                inventoryRepository.findByProductCodeIn(productCodeList).stream()
+                inventoryJOOQRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
         for (OrderItemDto orderItemDto : orderDto.items()) {

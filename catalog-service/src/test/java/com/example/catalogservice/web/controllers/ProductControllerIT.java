@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -222,6 +224,46 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         // Then, As it is still failing state should not change
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
+    }
+
+    @Test
+    void shouldCacheFindAllProductsAndEvictOnSave() {
+        transitionToClosedState("getInventoryByProductCodes");
+        mockBackendEndpoint(
+                200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
+
+        // First call - should hit the endpoint and cache the result
+        webTestClient
+                .get()
+                .uri("/api/catalog?pageSize=2&pageNo=1")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        // Verify cache is populated
+        Cache productsCache = cacheManager.getCache("products");
+        assertThat(productsCache).isNotNull();
+        // The key is "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()"
+        // pageNo=1, pageSize=2, sortBy=id (default), sortDir=asc (default)
+        assertThat(productsCache.get("1_2_id_asc")).isNotNull();
+
+        // Save a new product which should evict the cache
+        ProductRequest productRequest =
+                new ProductRequest("P004", "Product 4", "Description 4", "image-url", 10.0);
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(productRequest)
+                .exchange()
+                .expectStatus()
+                .isCreated();
+
+        // Verify cache is evicted
+        productsCache = cacheManager.getCache("products");
+        assertThat(productsCache.get("1_2_id_asc")).isNull();
     }
 
     @Test
