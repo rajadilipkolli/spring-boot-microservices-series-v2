@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -54,7 +54,7 @@ public class OrderGeneratorService {
                                             .map(
                                                     value -> {
                                                         List<OrderItemRequest> orderItems =
-                                                                generateOrderItems();
+                                                                generateOrderItems(idempotencyKey);
                                                         long customerId =
                                                                 RAND.nextLong(100)
                                                                         + 1; // Range 1-100
@@ -75,7 +75,7 @@ public class OrderGeneratorService {
                         });
     }
 
-    private List<OrderItemRequest> generateOrderItems() {
+    private List<OrderItemRequest> generateOrderItems(String idempotencyKey) {
         int x = RAND.nextInt(5) + 1;
         int orderItem1 = RAND.nextInt(100);
         int orderItem2 = RAND.nextInt(100);
@@ -84,12 +84,18 @@ public class OrderGeneratorService {
         }
 
         OrderItemRequest orderItemRequest =
-                new OrderItemRequest("ProductCode" + orderItem1, x, new BigDecimal(100 * x));
+                new OrderItemRequest(
+                        "ProductCode_" + idempotencyKey + "_" + orderItem1,
+                        x,
+                        new BigDecimal(100 * x));
 
         int y = RAND.nextInt(5) + 1;
 
         OrderItemRequest orderItemRequest2 =
-                new OrderItemRequest("ProductCode" + orderItem2, y, new BigDecimal(100 * y));
+                new OrderItemRequest(
+                        "ProductCode_" + idempotencyKey + "_" + orderItem2,
+                        y,
+                        new BigDecimal(100 * y));
 
         return List.of(orderItemRequest, orderItemRequest2);
     }
