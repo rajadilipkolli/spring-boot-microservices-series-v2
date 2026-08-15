@@ -11,8 +11,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.OrderServiceApplication;
+import com.example.orderservice.config.TestKafkaListenerConfig;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;
@@ -28,6 +29,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,7 +44,8 @@ import tools.jackson.databind.json.JsonMapper;
         classes = {
             OrderServiceApplication.class,
             ContainersConfig.class,
-            OrderServicePostGreSQLContainer.class
+            OrderServicePostGreSQLContainer.class,
+            TestKafkaListenerConfig.class
         })
 @AutoConfigureMockMvc
 @AutoConfigureTracing
@@ -62,7 +65,11 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, byte[]> kafkaTemplate;
+
+    @Autowired protected JdbcTemplate jdbcTemplate;
+
+    @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
 
     @InjectWireMock("catalog-service")
     protected WireMockServer wireMockServer;
@@ -93,6 +100,14 @@ public abstract class AbstractIntegrationTest {
                         aResponse()
                                 .withHeader(
                                         HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                .withBody(String.valueOf(status))));
+                                .withBody("{\"exists\": " + status + "}")));
+    }
+
+    protected byte[] toJsonBytes(OrderDto orderDto) {
+        try {
+            return jsonMapper.writeValueAsBytes(orderDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

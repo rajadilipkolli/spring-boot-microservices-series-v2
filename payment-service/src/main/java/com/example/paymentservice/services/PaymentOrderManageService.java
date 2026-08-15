@@ -1,11 +1,11 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.utils.LogSanitizer;
@@ -26,10 +26,10 @@ public class PaymentOrderManageService {
     private static final Logger log = LoggerFactory.getLogger(PaymentOrderManageService.class);
 
     private final CustomerRepository customerRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public PaymentOrderManageService(
-            CustomerRepository customerRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+            CustomerRepository customerRepository, KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.customerRepository = customerRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -64,7 +64,10 @@ public class PaymentOrderManageService {
                     LogSanitizer.sanitizeForLog(String.valueOf(customer)));
             customerRepository.save(customer);
             orderDto = orderDto.withSource(AppConstants.SOURCE);
-            kafkaTemplate.send(AppConstants.PAYMENT_ORDERS_TOPIC, orderDto.orderId(), orderDto);
+            kafkaTemplate.send(
+                    AppConstants.PAYMENT_ORDERS_TOPIC,
+                    String.valueOf(orderDto.orderId()),
+                    orderDto);
             log.info(
                     "Sent Reserved Order: {} to topic :{}",
                     LogSanitizer.sanitizeForLog(String.valueOf(orderDto)),

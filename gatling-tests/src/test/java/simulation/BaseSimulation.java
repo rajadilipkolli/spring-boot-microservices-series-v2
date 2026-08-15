@@ -22,6 +22,11 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class BaseSimulation extends Simulation {
 
+    @Override
+    public void before() {
+        runHealthChecks();
+    }
+
     protected static final Logger LOGGER = LoggerFactory.getLogger(BaseSimulation.class);
 
     // Common system properties for all simulations
@@ -34,6 +39,17 @@ public abstract class BaseSimulation extends Simulation {
     // JSON object mapper for serialization/deserialization
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    // Common load parameters with default values
+    protected static final int RAMP_USERS = Integer.parseInt(System.getProperty("rampUsers", "5"));
+    protected static final int CONSTANT_USERS =
+            Integer.parseInt(System.getProperty("constantUsers", "10"));
+    protected static final int RAMP_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("rampDuration", "30"));
+    protected static final int TEST_DURATION_SECONDS =
+            Integer.parseInt(System.getProperty("testDuration", "60"));
+    protected static final int BURST_USERS_PER_SEC =
+            Integer.parseInt(System.getProperty("burstUsersPerSec", "30"));
+
     // Common HTTP protocol configuration
     protected final HttpProtocolBuilder httpProtocol =
             http.baseUrl(BASE_URL)
@@ -41,13 +57,11 @@ public abstract class BaseSimulation extends Simulation {
                     .contentTypeHeader("application/json")
                     .userAgentHeader("Gatling/Performance Test")
                     .disableCaching()
-                    .shareConnections() // Enable connection sharing for better resource usage
-                    .maxConnectionsPerHost(100) // Increase max connections
+                    .shareConnections() // Reuse connections for better performance
+                    .maxConnectionsPerHost(100) // Limit concurrency per host to avoid overloading
                     .connectionHeader("keep-alive")
                     .acceptEncodingHeader("gzip, deflate")
-                    .enableHttp2() // Enable HTTP/2 for better performance
-                    .inferHtmlResources() // Better resource inference
-                    .silentResources(); // Don't log resource requests separately
+                    .enableHttp2(); // Use HTTP/2 where supported
 
     // Common data feeder for product data with address information
     protected Iterator<Map<String, Object>> enhancedProductFeeder() {
@@ -58,7 +72,10 @@ public abstract class BaseSimulation extends Simulation {
                             // Product information
                             data.put(
                                     "productCode",
-                                    "P" + String.format("%06d", random.nextInt(10, 100_000)));
+                                    "P"
+                                            + String.format("%06d", random.nextInt(10, 100_000))
+                                            + "-"
+                                            + System.nanoTime());
                             data.put("productName", "Product-" + random.nextInt(1000, 10000));
                             data.put("customerId", random.nextInt(1, 1000));
                             data.put("price", random.nextDouble(10, 1000));
@@ -82,21 +99,18 @@ public abstract class BaseSimulation extends Simulation {
 
         // Define health check configurations for each service
         ServiceHealthCheck[] serviceChecks = {
-            new ServiceHealthCheck("/actuator/health", "API Gateway", 15, 5000),
+            new ServiceHealthCheck("/actuator/health", "API Gateway", 3, 1000),
             new ServiceHealthCheck(
-                    "/CATALOG-SERVICE/catalog-service/actuator/health",
-                    "Catalog Service",
-                    10,
-                    3000),
+                    "/CATALOG-SERVICE/catalog-service/actuator/health", "Catalog Service", 3, 1000),
             new ServiceHealthCheck(
                     "/INVENTORY-SERVICE/inventory-service/actuator/health",
                     "Inventory Service",
-                    10,
-                    3000),
+                    3,
+                    1000),
             new ServiceHealthCheck(
-                    "/ORDER-SERVICE/order-service/actuator/health", "Order Service", 10, 3000),
+                    "/ORDER-SERVICE/order-service/actuator/health", "Order Service", 3, 1000),
             new ServiceHealthCheck(
-                    "/PAYMENT-SERVICE/payment-service/actuator/health", "Payment Service", 10, 3000)
+                    "/PAYMENT-SERVICE/payment-service/actuator/health", "Payment Service", 3, 1000)
         };
 
         // First check API Gateway as it's critical
@@ -132,11 +146,11 @@ public abstract class BaseSimulation extends Simulation {
                 commonRetryCount++;
                 if (commonRetryCount < maxCommonRetries) {
                     LOGGER.info(
-                            "Not all services are up. Retry attempt {}/{}. Waiting 10 seconds...",
+                            "Not all services are up. Retry attempt {}/{}. Waiting 1 second...",
                             commonRetryCount,
                             maxCommonRetries);
                     try {
-                        TimeUnit.SECONDS.sleep(10);
+                        TimeUnit.SECONDS.sleep(1);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;

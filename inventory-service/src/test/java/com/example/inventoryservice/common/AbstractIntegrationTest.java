@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -36,7 +36,7 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected JsonMapper jsonMapper;
 
-    @Autowired protected KafkaTemplate<Long, Object> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, Object> kafkaTemplate;
 
     @Autowired protected InventoryJOOQRepository inventoryJOOQRepository;
 

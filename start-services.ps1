@@ -45,4 +45,4 @@ Start-Sleep -Seconds 30
 
 Write-Host "All services should now be running!" -ForegroundColor Green
 Write-Host "You can access the Eureka dashboard at: http://localhost:8761" -ForegroundColor Cyan
-Write-Host "You can test the API Gateway endpoint at: http://localhost:8765/api/generate" -ForegroundColor Cyan
+Write-Host "You can test the API Gateway endpoint using: curl -X POST http://localhost:8765/api/v1/generate -H `"Idempotency-Key: test-123`"" -ForegroundColor Cyan

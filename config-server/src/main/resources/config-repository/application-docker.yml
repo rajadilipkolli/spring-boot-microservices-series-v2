@@ -14,6 +14,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://naming-server:8761/eureka/
+  instance:
+    preferIpAddress: false
+    hostname: host.docker.internal
 
 # Metrics Export
 management:

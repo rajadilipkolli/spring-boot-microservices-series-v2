@@ -1,50 +1,66 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.services;
 
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.exception.ProductAlreadyExistsException;
 import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
+import com.example.inventoryservice.model.response.InventoryResponse;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.logging.Loggable;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 @Loggable
 public class InventoryService {
 
     private static final SecureRandom RAND = new SecureRandom();
+
+    private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
+
     private final InventoryRepository inventoryRepository;
 
     private final InventoryMapper inventoryMapper;
 
     private final InventoryJOOQRepository inventoryJOOQRepository;
 
+    private final InventoryService self;
+
     public InventoryService(
             InventoryRepository inventoryRepository,
             InventoryMapper inventoryMapper,
-            InventoryJOOQRepository inventoryJOOQRepository) {
+            InventoryJOOQRepository inventoryJOOQRepository,
+            @Lazy InventoryService self) {
         this.inventoryRepository = inventoryRepository;
         this.inventoryMapper = inventoryMapper;
         this.inventoryJOOQRepository = inventoryJOOQRepository;
+        this.self = self;
     }
 
-    public PagedResult<Inventory> findAllInventories(
+    public PagedResult<InventoryResponse> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
 
         Sort sort =
@@ -52,17 +68,29 @@ public class InventoryService {
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
-        return new PagedResult<>(inventoryJOOQRepository.findAll(pageable));
+        Page<InventoryResponse> page =
+                inventoryJOOQRepository.findAll(pageable).map(inventoryMapper::toResponse);
+        return new PagedResult<>(page);
     }
 
     public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryJOOQRepository.findById(id);
+        return inventoryRepository.findById(id);
     }
 
     @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
+        if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
+            throw new ProductAlreadyExistsException(inventoryRequest.productCode());
+        }
         Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
-        return inventoryRepository.save(inventory);
+        try {
+            return inventoryRepository.save(inventory);
+        } catch (DataIntegrityViolationException ex) {
+            if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
+                throw new ProductAlreadyExistsException(inventoryRequest.productCode());
+            }
+            throw ex;
+        }
     }
 
     @Transactional
@@ -77,34 +105,63 @@ public class InventoryService {
     }
 
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
-        return this.inventoryJOOQRepository.findByProductCode(productCode);
+        return this.inventoryRepository.findByProductCode(productCode);
     }
 
-    public List<Inventory> getInventoryByProductCodes(List<String> productCodes) {
-        return this.inventoryJOOQRepository.findByProductCodeIn(productCodes);
+    public PagedResult<InventoryResponse> getInventoryByProductCodes(
+            List<String> productCodes, int pageNo, int pageSize, String sortBy, String sortDir) {
+        Sort sort =
+                sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        Page<InventoryResponse> page =
+                this.inventoryJOOQRepository
+                        .findByProductCodeIn(productCodes, pageable)
+                        .map(inventoryMapper::toResponse);
+        return new PagedResult<>(page);
     }
 
-    @Transactional
-    public void updateGeneratedInventory() {
+    public void updateGeneratedInventory(String idempotencyKey) {
+        if (!processedIdempotencyKeys.add(idempotencyKey)) {
+            return;
+        }
+
         IntStream.rangeClosed(0, 100)
                 .forEach(
                         operand -> {
-                            int randomQuantity = RAND.nextInt(10_000) + 1;
-                            Optional<Inventory> inventoryByProductCode =
-                                    findInventoryByProductCode("ProductCode" + operand);
-                            inventoryByProductCode.ifPresent(
-                                    inventoryFromDB ->
-                                            updateInventory(
-                                                    inventoryFromDB,
-                                                    new InventoryRequest(
-                                                            "ProductCode" + operand,
-                                                            randomQuantity)));
+                            try {
+                                int randomQuantity = RAND.nextInt(10_000) + 1;
+                                Optional<Inventory> inventoryByProductCode =
+                                        findInventoryByProductCode(
+                                                "ProductCode_" + idempotencyKey + "_" + operand);
+                                inventoryByProductCode.ifPresent(
+                                        inventoryFromDB ->
+                                                self.updateInventory(
+                                                        inventoryFromDB,
+                                                        new InventoryRequest(
+                                                                "ProductCode_"
+                                                                        + idempotencyKey
+                                                                        + "_"
+                                                                        + operand,
+                                                                randomQuantity)));
+                            } catch (OptimisticLockingFailureException e) {
+                                // Ignore optimistic locking failures when concurrently updating
+                                // random inventory
+                            }
                         });
     }
 
     @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
         return findInventoryById(id)
-                .map(inventoryFromDB -> updateInventory(inventoryFromDB, inventoryRequest));
+                .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
+    }
+
+    @Transactional
+    public Optional<Inventory> updateInventoryByProductCode(
+            String productCode, InventoryRequest inventoryRequest) {
+        return findInventoryByProductCode(productCode)
+                .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
     }
 }

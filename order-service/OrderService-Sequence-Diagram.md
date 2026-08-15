@@ -230,16 +230,16 @@ sequenceDiagram
 
 ## Service Endpoints Summary
 
-| Endpoint | Method | Description | Features |
-|----------|--------|-------------|----------|
-| `/api/orders` | GET | Get paginated orders | Pagination, sorting, N+1 prevention |
-| `/api/orders/{id}` | GET | Get order by ID | Circuit breaker, rate limiting |
-| `/api/orders` | POST | Create new order | Product validation, Kafka publishing |
-| `/api/orders/{id}` | PUT | Update existing order | Transactional updates |
-| `/api/orders/{id}` | DELETE | Delete order | Soft/hard deletion |
-| `/api/orders/customer/{id}` | GET | Get customer orders | Customer-specific pagination |
-| `/api/orders/all` | GET | Query Kafka streams | Real-time materialized view |
-| `/api/orders/generate` | GET | Generate mock orders | Development/testing utility |
+| Endpoint                    | Method | Description           | Features                             |
+|-----------------------------|--------|-----------------------|--------------------------------------|
+| `/api/orders`               | GET    | Get paginated orders  | Pagination, sorting, N+1 prevention  |
+| `/api/orders/{id}`          | GET    | Get order by ID       | Circuit breaker, rate limiting       |
+| `/api/orders`               | POST   | Create new order      | Product validation, Kafka publishing |
+| `/api/orders/{id}`          | PUT    | Update existing order | Transactional updates                |
+| `/api/orders/{id}`          | DELETE | Delete order          | Soft/hard deletion                   |
+| `/api/orders/customer/{id}` | GET    | Get customer orders   | Customer-specific pagination         |
+| `/api/orders/all`           | GET    | Query Kafka streams   | Real-time materialized view          |
+| `/api/orders/generate`      | POST   | Generate mock orders  | Development/testing utility          |
 
 ## Kafka Topics & Event Flow
 

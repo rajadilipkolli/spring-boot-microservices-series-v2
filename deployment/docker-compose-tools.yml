@@ -17,7 +17,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - microservice-network
 
@@ -35,7 +35,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:80/misc/ping"]
+      test: [ "CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:80/misc/ping" ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -45,8 +45,8 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.4.0-alpine'
-    extra_hosts: ['host.docker.internal:host-gateway']
+    image: 'redis:8.10.0-alpine'
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - '127.0.0.1:6379:6379/tcp'
     volumes:
@@ -61,13 +61,13 @@ services:
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.1
+    image: apache/kafka-native:4.3.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - "9092:9092"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -106,7 +106,7 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -115,7 +115,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5.2
+    image: quay.io/keycloak/keycloak:26.7.1
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -138,8 +138,21 @@ services:
       - KC_HTTP_ENABLED=true
       # Additional production settings
       - KC_FEATURES=token-exchange
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_TRACING_ENABLED=true
+      - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
+      - KC_TELEMETRY_PROTOCOL=http/protobuf
+      - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
       - "9191:9191"
+      - "9000:9000"
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep \"HTTP/1.1 200 OK\" <&3" ]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 120s
     depends_on:
       postgresql:
         condition: service_healthy
@@ -152,26 +165,28 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1400m
     ports:
       - "8888:8888"
     depends_on:
       tempo:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=config-server
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_SECURITY_USER_NAME=dockerUser
+      - SPRING_SECURITY_USER_PASSWORD=dockerSecret
     networks:
       - microservice-network
-    environment:
-      SPRING_PROFILES_ACTIVE: native
-      SPRING_SECURITY_USER_NAME: dockerUser
-      SPRING_SECURITY_USER_PASSWORD: dockerSecret
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   naming-server:
     container_name: naming-server
@@ -180,7 +195,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1400m
     ports:
       - "8761:8761"
     networks:
@@ -192,11 +207,10 @@ services:
         condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=naming-server
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   api-gateway:
     container_name: api-gateway
@@ -205,7 +219,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "8765:8765"
     networks:
@@ -218,18 +232,19 @@ services:
       tempo:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
+      otel-collector:
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=api-gateway
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   catalog-service:
     container_name: catalog-service
@@ -238,7 +253,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18080:18080"
     networks:
@@ -251,17 +266,16 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
       api-gateway:
         condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=catalog-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   inventory-service:
     container_name: inventory-service
@@ -270,7 +284,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18181:18181"
     networks:
@@ -283,15 +297,14 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=inventory-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   order-service:
     container_name: order-service
@@ -300,7 +313,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18282:18282"
       - "28282:28282"
@@ -314,15 +327,14 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE= docker
       - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=order-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
 
   payment-service:
     container_name: payment-service
@@ -344,14 +356,13 @@ services:
       postgresql:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_CONFIG_IMPORT: configserver:http://dockerUser:dockerSecret@config-server:8888/
-      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://tempo:4318
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
+      - SPRING_PROFILES_ACTIVE= docker
+      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=payment-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   retailstore-webapp:
@@ -361,10 +372,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
-      - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://tempo:4318
+      - OAUTH2_SERVER_URL=http://localhost:9191
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=retail-store-webapp
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
       - "8080:8080"
     networks:
@@ -372,27 +385,43 @@ services:
     depends_on:
       keycloak:
         condition: service_started
+      redis:
+        condition: service_healthy
       naming-server:
         condition: service_started
       api-gateway:
         condition: service_started
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: 700m
-    labels:
-      logging: "promtail"
-      logging_jobname: "containerlogs"
+          memory: 1400m
     restart: unless-stopped
+
+  retailstore-webapp-proxy:
+    image: alpine/socat
+    container_name: retailstore-webapp-proxy
+    command: tcp-listen:9191,fork,bind=127.0.0.1 tcp-connect:keycloak:9191
+    network_mode: "service:retailstore-webapp"
+    depends_on:
+      retailstore-webapp:
+        condition: service_started
 
   ## Observability
   grafana:
-    image: grafana/grafana:12.3.2
+    image: grafana/grafana:13.1.3
     container_name: grafana
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     depends_on:
       loki:
-        condition: service_healthy
+        condition: service_started
       prometheus:
         condition: service_healthy
       tempo:
@@ -407,7 +436,7 @@ services:
       - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3000/api/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3000/api/health || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -416,7 +445,7 @@ services:
       - microservice-network
 
   loki:
-    image: grafana/loki:3.6.4
+    image: grafana/loki:3.7.6
     container_name: loki
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file=/etc/loki/local-config.yaml
@@ -424,35 +453,9 @@ services:
       - "3100:3100"
     networks:
       - microservice-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3100/ready || exit 1"]
-      interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 90s
-
-  promtail:
-    image: grafana/promtail:3.6.4
-    container_name: promtail
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    volumes:
-      - ./config/promtail/promtail.yml:/etc/promtail/config.yml
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      loki:
-        condition: service_healthy
-    networks:
-      - microservice-network
-    healthcheck:
-      test: ["CMD", "ls", "/etc/promtail/config.yml"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.9.1
+    image: prom/prometheus:v3.13.2
     container_name: prometheus
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command:
@@ -466,14 +469,14 @@ services:
     networks:
       - microservice-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || wget --spider -q http://localhost:9090/-/ready || exit 1"]
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || wget --spider -q http://localhost:9090/-/ready || exit 1" ]
       interval: 30s
       timeout: 15s
       retries: 5
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:2.10.0
+    image: grafana/tempo:3.0.2
     container_name: tempo
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     command: -config.file /etc/tempo-config.yml
@@ -487,14 +490,26 @@ services:
     networks:
       - microservice-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      test: [ "CMD", "/tempo", "-version" ]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
+      
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.158.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    networks:
+      - microservice-network
+    depends_on:
+      grafana:
+        condition: service_started
 
   alertmanager:
-    image: prom/alertmanager:v0.30.1
+    image: prom/alertmanager:v0.33.1
     container_name: alertmanager
     ports:
       - "9093:9093"
@@ -505,7 +520,7 @@ services:
     networks:
       - microservice-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:9093/-/healthy || wget --quiet --tries=3 --spider http://localhost:9093/api/v1/status || exit 1"]
+      test: [ "CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:9093/-/healthy || wget --quiet --tries=3 --spider http://localhost:9093/api/v1/status || exit 1" ]
       interval: 30s
       timeout: 15s
       retries: 5

@@ -150,7 +150,7 @@ sequenceDiagram
         EurekaServer-->>OrderService: 200 OK + Catalog service instances
         
         OrderService->>OrderService: Select healthy instance (load balancing)
-        OrderService->>CatalogService: GET /api/catalog/productCode/{code}
+        OrderService->>CatalogService: GET /api/catalog/product-code/{code}
         CatalogService-->>OrderService: 200 OK + Product details
         
         OrderService->>EurekaServer: GET /eureka/apps/INVENTORY-SERVICE

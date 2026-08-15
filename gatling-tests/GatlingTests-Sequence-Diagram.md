@@ -68,13 +68,13 @@ sequenceDiagram
 
     %% Test Data Generation
     Note over Gatling, Kafka: 📊 Test Data Preparation
-    Gatling->>Gateway: GET /catalog-service/api/catalog/generate
+    Gatling->>Gateway: POST /catalog-service/api/catalog/generate
     Gateway->>Catalog: Generate test products
     Catalog->>Kafka: Publish ProductCreated events
     Catalog-->>Gateway: 200 OK (Products generated)
     Gateway-->>Gatling: Test data ready
     
-    Gatling->>Gateway: GET /inventory-service/api/inventory/generate
+    Gatling->>Gateway: POST /inventory-service/api/inventory/generate
     Gateway->>Inventory: Generate test inventory
     Inventory->>Kafka: Publish InventoryCreated events
     Inventory-->>Gateway: 200 OK (Inventory generated)
@@ -103,7 +103,7 @@ sequenceDiagram
         Catalog-->>Gateway: 200 OK + Product list
         Gateway-->>Gatling: Catalog browsing successful
         
-        Gatling->>Gateway: GET /catalog-service/api/catalog/productCode/{code}
+        Gatling->>Gateway: GET /catalog-service/api/catalog/product-code/{code}
         Gateway->>Catalog: Get product details
         Catalog-->>Gateway: 200 OK + Product details
         Gateway-->>Gatling: Product detail view successful
@@ -170,7 +170,7 @@ sequenceDiagram
                 Inventory-->>Gateway: 201 Created
                 Gateway-->>Gatling: Inventory initialized
                 
-                Gatling->>Gateway: GET /catalog-service/api/catalog/productCode/{code}
+                Gatling->>Gateway: GET /catalog-service/api/catalog/product-code/{code}
                 Gateway->>Catalog: Get product details
                 Catalog-->>Gateway: 200 OK + Product data
                 Gateway-->>Gatling: Product details loaded
@@ -194,7 +194,7 @@ sequenceDiagram
                 Inventory-->>Gateway: 201 Created
                 Gateway-->>Gatling: Inventory ready
                 
-                Gatling->>Gateway: GET /catalog-service/api/catalog/productCode/{code}
+                Gatling->>Gateway: GET /catalog-service/api/catalog/product-code/{code}
                 Gateway->>Catalog: Verify product exists
                 Catalog-->>Gateway: 200 OK + Product + Price
                 Gateway-->>Gatling: Product verified

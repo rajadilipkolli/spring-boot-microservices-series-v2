@@ -33,6 +33,11 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}Starting 'Store μServices' for [end-2-end] testing....${NC}\n"
 
+# Define a jq function to strip \r from output for Windows compatibility
+function jq() {
+  command jq "$@" | tr -d '\r'
+}
+
 # Default variables with fallback values using parameter expansion
 : ${HOST=localhost}
 : ${PORT=8765}
@@ -41,8 +46,8 @@ echo -e "${BLUE}Starting 'Store μServices' for [end-2-end] testing....${NC}\n"
 : ${CUSTOMER_NAME=dockerCustomer001}
 : ${SERVICE_WAIT_TIMEOUT=100}
 : ${INITIAL_SLEEP_TIME=45}
-: ${RETRY_SLEEP_TIME=3}
-: ${ORDER_PROCESSING_SLEEP_TIME=3}
+: ${RETRY_SLEEP_TIME=5}
+: ${ORDER_PROCESSING_SLEEP_TIME=8}
 : ${KAFKA_STARTUP_SLEEP_TIME=8}
 : ${DETAILED_LOGS=false}
 : ${PARALLEL_SETUP=false}
@@ -207,6 +212,8 @@ function assertCurl() {
   
   local httpCode="${result:(-3)}"
   RESPONSE='' && (( ${#result} > 3 )) && RESPONSE="${result%???}"
+  # Strip \r from RESPONSE for Windows compatibility
+  RESPONSE=$(echo "$RESPONSE" | tr -d '\r')
 
   if [[ "$httpCode" = "$expectedHttpCode" ]]; then
     if [[ "$httpCode" = "200" ]]; then
@@ -231,13 +238,17 @@ function assertEqual() {
   local actual=$2
   local testName="${3:-Value comparison}"
 
-  if [[ "$actual" = "$expected" ]]; then
-    echo -e "${GREEN}Test OK (actual value: $actual)${NC}"
-    track_test_result "$testName" "PASS" "Expected: $expected, Got: $actual"
+  # Strip \r from both expected and actual for Windows compatibility
+  local expected_clean=$(echo "$expected" | tr -d '\r')
+  local actual_clean=$(echo "$actual" | tr -d '\r')
+
+  if [[ "$actual_clean" = "$expected_clean" ]]; then
+    echo -e "${GREEN}Test OK (actual value: $actual_clean)${NC}"
+    track_test_result "$testName" "PASS" "Expected: $expected_clean, Got: $actual_clean"
     return 0
   else
-    echo -e "${RED}Test FAILED, EXPECTED VALUE: $expected, ACTUAL VALUE: $actual, WILL ABORT${NC}"
-    track_test_result "$testName" "FAIL" "Expected: $expected, Got: $actual"
+    echo -e "${RED}Test FAILED, EXPECTED VALUE: $expected_clean, ACTUAL VALUE: $actual_clean, WILL ABORT${NC}"
+    track_test_result "$testName" "FAIL" "Expected: $expected_clean, Got: $actual_clean"
     TEST_STATUS=1
     return 1
   fi
@@ -352,7 +363,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that communication between catalog-service and inventory service is established
-    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/productCode/$PROD_CODE_1?fetchInStock=true" || return 1
+    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/product-code/$PROD_CODE_1?fetchInStock=true" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
     assertEqual true $(echo ${RESPONSE} | jq .inStock) || return 1
 
@@ -391,7 +402,7 @@ function testCircuitBreaker() {
     local SERVICES_TEST=("catalog-service" "inventory-service" "order-service")
     for s in "${SERVICES_TEST[@]}"; do
       if [[ "$s" == "catalog-service" ]]; then
-        url="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
+        url="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
       elif [[ "$s" == "order-service" ]]; then
         ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
         if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
@@ -471,8 +482,8 @@ function testCircuitBreaker() {
 
     # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
     if [[ "$svc" == "catalog-service" ]]; then
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}"
+      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}"
       NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
     elif [[ "$svc" == "order-service" ]]; then
       # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
@@ -980,6 +991,12 @@ waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/ac
 waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
 waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
 waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+
+log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
+BATCH_ID=$(cat /proc/sys/kernel/random/uuid || uuidgen)
+curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "http://$HOST:$PORT/api/v1/generate" > /dev/null 2>&1
+log_info "Sleeping for 10 sec for warmup processing to complete..."
+sleep 10
 
 log_info "Setting up test data..."
 setupTestData || error_exit "Test data setup failed!"

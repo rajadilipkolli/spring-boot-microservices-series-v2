@@ -1,13 +1,13 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.services;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public class OrderKafkaStreamService {
 
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
 
-    private ReadOnlyKeyValueStore<Long, OrderDto> store = null;
+    private ReadOnlyKeyValueStore<String, OrderDto> store = null;
 
     public OrderKafkaStreamService(StreamsBuilderFactoryBean kafkaStreamsFactory) {
         this.kafkaStreamsFactory = kafkaStreamsFactory;
@@ -46,7 +46,7 @@ public class OrderKafkaStreamService {
 
         long startIndex = (long) pageNo * pageSize;
         long endIndex = startIndex + pageSize;
-        try (KeyValueIterator<Long, OrderDto> it = getReadOnlyKeyValueStore().all()) {
+        try (KeyValueIterator<String, OrderDto> it = getReadOnlyKeyValueStore().all()) {
             long currentIndex = 0;
 
             log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
@@ -72,12 +72,12 @@ public class OrderKafkaStreamService {
         return orders;
     }
 
-    public Optional<OrderDto> getOrderFromStoreById(long orderId) {
+    public Optional<OrderDto> getOrderFromStoreById(String orderId) {
         log.info("Fetching order from Kafka Store with orderId :{}", orderId);
         return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
     }
 
-    private ReadOnlyKeyValueStore<Long, OrderDto> getReadOnlyKeyValueStore() {
+    private ReadOnlyKeyValueStore<String, OrderDto> getReadOnlyKeyValueStore() {
         if (store == null) {
             try {
                 store =

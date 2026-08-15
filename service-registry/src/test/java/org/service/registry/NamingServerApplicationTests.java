@@ -1,4 +1,4 @@
-/* Licensed under Apache-2.0 2021-2023 */
+/* Licensed under Apache-2.0 2021-2025 */
 package org.service.registry;
 
 import org.junit.jupiter.api.Test;

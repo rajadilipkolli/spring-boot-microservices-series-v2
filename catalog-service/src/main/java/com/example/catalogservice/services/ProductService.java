@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -10,7 +10,6 @@ import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.kafka.CatalogKafkaProducer;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
@@ -24,18 +23,22 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 @Loggable
 public class ProductService {
 
@@ -45,20 +48,27 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
-    private final CatalogKafkaProducer catalogKafkaProducer;
+    private final OutboxService outboxService;
+
+    private final ProductService self;
 
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
-            CatalogKafkaProducer catalogKafkaProducer) {
+            OutboxService outboxService,
+            @Lazy ProductService self) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
-        this.catalogKafkaProducer = catalogKafkaProducer;
+        this.outboxService = outboxService;
+        this.self = self;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
+    @Cacheable(
+            cacheNames = "products",
+            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
@@ -149,12 +159,13 @@ public class ProductService {
     // saves product to db and sends message that new product is available for inventory
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository
                 .findByProductCodeAllIgnoreCase(productRequest.productCode())
                 .map(productMapper::toProductResponse)
-                .switchIfEmpty(createAndSaveProduct(productRequest))
+                .switchIfEmpty(Mono.defer(() -> self.createAndSaveProduct(productRequest)))
                 // Catch DuplicateKeyException from unique constraint violation
                 .onErrorResume(
                         DuplicateKeyException.class,
@@ -175,21 +186,40 @@ public class ProductService {
                         });
     }
 
-    /** Helper method to create and save a new product */
     @Transactional
-    protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
+    public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
         return Mono.just(productMapper.toEntity(productRequest))
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->
-                                catalogKafkaProducer.send(productRequest).thenReturn(savedProduct))
+                                outboxService
+                                        .createOutboxEvent(
+                                                "PRODUCT",
+                                                savedProduct.getProductCode(),
+                                                "PRODUCT_CREATED",
+                                                savedProduct)
+                                        .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse);
     }
 
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Void> deleteProductById(Long id) {
-        return productRepository.deleteById(id);
+        return productRepository
+                .findById(id)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
+                .flatMap(
+                        product ->
+                                productRepository
+                                        .deleteById(id)
+                                        .then(
+                                                outboxService.createOutboxEvent(
+                                                        "PRODUCT",
+                                                        product.getProductCode(),
+                                                        "PRODUCT_DELETED",
+                                                        product)))
+                .then();
     }
 
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
@@ -205,12 +235,24 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
         // Update the post object with data from postRequest
         productMapper.mapProductWithRequest(productRequest, product);
 
         // Save the updated post object
-        return productRepository.save(product).map(productMapper::toProductResponse);
+        return productRepository
+                .save(product)
+                .flatMap(
+                        savedProduct ->
+                                outboxService
+                                        .createOutboxEvent(
+                                                "PRODUCT",
+                                                savedProduct.getProductCode(),
+                                                "PRODUCT_UPDATED",
+                                                savedProduct)
+                                        .thenReturn(savedProduct))
+                .map(productMapper::toProductResponse);
     }
 
     public Mono<Product> findById(Long id) {
@@ -218,7 +260,8 @@ public class ProductService {
     }
 
     @Transactional
-    public Mono<Boolean> generateProducts() {
+    @CacheEvict(cacheNames = "products", allEntries = true)
+    public Mono<Boolean> generateProducts(String idempotencyKey) {
         return Flux.range(0, 101)
                 .flatMap(
                         i ->
@@ -226,9 +269,12 @@ public class ProductService {
                                         .map(
                                                 randomPrice ->
                                                         new ProductRequest(
-                                                                "ProductCode" + i,
-                                                                "Gen Product" + i,
-                                                                "Gen Prod Description" + i,
+                                                                "ProductCode_"
+                                                                        + idempotencyKey
+                                                                        + "_"
+                                                                        + i,
+                                                                "Gen Product " + i,
+                                                                "Gen Prod Description " + i,
                                                                 null,
                                                                 (double) randomPrice)))
                 .flatMap(this::saveProduct)

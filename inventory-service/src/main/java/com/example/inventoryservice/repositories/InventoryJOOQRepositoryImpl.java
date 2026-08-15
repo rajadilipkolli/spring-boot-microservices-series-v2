@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -25,10 +25,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
 
     private final DSLContext dslContext;
@@ -79,17 +80,32 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     @Override
-    public List<Inventory> findByProductCodeIn(List<String> productCodes) {
-        return dslContext
-                .select(
-                        INVENTORY.ID,
-                        INVENTORY.PRODUCT_CODE,
-                        INVENTORY.QUANTITY,
-                        INVENTORY.RESERVED_ITEMS,
-                        INVENTORY.VERSION)
-                .from(INVENTORY)
-                .where(INVENTORY.PRODUCT_CODE.in(productCodes))
-                .fetchInto(Inventory.class);
+    public Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable) {
+        return new PageImpl<>(
+                dslContext
+                        .select(
+                                INVENTORY.ID,
+                                INVENTORY.PRODUCT_CODE,
+                                INVENTORY.QUANTITY,
+                                INVENTORY.RESERVED_ITEMS,
+                                INVENTORY.VERSION)
+                        .from(INVENTORY)
+                        .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                        .orderBy(getSortFields(pageable.getSort()))
+                        .limit(pageable.getPageSize())
+                        .offset(pageable.getOffset())
+                        .fetchInto(Inventory.class),
+                pageable,
+                dslContext.fetchCount(INVENTORY, INVENTORY.PRODUCT_CODE.in(productCodes)));
+    }
+
+    @Override
+    public boolean existsByProductCode(String productCode) {
+        return dslContext.fetchExists(
+                dslContext
+                        .selectOne()
+                        .from(INVENTORY)
+                        .where(INVENTORY.PRODUCT_CODE.eq(productCode)));
     }
 
     @Override
@@ -123,8 +139,9 @@ public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     private TableField<InventoryRecord, Object> getTableField(String sortFieldName) {
         TableField<InventoryRecord, Object> sortField;
         try {
-            Field tableField =
-                    INVENTORY.getClass().getField(sortFieldName.toUpperCase(Locale.ROOT));
+            String jooqFieldName =
+                    sortFieldName.replaceAll("([a-z])([A-Z]+)", "$1_$2").toUpperCase(Locale.ROOT);
+            Field tableField = INVENTORY.getClass().getField(jooqFieldName);
             sortField = (TableField<InventoryRecord, Object>) tableField.get(INVENTORY);
         } catch (NoSuchFieldException | IllegalAccessException ex) {
             String errorMessage = "Could not find table field: %s".formatted(sortFieldName);

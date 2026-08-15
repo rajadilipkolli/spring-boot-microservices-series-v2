@@ -3,6 +3,11 @@ databaseChangeLog:
       id: insert-sample-products
       author: system
       context: sample-data
+      preConditions:
+        - onFail: MARK_RAN
+          sqlCheck:
+            expectedResult: 0
+            sql: "SELECT COUNT(*) FROM products WHERE product_code = 'P001'"
       changes:
         - insert:
             tableName: products

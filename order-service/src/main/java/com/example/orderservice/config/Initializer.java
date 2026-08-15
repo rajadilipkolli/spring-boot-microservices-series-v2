@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -28,7 +28,8 @@ class Initializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
-        BackgroundJob.scheduleRecurrently(Cron.minutely(), orderService::retryNewOrders);
-        log.info("Completed Scheduling Recurrently BackgroundJob with 2 retries");
+        BackgroundJob.scheduleRecurrently(
+                "retry-new-orders", Cron.minutely(), orderService::retryNewOrders);
+        log.info("Completed scheduling recurring jobs: retryNewOrders");
     }
 }

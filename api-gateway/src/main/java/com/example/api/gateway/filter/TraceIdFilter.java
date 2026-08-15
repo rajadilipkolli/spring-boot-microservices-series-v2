@@ -1,17 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway.filter;
 
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.TraceContext;
-import io.micrometer.tracing.Tracer;
-import java.util.Optional;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import java.util.UUID;
-import org.jspecify.annotations.Nullable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -27,11 +24,7 @@ class TraceIdFilter implements WebFilter {
 
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
-    private final Tracer tracer;
-
-    TraceIdFilter(@Nullable Tracer tracer) {
-        this.tracer = tracer;
-    }
+    TraceIdFilter() {}
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -48,17 +41,11 @@ class TraceIdFilter implements WebFilter {
     }
 
     private String getTraceId() {
-        if (this.tracer == null) {
-            return null;
+        SpanContext spanContext = Span.current().getSpanContext();
+        String traceId = null;
+        if (spanContext.isValid()) {
+            traceId = spanContext.getTraceId();
         }
-        Span span = this.tracer.currentSpan();
-        if (span != null && span.context() != null) {
-            return span.context().traceId();
-        }
-        String traceId =
-                Optional.ofNullable(tracer.currentTraceContext().context())
-                        .map(TraceContext::traceId)
-                        .orElse(null);
         // Generate a random UUID if traceId is still null as fallback
         if (traceId == null) {
             traceId = UUID.randomUUID().toString();

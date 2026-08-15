@@ -1,14 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.web.controllers;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -104,7 +106,7 @@ class OrderController implements OrderApi {
                 .body(OrderResponse.emptyResponse(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
@@ -134,9 +136,10 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    @GetMapping("/generate")
-    GenericResponse createMockOrders() {
-        orderGeneratorService.generateOrders();
+    @PostMapping("/generate")
+    GenericResponse createMockOrders(
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey) {
+        orderGeneratorService.generateOrders(idempotencyKey);
         return new GenericResponse(true);
     }
 
@@ -151,15 +154,16 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/store/{id}")
-    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable Long id) {
+    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable String id) {
         return orderKafkaStreamService
                 .getOrderFromStoreById(id)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new OrderNotFoundException(id));
+                .orElseThrow(() -> new OrderNotFoundException(Long.valueOf(id)));
     }
 
     @GetMapping("/customer/{id}")
-    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }

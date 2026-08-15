@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -81,25 +81,29 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 inventoryList.stream().map(Inventory::getProductCode).toArray(String[]::new);
 
         this.mockMvc
-                .perform(get("/api/inventory/product").param("codes", productCodeList))
+                .perform(
+                        get("/api/inventory/product")
+                                .param("codes", productCodeList)
+                                .param("pageSize", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(inventoryList.size())))
+                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
                 .andExpect(
-                        jsonPath("$[0].productCode")
+                        jsonPath("$.data[0].productCode")
                                 .value(inventoryList.getFirst().getProductCode()))
                 .andExpect(
-                        jsonPath("$[0].availableQuantity")
+                        jsonPath("$.data[0].availableQuantity")
                                 .value(inventoryList.getFirst().getAvailableQuantity()))
                 .andExpect(
-                        jsonPath("$[0].reservedItems")
+                        jsonPath("$.data[0].reservedItems")
                                 .value(inventoryList.getFirst().getReservedItems()))
                 .andExpect(
-                        jsonPath("$[1].productCode").value(inventoryList.get(1).getProductCode()))
+                        jsonPath("$.data[1].productCode")
+                                .value(inventoryList.get(1).getProductCode()))
                 .andExpect(
-                        jsonPath("$[1].availableQuantity")
+                        jsonPath("$.data[1].availableQuantity")
                                 .value(inventoryList.get(1).getAvailableQuantity()))
                 .andExpect(
-                        jsonPath("$[1].reservedItems")
+                        jsonPath("$.data[1].reservedItems")
                                 .value(inventoryList.get(1).getReservedItems()));
     }
 
@@ -147,6 +151,36 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldReturn409WhenCreateNewInventoryWithExistingProductCode() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        InventoryRequest inventoryRequest = new InventoryRequest(inventory.getProductCode(), 10);
+
+        this.mockMvc
+                .perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(
+                        jsonPath(
+                                "$.type",
+                                is("https://api.microservices.com/errors/already-exists")))
+                .andExpect(jsonPath("$.title", is("Product Already Exists")))
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(
+                        jsonPath(
+                                "$.detail",
+                                is(
+                                        "Product with code "
+                                                + inventory.getProductCode()
+                                                + " already exists")));
+    }
+
+    @Test
     void shouldUpdateInventory() throws Exception {
         Inventory inventory = inventoryList.getFirst();
         Integer availableQuantity = inventory.getAvailableQuantity();
@@ -174,5 +208,35 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
                 .andExpect(jsonPath("$.availableQuantity", is(inventory.getAvailableQuantity())))
                 .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldUpdateInventoryByProductCode() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        Integer availableQuantity = inventory.getAvailableQuantity();
+        InventoryRequest inventoryRequest =
+                new InventoryRequest(inventory.getProductCode(), availableQuantity + 500);
+
+        this.mockMvc
+                .perform(
+                        put("/api/inventory/product/{productCode}", inventory.getProductCode())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 500)))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInventoryByNonExistingProductCode() throws Exception {
+        InventoryRequest inventoryRequest = new InventoryRequest("non-existing", 100);
+
+        this.mockMvc
+                .perform(
+                        put("/api/inventory/product/{productCode}", "non-existing")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isNotFound());
     }
 }

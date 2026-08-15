@@ -25,12 +25,12 @@ jobs:
       matrix:
         java: ["25"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v5.2.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: ${{ matrix.java }}
           distribution: "temurin"
@@ -41,7 +41,7 @@ jobs:
           pwd
           cd ..
           cd deployment
-          docker compose up -d postgresql redis grafana-lgtm kafka config-server naming-server api-gateway catalog-service inventory-service order-service payment-service 
+          docker compose up -d postgresql redis grafana-lgtm otel-collector kafka config-server naming-server api-gateway catalog-service inventory-service order-service payment-service 
           sleep 60
           docker ps -a
 

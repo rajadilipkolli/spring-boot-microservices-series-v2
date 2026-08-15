@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Default values
-TEST_PROFILE="heavy"
+TEST_PROFILE="standard"
 BASE_URL="http://localhost:8765"
 USERS=50
 DURATION=300
-KAFKA_INIT_DELAY=15
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -39,16 +38,21 @@ while [[ $# -gt 0 ]]; do
             echo "  ./run-tests.sh [-p|--profile <profile>] [-u|--url <url>] [-n|--users <number>] [-d|--duration <seconds>] [-h|--help]"
             echo ""
             echo "Parameters:"
-            echo "  -p, --profile   Test profile to run (default, health-check, quick, heavy, resilience, stress, gateway, all)"
+            echo "  -p, --profile   Test profile to run (quick, standard, extended, resilience, stress, gateway, all)"
             echo "  -u, --url       Base URL for the API Gateway (default: http://localhost:8765)"
-            echo "  -n, --users     Number of users for the test (default: 10)"
-            echo "  -d, --duration  Duration of the test in seconds (default: 60)"
+            echo "  -n, --users     Number of users for the test (default: 50)"
+            echo "  -d, --duration  Duration of the test in seconds (default: 300)"
             echo "  -h, --help      Display this help message"
+            echo ""
+            echo "Profiles:"
+            echo "  quick      ~1-2 minutes, minimal load for smoke testing"
+            echo "  standard   ~3-5 minutes, balanced load for regular verification"
+            echo "  extended   ~10+ minutes, sustained load for stability testing"
             echo ""
             echo "Examples:"
             echo "  ./run-tests.sh"
             echo "  ./run-tests.sh -p quick"
-            echo "  ./run-tests.sh -p heavy -n 50 -d 300"
+            echo "  ./run-tests.sh -p extended -n 100"
             exit 0
             ;;
         *)
@@ -59,40 +63,72 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Function to check service health
+check_health() {
+    local service_url=$1
+    local max_attempts=10
+    local attempt=1
+    local sleep_time=5
+
+    echo "Checking health for $service_url..."
+    while [ $attempt -le $max_attempts ]; do
+        status=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL$service_url")
+        if [ "$status" == "200" ]; then
+            echo "Service $service_url is UP!"
+            return 0
+        fi
+        echo "Attempt $attempt/$max_attempts: $service_url is $status. Retrying in ${sleep_time}s..."
+        sleep $sleep_time
+        attempt=$((attempt + 1))
+    done
+    echo "ERROR: Service $service_url failed to become healthy after $max_attempts attempts."
+    return 1
+}
+
+echo "Starting pre-flight health checks..."
+SERVICES=("/actuator/health" "/catalog-service/actuator/health" "/inventory-service/actuator/health" "/order-service/actuator/health" "/payment-service/actuator/health")
+
+for service in "${SERVICES[@]}"; do
+    if ! check_health "$service"; then
+        echo "Pre-flight checks failed. Aborting."
+        exit 1
+    fi
+done
+echo "All services are healthy. Proceeding with tests."
+
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
-    "health-check")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -Dgatling.simulations=simulation.ServiceHealthCheckSimulation"
-        echo "Running health check simulation to verify all services are up..."
-        ;;
     "quick")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=5 -DrampDuration=10 -DtestDuration=30"
-        echo "Running quick test profile with minimal load..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=2 -DconstantUsers=$USERS -DrampDuration=15 -DtestDuration=$DURATION"
+        echo "Running quick test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
-    "heavy")
+    "standard")
         MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=20 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=$DURATION"
-        echo "Running heavy test profile with high load..."
+        echo "Running standard test profile (using users=$USERS, duration=${DURATION}s)..."
+        ;;
+    "extended")
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=50 -DconstantUsers=$USERS -DrampDuration=60 -DtestDuration=$DURATION"
+        echo "Running extended test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "resilience")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -Dusers=$USERS -DtestDuration=$DURATION -P resilience"
-        echo "Running resilience test profile to check error handling..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P resilience"
+        echo "Running resilience test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "stress")
-        PLATEAU_MINUTES=$(( DURATION / 60 > 0 ? DURATION / 60 : 1 ))
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DmaxUsers=$USERS -DrampDurationMinutes=2 -DplateauDurationMinutes=$PLATEAU_MINUTES -P stress"
-        echo "Running stress test profile with increasing load..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P stress"
+        echo "Running stress test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
     "gateway")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DburstUsers=$USERS -DsustainSeconds=$DURATION -P gateway"
-        echo "Running API gateway resilience tests..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DburstUsersPerSec=$USERS -DtestDuration=$DURATION -P gateway"
+        echo "Running API gateway resilience tests (using burstUsersPerSec=$USERS, duration=${DURATION}s)..."
         ;;
     "all")
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -P all"
-        echo "Running all test simulations..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DconstantUsers=$USERS -DtestDuration=$DURATION -P all"
+        echo "Running all test simulations (using users=$USERS, duration=${DURATION}s)..."
         ;;
     *)
-        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=5 -DconstantUsers=$USERS -DrampDuration=15 -DtestDuration=$DURATION"
-        echo "Running default test profile..."
+        MAVEN_PARAMS="-DbaseUrl=$BASE_URL -DrampUsers=10 -DconstantUsers=$USERS -DrampDuration=30 -DtestDuration=$DURATION"
+        echo "Running default test profile (using users=$USERS, duration=${DURATION}s)..."
         ;;
 esac
 
@@ -101,19 +137,10 @@ CMD="./mvnw clean gatling:test $MAVEN_PARAMS"
 echo "Executing: $CMD"
 eval $CMD
 
-# Find the latest report
-LATEST_REPORT=$(find target/gatling -type d -name "createproduct*" -o -name "stress*" -o -name "apiresilient*" -o -name "resilient*" | sort -r | head -n 1)
+# Find the latest report by modification time (ignoring the parent directory)
+LATEST_REPORT=$(ls -td target/gatling/*/ 2>/dev/null | head -n 1 | sed 's/\/$//')
 if [ -n "$LATEST_REPORT" ] && [ -f "$LATEST_REPORT/index.html" ]; then
     echo "Report generated at: $LATEST_REPORT/index.html"
-    
-    # Try to open the report in a browser
-    if command -v xdg-open &> /dev/null; then
-        xdg-open "$LATEST_REPORT/index.html"
-    elif command -v open &> /dev/null; then
-        open "$LATEST_REPORT/index.html"
-    else
-        echo "Please open the report manually in your browser"
-    fi
 else
-    echo "No test report found."
+    echo "No test report found in target/gatling/."
 fi

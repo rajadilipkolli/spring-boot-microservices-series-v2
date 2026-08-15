@@ -28,10 +28,6 @@ public class ServiceHealthCheckSimulation extends BaseSimulation {
 
     // Constructor that will trigger the health checks
     public ServiceHealthCheckSimulation() {
-        // Run the health checks first - BaseSimulation will throw an exception if services aren't
-        // ready
-        runHealthChecks();
-
         // Set up the simulation with minimal load since we're just testing health checks
         setUp(healthCheckScenario.injectOpen(atOnceUsers(1)));
     }

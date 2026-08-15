@@ -359,7 +359,7 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -386,7 +386,7 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isNotFound();
@@ -406,7 +406,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("fetchInStock", true)
                                         .build(code))
                 .exchange()
@@ -430,7 +430,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("delay", 1)
                                         .build(code))
                 .exchange()
@@ -457,7 +457,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(true);
 
         verify(productService).productExistsByProductCodes(codes);
@@ -479,7 +480,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(false);
     }
 
@@ -498,29 +500,33 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts()).willReturn(Mono.just(true));
+        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(true));
 
         webTestClient
-                .get()
+                .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(true);
     }
 
     @Test
     void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts()).willReturn(Mono.just(false));
+        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(false));
 
         webTestClient
-                .get()
+                .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(false);
     }
 

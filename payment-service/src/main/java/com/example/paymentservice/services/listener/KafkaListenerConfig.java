@@ -1,9 +1,9 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
-import com.example.common.dtos.OrderDto;
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
 import java.util.concurrent.CountDownLatch;
@@ -18,6 +18,8 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 @EnableKafka
@@ -27,11 +29,14 @@ public class KafkaListenerConfig {
     private static final Logger log = LoggerFactory.getLogger(KafkaListenerConfig.class);
 
     private final PaymentOrderManageService paymentOrderManageService;
+    private final JsonMapper jsonMapper;
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
-    public KafkaListenerConfig(PaymentOrderManageService paymentOrderManageService) {
+    public KafkaListenerConfig(
+            PaymentOrderManageService paymentOrderManageService, JsonMapper jsonMapper) {
         this.paymentOrderManageService = paymentOrderManageService;
+        this.jsonMapper = jsonMapper;
     }
 
     // retries if processing of event fails
@@ -46,9 +51,12 @@ public class KafkaListenerConfig {
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
             exclude = {CustomerNotFoundException.class},
+            retryTopicSuffix = "-retry-payment",
+            dltTopicSuffix = "-dlt-payment",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
-    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
-    public void onEvent(OrderDto orderDto) {
+    @KafkaListener(id = "payment-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
+    public void onEvent(String orderDtoStr) throws JacksonException {
+        OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,
@@ -66,13 +74,13 @@ public class KafkaListenerConfig {
      * retries This method is invoked when a message reaches the dead letter topic after exhausting
      * retry attempts
      *
-     * @param orderDto The failed order message that reached the DLT
+     * @param orderDtoStr The failed order message that reached the DLT
      * @param topic The Kafka topic from which the dead letter message was received
      */
     @DltHandler
-    public void dlt(OrderDto orderDto, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+    public void dlt(String orderDtoStr, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         // Log the failed message and topic at error level for monitoring/debugging
-        log.error("Received dead-letter message : {} from topic {}", orderDto, topic);
+        log.error("Received dead-letter message : {} from topic {}", orderDtoStr, topic);
         // Decrement latch to signal that a DLT message was processed
         // This is useful for testing and monitoring DLT handling
         deadLetterLatch.countDown();

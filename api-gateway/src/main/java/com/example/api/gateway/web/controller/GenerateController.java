@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -24,7 +25,7 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -34,7 +35,7 @@ import reactor.util.retry.Retry;
 
 /** Controller that orchestrates data generation calls to microservices. */
 @RestController
-@RequestMapping("/api/generate")
+@RequestMapping("/api/v1/generate")
 public class GenerateController implements GenerateAPI {
 
     private static final Logger logger = LoggerFactory.getLogger(GenerateController.class);
@@ -43,6 +44,8 @@ public class GenerateController implements GenerateAPI {
             "lb://CATALOG-SERVICE/catalog-service/api/catalog/generate";
     private static final String INVENTORY_SERVICE_URL =
             "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate";
+    private static final String ORDER_SERVICE_URL =
+            "lb://ORDER-SERVICE/order-service/api/orders/generate";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final Duration RETRY_BACKOFF = Duration.ofMillis(500);
@@ -67,10 +70,12 @@ public class GenerateController implements GenerateAPI {
      *
      * @return Mono with response message containing results from both services
      */
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
-        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG)
+        String batchId = UUID.randomUUID().toString();
+
+        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG, batchId)
                 .flatMap(
                         catalogResult -> {
                             if (catalogResult.status() == HttpStatus.OK.value()) {
@@ -81,12 +86,52 @@ public class GenerateController implements GenerateAPI {
                                                 catalogData ->
                                                         callMicroservice(
                                                                         INVENTORY_SERVICE_URL,
-                                                                        ServiceType.INVENTORY)
-                                                                .map(
-                                                                        inventoryResult ->
-                                                                                createResponseEntity(
-                                                                                        catalogData,
-                                                                                        inventoryResult)));
+                                                                        ServiceType.INVENTORY,
+                                                                        batchId)
+                                                                .flatMap(
+                                                                        inventoryResult -> {
+                                                                            if (inventoryResult
+                                                                                            .status()
+                                                                                    == HttpStatus.OK
+                                                                                            .value()) {
+                                                                                return Mono.just(
+                                                                                                inventoryResult)
+                                                                                        .delayElement(
+                                                                                                this
+                                                                                                        .delayBetweenServices)
+                                                                                        .flatMap(
+                                                                                                invData ->
+                                                                                                        callMicroservice(
+                                                                                                                        ORDER_SERVICE_URL,
+                                                                                                                        ServiceType
+                                                                                                                                .ORDER,
+                                                                                                                        batchId)
+                                                                                                                .map(
+                                                                                                                        orderResult ->
+                                                                                                                                createResponseEntity(
+                                                                                                                                        catalogData,
+                                                                                                                                        invData,
+                                                                                                                                        orderResult)));
+                                                                            } else {
+                                                                                return Mono.just(
+                                                                                        ResponseEntity
+                                                                                                .status(
+                                                                                                        inventoryResult
+                                                                                                                .status())
+                                                                                                .body(
+                                                                                                        new GenerationResponse(
+                                                                                                                "error",
+                                                                                                                "Error generating data in inventory service",
+                                                                                                                Map
+                                                                                                                        .of(
+                                                                                                                                "catalog",
+                                                                                                                                        catalogData
+                                                                                                                                                .response(),
+                                                                                                                                "inventory",
+                                                                                                                                        inventoryResult
+                                                                                                                                                .response()))));
+                                                                            }
+                                                                        }));
                             } else {
                                 // Don't call inventory service if catalog failed
                                 return Mono.just(
@@ -104,32 +149,28 @@ public class GenerateController implements GenerateAPI {
                 .onErrorResume(this::handleGenerationError);
     }
 
-    /**
-     * Creates an appropriate response entity based on the result of the inventory service call.
-     *
-     * @param catalogData The result from the catalog service call
-     * @param inventoryResult The result from the inventory service call
-     * @return ResponseEntity with appropriate status and body
-     */
+    /** Creates an appropriate response entity based on the results of the service calls. */
     private ResponseEntity<GenerationResponse> createResponseEntity(
-            ServiceResult catalogData, ServiceResult inventoryResult) {
-        if (inventoryResult.status() == HttpStatus.OK.value()) {
+            ServiceResult catalogData, ServiceResult inventoryData, ServiceResult orderResult) {
+        if (orderResult.status() == HttpStatus.OK.value()) {
             return ResponseEntity.ok(
                     new GenerationResponse(
                             "success",
                             "Generation process completed successfully",
                             Map.of(
                                     "catalog", catalogData.response(),
-                                    "inventory", inventoryResult.response())));
+                                    "inventory", inventoryData.response(),
+                                    "order", orderResult.response())));
         } else {
-            return ResponseEntity.status(inventoryResult.status())
+            return ResponseEntity.status(orderResult.status())
                     .body(
                             new GenerationResponse(
                                     "error",
-                                    "Error generating data in inventory service",
+                                    "Error generating data in order service",
                                     Map.of(
                                             "catalog", catalogData.response(),
-                                            "inventory", inventoryResult.response())));
+                                            "inventory", inventoryData.response(),
+                                            "order", orderResult.response())));
         }
     }
 
@@ -140,10 +181,12 @@ public class GenerateController implements GenerateAPI {
      * @param serviceType The type of service being called (for error messages)
      * @return Mono containing the service result
      */
-    private Mono<ServiceResult> callMicroservice(String url, ServiceType serviceType) {
+    private Mono<ServiceResult> callMicroservice(
+            String url, ServiceType serviceType, String batchId) {
         return webClient
-                .get()
+                .post()
                 .uri(url)
+                .header("Idempotency-Key", batchId)
                 .retrieve()
                 .toEntity(String.class) // Original Mono<ResponseEntity<String>>
                 .timeout(REQUEST_TIMEOUT) // Apply timeout to each attempt

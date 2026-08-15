@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -9,10 +9,10 @@ package com.example.orderservice.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.util.TestData;
 import java.time.Duration;
 import java.util.Optional;
@@ -39,12 +39,18 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("REJECT", testOrder);
 
         // Send payment rejection
-        kafkaTemplate.send("payment-orders", paymentOrderDto.orderId(), paymentOrderDto);
+        kafkaTemplate.send(
+                "payment-orders",
+                String.valueOf(paymentOrderDto.orderId()),
+                toJsonBytes(paymentOrderDto));
 
         // Send a successful inventory response
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
-        kafkaTemplate.send("stock-orders", inventoryOrderDto.orderId(), inventoryOrderDto);
+        kafkaTemplate.send(
+                "stock-orders",
+                String.valueOf(inventoryOrderDto.orderId()),
+                toJsonBytes(inventoryOrderDto));
 
         // Assert that the order is eventually rejected
         await().atMost(60, TimeUnit.SECONDS)
@@ -83,7 +89,8 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
         // Act - Only send payment response, missing inventory response
-        kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
+        kafkaTemplate.send(
+                "payment-orders", String.valueOf(testOrder.getId()), toJsonBytes(paymentOrderDto));
 
         // Assert - Order should stay in NEW state
         await().atMost(10, TimeUnit.SECONDS)
@@ -122,8 +129,12 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
         // Act - Send messages in reverse order
-        kafkaTemplate.send("stock-orders", testOrder.getId(), inventoryOrderDto);
-        kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
+        kafkaTemplate.send(
+                "stock-orders",
+                String.valueOf(inventoryOrderDto.orderId()),
+                toJsonBytes(inventoryOrderDto));
+        kafkaTemplate.send(
+                "payment-orders", String.valueOf(testOrder.getId()), toJsonBytes(paymentOrderDto));
 
         // Assert - Final state should still be correct
         await().atMost(60, TimeUnit.SECONDS)
