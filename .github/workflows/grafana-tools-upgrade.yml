@@ -1,12 +1,12 @@
-name: Test Docker Compose Tools Upgrade
+name: Test grafana Tools Upgrade
 
 on:
   push:
     paths:
-      - 'docker-compose-tools.yml'
+      - 'deployment/docker-compose-tools.yml'
   pull_request:
     paths:
-      - 'docker-compose-tools.yml'
+      - 'deployment/docker-compose-tools.yml'
 
 jobs:
   test-tools-upgrade:
