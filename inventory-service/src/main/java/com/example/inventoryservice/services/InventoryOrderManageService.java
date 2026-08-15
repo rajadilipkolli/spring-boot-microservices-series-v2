@@ -55,9 +55,12 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
-        // Using JOOQ repository for reading unpaged list
+        // Using JPA repository for reading unpaged list to keep entities managed.
+        // NOTE: Do not change this back to JOOQ for mutating operations.
+        // JOOQ returns detached entities which can lead to StaleObjectStateException
+        // when merged and saved if the version field mapping is not perfectly synchronized.
         List<Inventory> inventoryListFromDB =
-                inventoryJOOQRepository.findByProductCodeIn(productCodeList);
+                inventoryRepository.findByProductCodeIn(productCodeList);
 
         // Check if all requested products exist in the inventory
         if (inventoryListFromDB.size() != productCodeList.size()) {
@@ -144,8 +147,10 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
+        // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
+        // detached entities
         Map<String, Inventory> inventoryMap =
-                inventoryJOOQRepository.findByProductCodeIn(productCodeList).stream()
+                inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
         for (OrderItemDto orderItemDto : orderDto.items()) {

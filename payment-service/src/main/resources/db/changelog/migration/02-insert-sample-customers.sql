@@ -4,7 +4,7 @@
 --validCheckSum: ANY
 
 INSERT INTO payment.customers (id, name, email, address, phone, amount_available, amount_reserved)
-VALUES (nextval('payment.customers_seq'), 'John Doe', 'john.doe@example.com', '123 Main St, New York, NY 10001', '+1-555-0101', 5000.00, 200.00)
+VALUES (nextval('payment.customers_seq'), 'John Doe', 'john.doe@example.com', '123 Main St, New York, NY 10001', '+1-555-0101', 500000.00, 200.00)
     ON CONFLICT (name, email) DO NOTHING;
 
 INSERT INTO payment.customers (id, name, email, address, phone, amount_available, amount_reserved)

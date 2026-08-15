@@ -18,6 +18,7 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
@@ -50,9 +51,11 @@ public class KafkaListenerConfig {
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
             exclude = {CustomerNotFoundException.class},
+            retryTopicSuffix = "-retry-payment",
+            dltTopicSuffix = "-dlt-payment",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
-    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
-    public void onEvent(String orderDtoStr) throws tools.jackson.core.JacksonException {
+    @KafkaListener(id = "payment-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
+    public void onEvent(String orderDtoStr) throws JacksonException {
         OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
