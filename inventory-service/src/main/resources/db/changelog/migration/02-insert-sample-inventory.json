@@ -28,7 +28,7 @@
                 {
                   "column": {
                     "name": "quantity",
-                    "value": 50
+                    "value": 50000
                   }
                 },
                 {
@@ -128,7 +128,7 @@
                 {
                   "column": {
                     "name": "quantity",
-                    "value": 100
+                    "value": 50000
                   }
                 },
                 {

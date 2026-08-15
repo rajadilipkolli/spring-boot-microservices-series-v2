@@ -57,7 +57,7 @@ class InventoryOrderManageServiceTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
-        given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(List.of(inventory1, inventory2));
 
         // Act
@@ -95,7 +95,7 @@ class InventoryOrderManageServiceTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
-        given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(List.of(inventory1, inventory2));
 
         // Act
@@ -106,8 +106,7 @@ class InventoryOrderManageServiceTest {
         assertThat(result.status()).isEqualTo("REJECT");
         assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
         assertThat(result.orderId()).isEqualTo(1L);
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(kafkaTemplate, times(1))
                 .send(
                         eq(AppConstants.STOCK_ORDERS_TOPIC),
@@ -125,7 +124,7 @@ class InventoryOrderManageServiceTest {
         orderItems.add(new OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", "TEST", orderItems);
 
-        given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(new ArrayList<>());
 
         // Act
@@ -134,8 +133,7 @@ class InventoryOrderManageServiceTest {
         assertThat(result.status()).isEqualTo("REJECT");
         assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
         assertThat(result.orderId()).isEqualTo(1L);
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         ArgumentCaptor<OrderDto> orderDtoCaptor = ArgumentCaptor.forClass(OrderDto.class);
         verify(kafkaTemplate, times(1))
                 .send(
@@ -183,14 +181,13 @@ class InventoryOrderManageServiceTest {
                         .setReservedItems(20)
                         .setAvailableQuantity(20));
 
-        given(inventoryJOOQRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
+        given(inventoryRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
 
         // Act
         inventoryOrderManageService.confirm(orderDto);
 
         // Assert
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(anyCollection());
         assertThat(orderDto.status()).isEqualTo("CONFIRMED");
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository, kafkaTemplate);
@@ -216,7 +213,7 @@ class InventoryOrderManageServiceTest {
                         .setReservedItems(20)
                         .setAvailableQuantity(20));
 
-        given(inventoryJOOQRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(List.of(inventoryList.get(0), inventoryList.get(1)));
 
         // Act
@@ -224,8 +221,7 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         assertThat(orderDto.status()).isEqualTo("ROLLBACK");
-        verify(inventoryJOOQRepository, times(1))
-                .findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(argumentCaptor.capture());
         assertThat(argumentCaptor.getValue())
                 .isNotNull()

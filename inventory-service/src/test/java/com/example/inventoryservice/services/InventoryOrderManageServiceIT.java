@@ -69,7 +69,7 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
 
         // Capture initial state of all products
         Map<String, Inventory> initialState =
-                inventoryJOOQRepository
+                inventoryRepository
                         .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
                         .stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

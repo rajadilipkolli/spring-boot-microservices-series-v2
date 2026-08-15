@@ -55,8 +55,10 @@ class KafkaListenerConfig {
     // retries if processing of event fails
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
+            retryTopicSuffix = "-retry-inventory",
+            dltTopicSuffix = "-dlt-inventory",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
-    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
+    @KafkaListener(id = "inventory-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
     public void onEvent(String orderDtoStr) throws JacksonException {
         OrderDto orderDto = validate(jsonMapper.readValue(orderDtoStr, OrderDto.class));
         log.info("Received Order: {}", orderDto);
