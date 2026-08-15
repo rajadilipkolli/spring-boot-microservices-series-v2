@@ -993,7 +993,7 @@ waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuat
 waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
 
 log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
-BATCH_ID=$(cat /proc/sys/kernel/random/uuid || uuidgen)
+BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
 curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "http://$HOST:$PORT/api/v1/generate" > /dev/null 2>&1
 log_info "Sleeping for 10 sec for warmup processing to complete..."
 sleep 10

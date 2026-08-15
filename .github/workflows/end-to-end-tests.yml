@@ -1,7 +1,19 @@
 name: End-to-End Tests (Manual)
 on:
-  workflow_dispatch: # Only allow manual triggering of the workflow
-
+  workflow_dispatch: # Allow manual triggering of the workflow
+    inputs:
+      command_args:
+        description: 'Arguments to pass to test-em-all.sh'
+        required: false
+        default: 'start stop'
+        type: string
+  workflow_call: # Allow other workflows to trigger this workflow
+    inputs:
+      command_args:
+        description: 'Arguments to pass to test-em-all.sh'
+        required: false
+        default: 'start stop'
+        type: string
 jobs:
   e2e-tests:
     name: Run End-to-End Tests
@@ -27,7 +39,7 @@ jobs:
           fi
 
       - name: Run End to End Tests
-        run: ./test-em-all.sh --detailed-logs start stop
+        run: ./test-em-all.sh --detailed-logs ${{ inputs.command_args || 'start stop' }}
 
       - name: Stop main.py and collect logs
         if: always()
