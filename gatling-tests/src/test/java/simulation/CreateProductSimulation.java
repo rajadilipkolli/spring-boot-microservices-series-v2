@@ -6,11 +6,13 @@ import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
+import static io.gatling.javaapi.core.CoreDsl.doIf;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.tryMax;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -76,11 +78,19 @@ public class CreateProductSimulation extends Simulation {
                                             .is(session -> session.getString("productCode"))));
 
     private final ChainBuilder getInventory =
-            exec(http("Get product inventory")
-                            .get("/inventory-service/api/inventory/#{productCode}")
-                            .check(status().is(200))
-                            .check(bodyString().saveAs("inventoryResponseBody")))
-                    .pause(Duration.ofSeconds(1)) // Add a pause to ensure the response is processed
+            tryMax(5, "inventoryRetryCounter")
+                    .on(
+                            doIf(session -> session.getInt("inventoryRetryCounter") > 0)
+                                    .then(exec(session -> session).pause(Duration.ofSeconds(1)))
+                                    .exec(
+                                            http("Get product inventory")
+                                                    .get(
+                                                            "/inventory-service/api/inventory/#{productCode}")
+                                                    .check(status().is(200))
+                                                    .check(
+                                                            bodyString()
+                                                                    .saveAs(
+                                                                            "inventoryResponseBody"))))
                     .exec(
                             session -> {
                                 // Validate the response body
