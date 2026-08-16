@@ -54,7 +54,7 @@ To fully access all features of the application (such as the Inventory UI), you 
 ### 2. Map the Client Role to the ID Token
 By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
 1. On the left menu, go to **Client Scopes**.
-2. Click on the **`roles`** scope in the list.
+2. Select and click on the **`roles`** scope in the list.
 3. Go to the **Mappers** tab.
 4. Click on the **`client roles`** mapper.
 5. Toggle **ON** both **Add to ID token** and **Add to userinfo**.
@@ -65,8 +65,8 @@ By default, Keycloak only puts client roles inside the Access Token. To ensure t
 2. Search for your user (e.g., `raja` or `retail`) and click on the username.
 3. Go to the **Role mapping** tab.
 4. Click **Assign role**.
-5. From the dropdown at the top, select **Filter by clients**.
-6. Find `retailstore-webapp ADMIN`, check the box, and click **Assign**.
+5. From the dropdown at the top, select **Filter by client roles**.
+6. Find `ADMIN`, check the box, and click **Assign**.
 
 ## Export realm
 
@@ -79,20 +79,10 @@ If you need to export an updated realm configuration after making changes in the
 If you need to manually export the realm configuration, you can use the following steps:
 
 ```shell
-$ docker ps
-# copy the keycloak container id
-
-# ssh into keycloak container
-$ docker exec -it <container-id> bash
-
 # export the realm configuration along with users info
-$ /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
-
-# exit from the container
-$ exit
-
-# copy the exported realm configuration to local machine
-$ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/realm/retailstore-realm.json
+# Since the deployment mounts the ./realm-config directory to /opt/keycloak/data/import inside the container,
+# running this command will directly update the retailstore-realm.json file in your project!
+$ docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
 ```
 
 ## UI
