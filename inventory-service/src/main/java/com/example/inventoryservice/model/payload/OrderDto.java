@@ -6,7 +6,9 @@
 
 package com.example.inventoryservice.model.payload;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
@@ -18,7 +20,8 @@ public record OrderDto(
         @Positive(message = "CustomerId should be positive") Long customerId,
         String status,
         String source,
-        @NotEmpty(message = "Order without items not valid") List<OrderItemDto> items)
+        @NotEmpty(message = "Order without items not valid")
+                List<@NotNull @Valid OrderItemDto> items)
         implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;

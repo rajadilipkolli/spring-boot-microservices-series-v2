@@ -101,7 +101,8 @@
                 {
                   "column": {
                     "name": "version",
-                    "type": "smallint"
+                    "type": "smallint",
+                    "defaultValue": 0
                   }
                 }
               ]

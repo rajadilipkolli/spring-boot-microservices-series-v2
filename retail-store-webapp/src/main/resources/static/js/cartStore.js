@@ -12,6 +12,9 @@ authChannel.onmessage = function(event) {
 async function fetchCart() {
     try {
         const response = await fetch('/api/cart');
+        if (response.redirected) {
+            return { items: [], totalAmount: 0 };
+        }
         if (response.ok) {
             return await response.json();
         }
@@ -33,6 +36,10 @@ async function saveCart(cart) {
             headers: headers,
             body: JSON.stringify(cart)
         });
+        if (response.redirected) {
+            window.location.href = '/login';
+            return;
+        }
         if (response.ok) {
             const updatedCart = await response.json();
             authChannel.postMessage('CART_UPDATED');
@@ -95,6 +102,10 @@ async function deleteCart() {
 
     try {
         const response = await fetch(url, { method: 'DELETE', headers });
+        if (response.redirected) {
+            window.location.href = '/login';
+            return;
+        }
         if (response.ok) {
             authChannel.postMessage('CART_UPDATED');
             let emptyCart = { items: [], totalAmount: 0 };
