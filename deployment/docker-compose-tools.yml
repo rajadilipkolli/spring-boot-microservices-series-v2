@@ -126,6 +126,11 @@ services:
       # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # ✅ THESE FIX THE REDIRECT ISSUE
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_URL=http://localhost:9191
+      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
+      - KC_PROXY=edge
       # Database configuration for PostgreSQL
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
@@ -384,8 +389,6 @@ services:
       - microservice-network
     depends_on:
       keycloak:
-        condition: service_started
-      redis:
         condition: service_healthy
       naming-server:
         condition: service_started
@@ -399,11 +402,11 @@ services:
         condition: service_started
       payment-service:
         condition: service_started
+    restart: on-failure
     deploy:
       resources:
         limits:
           memory: 1400m
-    restart: unless-stopped
 
   retailstore-webapp-proxy:
     image: alpine/socat

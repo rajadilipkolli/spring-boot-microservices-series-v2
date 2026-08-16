@@ -144,14 +144,12 @@
             <optional>true</optional>
         </dependency>
 
-
         <!-- Scheduling -->
         <dependency>
             <groupId>org.jobrunr</groupId>
             <artifactId>jobrunr-spring-boot-4-starter</artifactId>
             <version>8.8.1</version>
         </dependency>
-
 
         <!-- Observability -->
         <!-- Metrics -->
@@ -385,7 +383,7 @@
                         <include>**/*IntTest*</include>
                         <include>**/*IntegrationTest*</include>
                     </includes>
-					<excludedGroups>performance</excludedGroups>
+                    <excludedGroups>performance</excludedGroups>
                 </configuration>
                 <executions>
                     <execution>
