@@ -4,6 +4,7 @@ import static config.Configuration.*;
 import static data.Feeders.enhancedProductFeeder;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
 import static io.gatling.javaapi.core.CoreDsl.repeat;
@@ -115,7 +116,13 @@ public class ApiGatewayResilienceSimulation extends Simulation {
                         RAMP_DURATION
                                 .plus(SUSTAIN_DURATION)
                                 .plus(RAMP_DURATION)
-                                .plus(Duration.ofMinutes(1)));
+                                .plus(Duration.ofMinutes(1)))
+                .assertions(
+                        global().responseTime().percentile(99).lt(4000),
+                        global().failedRequests()
+                                .percent()
+                                .is(0.0) // 429/503 are checked as OK, 500s/Timeouts are KO
+                        );
     }
 
     @Override

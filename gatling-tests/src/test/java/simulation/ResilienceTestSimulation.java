@@ -154,7 +154,7 @@ public class ResilienceTestSimulation extends Simulation {
                         global().responseTime().percentile(95).lt(3000),
                         global().failedRequests()
                                 .percent()
-                                .lt(25.0) // Expected failures in resilience test
+                                .is(0.0) // Any 500s or timeouts are unacceptable
                         );
     }
 
