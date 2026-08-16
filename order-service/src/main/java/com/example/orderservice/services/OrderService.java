@@ -204,18 +204,27 @@ public class OrderService {
     }
 
     @Job(name = "reProcessNewOrders", retries = 2)
+    @Transactional
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order
         List<Order> byStatusOrderByIdAsc =
-                orderRepository.findByStatusAndCreatedDateLessThanOrderByIdAsc(
+                orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
                         OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
         byStatusOrderByIdAsc.forEach(
                 order -> {
-                    OrderDto persistedOrderDto = this.orderMapper.toDto(order);
-                    log.info(
-                            "Retrying Order :{}",
-                            LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                    eventPublisher.publishEvent(persistedOrderDto);
+                    try {
+                        OrderDto persistedOrderDto = this.orderMapper.toDto(order);
+                        log.info(
+                                "Retrying Order :{}",
+                                LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
+                        eventPublisher.publishEvent(persistedOrderDto);
+
+                        // Update lastModifiedDate to prevent immediate repolling and endless spam
+                        order.setLastModifiedDate(LocalDateTime.now());
+                        orderRepository.save(order);
+                    } catch (Exception e) {
+                        log.error("Failed to retry publishing order :{}", order.getId(), e);
+                    }
                 });
     }
 }

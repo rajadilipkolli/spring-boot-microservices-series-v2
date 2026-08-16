@@ -99,6 +99,10 @@ done
 # Deployment file locations
 DOCKER_COMPOSE_FILE="deployment/docker-compose.yml"
 DOCKER_COMPOSE_TOOLS_FILE="deployment/docker-compose-tools.yml"
+COMPOSE_FILE_TO_USE="${DOCKER_COMPOSE_FILE}"
+if [[ $@ == *"setup"* ]]; then
+  COMPOSE_FILE_TO_USE="${DOCKER_COMPOSE_TOOLS_FILE}"
+fi
 
 # Global tracking variables
 TEST_STATUS=0
@@ -533,9 +537,9 @@ function testCircuitBreaker() {
     if [[ "${CB_STRICT}" == "true" ]]; then
       log_info "CB_STRICT is enabled — attempting deterministic induction for ${svc}"
       # Try to stop the single service container using docker compose. If docker is not available, warn and continue.
-      if command -v docker > /dev/null 2>&1 && docker compose -f ${DOCKER_COMPOSE_FILE} ps > /dev/null 2>&1; then
+      if command -v docker > /dev/null 2>&1 && docker compose -f ${COMPOSE_FILE_TO_USE} ps > /dev/null 2>&1; then
         log_info "Stopping ${svc} container to induce failures..."
-        if docker compose -f ${DOCKER_COMPOSE_FILE} stop ${svc} 2>/dev/null; then
+        if docker compose -f ${COMPOSE_FILE_TO_USE} stop ${svc} 2>/dev/null; then
           sleep 2
           # Run a few fast requests which should fail quickly via gateway timeout/fallback
           strict_ok=false
@@ -561,7 +565,7 @@ function testCircuitBreaker() {
 
           # Start the service back up
           log_info "Starting ${svc} container back up..."
-          docker compose -f ${DOCKER_COMPOSE_FILE} start ${svc} 2>/dev/null || true
+          docker compose -f ${COMPOSE_FILE_TO_USE} start ${svc} 2>/dev/null || true
           # give some time for service to register
           sleep 5
         else
