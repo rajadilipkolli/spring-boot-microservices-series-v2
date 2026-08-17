@@ -1,25 +1,27 @@
 package simulation;
 
+import static config.Configuration.*;
+import static data.Feeders.*;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
+import static io.gatling.javaapi.core.CoreDsl.doIf;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.tryMax;
 import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -30,60 +32,10 @@ import org.slf4j.LoggerFactory;
  * test validates the end-to-end process of creating products, updating inventory, and creating
  * orders.
  */
-public class CreateProductSimulation extends BaseSimulation {
+public class CreateProductSimulation extends Simulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
-
-    @Override
-    public void before() {
-        super.before(); // Run health checks
-        warmUpKafka();
-    }
-
-    private void warmUpKafka() {
-        LOGGER.info("Performing Kafka warm-up by creating an initial product...");
-        HttpClient client = HttpClient.newHttpClient();
-        try {
-            String productJson =
-                    """
-                {
-                  "productCode": "WARMUP-001",
-                  "productName": "Warm-up Product",
-                  "price": 1.0,
-                  "description": "Kafka Warm-up Product"
-                }
-                """;
-
-            HttpRequest request =
-                    HttpRequest.newBuilder()
-                            .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
-                            .header("Content-Type", "application/json")
-                            .POST(HttpRequest.BodyPublishers.ofString(productJson))
-                            .build();
-
-            HttpResponse<String> response =
-                    client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 201 || response.statusCode() == 409) {
-                LOGGER.info(
-                        "Kafka warm-up successful (status: {}). Waiting for initialization...",
-                        response.statusCode());
-                try {
-                    Thread.sleep(KAFKA_INIT_DELAY_SECONDS * 1000L);
-                } catch (InterruptedException e) {
-                    LOGGER.error("Warm-up sleep interrupted: {}", e.getMessage());
-                    Thread.currentThread().interrupt();
-                }
-            } else {
-                LOGGER.warn("Kafka warm-up returned status: {}", response.statusCode());
-            }
-        } catch (InterruptedException e) {
-            LOGGER.error("Warm-up interrupted: {}", e.getMessage());
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            LOGGER.error("Kafka warm-up failed: {}", e.getMessage());
-        }
-    }
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // Parameters are now inherited from BaseSimulation for consistency
 
@@ -126,11 +78,34 @@ public class CreateProductSimulation extends BaseSimulation {
                                             .is(session -> session.getString("productCode"))));
 
     private final ChainBuilder getInventory =
-            exec(http("Get product inventory")
-                            .get("/inventory-service/api/inventory/#{productCode}")
-                            .check(status().is(200))
-                            .check(bodyString().saveAs("inventoryResponseBody")))
-                    .pause(Duration.ofSeconds(1)) // Add a pause to ensure the response is processed
+            tryMax(5, "inventoryRetryCounter")
+                    .on(
+                            doIf(session -> session.getInt("inventoryRetryCounter") > 0)
+                                    .then(exec(session -> session).pause(Duration.ofSeconds(1)))
+                                    .exec(
+                                            http("Get product inventory")
+                                                    .get(
+                                                            "/inventory-service/api/inventory/#{productCode}")
+                                                    .check(
+                                                            status().in(200, 404)
+                                                                    .saveAs("inventoryStatus"))
+                                                    .checkIf(
+                                                            session ->
+                                                                    session.contains(
+                                                                                    "inventoryStatus")
+                                                                            && session.getInt(
+                                                                                            "inventoryStatus")
+                                                                                    == 200)
+                                                    .then(
+                                                            bodyString()
+                                                                    .saveAs(
+                                                                            "inventoryResponseBody")))
+                                    .doIf(
+                                            session ->
+                                                    session.contains("inventoryStatus")
+                                                            && session.getInt("inventoryStatus")
+                                                                    == 404)
+                                    .then(exec(session -> session.markAsFailed())))
                     .exec(
                             session -> {
                                 // Validate the response body
@@ -368,7 +343,7 @@ public class CreateProductSimulation extends BaseSimulation {
                                 rampUsersPerSec(0).to(targetRate).during(rampDuration),
                                 constantUsersPerSec(targetRate).during(steadyStateDuration),
                                 rampUsersPerSec(targetRate).to(0).during(rampDuration)))
-                .protocols(httpProtocol)
+                .protocols(HTTP_PROTOCOL)
                 .maxDuration(
                         rampDuration
                                 .plus(steadyStateDuration)

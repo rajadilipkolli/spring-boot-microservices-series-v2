@@ -1,7 +1,10 @@
 package simulation;
 
+import static config.Configuration.*;
+import static data.Feeders.enhancedProductFeeder;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
 import static io.gatling.javaapi.core.CoreDsl.repeat;
@@ -12,16 +15,18 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.ScenarioBuilder;
+import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scenarios.ScenarioBuilders;
 
 /**
  * This simulation tests API Gateway resilience patterns like circuit breakers and rate limiting. It
  * identifies breaking points in the system by generating targeted load patterns.
  */
-public class ApiGatewayResilienceSimulation extends BaseSimulation {
+public class ApiGatewayResilienceSimulation extends Simulation {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(ApiGatewayResilienceSimulation.class);
@@ -37,11 +42,6 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
     // Counter to track rate limiting responses
     private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
     private final AtomicInteger serviceUnavailableCount = new AtomicInteger(0);
-
-    @Override
-    public void before() {
-        super.before(); // Run health checks
-    }
 
     // Define a rapid-fire request chain to trigger rate limiting
     private final ChainBuilder rapidRequests =
@@ -111,12 +111,18 @@ public class ApiGatewayResilienceSimulation extends BaseSimulation {
                                 rampUsersPerSec(0).to(MIXED_LOAD_RATE).during(RAMP_DURATION),
                                 constantUsersPerSec(MIXED_LOAD_RATE).during(SUSTAIN_DURATION),
                                 rampUsersPerSec(MIXED_LOAD_RATE).to(0).during(RAMP_DURATION)))
-                .protocols(httpProtocol)
+                .protocols(HTTP_PROTOCOL)
                 .maxDuration(
                         RAMP_DURATION
                                 .plus(SUSTAIN_DURATION)
                                 .plus(RAMP_DURATION)
-                                .plus(Duration.ofMinutes(1)));
+                                .plus(Duration.ofMinutes(1)))
+                .assertions(
+                        global().responseTime().percentile(99).lt(4000),
+                        global().failedRequests()
+                                .percent()
+                                .is(0.0) // 429/503 are checked as OK, 500s/Timeouts are KO
+                        );
     }
 
     @Override

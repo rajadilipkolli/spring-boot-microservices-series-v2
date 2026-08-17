@@ -1,4 +1,4 @@
-package simulation;
+package scenarios;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.exec;
@@ -7,6 +7,7 @@ import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ChainBuilder;
+import java.time.Duration;
 
 /**
  * Utility class containing reusable request chains for Gatling simulations. Each chain executes
@@ -31,7 +32,7 @@ public class ScenarioBuilders {
                         .asJson()
                         .check(status().is(201))
                         .check(header("location").saveAs("productLocation")))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     /** Chain to retrieve product details by product code. */
@@ -39,7 +40,7 @@ public class ScenarioBuilders {
         return exec(http("Get product detail")
                         .get("/catalog-service/api/catalog/product-code/#{productCode}")
                         .check(status().is(200)))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     /** Chain to update inventory for a product. */
@@ -56,7 +57,7 @@ public class ScenarioBuilders {
             """))
                         .asJson()
                         .check(status().is(200)))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     /** Chain to create a new order. */
@@ -85,7 +86,7 @@ public class ScenarioBuilders {
             """))
                         .asJson()
                         .check(status().is(201)))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     /** Chain to browse the product catalog. */
@@ -93,7 +94,7 @@ public class ScenarioBuilders {
         return exec(http("Browse catalog")
                         .get("/catalog-service/api/catalog?pageNo=0&pageSize=10")
                         .check(status().is(200)))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
     /** Chain to search for products. */
@@ -101,6 +102,6 @@ public class ScenarioBuilders {
         return exec(http("Search products")
                         .get("/catalog-service/api/catalog/search?term=product")
                         .check(status().is(200)))
-                .pause(1);
+                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 }

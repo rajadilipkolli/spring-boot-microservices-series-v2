@@ -1,5 +1,7 @@
 package simulation;
 
+import static config.Configuration.*;
+import static data.Feeders.*;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.exec;
@@ -13,10 +15,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.ScenarioBuilder;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -26,12 +25,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scenarios.ScenarioBuilders;
 
 /**
  * This simulation focuses on testing service resilience and error handling capabilities. It
  * deliberately sends some invalid requests to test error handling.
  */
-public class ResilienceTestSimulation extends BaseSimulation {
+public class ResilienceTestSimulation extends Simulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResilienceTestSimulation.class);
 
@@ -41,48 +41,6 @@ public class ResilienceTestSimulation extends BaseSimulation {
 
     private final AtomicInteger rateLimitedCount = new AtomicInteger(0);
     private final AtomicInteger serviceUnavailableCount = new AtomicInteger(0);
-
-    @Override
-    public void before() {
-        super.before(); // Run health checks
-        warmUpKafka();
-    }
-
-    private void warmUpKafka() {
-        LOGGER.info("Performing Kafka warm-up for resilience tests...");
-        HttpClient client = HttpClient.newHttpClient();
-        try {
-            HttpRequest request =
-                    HttpRequest.newBuilder()
-                            .uri(URI.create(BASE_URL + "/catalog-service/api/catalog"))
-                            .header("Content-Type", "application/json")
-                            .POST(
-                                    HttpRequest.BodyPublishers.ofString(
-                                            """
-                                {
-                                  "productCode": "WARMUP-RES",
-                                  "productName": "Warmup Product",
-                                  "price": 10.0,
-                                  "description": "Kafka Warmup"
-                                }
-                                """))
-                            .build();
-            client.send(request, HttpResponse.BodyHandlers.ofString());
-            LOGGER.info("Kafka warm-up request sent.");
-
-            try {
-                Thread.sleep(5000); // Wait for Kafka init
-            } catch (InterruptedException e) {
-                LOGGER.error("Warm-up sleep interrupted: {}", e.getMessage());
-                Thread.currentThread().interrupt();
-            }
-        } catch (InterruptedException e) {
-            LOGGER.error("Warm-up interrupted: {}", e.getMessage());
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            LOGGER.warn("Kafka warm-up failed: {}", e.getMessage());
-        }
-    }
 
     // Valid data feeder
     private final Iterator<Map<String, Object>> validDataFeeder =
@@ -186,7 +144,7 @@ public class ResilienceTestSimulation extends BaseSimulation {
                                 rampUsersPerSec(0).to(TARGET_RATE).during(RAMP_DURATION),
                                 constantUsersPerSec(TARGET_RATE).during(STEADY_STATE_DURATION),
                                 rampUsersPerSec(TARGET_RATE).to(0).during(RAMP_DURATION)))
-                .protocols(httpProtocol)
+                .protocols(HTTP_PROTOCOL)
                 .maxDuration(
                         RAMP_DURATION
                                 .plus(STEADY_STATE_DURATION)
@@ -196,7 +154,7 @@ public class ResilienceTestSimulation extends BaseSimulation {
                         global().responseTime().percentile(95).lt(3000),
                         global().failedRequests()
                                 .percent()
-                                .lt(25.0) // Expected failures in resilience test
+                                .is(0.0) // Any 500s or timeouts are unacceptable
                         );
     }
 

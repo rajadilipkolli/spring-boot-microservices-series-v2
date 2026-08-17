@@ -66,9 +66,9 @@ done
 # Function to check service health
 check_health() {
     local service_url=$1
-    local max_attempts=10
+    local max_attempts=50
     local attempt=1
-    local sleep_time=5
+    local sleep_time=8
 
     echo "Checking health for $service_url..."
     while [ $attempt -le $max_attempts ]; do
@@ -95,6 +95,15 @@ for service in "${SERVICES[@]}"; do
     fi
 done
 echo "All services are healthy. Proceeding with tests."
+
+echo "Warming up services via API Gateway /api/v1/generate endpoint..."
+BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
+if ! curl -X POST -f -m 30 -s -k -H "Idempotency-Key: ${BATCH_ID}" "${BASE_URL}/api/v1/generate" > /dev/null 2>&1; then
+    echo "ERROR: Warm-up request failed. Aborting."
+    exit 1
+fi
+echo "Sleeping for 10 sec for warmup processing to complete..."
+sleep 10
 
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
@@ -136,6 +145,7 @@ esac
 CMD="./mvnw clean gatling:test $MAVEN_PARAMS"
 echo "Executing: $CMD"
 eval $CMD
+STATUS=$?
 
 # Find the latest report by modification time (ignoring the parent directory)
 LATEST_REPORT=$(ls -td target/gatling/*/ 2>/dev/null | head -n 1 | sed 's/\/$//')
@@ -143,4 +153,9 @@ if [ -n "$LATEST_REPORT" ] && [ -f "$LATEST_REPORT/index.html" ]; then
     echo "Report generated at: $LATEST_REPORT/index.html"
 else
     echo "No test report found in target/gatling/."
+fi
+
+if [ $STATUS -ne 0 ]; then
+    echo "Gatling tests failed with status $STATUS"
+    exit $STATUS
 fi
