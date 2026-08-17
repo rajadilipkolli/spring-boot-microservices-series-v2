@@ -66,9 +66,9 @@ done
 # Function to check service health
 check_health() {
     local service_url=$1
-    local max_attempts=10
+    local max_attempts=50
     local attempt=1
-    local sleep_time=5
+    local sleep_time=8
 
     echo "Checking health for $service_url..."
     while [ $attempt -le $max_attempts ]; do
