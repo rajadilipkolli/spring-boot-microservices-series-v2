@@ -22,7 +22,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <springdoc-openapi.version>3.1.0</springdoc-openapi.version>
 
-        <spotless.version>3.9.0</spotless.version>
+        <spotless.version>3.10.0</spotless.version>
         <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -298,7 +298,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.36.1</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
