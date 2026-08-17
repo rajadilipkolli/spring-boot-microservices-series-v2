@@ -32,6 +32,11 @@ public class Configuration {
                             "traceparent",
                             session -> {
                                 String traceId = UUID.randomUUID().toString().replace("-", "");
-                                return "00-" + traceId + "-0000000000000000-01";
+                                String parentId =
+                                        UUID.randomUUID()
+                                                .toString()
+                                                .replace("-", "")
+                                                .substring(0, 16);
+                                return "00-" + traceId + "-" + parentId + "-01";
                             });
 }

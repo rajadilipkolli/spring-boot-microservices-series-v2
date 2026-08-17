@@ -86,11 +86,26 @@ public class CreateProductSimulation extends Simulation {
                                             http("Get product inventory")
                                                     .get(
                                                             "/inventory-service/api/inventory/#{productCode}")
-                                                    .check(status().is(200))
                                                     .check(
+                                                            status().in(200, 404)
+                                                                    .saveAs("inventoryStatus"))
+                                                    .checkIf(
+                                                            session ->
+                                                                    session.contains(
+                                                                                    "inventoryStatus")
+                                                                            && session.getInt(
+                                                                                            "inventoryStatus")
+                                                                                    == 200)
+                                                    .then(
                                                             bodyString()
                                                                     .saveAs(
-                                                                            "inventoryResponseBody"))))
+                                                                            "inventoryResponseBody")))
+                                    .doIf(
+                                            session ->
+                                                    session.contains("inventoryStatus")
+                                                            && session.getInt("inventoryStatus")
+                                                                    == 404)
+                                    .then(exec(session -> session.markAsFailed())))
                     .exec(
                             session -> {
                                 // Validate the response body
