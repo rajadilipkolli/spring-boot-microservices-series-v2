@@ -177,7 +177,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.36.1</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>
