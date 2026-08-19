@@ -42,3 +42,9 @@ inventory-service/logs/
 inventory-service/LOG_FILE_IS_UNDEFINED
 order-service/logs/
 order-service/LOG_FILE_IS_UNDEFINED
+config-server/bin/
+config-server/target/
+inventory-service/bin/
+inventory-service/target/
+order-service/bin/
+order-service/target/
