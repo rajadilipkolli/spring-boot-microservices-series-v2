@@ -109,16 +109,16 @@ This project implements a **microservices pattern** where different functionalit
 
 <div align="center">
 
-| Service | Port | Description | Tech Stack |
-|---------|------|-------------|------------|
-| 🌐 **API Gateway** | 8765 | Single entry point, routing & load balancing | Spring Cloud Gateway |
-| 📁 **Config Server** | 8888 | Centralized configuration management | Spring Cloud Config |
-| 🏢 **Service Registry** | 8761 | Service discovery with Eureka | Spring Cloud Netflix |
-| 📚 **Catalog Service** | 18080 | Product catalog management | PostgreSQL + Liquibase (YAML) |
-| 📦 **Inventory Service** | 18181 | Stock level management | PostgreSQL + Liquibase (JSON) |
-| 🛍️ **Order Service** | 18282 | Order processing & orchestration | PostgreSQL + Liquibase (XML) |
-| 💳 **Payment Service** | 18085 | Payment processing | PostgreSQL + Liquibase (XML) |
-| 🛒 **Retail Store Web** | 8080 | Customer-facing web application | Thymeleaf + Alpine.js |
+| Service                  | Port  | Description                                  | Tech Stack                    |
+|--------------------------|-------|----------------------------------------------|-------------------------------|
+| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
+| 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
+| 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
+| 📦 **Inventory Service** | 18181 | Stock level management                       | PostgreSQL + Liquibase (JSON) |
+| 🛍️ **Order Service**     | 18282 | Order processing & orchestration             | PostgreSQL + Liquibase (XML)  |
+| 💳 **Payment Service**   | 18085 | Payment processing                           | PostgreSQL + Liquibase (XML)  |
+| 🛒 **Retail Store Web**  | 8080  | Customer-facing web application              | Thymeleaf + Alpine.js         |
 
 </div>
 
@@ -234,13 +234,13 @@ graph TB
 
 Before you begin, ensure you have the following installed:
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| ☕ **Java** | 21+ | Runtime environment |
-| 📦 **Maven** | 3.9.x+ | Build tool |
-| 🐳 **Docker** | Latest | Containerization |
-| 🔧 **Docker Compose** | Latest | Orchestration |
-| 📚 **Git** | Latest | Version control |
+| Tool                  | Version | Purpose             |
+|-----------------------|---------|---------------------|
+| ☕ **Java**           | 25+     | Runtime environment |
+| 📦 **Maven**          | 3.9.x+  | Build tool          |
+| 🐳 **Docker**         | Latest  | Containerization    |
+| 🔧 **Docker Compose** | Latest  | Orchestration       |
+| 📚 **Git**            | Latest  | Version control     |
 
 > 💡 **Tip:** Ensure `JAVA_HOME` environment variable is properly set
 
@@ -448,12 +448,12 @@ This project demonstrates **flexible database schema management** using Liquibas
 
 <div align="center">
 
-| 🏷️ Format | 📁 Service Examples | 📝 Use Case |
-|-----------|-------------------|-------------|
-| **XML** | `order-service`, `payment-service` | Complex migrations, detailed documentation |
-| **YAML** | `catalog-service` | Human-readable, simple structure |
-| **JSON** | `inventory-service` | API-friendly, structured data |
-| **SQL** | Custom implementations | Direct SQL control, legacy migrations |
+| 🏷️ Format | 📁 Service Examples                | 📝 Use Case                                |
+|-----------|------------------------------------|--------------------------------------------|
+| **XML**   | `order-service`, `payment-service` | Complex migrations, detailed documentation |
+| **YAML**  | `catalog-service`                  | Human-readable, simple structure           |
+| **JSON**  | `inventory-service`                | API-friendly, structured data              |
+| **SQL**   | Custom implementations             | Direct SQL control, legacy migrations      |
 
 </div>
 
