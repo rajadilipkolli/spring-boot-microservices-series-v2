@@ -74,7 +74,7 @@ spec:
           value: 'false'
         - name: KC_HTTP_ENABLED
           value: 'true'
-        image: quay.io/keycloak/keycloak:26.7.1
+        image: quay.io/keycloak/keycloak:26.7.2
         name: keycloak
         resources:
           requests:
