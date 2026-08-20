@@ -24,7 +24,8 @@ import org.springframework.stereotype.Service;
 @Loggable
 public class OrderGeneratorService {
 
-    private static final int NUM_ORDERS = 10_000;
+    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
+    private static final int NUM_ORDERS = MAX_GENERATION_BATCH_SIZE;
     private static final int BATCH_SIZE = 100;
     private static final SecureRandom RAND = new SecureRandom();
 
@@ -38,6 +39,7 @@ public class OrderGeneratorService {
 
     @Async
     public void generateOrders(String idempotencyKey, Integer batchSize) {
+        validateBatchSize(batchSize);
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
@@ -75,6 +77,13 @@ public class OrderGeneratorService {
                                             .toList();
                             orderService.saveBatchOrders(orderRequests);
                         });
+    }
+
+    private static void validateBatchSize(Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
+            throw new IllegalArgumentException(
+                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
+        }
     }
 
     private List<OrderItemRequest> generateOrderItems(String idempotencyKey) {

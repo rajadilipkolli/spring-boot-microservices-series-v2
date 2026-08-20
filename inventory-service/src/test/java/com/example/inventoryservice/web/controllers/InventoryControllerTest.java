@@ -17,6 +17,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,6 +41,8 @@ import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -400,6 +403,17 @@ class InventoryControllerTest {
                                         .isTrue());
 
         verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=" + batchSize)
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(inventoryService);
     }
 
     @Test

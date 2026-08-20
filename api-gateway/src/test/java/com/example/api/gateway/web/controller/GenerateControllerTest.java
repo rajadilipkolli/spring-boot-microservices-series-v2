@@ -9,6 +9,7 @@ package com.example.api.gateway.web.controller;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
@@ -18,6 +19,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
@@ -155,6 +158,18 @@ class GenerateControllerTest {
                         "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate?batchSize=25");
         verify(requestBodyUriSpec)
                 .uri("lb://ORDER-SERVICE/order-service/api/orders/generate?batchSize=25");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidBatchSizeWithoutCallingServices(int batchSize) {
+        Mono<?> result = invokeGenerate(batchSize);
+
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
+                .expectNextMatches(response -> response.getStatusCode() == HttpStatus.BAD_REQUEST)
+                .verifyComplete();
+
+        verifyNoInteractions(webClient);
     }
 
     @Test

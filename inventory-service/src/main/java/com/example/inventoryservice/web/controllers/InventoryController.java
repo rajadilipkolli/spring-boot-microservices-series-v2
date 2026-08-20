@@ -14,6 +14,8 @@ import com.example.inventoryservice.services.InventoryService;
 import com.example.inventoryservice.utils.AppConstants;
 import com.example.inventoryservice.utils.logging.Loggable;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.springframework.http.HttpStatus;
@@ -102,7 +104,8 @@ class InventoryController {
     @PostMapping("/generate")
     boolean updateInventoryWithRandomValue(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) Integer batchSize) {
+            @RequestParam(required = false) @Min(1) @Max(InventoryService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize) {
         inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
         return true;
     }

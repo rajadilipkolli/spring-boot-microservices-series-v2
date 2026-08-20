@@ -44,6 +44,7 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final SecureRandom RAND = new SecureRandom();
+    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
     private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final ProductRepository productRepository;
@@ -263,6 +264,7 @@ public class ProductService {
     @Transactional
     @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
+        validateBatchSize(batchSize);
         int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
 
         return Flux.range(0, resolvedBatchSize)
@@ -282,6 +284,13 @@ public class ProductService {
                                                                 (double) randomPrice)))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
+    }
+
+    private static void validateBatchSize(Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
+            throw new IllegalArgumentException(
+                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
+        }
     }
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTerm(

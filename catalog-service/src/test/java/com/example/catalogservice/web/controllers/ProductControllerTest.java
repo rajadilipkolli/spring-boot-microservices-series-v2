@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
@@ -26,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.data.domain.Page;
@@ -534,6 +537,20 @@ class ProductControllerTest {
                 .isEqualTo(true);
 
         verify(productService).generateProducts("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) {
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate?batchSize=" + batchSize)
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+
+        verifyNoInteractions(productService);
     }
 
     @Test

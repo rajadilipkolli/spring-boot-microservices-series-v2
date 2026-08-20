@@ -11,6 +11,8 @@ import com.example.api.gateway.model.ServiceResult;
 import com.example.api.gateway.model.ServiceType;
 import com.example.api.gateway.util.LogSanitizer;
 import com.example.api.gateway.web.api.GenerateAPI;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -74,7 +76,17 @@ public class GenerateController implements GenerateAPI {
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate(
-            @RequestParam(required = false) Integer batchSize) {
+            @RequestParam(required = false) @Min(1) @Max(MAX_BATCH_SIZE) Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_BATCH_SIZE)) {
+            return Mono.just(
+                    ResponseEntity.badRequest()
+                            .body(
+                                    new GenerationResponse(
+                                            "error",
+                                            "batchSize must be between 1 and " + MAX_BATCH_SIZE,
+                                            Map.of())));
+        }
+
         String batchId = UUID.randomUUID().toString();
 
         return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG, batchId, batchSize)
