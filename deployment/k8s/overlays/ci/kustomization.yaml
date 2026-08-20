@@ -15,10 +15,10 @@ patches:
         value: IfNotPresent
       - op: replace
         path: /spec/template/spec/containers/0/resources/requests/memory
-        value: "256Mi"
+        value: "512Mi"
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/memory
-        value: "512Mi"
+        value: "1400Mi"
   - target:
       kind: Deployment
       name: keycloak
