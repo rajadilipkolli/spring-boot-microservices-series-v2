@@ -16,6 +16,33 @@ function OK($msg)   { Write-Host "OK: $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "WARN: $msg" -ForegroundColor Yellow }
 function Fail($msg) { Write-Host "FAIL: $msg" -ForegroundColor Red; exit 1 }
 
+function Ensure-Jq {
+    if (Get-Command jq -ErrorAction SilentlyContinue) {
+        OK "jq is available."
+        return
+    }
+
+    Step "Installing jq"
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        winget install --id jqlang.jq --exact --source winget --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -ne 0) { Fail "winget could not install jq." }
+    } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+        choco install jq --yes --no-progress
+        if ($LASTEXITCODE -ne 0) { Fail "Chocolatey could not install jq." }
+    } else {
+        Fail "jq is required, but neither winget nor Chocolatey is available to install it."
+    }
+
+    # Package managers may update PATH outside the current PowerShell process.
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = "$machinePath;$userPath;$env:Path"
+    if (-not (Get-Command jq -ErrorAction SilentlyContinue)) {
+        Fail "jq was installed, but is not available on PATH. Restart PowerShell and rerun this script."
+    }
+    OK "jq installed."
+}
+
 function Add-HostsEntry {
     $current = Get-Content $HOSTS_FILE -Raw
     if ($current -notmatch "retailstore\.local") {
@@ -48,6 +75,7 @@ foreach ($tool in @("docker","kind","kubectl","bash")) {
     }
 }
 OK "All tools found."
+Ensure-Jq
 
 if (-not $SkipCluster) {
     Step "Creating Kind cluster '$CLUSTER_NAME' with port-mapping config"
