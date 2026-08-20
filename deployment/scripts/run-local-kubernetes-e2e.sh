@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
+CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/ci"
+E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
+
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
 HOSTS_ENTRY="127.0.0.1 retailstore.local api.retailstore.local keycloak.local jobrunr.local"
@@ -96,7 +102,7 @@ ok "All tools found."
 if [[ "$SKIP_CLUSTER" != true ]]; then
   step "Creating Kind cluster '$CLUSTER_NAME'"
   kind delete cluster --name "$CLUSTER_NAME" >/dev/null 2>&1 || true
-  kind create cluster --name "$CLUSTER_NAME" --config deployment/k8s/kind-config.yaml --wait 120s
+  kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CONFIG" --wait 120s
   ok "Cluster '$CLUSTER_NAME' is up."
 else
   warn "Skipping cluster creation."
@@ -118,7 +124,7 @@ done
 ok "All images loaded."
 
 step "Applying Kustomize CI overlay"
-kubectl apply -k deployment/k8s/overlays/ci/
+kubectl apply -k "$CI_OVERLAY"
 ok "CI overlay applied."
 
 step "Waiting for infrastructure rollouts"
@@ -149,7 +155,7 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 set +e
-HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+HOST=api.retailstore.local PORT=80 "$E2E_SCRIPT" --no-cb-strict
 test_exit=$?
 set -e
 
