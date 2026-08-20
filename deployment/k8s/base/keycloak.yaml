@@ -76,6 +76,11 @@ spec:
           value: 'true'
         image: quay.io/keycloak/keycloak:26.7.1
         name: keycloak
+        resources:
+          requests:
+            memory: 512Mi
+          limits:
+            memory: 1400Mi
         ports:
         - containerPort: 8080
         - containerPort: 9000
