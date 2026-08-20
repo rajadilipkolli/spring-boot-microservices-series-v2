@@ -59,9 +59,11 @@ docker pull dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
 kind load docker-image dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT --name kind
 ```
 
-Repeat for config-server, service-registry, api-gateway, inventory-service,
-order-service, payment-service, and retail-store-webapp. Alternatively, build
-the images locally and load those image tags into Kind.
+Repeat for config-server, api-gateway, inventory-service, order-service,
+payment-service, and retail-store-webapp. The service-registry image is named
+`dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT` (note the `-25` suffix),
+not the generic `mmv2-service-registry` pattern. Alternatively, build the
+images locally and load those image tags into Kind.
 
 ### Deploying the Stack
 

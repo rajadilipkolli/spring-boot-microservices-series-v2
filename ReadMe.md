@@ -306,7 +306,7 @@ For a local Kubernetes deployment, use Kind with the manifests under
 the complete setup and validation flow.
 
 ```bash
-./run-local-kubernetes-e2e.sh
+./deployment/scripts/run-local-kubernetes-e2e.sh
 ```
 
 The same Kubernetes end-to-end gate runs in

@@ -19,6 +19,13 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/memory
         value: "1400Mi"
+      - op: add
+        path: /spec/template/spec/dnsConfig
+        value:
+          options:
+            - name: single-request-reopen
+            - name: ndots
+              value: "2"
   - target:
       kind: Deployment
       name: keycloak
@@ -29,6 +36,15 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/memory
         value: "1400Mi"
+  - target:
+      kind: Deployment
+      name: "^(api-gateway|catalog-service|config-server|inventory-service|order-service|payment-service|retail-store-webapp|service-registry|keycloak)$"
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: JDK_JAVA_OPTIONS
+          value: "-Djava.net.preferIPv4Stack=true"
 
 images:
   - name: dockertmt/mmv2-config-server
