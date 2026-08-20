@@ -15,11 +15,14 @@ import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +38,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/catalog")
 @Loggable
+@Validated
 public class ProductController implements ProductApi {
 
     private final ProductService productService;
@@ -88,8 +92,11 @@ public class ProductController implements ProductApi {
 
     @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<GenerateProductsResponse> createRandomProducts(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey) {
-        return productService.generateProducts(idempotencyKey).map(GenerateProductsResponse::new);
+            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
+            @RequestParam(required = false) @Min(1) @Max(ProductService.MAX_GENERATION_BATCH_SIZE) Integer batchSize) {
+        return productService
+                .generateProducts(idempotencyKey, batchSize)
+                .map(GenerateProductsResponse::new);
     }
 
     @PostMapping(

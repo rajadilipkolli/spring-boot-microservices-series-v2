@@ -44,6 +44,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -68,6 +70,17 @@ class OrderControllerTest {
     @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
     @Autowired private JsonMapper jsonMapper;
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
+        mockMvc.perform(
+                        post("/api/orders/generate?batchSize=" + batchSize)
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoMoreInteractions(orderGeneratorService);
+    }
 
     @Test
     void shouldFetchAllOrders() throws Exception {
