@@ -8,14 +8,19 @@ package com.example.api.gateway.web.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
@@ -71,21 +76,25 @@ class GenerateControllerTest {
     @BeforeEach
     void setup() {
         when(webClientBuilder.build()).thenReturn(webClient);
-
-        // Common mocking for webClient.post().uri(...).header(...).retrieve()
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-
         // Use Duration.ZERO for tests to avoid unnecessary delays
         controller = new GenerateController(webClientBuilder, Duration.ZERO, false);
     }
 
+    private void mockServiceCallChain() {
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    }
+
     private Mono<?> invokeGenerate() {
+        return invokeGenerate(null);
+    }
+
+    private Mono<?> invokeGenerate(Integer batchSize) {
         try {
-            java.lang.reflect.Method m = controller.getClass().getMethod("generate");
-            return (Mono<?>) m.invoke(controller);
+            Method m = controller.getClass().getMethod("generate", Integer.class);
+            return (Mono<?>) m.invoke(controller, batchSize);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -93,12 +102,15 @@ class GenerateControllerTest {
 
     @Test
     void shouldGenerateDataWhenBothServicesSucceed() {
+        mockServiceCallChain();
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
+        ResponseEntity<String> orderResponse = ResponseEntity.ok("Test order data");
 
         when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.just(catalogResponse))
-                .thenReturn(Mono.just(inventoryResponse));
+                .thenReturn(Mono.just(inventoryResponse))
+                .thenReturn(Mono.just(orderResponse));
 
         Mono<?> result = invokeGenerate();
 
@@ -115,13 +127,56 @@ class GenerateControllerTest {
                                             .equals("Test catalog data")
                                     && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
-                                            .equals("Test inventory data");
+                                            .equals("Test inventory data")
+                                    && Objects.requireNonNull(getServiceResponses(body))
+                                            .get("order")
+                                            .equals("Test order data");
                         })
                 .verifyComplete();
     }
 
     @Test
+    void shouldForwardBatchSizeToAllServicesWhenProvided() {
+        mockServiceCallChain();
+        ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
+        ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
+        ResponseEntity<String> orderResponse = ResponseEntity.ok("Test order data");
+
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(Mono.just(catalogResponse))
+                .thenReturn(Mono.just(inventoryResponse))
+                .thenReturn(Mono.just(orderResponse));
+
+        Mono<?> result = invokeGenerate(25);
+
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
+                .expectNextMatches(response -> response.getStatusCode() == HttpStatus.OK)
+                .verifyComplete();
+
+        verify(requestBodyUriSpec)
+                .uri("lb://CATALOG-SERVICE/catalog-service/api/catalog/generate?batchSize=25");
+        verify(requestBodyUriSpec)
+                .uri(
+                        "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate?batchSize=25");
+        verify(requestBodyUriSpec)
+                .uri("lb://ORDER-SERVICE/order-service/api/orders/generate?batchSize=25");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidBatchSizeWithoutCallingServices(int batchSize) {
+        Mono<?> result = invokeGenerate(batchSize);
+
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
+                .expectNextMatches(response -> response.getStatusCode() == HttpStatus.BAD_REQUEST)
+                .verifyComplete();
+
+        verifyNoInteractions(webClient);
+    }
+
+    @Test
     void shouldHandleCatalogServiceError() {
+        mockServiceCallChain();
         WebClientResponseException catalogException =
                 new WebClientResponseException(
                         "Catalog Service Error",
@@ -155,6 +210,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleInventoryServiceError() {
+        mockServiceCallChain();
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         WebClientResponseException inventoryException =
                 new WebClientResponseException(
@@ -194,6 +250,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceTimeoutDirectlyFromCallMicroservice() {
+        mockServiceCallChain();
         when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(
                         Mono.error(new java.util.concurrent.TimeoutException("Simulated timeout")));
@@ -217,6 +274,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceTimeoutWrappedInWebClientResponseException() {
+        mockServiceCallChain();
         WebClientResponseException timeoutException =
                 new WebClientResponseException(
                         HttpStatus.REQUEST_TIMEOUT.value(),
@@ -246,6 +304,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleServiceUnavailable() {
+        mockServiceCallChain();
         WebClientResponseException serviceUnavailableException =
                 new WebClientResponseException(
                         HttpStatus.SERVICE_UNAVAILABLE.value(),
@@ -276,6 +335,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldFailAfterMaxRetriesOnServiceUnavailable() {
+        mockServiceCallChain();
         WebClientResponseException serviceUnavailable =
                 new WebClientResponseException(
                         HttpStatus.SERVICE_UNAVAILABLE.value(),
@@ -309,6 +369,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleCatalogReturningNonOkStatusDirectly() {
+        mockServiceCallChain();
         ResponseEntity<String> catalogErrorResponse =
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Catalog bad request data");
 
@@ -333,6 +394,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleInventoryReturningNonOkStatusDirectly() {
+        mockServiceCallChain();
         ResponseEntity<String> catalogSuccessResponse = ResponseEntity.ok("Catalog data");
         ResponseEntity<String> inventoryErrorResponse =
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body("Inventory not found data");
@@ -363,6 +425,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleGenericExceptionDuringCatalogCall() {
+        mockServiceCallChain();
         RuntimeException genericError = new RuntimeException("Generic catalog failure message");
         when(responseSpec.toEntity(eq(String.class))).thenReturn(Mono.error(genericError));
 
@@ -386,6 +449,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleGenericExceptionDuringInventoryCall() {
+        mockServiceCallChain();
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         RuntimeException genericError = new RuntimeException("Generic inventory failure message");
 
@@ -416,6 +480,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleWebClientResponseExceptionWithEmptyBody() {
+        mockServiceCallChain();
         WebClientResponseException webClientResponseExceptionWithEmptyBody =
                 new WebClientResponseException(
                         HttpStatus.BAD_GATEWAY.value(),
@@ -446,6 +511,7 @@ class GenerateControllerTest {
 
     @Test
     void shouldHandleWebClientResponseExceptionWithUnknownStatus() {
+        mockServiceCallChain();
         WebClientResponseException errorWithUnknownStatus =
                 new WebClientResponseException(
                         999,

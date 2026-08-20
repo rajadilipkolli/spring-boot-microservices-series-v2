@@ -12,6 +12,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
@@ -108,7 +109,7 @@ class ProductServiceTest {
         given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
 
         // Use StepVerifier to test the method
-        StepVerifier.create(productService.generateProducts("test-batch-123"))
+        StepVerifier.create(productService.generateProducts("test-batch-123", null))
                 .expectSubscription()
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();
@@ -121,6 +122,41 @@ class ProductServiceTest {
         assertThat(capturedProducts)
                 .isNotEmpty()
                 .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
+    }
+
+    @Test
+    void shouldGenerateRequestedBatchSize() {
+        given(productMapper.toEntity(any(ProductRequest.class)))
+                .willAnswer(
+                        invocation -> {
+                            ProductRequest request = invocation.getArgument(0);
+                            return new Product()
+                                    .setProductCode(request.productCode())
+                                    .setProductName(request.productName())
+                                    .setDescription(request.description())
+                                    .setPrice(request.price().intValue());
+                        });
+        given(productMapper.toProductResponse(any(Product.class)))
+                .willReturn(new ProductResponse(1L, "code", "name", "description", null, 1, true));
+        given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
+        given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
+                .willReturn(Mono.empty());
+        given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
+
+        StepVerifier.create(productService.generateProducts("test-batch-456", 5))
+                .expectSubscription()
+                .expectNext(Boolean.TRUE)
+                .verifyComplete();
+
+        then(productMapper).should(times(5)).toEntity(productCaptor.capture());
+        assertThat(productCaptor.getAllValues())
+                .extracting(ProductRequest::productCode)
+                .containsExactly(
+                        "ProductCode_test-batch-456_0",
+                        "ProductCode_test-batch-456_1",
+                        "ProductCode_test-batch-456_2",
+                        "ProductCode_test-batch-456_3",
+                        "ProductCode_test-batch-456_4");
     }
 
     @Test

@@ -7,6 +7,7 @@
 package com.example.catalogservice.exception;
 
 import com.example.catalogservice.utils.LogSanitizer;
+import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
@@ -67,6 +68,30 @@ public class GlobalExceptionHandler {
                 URI.create("https://api.microservices.com/errors/constraint-violation"));
         problemDetail.setProperty("errorCategory", "Database");
         problemDetail.setProperty("timestamp", Instant.now());
+        return Mono.just(problemDetail);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    Mono<ProblemDetail> handleConstraintViolationException(ConstraintViolationException ex) {
+        log.warn("Constraint violation: {}", LogSanitizer.sanitizeException(ex));
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("Invalid request parameters.");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        var violations =
+                ex.getConstraintViolations().stream()
+                        .map(
+                                violation ->
+                                        Map.of(
+                                                "field",
+                                                violation.getPropertyPath() != null
+                                                        ? violation.getPropertyPath().toString()
+                                                        : "",
+                                                "message",
+                                                violation.getMessage()))
+                        .toList();
+        problemDetail.setProperty("violations", violations);
         return Mono.just(problemDetail);
     }
 }

@@ -22,6 +22,8 @@ import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -138,8 +140,12 @@ class OrderController implements OrderApi {
 
     @PostMapping("/generate")
     GenericResponse createMockOrders(
-            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey) {
-        orderGeneratorService.generateOrders(idempotencyKey);
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
+            @RequestParam(required = false)
+                    @Min(1)
+                    @Max(OrderGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize) {
+        orderGeneratorService.generateOrders(idempotencyKey, batchSize);
         return new GenericResponse(true);
     }
 

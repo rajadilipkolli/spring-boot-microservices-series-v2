@@ -11,11 +11,13 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,6 +41,8 @@ import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -367,7 +371,7 @@ class InventoryControllerTest {
     @Test
     void testUpdateInventoryWithRandomValue() throws Exception {
         // Setup
-        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class));
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), isNull());
 
         // Execute & Verify
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
@@ -380,14 +384,43 @@ class InventoryControllerTest {
                                         .isTrue());
 
         // Verify interactions
-        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123");
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", null);
+    }
+
+    @Test
+    void shouldUpdateInventoryWithBatchSize() throws Exception {
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), eq(25));
+
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=25")
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                Boolean.parseBoolean(
+                                                        result.getResponse().getContentAsString()))
+                                        .isTrue());
+
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=" + batchSize)
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(inventoryService);
     }
 
     @Test
     void shouldReturn500WhenGenerationFails() throws Exception {
         doThrow(new RuntimeException("failure"))
                 .when(inventoryService)
-                .updateGeneratedInventory(any(String.class));
+                .updateGeneratedInventory(any(String.class), isNull());
 
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isInternalServerError());
