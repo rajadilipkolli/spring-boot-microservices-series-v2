@@ -356,7 +356,6 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=payment-service
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
-    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   retailstore-webapp:

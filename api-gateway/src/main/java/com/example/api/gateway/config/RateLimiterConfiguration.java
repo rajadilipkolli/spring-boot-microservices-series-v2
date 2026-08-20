@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -19,14 +19,22 @@ class RateLimiterConfiguration {
 
     @Bean
     KeyResolver userKeyResolver() {
-        return exchange ->
-                exchange.getRequest().getHeaders().getFirst("X-User-ID") != null
-                        ? Mono.just(exchange.getRequest().getHeaders().getFirst("X-User-ID"))
-                        : Mono.just(
-                                exchange.getRequest()
-                                        .getRemoteAddress()
-                                        .getAddress()
-                                        .getHostAddress());
+        return exchange -> {
+            String userId = exchange.getRequest().getHeaders().getFirst("X-User-ID");
+            if (userId != null) {
+                return Mono.just(userId);
+            }
+            // Behind a proxy/ingress the remote address (or its resolved IP) can be null.
+            var remoteAddress = exchange.getRequest().getRemoteAddress();
+            String key = "unknown";
+            if (remoteAddress != null) {
+                key =
+                        remoteAddress.getAddress() != null
+                                ? remoteAddress.getAddress().getHostAddress()
+                                : remoteAddress.getHostString();
+            }
+            return Mono.just(key);
+        };
     }
 
     @Bean
