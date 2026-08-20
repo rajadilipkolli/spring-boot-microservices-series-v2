@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+  name: retailstore-ingress
+  namespace: retailstore
+spec:
+  rules:
+    - host: retailstore.local
+      http:
+        paths:
+          - backend:
+              service:
+                name: retail-store-webapp
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+    - host: api.retailstore.local
+      http:
+        paths:
+          - backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8765
+            path: /
+            pathType: Prefix
+    - host: keycloak.local
+      http:
+        paths:
+          - backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+    - host: jobrunr.local
+      http:
+        paths:
+          - backend:
+              service:
+                name: order-service
+                port:
+                  number: 28282
+            path: /
+            pathType: Prefix

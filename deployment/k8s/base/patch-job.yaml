@@ -1,0 +1,54 @@
+﻿apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webapp-patcher
+  namespace: retailstore
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: webapp-patcher-role
+  namespace: retailstore
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: webapp-patcher-binding
+  namespace: retailstore
+subjects:
+- kind: ServiceAccount
+  name: webapp-patcher
+roleRef:
+  kind: Role
+  name: webapp-patcher-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: patch-webapp-hostaliases
+  namespace: retailstore
+spec:
+  template:
+    spec:
+      serviceAccountName: webapp-patcher
+      restartPolicy: OnFailure
+      containers:
+      - name: patcher
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Waiting for keycloak service..."
+          while ! kubectl get svc keycloak > /dev/null 2>&1; do sleep 2; done
+          IP=$(kubectl get svc keycloak -o jsonpath='{.spec.clusterIP}')
+          echo "Keycloak IP is $IP. Patching retail-store-webapp..."
+          kubectl patch deployment retail-store-webapp -p "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"$IP\",\"hostnames\":[\"keycloak.local\"]}]}}}}"

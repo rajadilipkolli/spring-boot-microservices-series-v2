@@ -1,0 +1,128 @@
+name: Kubernetes E2E Tests
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deployment/k8s/**'
+      - '.github/workflows/k8s-e2e.yml'
+  pull_request:
+    paths:
+      - 'deployment/k8s/**'
+      - '.github/workflows/k8s-e2e.yml'
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          version: v0.23.0
+          config: deployment/k8s/kind-config.yaml
+
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
+
+      - name: Obtain and Load Images
+        run: |
+          # Pull existing latest images
+          docker pull dockertmt/mmv2-config-server:latest
+          docker pull dockertmt/mmv2-service-registry-25:latest
+          docker pull dockertmt/mmv2-api-gateway:latest
+          docker pull dockertmt/mmv2-catalog-service:latest
+          docker pull dockertmt/mmv2-inventory-service:latest
+          docker pull dockertmt/mmv2-order-service:latest
+          docker pull dockertmt/mmv2-payment-service:latest
+          docker pull dockertmt/mmv2-retail-store-webapp:latest
+          
+          # Tag them to the snapshot tags used in kustomization
+          docker tag dockertmt/mmv2-config-server:latest dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-service-registry-25:latest dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-api-gateway:latest dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-catalog-service:latest dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-inventory-service:latest dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-order-service:latest dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-payment-service:latest dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+          docker tag dockertmt/mmv2-retail-store-webapp:latest dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+          
+          # Load them into Kind
+          kind load docker-image dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+          kind load docker-image dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+
+      - name: Apply CI Overlay
+        run: |
+          kubectl apply -k deployment/k8s/overlays/ci/
+
+      - name: Wait for Infrastructure Rollouts
+        run: |
+          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
+          kubectl rollout status deployment/redis -n retailstore --timeout=300s
+          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
+          kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
+
+      - name: Wait for Platform Core Rollouts
+        run: |
+          kubectl rollout status deployment/config-server -n retailstore --timeout=300s
+          kubectl rollout status deployment/service-registry -n retailstore --timeout=300s
+
+      - name: Wait for Application Rollouts
+        run: |
+          for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
+            kubectl rollout status deployment/$svc -n retailstore --timeout=300s
+          done
+
+      - name: Run E2E Validations
+        run: |
+          # Map hostnames for test
+          sudo echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
+          
+          # E2E Script Validation
+          HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+          
+          # Request webapp via Ingress
+          curl -s -f http://retailstore.local > /dev/null
+          
+          # OAuth2 Keycloak Test
+          curl -s -f -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
+            -d "client_id=retailstore-webapp" \
+            -d "grant_type=password" \
+            -d "username=alice" \
+            -d "password=alice" | grep access_token > /dev/null
+
+      - name: Collect Diagnostics
+        if: failure()
+        run: |
+          mkdir -p k8s-diagnostics
+          kubectl get pods -A > k8s-diagnostics/pods.txt
+          kubectl get events -n retailstore > k8s-diagnostics/events.txt
+          kubectl describe pods -n retailstore > k8s-diagnostics/pods-describe.txt
+          
+          for pod in $(kubectl get pods -n retailstore -o name); do
+            # Replace / in pod name (like pod/my-pod) with _ for filename
+            clean_pod=$(echo $pod | tr '/' '_')
+            kubectl logs $pod -n retailstore --all-containers > k8s-diagnostics/$clean_pod.log || true
+          done
+
+      - name: Upload Diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-diagnostics
+          path: k8s-diagnostics/
+
+      - name: Teardown Cluster
+        if: always()
+        run: |
+          kind delete cluster

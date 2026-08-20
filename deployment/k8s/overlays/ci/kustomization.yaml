@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+
+images:
+  - name: dockertmt/mmv2-config-server
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-service-registry-25
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-api-gateway
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-catalog-service
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-inventory-service
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-order-service
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-payment-service
+    newTag: "0.0.1-SNAPSHOT"
+  - name: dockertmt/mmv2-retail-store-webapp
+    newTag: "0.0.1-SNAPSHOT"

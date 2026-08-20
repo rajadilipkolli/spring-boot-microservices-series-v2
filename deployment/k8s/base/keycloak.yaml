@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: retailstore
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  - name: management
+    port: 9000
+    targetPort: 9000
+  - name: http-80
+    port: 80
+    targetPort: 8080
+  selector:
+    app: keycloak
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - args:
+        - start
+        - --import-realm
+        env:
+        - name: KC_PROXY_HEADERS
+          value: xforwarded
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL_HOST
+          value: postgresql
+        - name: KC_DB_URL_DATABASE
+          value: appdb
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_USER
+              name: postgres-credentials
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: postgres-credentials
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN
+              name: keycloak-admin-credentials
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN_PASSWORD
+              name: keycloak-admin-credentials
+        - name: KC_HEALTH_ENABLED
+          value: 'true'
+        - name: KC_HOSTNAME
+          value: keycloak.local
+        - name: KC_HOSTNAME_STRICT
+          value: 'false'
+        - name: KC_HTTP_ENABLED
+          value: 'true'
+        image: quay.io/keycloak/keycloak:26.7.1
+        name: keycloak
+        ports:
+        - containerPort: 8080
+        - containerPort: 9000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 9000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /opt/keycloak/data/import
+          name: realm-config
+      volumes:
+      - configMap:
+          name: keycloak-realm-config
+        name: realm-config

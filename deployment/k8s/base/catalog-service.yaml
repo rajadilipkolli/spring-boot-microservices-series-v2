@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: retailstore
+spec:
+  ports:
+  - port: 18080
+    targetPort: 18080
+  selector:
+    app: catalog-service
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+      - env:
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        - name: SPRING_CONFIG_IMPORT
+          value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: http://service-registry:8761/eureka/
+        - name: SPRING_R2DBC_URL
+          value: r2dbc:postgresql://postgresql:5432/appdb
+        - name: SPRING_R2DBC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_USER
+        - name: SPRING_R2DBC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_PASSWORD
+        - name: SPRING_LIQUIBASE_URL
+          value: jdbc:postgresql://postgresql:5432/appdb
+        - name: SPRING_LIQUIBASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_USER
+        - name: SPRING_LIQUIBASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: POSTGRES_PASSWORD
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxDirectMemorySize=256m -Xmx400m
+        - name: APPLICATION_INVENTORY_SERVICE_URL
+          value: http://inventory-service:18181/inventory-service
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /catalog-service/actuator/health/liveness
+            port: 18080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: catalog-service
+        ports:
+        - containerPort: 18080
+        readinessProbe:
+          httpGet:
+            path: /catalog-service/actuator/health/readiness
+            port: 18080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1400Mi
+          requests:
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /catalog-service/actuator/health/liveness
+            port: 18080
+          periodSeconds: 10
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - 'until nc -z config-server 8888; do echo waiting for config-server; sleep
+          2; done;
+
+          until nc -z service-registry 8761; do echo waiting for service-registry;
+          sleep 2; done;
+
+          until nc -z postgresql 5432; do echo waiting for postgresql; sleep 2; done;
+
+          until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done;
+
+          '
+        image: busybox:1.36
+        name: wait-for-dependencies
