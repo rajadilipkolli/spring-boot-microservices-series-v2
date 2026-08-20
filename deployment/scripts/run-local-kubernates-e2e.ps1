@@ -252,9 +252,10 @@ if ($testExit -eq 0) {
     $tokenResp = bash -c @"
 curl -s -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d 'client_id=retailstore-webapp' \
+  -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
   -d 'grant_type=password' \
-  -d 'username=alice' \
-  -d 'password=alice' | grep -c access_token
+  -d 'username=retail' \
+  -d 'password=retail1234' | grep -c access_token
 "@
     if ($tokenResp -ge 1) { OK "Keycloak token endpoint returned access_token." }
     else                  { Warn "Keycloak token test skipped or non-fatal." }

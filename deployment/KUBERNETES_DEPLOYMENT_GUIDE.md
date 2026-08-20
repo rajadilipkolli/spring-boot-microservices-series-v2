@@ -104,8 +104,9 @@ sequence locally as follows:
 HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
 curl --fail http://retailstore.local
 curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
-  -d 'client_id=retailstore-webapp' -d 'grant_type=password' \
-  -d 'username=alice' -d 'password=alice' | grep access_token
+  -d 'client_id=retailstore-webapp' -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
+  -d 'grant_type=password' \
+  -d 'username=retail' -d 'password=retail1234' | grep access_token
 ```
 
 `--no-cb-strict` skips the Docker Compose container-stop circuit-breaker path;

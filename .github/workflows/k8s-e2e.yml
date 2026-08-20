@@ -110,9 +110,10 @@ jobs:
           # OAuth2 Keycloak Test (best-effort smoke check; does not fail the job)
           if curl -s -f -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
             -d "client_id=retailstore-webapp" \
+            -d "client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z" \
             -d "grant_type=password" \
-            -d "username=alice" \
-            -d "password=alice" | grep -q access_token; then
+            -d "username=retail" \
+            -d "password=retail1234" | grep -q access_token; then
             echo "Keycloak token endpoint returned access_token."
           else
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."

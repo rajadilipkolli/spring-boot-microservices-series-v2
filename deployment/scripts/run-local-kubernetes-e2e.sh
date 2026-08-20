@@ -169,9 +169,10 @@ if ((test_exit == 0)); then
 
   if curl --silent --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
     -d 'client_id=retailstore-webapp' \
+    -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
     -d 'grant_type=password' \
-    -d 'username=alice' \
-    -d 'password=alice' | grep -q access_token; then
+    -d 'username=retail' \
+    -d 'password=retail1234' | grep -q access_token; then
     ok "Keycloak token endpoint returned an access token."
   else
     warn "Keycloak token smoke check failed."
