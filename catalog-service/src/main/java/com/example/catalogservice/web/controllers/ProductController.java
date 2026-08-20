@@ -88,8 +88,11 @@ public class ProductController implements ProductApi {
 
     @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<GenerateProductsResponse> createRandomProducts(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey) {
-        return productService.generateProducts(idempotencyKey).map(GenerateProductsResponse::new);
+            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
+            @RequestParam(required = false) Integer batchSize) {
+        return productService
+                .generateProducts(idempotencyKey, batchSize)
+                .map(GenerateProductsResponse::new);
     }
 
     @PostMapping(

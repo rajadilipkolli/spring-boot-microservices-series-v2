@@ -8,8 +8,10 @@ package com.example.api.gateway.web.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -83,9 +85,13 @@ class GenerateControllerTest {
     }
 
     private Mono<?> invokeGenerate() {
+        return invokeGenerate(null);
+    }
+
+    private Mono<?> invokeGenerate(Integer batchSize) {
         try {
-            java.lang.reflect.Method m = controller.getClass().getMethod("generate");
-            return (Mono<?>) m.invoke(controller);
+            Method m = controller.getClass().getMethod("generate", Integer.class);
+            return (Mono<?>) m.invoke(controller, batchSize);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -95,10 +101,12 @@ class GenerateControllerTest {
     void shouldGenerateDataWhenBothServicesSucceed() {
         ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
         ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
+        ResponseEntity<String> orderResponse = ResponseEntity.ok("Test order data");
 
         when(responseSpec.toEntity(eq(String.class)))
                 .thenReturn(Mono.just(catalogResponse))
-                .thenReturn(Mono.just(inventoryResponse));
+                .thenReturn(Mono.just(inventoryResponse))
+                .thenReturn(Mono.just(orderResponse));
 
         Mono<?> result = invokeGenerate();
 
@@ -115,9 +123,38 @@ class GenerateControllerTest {
                                             .equals("Test catalog data")
                                     && Objects.requireNonNull(getServiceResponses(body))
                                             .get("inventory")
-                                            .equals("Test inventory data");
+                                            .equals("Test inventory data")
+                                    && Objects.requireNonNull(getServiceResponses(body))
+                                            .get("order")
+                                            .equals("Test order data");
                         })
                 .verifyComplete();
+    }
+
+    @Test
+    void shouldForwardBatchSizeToAllServicesWhenProvided() {
+        ResponseEntity<String> catalogResponse = ResponseEntity.ok("Test catalog data");
+        ResponseEntity<String> inventoryResponse = ResponseEntity.ok("Test inventory data");
+        ResponseEntity<String> orderResponse = ResponseEntity.ok("Test order data");
+
+        when(responseSpec.toEntity(eq(String.class)))
+                .thenReturn(Mono.just(catalogResponse))
+                .thenReturn(Mono.just(inventoryResponse))
+                .thenReturn(Mono.just(orderResponse));
+
+        Mono<?> result = invokeGenerate(25);
+
+        StepVerifier.create((Mono<ResponseEntity<?>>) result)
+                .expectNextMatches(response -> response.getStatusCode() == HttpStatus.OK)
+                .verifyComplete();
+
+        verify(requestBodyUriSpec)
+                .uri("lb://CATALOG-SERVICE/catalog-service/api/catalog/generate?batchSize=25");
+        verify(requestBodyUriSpec)
+                .uri(
+                        "lb://INVENTORY-SERVICE/inventory-service/api/inventory/generate?batchSize=25");
+        verify(requestBodyUriSpec)
+                .uri("lb://ORDER-SERVICE/order-service/api/orders/generate?batchSize=25");
     }
 
     @Test

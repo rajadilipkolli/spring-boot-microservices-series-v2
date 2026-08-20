@@ -11,6 +11,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -367,7 +368,7 @@ class InventoryControllerTest {
     @Test
     void testUpdateInventoryWithRandomValue() throws Exception {
         // Setup
-        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class));
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), isNull());
 
         // Execute & Verify
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
@@ -380,14 +381,32 @@ class InventoryControllerTest {
                                         .isTrue());
 
         // Verify interactions
-        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123");
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", null);
+    }
+
+    @Test
+    void shouldUpdateInventoryWithBatchSize() throws Exception {
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), eq(25));
+
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=25")
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                Boolean.parseBoolean(
+                                                        result.getResponse().getContentAsString()))
+                                        .isTrue());
+
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", 25);
     }
 
     @Test
     void shouldReturn500WhenGenerationFails() throws Exception {
         doThrow(new RuntimeException("failure"))
                 .when(inventoryService)
-                .updateGeneratedInventory(any(String.class));
+                .updateGeneratedInventory(any(String.class), isNull());
 
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isInternalServerError());

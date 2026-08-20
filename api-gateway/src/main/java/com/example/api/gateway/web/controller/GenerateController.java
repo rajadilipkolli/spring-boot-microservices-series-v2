@@ -27,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -72,10 +73,11 @@ public class GenerateController implements GenerateAPI {
      */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
-    public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate() {
+    public Mono<@NonNull ResponseEntity<@NonNull GenerationResponse>> generate(
+            @RequestParam(required = false) Integer batchSize) {
         String batchId = UUID.randomUUID().toString();
 
-        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG, batchId)
+        return callMicroservice(CATALOG_SERVICE_URL, ServiceType.CATALOG, batchId, batchSize)
                 .flatMap(
                         catalogResult -> {
                             if (catalogResult.status() == HttpStatus.OK.value()) {
@@ -87,7 +89,8 @@ public class GenerateController implements GenerateAPI {
                                                         callMicroservice(
                                                                         INVENTORY_SERVICE_URL,
                                                                         ServiceType.INVENTORY,
-                                                                        batchId)
+                                                                        batchId,
+                                                                        batchSize)
                                                                 .flatMap(
                                                                         inventoryResult -> {
                                                                             if (inventoryResult
@@ -105,7 +108,8 @@ public class GenerateController implements GenerateAPI {
                                                                                                                         ORDER_SERVICE_URL,
                                                                                                                         ServiceType
                                                                                                                                 .ORDER,
-                                                                                                                        batchId)
+                                                                                                                        batchId,
+                                                                                                                        batchSize)
                                                                                                                 .map(
                                                                                                                         orderResult ->
                                                                                                                                 createResponseEntity(
@@ -125,11 +129,11 @@ public class GenerateController implements GenerateAPI {
                                                                                                                 Map
                                                                                                                         .of(
                                                                                                                                 "catalog",
-                                                                                                                                        catalogData
-                                                                                                                                                .response(),
+                                                                                                                                catalogData
+                                                                                                                                        .response(),
                                                                                                                                 "inventory",
-                                                                                                                                        inventoryResult
-                                                                                                                                                .response()))));
+                                                                                                                                inventoryResult
+                                                                                                                                        .response()))));
                                                                             }
                                                                         }));
                             } else {
@@ -182,10 +186,10 @@ public class GenerateController implements GenerateAPI {
      * @return Mono containing the service result
      */
     private Mono<ServiceResult> callMicroservice(
-            String url, ServiceType serviceType, String batchId) {
+            String url, ServiceType serviceType, String batchId, Integer batchSize) {
         return webClient
                 .post()
-                .uri(url)
+                .uri(addBatchSizeIfPresent(url, batchSize))
                 .header("Idempotency-Key", batchId)
                 .retrieve()
                 .toEntity(String.class) // Original Mono<ResponseEntity<String>>
@@ -193,6 +197,10 @@ public class GenerateController implements GenerateAPI {
                 .map(this::toServiceResult)
                 .retryWhen(createRetrySpec(url))
                 .onErrorResume(throwable -> handleCallError(throwable, url, serviceType));
+    }
+
+    private String addBatchSizeIfPresent(String url, Integer batchSize) {
+        return batchSize != null ? url + "?batchSize=" + batchSize : url;
     }
 
     private Retry createRetrySpec(String url) {

@@ -10,6 +10,8 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -443,7 +445,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnTrueWhenProductsExist() {
-        var codes = java.util.List.of("code-1", "code-2");
+        var codes = List.of("code-1", "code-2");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(true));
 
         webTestClient
@@ -466,7 +468,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnFalseWhenProductsDoNotExist() {
-        var codes = java.util.List.of("missing");
+        var codes = List.of("missing");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(false));
 
         webTestClient
@@ -500,7 +502,8 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(true));
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(true));
 
         webTestClient
                 .post()
@@ -515,8 +518,28 @@ class ProductControllerTest {
     }
 
     @Test
+    void shouldGenerateRandomProductsWithBatchSize() {
+        given(productService.generateProducts(any(String.class), eq(25)))
+                .willReturn(Mono.just(true));
+
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate?batchSize=25")
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.success")
+                .isEqualTo(true);
+
+        verify(productService).generateProducts("test-batch-123", 25);
+    }
+
+    @Test
     void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts(any(String.class))).willReturn(Mono.just(false));
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(false));
 
         webTestClient
                 .post()

@@ -998,7 +998,7 @@ waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/ac
 
 log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
 BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
-curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "http://$HOST:$PORT/api/v1/generate" > /dev/null 2>&1
+curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "http://$HOST:$PORT/api/v1/generate?batchSize=1" > /dev/null 2>&1
 log_info "Sleeping for 10 sec for warmup processing to complete..."
 sleep 10
 

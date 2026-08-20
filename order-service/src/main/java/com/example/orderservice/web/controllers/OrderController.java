@@ -138,8 +138,9 @@ class OrderController implements OrderApi {
 
     @PostMapping("/generate")
     GenericResponse createMockOrders(
-            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey) {
-        orderGeneratorService.generateOrders(idempotencyKey);
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
+            @RequestParam(required = false) Integer batchSize) {
+        orderGeneratorService.generateOrders(idempotencyKey, batchSize);
         return new GenericResponse(true);
     }
 

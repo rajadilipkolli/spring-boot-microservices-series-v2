@@ -101,8 +101,9 @@ class InventoryController {
 
     @PostMapping("/generate")
     boolean updateInventoryWithRandomValue(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey) {
-        inventoryService.updateGeneratedInventory(idempotencyKey);
+            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
+            @RequestParam(required = false) Integer batchSize) {
+        inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
         return true;
     }
 

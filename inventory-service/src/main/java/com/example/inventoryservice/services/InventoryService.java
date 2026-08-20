@@ -38,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private static final SecureRandom RAND = new SecureRandom();
+    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
 
@@ -122,12 +123,14 @@ public class InventoryService {
         return new PagedResult<>(page);
     }
 
-    public void updateGeneratedInventory(String idempotencyKey) {
+    public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
 
-        IntStream.rangeClosed(0, 100)
+        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
+
+        IntStream.range(0, resolvedBatchSize)
                 .forEach(
                         operand -> {
                             try {

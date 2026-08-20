@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 
 @Tag(
@@ -48,5 +49,6 @@ public interface GenerateAPI {
                         responseCode = "503",
                         description = "One of the required services is temporarily unavailable")
             })
-    Mono<ResponseEntity<GenerationResponse>> generate();
+    Mono<ResponseEntity<GenerationResponse>> generate(
+            @RequestParam(required = false) Integer batchSize);
 }

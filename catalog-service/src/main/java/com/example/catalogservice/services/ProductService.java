@@ -44,6 +44,7 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final SecureRandom RAND = new SecureRandom();
+    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
@@ -261,8 +262,10 @@ public class ProductService {
 
     @Transactional
     @CacheEvict(cacheNames = "products", allEntries = true)
-    public Mono<Boolean> generateProducts(String idempotencyKey) {
-        return Flux.range(0, 101)
+    public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
+        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
+
+        return Flux.range(0, resolvedBatchSize)
                 .flatMap(
                         i ->
                                 Mono.just(RAND.nextInt(100) + 1)

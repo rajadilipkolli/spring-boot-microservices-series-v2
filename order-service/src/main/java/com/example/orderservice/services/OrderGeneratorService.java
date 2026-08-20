@@ -37,12 +37,14 @@ public class OrderGeneratorService {
     }
 
     @Async
-    public void generateOrders(String idempotencyKey) {
+    public void generateOrders(String idempotencyKey, Integer batchSize) {
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
 
-        IntStream.range(0, NUM_ORDERS)
+        int resolvedBatchSize = batchSize != null ? batchSize : NUM_ORDERS;
+
+        IntStream.range(0, resolvedBatchSize)
                 .boxed()
                 .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))
                 .values()
