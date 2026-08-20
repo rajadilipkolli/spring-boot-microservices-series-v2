@@ -6,17 +6,22 @@ on:
     paths:
       - 'deployment/k8s/**'
       - '.github/workflows/k8s-e2e.yml'
+    branches: [main]
   pull_request:
     paths:
       - 'deployment/k8s/**'
       - '.github/workflows/k8s-e2e.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.10.0
@@ -31,25 +36,15 @@ jobs:
 
       - name: Obtain and Load Images
         run: |
-          # Pull existing latest images
-          docker pull dockertmt/mmv2-config-server:latest
-          docker pull dockertmt/mmv2-service-registry-25:latest
-          docker pull dockertmt/mmv2-api-gateway:latest
-          docker pull dockertmt/mmv2-catalog-service:latest
-          docker pull dockertmt/mmv2-inventory-service:latest
-          docker pull dockertmt/mmv2-order-service:latest
-          docker pull dockertmt/mmv2-payment-service:latest
-          docker pull dockertmt/mmv2-retail-store-webapp:latest
-          
-          # Tag them to the snapshot tags used in kustomization
-          docker tag dockertmt/mmv2-config-server:latest dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-service-registry-25:latest dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-api-gateway:latest dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-catalog-service:latest dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-inventory-service:latest dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-order-service:latest dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-payment-service:latest dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
-          docker tag dockertmt/mmv2-retail-store-webapp:latest dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+          # Pull existing snapshot images
+          docker pull dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+          docker pull dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
           
           # Load them into Kind
           kind load docker-image dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
