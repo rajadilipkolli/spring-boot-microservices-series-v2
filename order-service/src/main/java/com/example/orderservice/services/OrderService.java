@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Observed(name = "orderService")
 public class OrderService {
 
+    private static final int PRODUCT_VALIDATION_BATCH_SIZE = 25;
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
@@ -116,8 +118,23 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .distinct()
                         .toList();
+        // TODO once Catalog-service migrates to QUERY HttpMethod we should change below
+        // implementation to validate all product codes in a single call instead of batch processing
+        boolean allProductsExist =
+                IntStream.iterate(
+                                0,
+                                index -> index < allProductCodes.size(),
+                                index -> index + PRODUCT_VALIDATION_BATCH_SIZE)
+                        .mapToObj(
+                                start ->
+                                        allProductCodes.subList(
+                                                start,
+                                                Math.min(
+                                                        start + PRODUCT_VALIDATION_BATCH_SIZE,
+                                                        allProductCodes.size())))
+                        .allMatch(productBatch -> productsExistsAndInStock(productBatch).exists());
 
-        if (productsExistsAndInStock(allProductCodes).exists()) {
+        if (allProductsExist) {
             log.debug(
                     "All ProductCodes exist in db, proceeding with batch save: {}",
                     LogSanitizer.sanitizeCollection(allProductCodes));
