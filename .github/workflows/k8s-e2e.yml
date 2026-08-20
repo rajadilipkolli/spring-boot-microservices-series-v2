@@ -19,6 +19,7 @@ on:
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout Source
         uses: actions/checkout@v7
@@ -27,62 +28,74 @@ jobs:
         uses: helm/kind-action@v1.10.0
         with:
           version: v0.23.0
+          node_image: kindest/node:v1.32.0
           cluster_name: kind
           config: deployment/k8s/kind-config.yaml
 
       - name: Install NGINX Ingress Controller
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          set -Eeuo pipefail
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
           kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
 
       - name: Obtain and Load Images
         run: |
-          # Pull existing snapshot images
-          docker pull dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
-          docker pull dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
-          
-          # Load them into Kind
-          kind load docker-image dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
-          kind load docker-image dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+          set -Eeuo pipefail
+          images=(
+            dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+            dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+            dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+            dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+            dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+            dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+            dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+            dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+          )
+          for image in "${images[@]}"; do
+            docker pull "$image"
+            kind load docker-image "$image" --name kind
+          done
 
       - name: Apply CI Overlay
         run: |
+          set -Eeuo pipefail
           kubectl apply -k deployment/k8s/overlays/ci/
 
       - name: Wait for Infrastructure Rollouts
         run: |
+          set -Eeuo pipefail
           kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
           kubectl rollout status deployment/redis -n retailstore --timeout=300s
           kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
           kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
+          for app in postgresql redis kafka keycloak; do
+            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
+          done
 
       - name: Wait for Platform Core Rollouts
         run: |
+          set -Eeuo pipefail
           kubectl rollout status deployment/config-server -n retailstore --timeout=300s
           kubectl rollout status deployment/service-registry -n retailstore --timeout=300s
+          for app in config-server service-registry; do
+            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
+          done
 
       - name: Wait for Application Rollouts
         run: |
+          set -Eeuo pipefail
           for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
-            kubectl rollout status deployment/$svc -n retailstore --timeout=300s
+            kubectl rollout status "deployment/$svc" -n retailstore --timeout=300s
+            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$svc" --timeout=300s
           done
 
       - name: Run E2E Validations
         run: |
+          set -Eeuo pipefail
           # Map hostnames for test
-          sudo echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
+          if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
+            echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
+          fi
           
           # E2E Script Validation
           HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
@@ -100,10 +113,28 @@ jobs:
       - name: Collect Diagnostics
         if: failure()
         run: |
+          set +e
           mkdir -p k8s-diagnostics
           kubectl get pods -A > k8s-diagnostics/pods.txt
-          kubectl get events -n retailstore > k8s-diagnostics/events.txt
-          kubectl describe pods -n retailstore > k8s-diagnostics/pods-describe.txt
+          kubectl get events -A > k8s-diagnostics/events.txt
+          kubectl get deployments,statefulsets,services -n retailstore > k8s-diagnostics/resources.txt
+          kubectl describe pods -A > k8s-diagnostics/pods-describe.txt
+          kubectl describe deployments,statefulsets -n retailstore > k8s-diagnostics/workloads-describe.txt
+          for resource in \
+            statefulset/postgresql \
+            deployment/redis \
+            statefulset/kafka \
+            deployment/keycloak \
+            deployment/config-server \
+            deployment/service-registry \
+            deployment/catalog-service \
+            deployment/inventory-service \
+            deployment/order-service \
+            deployment/payment-service \
+            deployment/api-gateway \
+            deployment/retail-store-webapp; do
+            kubectl rollout status "$resource" -n retailstore --timeout=5s > "k8s-diagnostics/${resource//\//-}-rollout.txt" 2>&1
+          done
           
           for pod in $(kubectl get pods -n retailstore -o name); do
             # Replace / in pod name (like pod/my-pod) with _ for filename
@@ -121,4 +152,4 @@ jobs:
       - name: Teardown Cluster
         if: always()
         run: |
-          kind delete cluster
+          kind delete cluster --name kind

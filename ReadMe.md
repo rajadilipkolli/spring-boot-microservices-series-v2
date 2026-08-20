@@ -199,6 +199,8 @@ graph TB
 ### Containerization & CI/CD
 * ![Docker](https://img.shields.io/badge/Docker-Latest-blue?style=flat-square&logo=docker) [Docker](https://www.docker.com/)
 * ![Docker Compose](https://img.shields.io/badge/Docker_Compose-Latest-blue?style=flat-square&logo=docker) [Docker Compose](https://github.com/docker/compose)
+* [Kubernetes deployment guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md)
+* [Kubernetes E2E workflow](.github/workflows/k8s-e2e.yml)
 * ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Latest-black?style=flat-square&logo=github) [GitHub Actions](https://github.com/features/actions)
 
 </details>
@@ -240,6 +242,8 @@ Before you begin, ensure you have the following installed:
 | 📦 **Maven**          | 3.9.x+  | Build tool          |
 | 🐳 **Docker**         | Latest  | Containerization    |
 | 🔧 **Docker Compose** | Latest  | Orchestration       |
+| **Kind**              | Latest  | Local Kubernetes cluster |
+| **kubectl**           | Latest  | Kubernetes CLI       |
 | 📚 **Git**            | Latest  | Version control     |
 
 > 💡 **Tip:** Ensure `JAVA_HOME` environment variable is properly set
@@ -293,6 +297,20 @@ bash run.sh
 ```powershell
 .\start-services.ps1
 ```
+
+#### Option 4: Local Kubernetes with Kind
+
+For a local Kubernetes deployment, use Kind with the manifests under
+[`deployment/k8s/`](deployment/k8s/). See the
+[Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
+the complete setup and validation flow.
+
+```bash
+./run-local-kubernetes-e2e.sh
+```
+
+The same Kubernetes end-to-end gate runs in
+[`k8s-e2e.yml`](.github/workflows/k8s-e2e.yml).
 
 ### 🛑 Stopping Services
 
