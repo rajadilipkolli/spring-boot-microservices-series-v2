@@ -1,0 +1,192 @@
+{
+  "reflection": [
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.config.ApplicationProperties"
+      },
+      "type": "com.example.orderservice.config.ApplicationProperties",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.entities.Auditable"
+      },
+      "type": "com.example.orderservice.entities.Auditable",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.entities.Order"
+      },
+      "type": "com.example.orderservice.entities.Order",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.entities.OrderItem"
+      },
+      "type": "com.example.orderservice.entities.OrderItem",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.exception.GlobalExceptionHandler$ApiValidationError"
+      },
+      "type": "com.example.orderservice.exception.GlobalExceptionHandler$ApiValidationError",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.exception.OrderNotFoundException"
+      },
+      "type": "com.example.orderservice.exception.OrderNotFoundException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.exception.ProductNotFoundException"
+      },
+      "type": "com.example.orderservice.exception.ProductNotFoundException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.Address"
+      },
+      "type": "com.example.orderservice.model.Address",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.dtos.OrderDto"
+      },
+      "type": "com.example.orderservice.model.dtos.OrderDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.dtos.OrderItemDto"
+      },
+      "type": "com.example.orderservice.model.dtos.OrderItemDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.request.OrderItemRequest"
+      },
+      "type": "com.example.orderservice.model.request.OrderItemRequest",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.request.OrderRequest"
+      },
+      "type": "com.example.orderservice.model.request.OrderRequest",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.response.OrderItemResponse"
+      },
+      "type": "com.example.orderservice.model.response.OrderItemResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.response.OrderResponse"
+      },
+      "type": "com.example.orderservice.model.response.OrderResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.model.response.PagedResult"
+      },
+      "type": "com.example.orderservice.model.response.PagedResult",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.services.CatalogServiceProxy$ProductExistsResponse"
+      },
+      "type": "com.example.orderservice.services.CatalogServiceProxy$ProductExistsResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.orderservice.web.controllers.OrderController$GenericResponse"
+      },
+      "type": "com.example.orderservice.web.controllers.OrderController$GenericResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.springframework.modulith.events.jpa.archiving.ArchivedJpaEventPublication"
+      },
+      "type": "org.springframework.modulith.events.jpa.archiving.ArchivedJpaEventPublication",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.springframework.modulith.events.jpa.updating.DefaultJpaEventPublication"
+      },
+      "type": "org.springframework.modulith.events.jpa.updating.DefaultJpaEventPublication",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    }
+  ],
+  "resources": [
+    {
+      "glob": "application*.properties"
+    },
+    {
+      "glob": "application*.yml"
+    },
+    {
+      "glob": "application*.yaml"
+    },
+    {
+      "glob": "logback-spring.xml"
+    },
+    {
+      "glob": "log4j2-spring.xml"
+    }
+  ]
+}

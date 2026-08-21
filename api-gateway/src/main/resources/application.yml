@@ -77,6 +77,8 @@ spring:
               predicates:
                 - Path=/payment-service/**
               uri: lb://payment-service
+    refresh:
+      enabled: false
   config:
     import: "optional:configserver:${CONFIG_SERVER:http://localhost:8888}/"
   webflux:

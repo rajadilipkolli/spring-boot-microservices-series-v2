@@ -128,7 +128,7 @@
         <!-- <dependency>
             <groupId>com.julien-dubois.bootui</groupId>
             <artifactId>bootui-spring-boot-starter-reactive</artifactId>
-            <version>1.13.1</version>
+            <version>1.14.1</version>
             <scope>runtime</scope>
         </dependency> -->
         <dependency>
@@ -326,6 +326,7 @@
                             <version>${org.mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                    <parameters>true</parameters>
                     <release>${java.version}</release>
                 </configuration>
             </plugin>
