@@ -40,6 +40,9 @@ services:
     image: grafana/otel-lgtm:0.31.0
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     container_name: grafana-lgtm
+    depends_on:
+      otel-collector:
+        condition: service_started
     environment:
       - OTEL_METRIC_EXPORT_INTERVAL=500
       - ENABLE_LOGS_ALL=true # Enable logs for all components

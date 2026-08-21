@@ -106,7 +106,7 @@ spring:
         session:
           events:
             log:
-              LOG_QUERIES_SLOWER_THAN_MS: 5
+              LOG_QUERIES_SLOWER_THAN_MS: "5"
     # show-sql: true
   main:
     allow-bean-definition-overriding: true
