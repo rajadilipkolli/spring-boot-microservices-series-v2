@@ -260,6 +260,27 @@ if ($TestOnly) {
     OK "All application services are ready."
 }
 
+# ── step 8b – wait for every pod to be Running and fully ready ──────────────
+Step "Waiting for all pods to be Running and fully ready"
+# Final gate before running tests: every pod (excluding completed Job pods
+# like patch-webapp-hostaliases) must be Running with all containers ready,
+# regardless of which resource is still settling.
+$podsTimeoutSeconds = 300
+$podsElapsed = 0
+while ($true) {
+    $notReady = bash -lc "kubectl get pods -n $NAMESPACE -o json | jq -r '[.items[] | select(.status.phase != \"Succeeded\") | select((.status.phase != \"Running\") or ([.status.containerStatuses[]?.ready] | any(. == false))) | .metadata.name] | length'"
+    if ($LASTEXITCODE -eq 0 -and $notReady -eq 0) {
+        OK "All pods are Running and ready."
+        break
+    }
+    if ($podsElapsed -ge $podsTimeoutSeconds) {
+        kubectl get pods -n $NAMESPACE
+        Fail "Timed out after ${podsTimeoutSeconds}s waiting for all pods to be ready."
+    }
+    Start-Sleep -Seconds 5
+    $podsElapsed += 5
+}
+
 # ── step 9 – add hosts entry ─────────────────────────────────────────────────
 Step "Adding hosts file entries (requires UAC prompt)"
 Add-HostsEntry

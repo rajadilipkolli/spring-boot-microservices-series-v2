@@ -158,6 +158,33 @@ for resource in \
 done
 ok "All application services are ready."
 
+step "Waiting for all pods to be Running and fully ready"
+# Final gate before running tests: every pod (excluding completed Job pods
+# like patch-webapp-hostaliases) must be Running with all containers ready,
+# regardless of which resource is still settling.
+pods_timeout_seconds=300
+pods_elapsed=0
+while true; do
+  not_ready=$(kubectl get pods -n "$NAMESPACE" -o json | jq -r '
+    [.items[] | select(.status.phase != "Succeeded")
+      | select(
+          (.status.phase != "Running") or
+          ([.status.containerStatuses[]?.ready] | any(. == false))
+        )
+      | .metadata.name
+    ] | length')
+  if [ "$not_ready" -eq 0 ]; then
+    ok "All pods are Running and ready."
+    break
+  fi
+  if [ "$pods_elapsed" -ge "$pods_timeout_seconds" ]; then
+    kubectl get pods -n "$NAMESPACE"
+    fail "Timed out after ${pods_timeout_seconds}s waiting for all pods to be ready."
+  fi
+  sleep 5
+  pods_elapsed=$((pods_elapsed + 5))
+done
+
 step "Adding local host entries"
 add_hosts_entry
 

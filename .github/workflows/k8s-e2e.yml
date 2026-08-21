@@ -95,7 +95,37 @@ jobs:
           set -Eeuo pipefail
           for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
             kubectl rollout status "deployment/$svc" -n retailstore --timeout=300s
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$svc" --timeout=300s
+          done
+
+      - name: Wait for All Pods Ready
+        run: |
+          set -Eeuo pipefail
+          # Final gate before running tests: every pod (excluding completed Job
+          # pods like patch-webapp-hostaliases) must be Running with all
+          # containers ready, regardless of which resource is still settling.
+          echo "Waiting for all pods in retailstore to be Running and fully ready..."
+          timeout_seconds=300
+          elapsed=0
+          while true; do
+            not_ready=$(kubectl get pods -n retailstore -o json | jq -r '
+              [.items[] | select(.status.phase != "Succeeded")
+                | select(
+                    (.status.phase != "Running") or
+                    ([.status.containerStatuses[]?.ready] | any(. == false))
+                  )
+                | .metadata.name
+              ] | length')
+            if [ "$not_ready" -eq 0 ]; then
+              echo "All pods are Running and ready."
+              break
+            fi
+            if [ "$elapsed" -ge "$timeout_seconds" ]; then
+              echo "Timed out after ${timeout_seconds}s waiting for all pods to be ready." >&2
+              kubectl get pods -n retailstore
+              exit 1
+            fi
+            sleep 5
+            elapsed=$((elapsed + 5))
           done
 
       - name: Run E2E Validations
@@ -162,7 +192,7 @@ jobs:
 
       - name: Upload Diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: k8s-diagnostics
           path: k8s-diagnostics/
