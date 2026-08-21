@@ -127,6 +127,14 @@ step "Applying Kustomize CI overlay"
 kubectl apply -k "$CI_OVERLAY"
 ok "CI overlay applied."
 
+step "Waiting for webapp hostAliases patch"
+# This Job patches retail-store-webapp's pod template (hostAliases for
+# keycloak.local), triggering a new rollout. Wait for it here, before any
+# rollout/readiness checks, so those checks see the final pod spec instead of
+# racing a mid-patch rollout.
+kubectl wait --namespace "$NAMESPACE" --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
+ok "Webapp hostAliases patch applied."
+
 step "Waiting for infrastructure rollouts"
 for resource in \
   statefulset/postgresql \
@@ -167,9 +175,13 @@ if ((test_exit == 0)); then
     warn "retail-store-webapp smoke check failed."
   fi
 
-  if curl --silent --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
+  # Fetch the client secret from the cluster Secret rather than hard-coding it.
+  client_secret="$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+  if [[ -z "$client_secret" ]]; then
+    warn "Could not retrieve Keycloak client secret from Secret 'webapp-oauth2-credentials' - skipping Keycloak smoke check."
+  elif curl --silent --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
     -d 'client_id=retailstore-webapp' \
-    -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
+    -d "client_secret=$client_secret" \
     -d 'grant_type=password' \
     -d 'username=retail' \
     -d 'password=retail1234' | grep -q access_token; then

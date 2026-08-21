@@ -103,8 +103,9 @@ sequence locally as follows:
 ```bash
 HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
 curl --fail http://retailstore.local
+CLIENT_SECRET=$(kubectl get secret webapp-oauth2-credentials -n retailstore -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 -d)
 curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
-  -d 'client_id=retailstore-webapp' -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
+  -d 'client_id=retailstore-webapp' -d "client_secret=$CLIENT_SECRET" \
   -d 'grant_type=password' \
   -d 'username=retail' -d 'password=retail1234' | grep access_token
 ```

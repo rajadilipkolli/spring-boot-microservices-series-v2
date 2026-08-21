@@ -37,7 +37,7 @@ function Start-ServiceProcess {
 Start-ServiceProcess -Name "Service Registry (Eureka)" -Directory "service-registry" -HealthUrl "http://localhost:8761/actuator/health" -TimeoutSeconds 60 | Out-Null
 Start-ServiceProcess -Name "Config Server" -Directory "config-server" -HealthUrl "http://localhost:8888/actuator/health" -TimeoutSeconds 60 | Out-Null
 Start-ServiceProcess -Name "API Gateway" -Directory "api-gateway" -HealthUrl "http://localhost:8765/actuator/health" -TimeoutSeconds 60 | Out-Null
-Start-ServiceProcess -Name "Catalog Service" -Directory "catalog-service" -HealthUrl "http://localhost:18080/actuator/health" -TimeoutSeconds 60 | Out-Null
+Start-ServiceProcess -Name "Catalog Service" -Directory "catalog-service" -HealthUrl "http://localhost:18080/catalog-service/actuator/health" -TimeoutSeconds 60 | Out-Null
 Start-ServiceProcess -Name "Inventory Service" -Directory "inventory-service" -HealthUrl "http://localhost:18181/inventory-service/actuator/health" -TimeoutSeconds 60 | Out-Null
 Start-ServiceProcess -Name "Order Service" -Directory "order-service" -HealthUrl "http://localhost:18282/order-service/actuator/health" -TimeoutSeconds 60 | Out-Null
 Start-ServiceProcess -Name "Payment Service" -Directory "payment-service" -HealthUrl "http://localhost:18085/payment-service/actuator/health" -TimeoutSeconds 60 | Out-Null

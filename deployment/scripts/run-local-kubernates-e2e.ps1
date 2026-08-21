@@ -51,22 +51,25 @@ function Ensure-Jq {
 }
 
 function Add-HostsEntry {
+    $ok = $true
     $current = Get-Content $HOSTS_FILE -Raw
     if ($current -notmatch [regex]::Escape($HOSTS_MARKER)) {
         $addCmd = "try { Add-Content -Path '$HOSTS_FILE' -Value '$HOSTS_ENTRY'; exit 0 } catch { exit 1 }"
         $proc = Start-Process powershell -Verb RunAs -ArgumentList "-Command", $addCmd -Wait -PassThru
         if ($proc.ExitCode -ne 0) {
             Warn "Failed to add hosts entries (elevation declined or write failed, exit code $($proc.ExitCode))."
+            $ok = $false
         } else {
             OK "Added hosts entries"
         }
     } else {
         Warn "Hosts entries already present - skipping."
     }
-    Add-WslHostsEntry
+    return (Add-WslHostsEntry) -and $ok
 }
 
 function Remove-HostsEntry {
+    $ok = $true
     $current = Get-Content $HOSTS_FILE -Raw
     if ($current -notmatch [regex]::Escape($HOSTS_MARKER)) {
         Warn "No hosts entries to remove - skipping."
@@ -77,47 +80,58 @@ function Remove-HostsEntry {
         $proc = Start-Process powershell -Verb RunAs -ArgumentList "-Command", $removeCmd -Wait -PassThru
         if ($proc.ExitCode -ne 0) {
             Warn "Failed to remove hosts entries (elevation declined or write failed, exit code $($proc.ExitCode))."
+            $ok = $false
         } else {
             OK "Removed hosts entries."
         }
     }
-    Remove-WslHostsEntry
+    return (Remove-WslHostsEntry) -and $ok
 }
 
 function Add-WslHostsEntry {
     # WSL auto-generates its own /etc/hosts (separate from Windows), and
     # test-em-all.sh runs inside bash/WSL, so it needs its own entry too.
-    if (bash -lc "grep -q retailstore.local /etc/hosts" 2>$null) {
+    # Matched by marker (not the hostname) so unrelated aliases are untouched.
+    if (bash -lc "grep -qF '$HOSTS_MARKER' /etc/hosts" 2>$null) {
         Warn "WSL hosts entries already present - skipping."
-        return
+        return $true
     }
     bash -lc "echo '$HOSTS_ENTRY' | sudo tee -a /etc/hosts > /dev/null"
     if ($LASTEXITCODE -ne 0) {
         Warn "Could not add hosts entries inside WSL (sudo required). test-em-all.sh may fail to resolve retailstore.local."
-        return
+        return $false
     }
     OK "Added hosts entries inside WSL."
+    return $true
 }
 
 function Remove-WslHostsEntry {
-    if (-not (bash -lc "grep -q retailstore.local /etc/hosts" 2>$null)) {
+    if (-not (bash -lc "grep -qF '$HOSTS_MARKER' /etc/hosts" 2>$null)) {
         Warn "No WSL hosts entries to remove - skipping."
-        return
+        return $true
     }
-    bash -lc "sudo sed -i '/retailstore\.local/d' /etc/hosts"
+    # Filter by marker (fixed-string) rather than sed regex, so unrelated aliases are preserved.
+    bash -lc "grep -vF '$HOSTS_MARKER' /etc/hosts | sudo tee /etc/hosts.tmp > /dev/null && sudo mv /etc/hosts.tmp /etc/hosts"
     if ($LASTEXITCODE -ne 0) {
         Warn "Could not remove hosts entries inside WSL (sudo required)."
-        return
+        return $false
     }
     OK "Removed hosts entries inside WSL."
+    return $true
 }
 
 if ($Teardown) {
     Step "Tearing down Kind cluster"
     kind delete cluster --name $CLUSTER_NAME 2>$null
-    Remove-HostsEntry
-    OK "Teardown complete."
-    exit 0
+    $clusterOk = ($LASTEXITCODE -eq 0)
+    if (-not $clusterOk) { Warn "kind delete cluster exited with code $LASTEXITCODE." }
+    $hostsOk = Remove-HostsEntry
+    if ($clusterOk -and $hostsOk) {
+        OK "Teardown complete."
+        exit 0
+    }
+    Write-Host "FAIL: Teardown did not complete cleanly." -ForegroundColor Red
+    exit 1
 }
 
 function Ensure-Jq-InBash {
@@ -144,12 +158,19 @@ OK "All tools found."
 Ensure-Jq
 Ensure-Jq-InBash
 
+function Assert-KindContext {
+    $expectedContext = "kind-$CLUSTER_NAME"
+    $currentContext = kubectl config current-context 2>$null
+    if ($LASTEXITCODE -ne 0 -or $currentContext -ne $expectedContext) {
+        Fail "Active kube context is '$currentContext', expected '$expectedContext'. Run the script once without -TestOnly/-SkipCluster first."
+    }
+}
+
 if ($TestOnly) {
     # Skip cluster create/pull/load/apply/rollout - reuse what's already deployed
     # so iterating on test-em-all.sh doesn't pay the ~full setup cost each time.
     Step "Test-only mode: reusing existing cluster and deployments"
-    kubectl config current-context 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { Fail "No active kube context found. Run the script once without -TestOnly first." }
+    Assert-KindContext
     kubectl get namespace $NAMESPACE 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "Namespace '$NAMESPACE' not found. Run the script once without -TestOnly first." }
     OK "Reusing existing '$CLUSTER_NAME' cluster and '$NAMESPACE' deployments."
@@ -161,6 +182,8 @@ if ($TestOnly) {
         if ($LASTEXITCODE -ne 0) { Fail "kind create cluster failed." }
         OK "Cluster '$CLUSTER_NAME' is up."
     } else {
+        Step "Reusing existing Kind cluster (-SkipCluster)"
+        Assert-KindContext
         Warn "Skipping cluster creation (-SkipCluster)."
     }
 
@@ -201,6 +224,15 @@ if ($TestOnly) {
     kubectl apply -k deployment/k8s/overlays/ci/
     if ($LASTEXITCODE -ne 0) { Fail "kubectl apply -k failed." }
     OK "CI overlay applied."
+
+    Step "Waiting for webapp hostAliases patch"
+    # This Job patches retail-store-webapp's pod template (hostAliases for
+    # keycloak.local), triggering a new rollout. Wait for it here, before any
+    # rollout/readiness checks, so those checks see the final pod spec instead
+    # of racing a mid-patch rollout.
+    kubectl wait --namespace $NAMESPACE --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
+    if ($LASTEXITCODE -ne 0) { Fail "patch-webapp-hostaliases job did not complete." }
+    OK "Webapp hostAliases patch applied."
 
     Step "Waiting for infrastructure rollouts"
     kubectl rollout status statefulset/postgresql -n $NAMESPACE --timeout=300s
@@ -248,17 +280,26 @@ if ($testExit -eq 0) {
     if ($webResp -eq "200") { OK "retail-store-webapp returned 200." }
     else                    { Warn "retail-store-webapp returned $webResp (non-fatal)." }
 
-    # Keycloak token
-    $tokenResp = bash -c @"
+    # Keycloak token - fetch client secret from the cluster Secret rather than hard-coding it.
+    $clientSecretB64 = kubectl get secret webapp-oauth2-credentials -n $NAMESPACE -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' 2>$null
+    $clientSecret = $null
+    if ($LASTEXITCODE -eq 0 -and $clientSecretB64) {
+        $clientSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($clientSecretB64))
+    }
+    if (-not $clientSecret) {
+        Warn "Could not retrieve Keycloak client secret from Secret 'webapp-oauth2-credentials' - skipping Keycloak smoke check."
+    } else {
+        $tokenResp = bash -c @"
 curl -s -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d 'client_id=retailstore-webapp' \
-  -d 'client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z' \
+  -d 'client_secret=$clientSecret' \
   -d 'grant_type=password' \
   -d 'username=retail' \
   -d 'password=retail1234' | grep -c access_token
 "@
-    if ($tokenResp -ge 1) { OK "Keycloak token endpoint returned access_token." }
-    else                  { Warn "Keycloak token test skipped or non-fatal." }
+        if ($tokenResp -ge 1) { OK "Keycloak token endpoint returned access_token." }
+        else                  { Warn "Keycloak token test skipped or non-fatal." }
+    }
 }
 
 # ── summary ───────────────────────────────────────────────────────────────────

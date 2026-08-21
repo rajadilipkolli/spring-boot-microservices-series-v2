@@ -61,6 +61,15 @@ jobs:
           set -Eeuo pipefail
           kubectl apply -k deployment/k8s/overlays/ci/
 
+      - name: Wait for Webapp Hostaliases Patch
+        run: |
+          set -Eeuo pipefail
+          # This Job patches retail-store-webapp's pod template (hostAliases for
+          # keycloak.local), triggering a new rollout. Wait for it here, before
+          # any rollout/readiness checks, so those checks see the final pod spec
+          # instead of racing a mid-patch rollout.
+          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
+
       - name: Wait for Infrastructure Rollouts
         run: |
           set -Eeuo pipefail
