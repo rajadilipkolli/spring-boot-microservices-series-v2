@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: retail-store-webapp
+  namespace: retailstore
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: retail-store-webapp
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-store-webapp
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retail-store-webapp
+  template:
+    metadata:
+      labels:
+        app: retail-store-webapp
+    spec:
+      containers:
+      - env:
+        - name: SERVER_FORWARD_HEADERS_STRATEGY
+          value: framework
+        - name: SPRING_CONFIG_IMPORT
+          value: ''
+        - name: OAUTH2_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: OAUTH2_CLIENT_SECRET
+              name: webapp-oauth2-credentials
+        - name: KEYCLOAK_ADMINUSERNAME
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN
+              name: keycloak-admin-credentials
+        - name: KEYCLOAK_ADMINPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN_PASSWORD
+              name: keycloak-admin-credentials
+        - name: RETAILSTORE_API_GATEWAY_URL
+          value: http://api-gateway:8765
+        - name: OAUTH2_SERVER_URL
+          value: http://keycloak.local
+        - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_RETAILSTORE_WEBAPP_ISSUER_URI
+          value: http://keycloak.local/realms/retailstore
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxDirectMemorySize=64m -Xmx400m
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: retail-store-webapp
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1400Mi
+          requests:
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+      hostAliases:
+      - hostnames:
+        - keycloak.local
+        ip: 10.43.243.75

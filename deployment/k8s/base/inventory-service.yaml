@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: retailstore
+spec:
+  ports:
+    - port: 18181
+      targetPort: 18181
+  selector:
+    app: inventory-service
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - env:
+            - name: CONFIG_SERVER_USR
+              valueFrom:
+                secretKeyRef:
+                  key: CONFIG_SERVER_USR
+                  name: config-server-credentials
+            - name: CONFIG_SERVER_PWD
+              valueFrom:
+                secretKeyRef:
+                  key: CONFIG_SERVER_PWD
+                  name: config-server-credentials
+            - name: SPRING_CONFIG_IMPORT
+              value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql:5432/appdb
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_USER
+                  name: postgres-credentials
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: postgres-credentials
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://service-registry:8761/eureka/
+          envFrom:
+            - configMapRef:
+                name: shared-config
+          image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+          livenessProbe:
+            httpGet:
+              path: /inventory-service/actuator/health/liveness
+              port: 18181
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          name: inventory-service
+          ports:
+            - containerPort: 18181
+          readinessProbe:
+            httpGet:
+              path: /inventory-service/actuator/health/readiness
+              port: 18181
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              memory: 1400Mi
+            requests:
+              memory: 512Mi
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /inventory-service/actuator/health/liveness
+              port: 18181
+            periodSeconds: 10
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - 'until nc -z config-server 8888; do echo waiting for config-server;
+              sleep 2; done;
+
+              until nc -z service-registry 8761; do echo waiting for service-registry;
+              sleep 2; done;
+
+              until nc -z postgresql 5432; do echo waiting for postgresql; sleep 2;
+              done;
+
+              until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done;
+
+              '
+          image: busybox:1.36
+          name: wait-for-dependencies

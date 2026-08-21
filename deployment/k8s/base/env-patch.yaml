@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: all-deployments
+  annotations:
+    note: "patching all deployments"
+spec:
+  template:
+    spec:
+      containers:
+      - name: ".*"
+        env:
+        - name: SPRING_CLOUD_CONFIG_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: config-server-credentials
+              key: CONFIG_SERVER_USR
+        - name: SPRING_CLOUD_CONFIG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-server-credentials
+              key: CONFIG_SERVER_PWD

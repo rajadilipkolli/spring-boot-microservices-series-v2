@@ -1,6 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://postgresql:5432/appdb
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   kafka:
     bootstrap-servers: kafka:9092
 
