@@ -63,9 +63,6 @@ services:
       - ./otel-collector-config.yml:/etc/otel-collector-config.yml
     networks:
       - microservice-network
-    depends_on:
-      grafana-lgtm:
-        condition: service_started
 
   kafka:
     container_name: kafka
