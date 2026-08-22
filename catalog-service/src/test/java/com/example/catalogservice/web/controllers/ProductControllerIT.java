@@ -18,6 +18,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.hypersistence.tsid.TSID;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -84,21 +85,21 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         List<Product> productList =
                 List.of(
                         new Product()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
                                 .setPrice(9.0),
                         new Product()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
                                 .setPrice(10.0),
                         new Product()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P003")
                                 .setProductName("name 3")
@@ -969,5 +970,32 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         .body(body)
                         .build();
         mockWebServer.enqueue(mockResponse);
+    }
+
+    @Test
+    void shouldSaveProductTwiceAndNotBeTreatedAsNew() {
+        Product product =
+                new Product()
+                        .setId(TSID.fast().toLong())
+                        .setNew(true)
+                        .setProductCode("P_DOUBLE_SAVE")
+                        .setProductName("Double Save Product")
+                        .setPrice(10.0);
+        // First save should succeed and set isNew to false
+        StepVerifier.create(productRepository.save(product))
+                .assertNext(
+                        saved -> {
+                            assertThat(saved.isNew()).isFalse();
+                        })
+                .verifyComplete();
+        // Update a field
+        product.setPrice(15.0);
+        // Second save should succeed (as an update, not a conflicting insert)
+        StepVerifier.create(productRepository.save(product))
+                .assertNext(
+                        saved -> {
+                            assertThat(saved.getPrice()).isEqualTo(15.0);
+                        })
+                .verifyComplete();
     }
 }
