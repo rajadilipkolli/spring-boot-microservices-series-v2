@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -20,9 +21,9 @@ public class TestWebClientConfig {
      * a @LoadBalanced WebClient is used, it attempts to resolve 'localhost' as a service ID via
      * Eureka, which results in an UnknownHostException.
      */
-    @Bean
     @Primary
-    WebClient.Builder testWebClientBuilder() {
+    @Bean(name = "testLoadBalancedWebClientBuilder")
+    @Qualifier("loadBalanced") WebClient.Builder testWebClientBuilder() {
         return WebClient.builder();
     }
 }
