@@ -19,8 +19,7 @@
       "type": "com.example.api.gateway.model.UsernameDTO",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true,
-      "allDeclaredFields": true,
-      "serializable": true
+      "allDeclaredFields": true
     }
   ],
   "resources": [

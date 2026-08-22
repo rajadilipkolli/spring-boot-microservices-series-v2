@@ -137,6 +137,7 @@
             <artifactId>bootui-spring-boot-starter</artifactId>
             <version>1.14.1</version>
             <scope>runtime</scope>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -303,6 +304,9 @@
             <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.example.orderservice.OrderServiceApplication</mainClass>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -335,6 +339,7 @@
                         </path>
                         <!-- other annotation processors -->
                     </annotationProcessorPaths>
+                    <parameters>true</parameters>
                     <release>${java.version}</release>
                 </configuration>
             </plugin>

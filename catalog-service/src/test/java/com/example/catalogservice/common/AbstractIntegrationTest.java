@@ -10,6 +10,7 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.catalogservice.config.TestKafkaListenerConfig;
+import com.example.catalogservice.config.TestWebClientConfig;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.OutboxPublisher;
@@ -28,7 +29,12 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false"},
-        classes = {SQLContainerConfig.class, TestKafkaListenerConfig.class, ContainersConfig.class})
+        classes = {
+            SQLContainerConfig.class,
+            TestKafkaListenerConfig.class,
+            ContainersConfig.class,
+            TestWebClientConfig.class
+        })
 @AutoConfigureWebTestClient
 @AutoConfigureMetrics
 public abstract class AbstractIntegrationTest {

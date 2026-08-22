@@ -6,13 +6,13 @@
 
 package com.example.catalogservice.entities;
 
+import io.r2dbc.postgresql.codec.Json;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
-import tools.jackson.databind.JsonNode;
 
 @Table("outbox_events")
 public class OutboxEvent implements Persistable<UUID> {
@@ -27,7 +27,7 @@ public class OutboxEvent implements Persistable<UUID> {
 
     private String eventType;
 
-    private JsonNode payload;
+    private Json payload;
 
     private OutboxEventStatus status;
 
@@ -79,11 +79,11 @@ public class OutboxEvent implements Persistable<UUID> {
         return this;
     }
 
-    public JsonNode getPayload() {
+    public Json getPayload() {
         return payload;
     }
 
-    public OutboxEvent setPayload(JsonNode payload) {
+    public OutboxEvent setPayload(Json payload) {
         this.payload = payload;
         return this;
     }
