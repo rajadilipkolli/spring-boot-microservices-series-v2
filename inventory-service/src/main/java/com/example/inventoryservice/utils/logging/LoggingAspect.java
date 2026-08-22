@@ -8,7 +8,9 @@ package com.example.inventoryservice.utils.logging;
 
 import com.example.inventoryservice.utils.AppConstants;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -94,8 +96,8 @@ class LoggingAspect {
         logExecutionDetails(joinPoint, logLevel, methodName + "() start execution");
     }
 
-    private static final java.util.regex.Pattern SENSITIVE_PARAM_PATTERN =
-            java.util.regex.Pattern.compile("(?i).*(password|creditCard|ssn).*");
+    private static final Pattern SENSITIVE_PARAM_PATTERN =
+            Pattern.compile("(?i).*(password|creditCard|ssn).*");
 
     private void logMethodParams(
             ProceedingJoinPoint joinPoint,
@@ -151,8 +153,8 @@ class LoggingAspect {
         }
 
         String resultStr;
-        if (result instanceof java.util.Collection) {
-            resultStr = LogSanitizer.sanitizeCollection((java.util.Collection<?>) result);
+        if (result instanceof Collection) {
+            resultStr = LogSanitizer.sanitizeCollection((Collection<?>) result);
         } else {
             resultStr = LogSanitizer.sanitizeForLog(String.valueOf(result), 1024);
         }

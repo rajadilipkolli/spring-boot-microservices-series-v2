@@ -22,7 +22,7 @@
             <column name="created_by" value="system"/>
             <column name="created_date" valueDate="2024-01-15T10:30:00"/>
         </insert>
-        
+
         <insert tableName="order_items">
             <column name="id" value="1"/>
             <column name="product_code" value="P001"/>
@@ -30,7 +30,7 @@
             <column name="product_price" value="999.99"/>
             <column name="order_id" value="1"/>
         </insert>
-        
+
         <insert tableName="order_items">
             <column name="id" value="2"/>
             <column name="product_code" value="P005"/>
@@ -53,7 +53,7 @@
             <column name="created_by" value="system"/>
             <column name="created_date" valueDate="2024-01-16T14:15:00"/>
         </insert>
-        
+
         <insert tableName="order_items">
             <column name="id" value="3"/>
             <column name="product_code" value="P003"/>
@@ -76,7 +76,7 @@
             <column name="created_by" value="system"/>
             <column name="created_date" valueDate="2024-01-10T09:45:00"/>
         </insert>
-        
+
         <insert tableName="order_items">
             <column name="id" value="4"/>
             <column name="product_code" value="P002"/>
@@ -84,7 +84,7 @@
             <column name="product_price" value="899.99"/>
             <column name="order_id" value="3"/>
         </insert>
-        
+
         <insert tableName="order_items">
             <column name="id" value="5"/>
             <column name="product_code" value="P004"/>

@@ -19,6 +19,7 @@ import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -60,7 +61,8 @@ class ProductServiceTest {
                                 productMapper,
                                 inventoryServiceProxy,
                                 outboxService,
-                                null));
+                                null,
+                                TSID.Factory.builder().build()));
         ProxyFactory proxyFactory = new ProxyFactory(spy);
         ProductService proxy = (ProductService) proxyFactory.getProxy();
         ReflectionTestUtils.setField(spy, "self", proxy);

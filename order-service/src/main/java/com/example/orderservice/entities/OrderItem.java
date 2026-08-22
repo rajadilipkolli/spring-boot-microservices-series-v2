@@ -28,7 +28,9 @@ import org.hibernate.proxy.HibernateProxy;
                         columnNames = {"product_code", "order_id"}))
 public class OrderItem implements Serializable {
 
-    @Id @Tsid private Long id;
+    @Id
+    @Tsid(TsidSupplier.class)
+    private Long id;
 
     @Column(nullable = false, name = "product_code")
     private String productCode;

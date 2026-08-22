@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -17,7 +17,9 @@ import jakarta.persistence.Version;
 @Table(name = "inventory")
 public class Inventory {
 
-    @Id @Tsid private Long id;
+    @Id
+    @Tsid(TsidSupplier.class)
+    private Long id;
 
     @Column(name = "product_code", nullable = false, unique = true, updatable = false)
     private String productCode;

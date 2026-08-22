@@ -28,7 +28,9 @@ import java.util.List;
 @Table(name = "orders")
 public class Order extends Auditable<String> implements Serializable {
 
-    @Id @Tsid private Long id;
+    @Id
+    @Tsid(TsidSupplier.class)
+    private Long id;
 
     @Column(name = "customer_id", nullable = false)
     private Long customerId;

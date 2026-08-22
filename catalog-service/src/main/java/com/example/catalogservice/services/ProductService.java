@@ -16,6 +16,7 @@ import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.security.SecureRandom;
 import java.util.Collections;
@@ -53,18 +54,21 @@ public class ProductService {
     private final OutboxService outboxService;
 
     private final ProductService self;
+    private final TSID.Factory tsidFactory;
 
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
-            @Lazy ProductService self) {
+            @Lazy ProductService self,
+            TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
         this.self = self;
+        this.tsidFactory = tsidFactory;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
@@ -197,7 +201,7 @@ public class ProductService {
         return Mono.fromSupplier(
                         () -> {
                             Product product = productMapper.toEntity(productRequest);
-                            product.setId(io.hypersistence.tsid.TSID.fast().toLong());
+                            product.setId(tsidFactory.generate().toLong());
                             product.setNew(true);
                             return product;
                         })

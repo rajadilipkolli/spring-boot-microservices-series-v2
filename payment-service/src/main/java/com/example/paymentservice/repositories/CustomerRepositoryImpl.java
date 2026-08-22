@@ -30,9 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dslContext;
+    private final TSID.Factory tsidFactory;
 
-    public CustomerRepositoryImpl(DSLContext dslContext) {
+    public CustomerRepositoryImpl(DSLContext dslContext, TSID.Factory tsidFactory) {
         this.dslContext = dslContext;
+        this.tsidFactory = tsidFactory;
     }
 
     @Override
@@ -88,7 +90,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         }
         boolean isNew = customer.getId() == null;
         if (isNew) {
-            customer.setId(TSID.fast().toLong());
+            customer.setId(tsidFactory.generate().toLong());
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext
                     .insertInto(CUSTOMERS)
@@ -115,7 +117,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     public List<Customer> saveAll(List<Customer> customerList) {
         for (var customer : customerList) {
             if (customer.getId() == null) {
-                customer.setId(TSID.fast().toLong());
+                customer.setId(tsidFactory.generate().toLong());
             }
         }
         InsertSetMoreStep<CustomersRecord> insertStepN =
