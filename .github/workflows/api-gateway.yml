@@ -52,7 +52,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSCODE }}
 
-      - if: ${{ github.ref != 'refs/heads/main' }}
+      - if: ${{ github.ref == 'refs/heads/main' }}
         name: Build and Push Docker Image
         run: |
           ./mvnw -Pnative spring-boot:build-image \
