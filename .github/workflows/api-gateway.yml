@@ -17,6 +17,7 @@ jobs:
   build:
     name: Run Unit & Integration Tests with jdk  ${{ matrix.java }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: "api-gateway"
@@ -54,7 +55,7 @@ jobs:
       - if: ${{ github.ref == 'refs/heads/main' }}
         name: Build and Push Docker Image
         run: |
-          ./mvnw spring-boot:build-image \
+          ./mvnw -Pnative spring-boot:build-image \
             -DskipTests \
             -Dspring-boot.build-image.publish=true \
             -Dspring-boot.build-image.imageName=dockertmt/mmv2-api-gateway:latest
