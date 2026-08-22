@@ -38,10 +38,12 @@ class JOOQInventoryRepositoryTest {
         List<Inventory> inventoryList =
                 List.of(
                         new Inventory()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
                                 .setProductCode("product1")
                                 .setAvailableQuantity(10)
                                 .setReservedItems(0),
                         new Inventory()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
                                 .setProductCode("product2")
                                 .setAvailableQuantity(0)
                                 .setReservedItems(0));

@@ -16,6 +16,7 @@ This skill provides a structured approach for implementing Spring Native hints i
 ### 1. Identify Classes Needing Hints
 Scan the service for the following candidates that are reachable at runtime via reflection, dynamic proxies, or resource loading:
 - **Entities**: Any class in the `entities` package (used by JPA/R2DBC). Reflection for fields and setters.
+- **Hibernate Generators**: If using `@Tsid`, the `io.hypersistence.utils.hibernate.id.TsidGenerator` class requires reflection hints.
 - **DTOs**: Any class in the `model` or `dtos` package used in Web or Kafka layers. Reflection for Jackson serialization/deserialization.
 - **Mappers (MapStruct)**: Especially Decorators or custom mapping logic using reflection.
 - **Custom Exceptions**: If they carry state that needs binding.

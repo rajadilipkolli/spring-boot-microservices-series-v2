@@ -2,6 +2,15 @@
   "reflection": [
     {
       "condition": {
+        "typeReached": "io.hypersistence.utils.hibernate.id.TsidGenerator"
+      },
+      "type": "io.hypersistence.utils.hibernate.id.TsidGenerator",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
         "typeReached": "com.example.orderservice.config.ApplicationProperties"
       },
       "type": "com.example.orderservice.config.ApplicationProperties",

@@ -106,6 +106,7 @@
                         <arg>--strict-image-heap</arg>
                         <arg>--initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider</arg>
                         <arg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</arg>
+                        <arg>-H:IncludeResources=config-repository/.*</arg>
                     </buildArgs>
                 </configuration>
              </plugin>
@@ -118,7 +119,7 @@
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
                             <THC_PORT>8888</THC_PORT>
-                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider,org.apache.sshd.common.file.root.RootedFileSystemProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider,org.apache.sshd.common.file.root.RootedFileSystemProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -H:IncludeResources=config-repository/.*</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                     </image>
                 </configuration>

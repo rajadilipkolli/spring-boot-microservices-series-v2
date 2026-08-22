@@ -11,21 +11,13 @@
     <changeSet author="rajakolli" id="createTable-orders">
         <preConditions onFail="MARK_RAN">
             <not>
-                <sequenceExists sequenceName="orders_seq"/>
-                <sequenceExists sequenceName="order_items_seq"/>
                 <tableExists tableName="orders"/>
                 <tableExists tableName="order_items"/>
             </not>
         </preConditions>
-        <createSequence
-                sequenceName="orders_seq"
-                incrementBy="50"
-                startValue="1"
-        />
-        <createSequence sequenceName="order_items_seq" startValue="1" incrementBy="50"/>
 
         <createTable tableName="orders">
-            <column name="id" type="BIGINT" defaultValueSequenceNext="orders_seq">
+            <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_orders"/>
             </column>
             <column name="customer_id" type="BIGINT">
@@ -57,7 +49,7 @@
         </createTable>
 
         <createTable tableName="order_items">
-            <column name="id" type="BIGINT" defaultValueSequenceNext="order_items_seq">
+            <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_items"/>
             </column>
             <column name="product_code" type="${string.type}">
