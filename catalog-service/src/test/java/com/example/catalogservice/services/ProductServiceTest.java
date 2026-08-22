@@ -19,6 +19,7 @@ import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,6 +51,7 @@ class ProductServiceTest {
     private ProductService productService;
 
     @Captor private ArgumentCaptor<ProductRequest> productCaptor;
+    @Captor private ArgumentCaptor<Product> productEntityCaptor;
 
     @BeforeEach
     void setUp() {
@@ -60,7 +62,8 @@ class ProductServiceTest {
                                 productMapper,
                                 inventoryServiceProxy,
                                 outboxService,
-                                null));
+                                null,
+                                TSID.Factory.builder().build()));
         ProxyFactory proxyFactory = new ProxyFactory(spy);
         ProductService proxy = (ProductService) proxyFactory.getProxy();
         ReflectionTestUtils.setField(spy, "self", proxy);
@@ -122,6 +125,14 @@ class ProductServiceTest {
         assertThat(capturedProducts)
                 .isNotEmpty()
                 .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
+
+        then(productRepository).should(atLeastOnce()).save(productEntityCaptor.capture());
+        assertThat(productEntityCaptor.getAllValues())
+                .allSatisfy(
+                        product -> {
+                            assertThat(product.getId()).isNotNull();
+                            assertThat(product.isNew()).isTrue();
+                        });
     }
 
     @Test
@@ -157,6 +168,14 @@ class ProductServiceTest {
                         "ProductCode_test-batch-456_2",
                         "ProductCode_test-batch-456_3",
                         "ProductCode_test-batch-456_4");
+
+        then(productRepository).should(times(5)).save(productEntityCaptor.capture());
+        assertThat(productEntityCaptor.getAllValues())
+                .allSatisfy(
+                        product -> {
+                            assertThat(product.getId()).isNotNull();
+                            assertThat(product.isNew()).isTrue();
+                        });
     }
 
     @Test
@@ -168,9 +187,9 @@ class ProductServiceTest {
 
         given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
         given(productMapper.toEntity(request)).willReturn(product);
-        given(productRepository.save(product)).willReturn(Mono.just(product));
+        given(productRepository.save(any(Product.class))).willReturn(Mono.just(product));
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
-        given(productMapper.toProductResponse(product)).willReturn(response);
+        given(productMapper.toProductResponse(any(Product.class))).willReturn(response);
 
         StepVerifier.create(productService.saveProduct(request))
                 .expectNext(response)
@@ -178,6 +197,11 @@ class ProductServiceTest {
 
         // Verify the proxy routed to the self method
         then(productService).should().createAndSaveProduct(request);
+
+        then(productRepository).should().save(productEntityCaptor.capture());
+        Product capturedProduct = productEntityCaptor.getValue();
+        assertThat(capturedProduct.getId()).isNotNull();
+        assertThat(capturedProduct.isNew()).isTrue();
 
         // Verify annotations for Transactional and CacheEvict are present to confirm cache
         // invalidation logic

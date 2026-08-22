@@ -14,7 +14,8 @@ import java.util.regex.Pattern;
 public final class LogSanitizer {
 
     private static final Pattern CRLF = Pattern.compile("[\r\n]+");
-    private static final Pattern CONTROL = Pattern.compile("[\\p{Cntrl}&&[^\r\n]]+");
+    private static final Pattern CONTROL =
+            Pattern.compile("[\\p{Cntrl}\\u0085\\u2028\\u2029&&[^\r\n]]+");
     private static final Pattern ANSI_ESCAPE = Pattern.compile("\\u001B\\[[;\\d]*[ -/]*[@-~]");
 
     private LogSanitizer() {}

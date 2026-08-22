@@ -11,6 +11,7 @@ This skill covers adding and verifying database schema migrations using Liquibas
 - **Non-Destructive**: Never perform `DROP` operations unless explicitly authorized. Use `ALTER` or versioning.
 - **Support Multi-Format**: Maintain compatibility with XML, YAML, and JSON changelogs depending on the service.
 - **Traceability**: Every changeset must have a unique ID and a descriptive author.
+- **No Database Sequences**: Use TSID (Time-Sorted Unique Identifiers) for primary keys instead of database sequences (`nextval`, `createSequence`, etc.).
 
 ## Procedure
 

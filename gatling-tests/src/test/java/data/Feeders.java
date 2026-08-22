@@ -21,7 +21,7 @@ public class Feeders {
                                             + "-"
                                             + System.nanoTime());
                             data.put("productName", "Product-" + random.nextInt(1000, 10000));
-                            data.put("customerId", random.nextInt(1, 1000));
+                            data.put("customerId", random.nextInt(101, 1000));
                             data.put("price", random.nextDouble(10, 1000));
                             data.put("quantity", random.nextInt(1, 50));
 

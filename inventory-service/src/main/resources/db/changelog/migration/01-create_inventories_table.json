@@ -16,36 +16,6 @@
     },
     {
       "changeSet": {
-        "id": "create_inventory_sequence",
-        "author": "rajakolli",
-        "preConditions": [
-          {
-            "onFail": "MARK_RAN",
-            "not": {
-              "sequenceExists": {
-                "sequenceName": "inventory_seq"
-              }
-            }
-          }
-        ],
-        "changes": [
-          {
-            "createSequence": {
-              "cacheSize": 1,
-              "cycle": false,
-              "dataType": "bigint",
-              "incrementBy": 50,
-              "maxValue": 9223372036854775807,
-              "minValue": 1,
-              "sequenceName": "inventory_seq",
-              "startValue": 1
-            }
-          }
-        ]
-      }
-    },
-    {
-      "changeSet": {
         "id": "create_inventory_table",
         "author": "rajakolli",
         "preConditions": [
@@ -65,7 +35,6 @@
               "columns": [
                 {
                   "column": {
-                    "defaultValueSequenceNext": "inventory_seq",
                     "constraints": {
                       "nullable": false,
                       "primaryKey": true,

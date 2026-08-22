@@ -16,6 +16,7 @@ import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.security.SecureRandom;
 import java.util.Collections;
@@ -53,18 +54,21 @@ public class ProductService {
     private final OutboxService outboxService;
 
     private final ProductService self;
+    private final TSID.Factory tsidFactory;
 
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
-            @Lazy ProductService self) {
+            @Lazy ProductService self,
+            TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
         this.self = self;
+        this.tsidFactory = tsidFactory;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
@@ -75,15 +79,10 @@ public class ProductService {
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
-        Mono<Long> totalProductsCountMono = productRepository.count();
-        Flux<Product> pagedProductsFlux = productRepository.findAllBy(pageable);
-
-        return Mono.zip(totalProductsCountMono, pagedProductsFlux.collectList())
+        return productRepository
+                .count()
                 .flatMap(
-                        tuple -> {
-                            long count = tuple.getT1();
-                            List<Product> products = tuple.getT2();
-
+                        count -> {
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
@@ -91,11 +90,20 @@ public class ProductService {
                                                         Collections.emptyList(), pageable, 0)));
                             }
 
-                            Flux<ProductResponse> productResponseFlux =
-                                    Flux.fromIterable(products)
-                                            .map(productMapper::toProductResponse);
+                            return productRepository
+                                    .findAllBy(pageable)
+                                    .collectList()
+                                    .flatMap(
+                                            products -> {
+                                                Flux<ProductResponse> productResponseFlux =
+                                                        Flux.fromIterable(products)
+                                                                .map(
+                                                                        productMapper
+                                                                                ::toProductResponse);
 
-                            return enrichWithAvailability(productResponseFlux, pageable, count);
+                                                return enrichWithAvailability(
+                                                        productResponseFlux, pageable, count);
+                                            });
                         });
     }
 
@@ -190,7 +198,13 @@ public class ProductService {
 
     @Transactional
     public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
-        return Mono.just(productMapper.toEntity(productRequest))
+        return Mono.fromSupplier(
+                        () -> {
+                            Product product = productMapper.toEntity(productRequest);
+                            product.setId(tsidFactory.generate().toLong());
+                            product.setNew(true);
+                            return product;
+                        })
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->

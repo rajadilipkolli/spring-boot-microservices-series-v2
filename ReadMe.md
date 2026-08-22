@@ -616,10 +616,11 @@ import static org.hamcrest.Matchers.closeTo;
 <details>
 <summary><strong>🏗️ Architecture Considerations</strong></summary>
 
-- **🔄 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
+- **💾 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
 - **📊 Event Sourcing:** Kafka integration for reliable message delivery
 - **🚀 Native Images:** Some services may need additional GraalVM configuration
 - **🔍 Service Discovery:** Health checks are crucial for proper load balancing
+- **🔑 TSID Generation:** If a deployment does not set a unique `tsid.node` or `TSID_NODE` for each generator, replicas can share a node and produce colliding IDs during an overlapping timestamp and counter window. Configure unique node IDs, or inject an explicitly configured `TSID.Factory`, for this service and the other TSID generators. The Hypersistence documentation states that exclusive node IDs avoid collisions and that the node is random when no setting is provided. This project's TSID implementation will fallback to this random node library default when `withNode` is omitted.
 
 </details>
 
