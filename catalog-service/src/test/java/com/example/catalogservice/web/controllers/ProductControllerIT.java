@@ -8,7 +8,6 @@ package com.example.catalogservice.web.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.hamcrest.CoreMatchers.is;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.OutboxEvent;
@@ -731,15 +730,15 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .value(is(product.getId().intValue()))
+                .isEqualTo(product.getId().intValue())
                 .jsonPath("$.productCode")
-                .value(is(product.getProductCode()))
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
-                .value(is(product.getProductName()))
+                .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
-                .value(is("Updated Catalog"))
+                .isEqualTo("Updated Catalog")
                 .jsonPath("$.price")
-                .value(is(100.00));
+                .isEqualTo(100.00);
     }
 
     @Test
@@ -875,7 +874,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                             new InventoryResponse("P001", 5),
                                             new InventoryResponse("P002", 3),
                                             new InventoryResponse("P003", 0)),
-                                    3,
+                                    3L,
                                     1,
                                     1,
                                     true,
@@ -908,18 +907,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            new PagedResult<>(
-                                    List.of(
-                                            new InventoryResponse("P001", 5),
-                                            new InventoryResponse("P002", 3),
-                                            new InventoryResponse("P003", 0)),
-                                    3,
-                                    1,
-                                    1,
-                                    true,
-                                    true,
-                                    false,
-                                    false)));
+                            List.of(
+                                    new InventoryResponse("P001", 5),
+                                    new InventoryResponse("P002", 3),
+                                    new InventoryResponse("P003", 0))));
 
             webTestClient
                     .get()
@@ -943,10 +934,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         @Test
         void shouldReturnEmptyResultsWhenNoProductsMatchSearch() {
-            mockBackendEndpoint(
-                    200,
-                    jsonMapper.writeValueAsString(
-                            new PagedResult<>(List.of(), 0, 1, 0, true, true, false, false)));
+            mockBackendEndpoint(200, jsonMapper.writeValueAsString(List.of()));
 
             webTestClient
                     .get()

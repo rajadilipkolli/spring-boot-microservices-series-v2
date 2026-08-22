@@ -8,6 +8,7 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.entities.OutboxEvent;
 import com.example.catalogservice.entities.OutboxEventStatus;
+import com.example.catalogservice.entities.OutboxPayload;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.OutboxEventRepository;
@@ -54,7 +55,7 @@ public class OutboxService {
                             .setAggregateType(aggregateType)
                             .setAggregateId(aggregateId)
                             .setEventType(eventType)
-                            .setPayload(io.r2dbc.postgresql.codec.Json.of(payloadString))
+                            .setPayload(new OutboxPayload(payloadString))
                             .setStatus(OutboxEventStatus.PENDING)
                             .setNew(true)
                             .setCreatedAt(OffsetDateTime.now())

@@ -28,7 +28,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"},
+        properties = {"spring.cloud.config.enabled=false", "bootui.enabled=OFF"},
         classes = {
             SQLContainerConfig.class,
             TestKafkaListenerConfig.class,
