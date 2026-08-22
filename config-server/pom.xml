@@ -99,6 +99,15 @@
              <plugin>
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.example.configserver.ConfigServerApplication</mainClass>
+                    <buildArgs>
+                        <arg>-H:-AddAllFileSystemProviders</arg>
+                        <arg>--strict-image-heap</arg>
+                        <arg>--initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider</arg>
+                        <arg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</arg>
+                    </buildArgs>
+                </configuration>
              </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
