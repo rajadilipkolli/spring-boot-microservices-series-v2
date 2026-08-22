@@ -67,7 +67,7 @@ class LoggingAspect {
 
         LogLevel logLevel = loggable.value();
 
-        logMethodStart(joinPoint, methodName);
+        logMethodStart(joinPoint, methodName, logLevel);
         logMethodParams(joinPoint, logLevel, methodName, loggable);
 
         long start = System.currentTimeMillis();
@@ -84,14 +84,18 @@ class LoggingAspect {
         long end = System.currentTimeMillis();
 
         logMethodResult(joinPoint, result, logLevel, methodName, loggable);
-        logMethodCompletion(joinPoint, methodName, end - start);
+        logMethodCompletion(joinPoint, methodName, end - start, logLevel);
 
         return result;
     }
 
-    private void logMethodStart(ProceedingJoinPoint joinPoint, String methodName) {
-        logExecutionDetails(joinPoint, LogLevel.INFO, methodName + "() start execution");
+    private void logMethodStart(
+            ProceedingJoinPoint joinPoint, String methodName, LogLevel logLevel) {
+        logExecutionDetails(joinPoint, logLevel, methodName + "() start execution");
     }
+
+    private static final java.util.regex.Pattern SENSITIVE_PARAM_PATTERN =
+            java.util.regex.Pattern.compile("(?i).*(password|creditCard|ssn).*");
 
     private void logMethodParams(
             ProceedingJoinPoint joinPoint,
@@ -120,7 +124,7 @@ class LoggingAspect {
 
             Object argValue = args[i];
 
-            if (paramName.matches("(?i).*(password|creditCard|ssn).*")) {
+            if (SENSITIVE_PARAM_PATTERN.matcher(paramName).matches()) {
                 argValue = "REDACTED";
             }
 
@@ -146,20 +150,22 @@ class LoggingAspect {
             return;
         }
 
-        logExecutionDetails(
-                joinPoint,
-                logLevel,
-                methodName
-                        + "() Returned : "
-                        + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
+        String resultStr;
+        if (result instanceof java.util.Collection) {
+            resultStr = LogSanitizer.sanitizeCollection((java.util.Collection<?>) result);
+        } else {
+            resultStr = LogSanitizer.sanitizeForLog(String.valueOf(result), 1024);
+        }
+
+        logExecutionDetails(joinPoint, logLevel, methodName + "() Returned : " + resultStr);
     }
 
     private void logMethodCompletion(
-            ProceedingJoinPoint joinPoint, String methodName, long timeTaken) {
+            ProceedingJoinPoint joinPoint, String methodName, long timeTaken, LogLevel logLevel) {
 
         logExecutionDetails(
                 joinPoint,
-                LogLevel.INFO,
+                logLevel,
                 methodName + "() finished execution and took (" + timeTaken + ") ms to execute");
     }
 
@@ -191,7 +197,7 @@ class LoggingAspect {
         Object target = joinPoint.getTarget();
 
         if (target == null) {
-            log.error(message);
+            LogWriter.write(joinPoint.getSignature().getDeclaringType(), logLevel, message);
             return;
         }
 

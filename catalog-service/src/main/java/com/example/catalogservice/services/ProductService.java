@@ -75,15 +75,10 @@ public class ProductService {
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
-        Mono<Long> totalProductsCountMono = productRepository.count();
-        Flux<Product> pagedProductsFlux = productRepository.findAllBy(pageable);
-
-        return Mono.zip(totalProductsCountMono, pagedProductsFlux.collectList())
+        return productRepository
+                .count()
                 .flatMap(
-                        tuple -> {
-                            long count = tuple.getT1();
-                            List<Product> products = tuple.getT2();
-
+                        count -> {
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
@@ -91,11 +86,20 @@ public class ProductService {
                                                         Collections.emptyList(), pageable, 0)));
                             }
 
-                            Flux<ProductResponse> productResponseFlux =
-                                    Flux.fromIterable(products)
-                                            .map(productMapper::toProductResponse);
+                            return productRepository
+                                    .findAllBy(pageable)
+                                    .collectList()
+                                    .flatMap(
+                                            products -> {
+                                                Flux<ProductResponse> productResponseFlux =
+                                                        Flux.fromIterable(products)
+                                                                .map(
+                                                                        productMapper
+                                                                                ::toProductResponse);
 
-                            return enrichWithAvailability(productResponseFlux, pageable, count);
+                                                return enrichWithAvailability(
+                                                        productResponseFlux, pageable, count);
+                                            });
                         });
     }
 
@@ -190,7 +194,13 @@ public class ProductService {
 
     @Transactional
     public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
-        return Mono.just(productMapper.toEntity(productRequest))
+        return Mono.fromSupplier(
+                        () -> {
+                            Product product = productMapper.toEntity(productRequest);
+                            product.setId(io.hypersistence.tsid.TSID.fast().toLong());
+                            product.setNew(true);
+                            return product;
+                        })
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->

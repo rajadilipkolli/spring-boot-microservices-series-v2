@@ -1,6 +1,15 @@
 {
   "reflection": [
     {
+      "condition": {
+        "typeReached": "io.hypersistence.utils.hibernate.id.TsidGenerator"
+      },
+      "type": "io.hypersistence.utils.hibernate.id.TsidGenerator",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
       "condition": {"typeReached": "com.example.inventoryservice.entities.Inventory"},
       "type": "com.example.inventoryservice.entities.Inventory",
       "allDeclaredConstructors": true,

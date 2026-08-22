@@ -84,16 +84,22 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         List<Product> productList =
                 List.of(
                         new Product()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
                                 .setPrice(9.0),
                         new Product()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
                                 .setPrice(10.0),
                         new Product()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P003")
                                 .setProductName("name 3")
                                 .setDescription("description 3")
@@ -730,7 +736,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(product.getId().intValue())
+                .isEqualTo(product.getId())
                 .jsonPath("$.productCode")
                 .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")

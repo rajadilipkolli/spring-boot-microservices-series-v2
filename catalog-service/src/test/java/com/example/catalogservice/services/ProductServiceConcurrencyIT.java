@@ -62,6 +62,8 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
         StepVerifier.create(
                         productRepository.save(
                                 new Product()
+                                        .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                        .setNew(true)
                                         .setProductCode(TEST_PRODUCT_CODE)
                                         .setProductName("Test Product")
                                         .setDescription("Description")
@@ -118,6 +120,8 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
         // First, save the product directly to the database
         Product product =
                 new Product()
+                        .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                        .setNew(true)
                         .setProductCode(TEST_PRODUCT_CODE)
                         .setProductName("Test Product")
                         .setDescription("Description")
@@ -175,6 +179,13 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                             return productRepository
                                     .save(
                                             new Product()
+                                                    .setId(
+                                                            io.hypersistence
+                                                                    .tsid
+                                                                    .TSID
+                                                                    .fast()
+                                                                    .toLong())
+                                                    .setNew(true)
                                                     .setProductCode(TEST_PRODUCT_CODE_3)
                                                     .setProductName("Original Product")
                                                     .setDescription("Original Product Description")

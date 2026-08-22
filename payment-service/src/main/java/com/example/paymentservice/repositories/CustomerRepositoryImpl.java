@@ -6,6 +6,7 @@ import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.response.CustomerResponse;
+import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,7 +86,9 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         if (customer.getEmail() != null) {
             customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
         }
-        if (customer.getId() == null) {
+        boolean isNew = customer.getId() == null;
+        if (isNew) {
+            customer.setId(TSID.fast().toLong());
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext
                     .insertInto(CUSTOMERS)
@@ -110,6 +113,11 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Override
     @Transactional
     public List<Customer> saveAll(List<Customer> customerList) {
+        for (var customer : customerList) {
+            if (customer.getId() == null) {
+                customer.setId(TSID.fast().toLong());
+            }
+        }
         InsertSetMoreStep<CustomersRecord> insertStepN =
                 dslContext
                         .insertInto(CUSTOMERS)

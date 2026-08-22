@@ -11,17 +11,9 @@
     <changeSet author="rajakolli" id="createTable-customers">
         <preConditions onFail="MARK_RAN">
             <not>
-                <sequenceExists sequenceName="customers_seq" schemaName="payment"/>
                 <tableExists tableName="customers" schemaName="payment"/>
             </not>
         </preConditions>
-
-        <!-- Create sequence in the payment schema -->
-        <createSequence schemaName="payment"
-                sequenceName="customers_seq"
-                incrementBy="1"
-                startValue="1"
-        />
 
         <!-- Create the table in the payment schema -->
         <createTable tableName="customers" schemaName="payment">
@@ -45,9 +37,5 @@
         <addUniqueConstraint tableName="customers" columnNames="name, email"
                              constraintName="uc_customers_name_email_key" schemaName="payment"/>
 
-        <!-- Set default value for ID column -->
-        <sql>
-            ALTER TABLE payment.customers ALTER COLUMN id SET DEFAULT nextval('payment.customers_seq');
-        </sql>
     </changeSet>
 </databaseChangeLog>

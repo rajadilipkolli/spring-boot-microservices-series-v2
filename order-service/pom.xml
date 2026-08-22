@@ -39,7 +39,7 @@
         <jacoco.itReportFile>${jacoco.itReportFolder}/integrationTest.exec</jacoco.itReportFile>
         <junit.utReportFolder>${project.testresult.directory}/test</junit.utReportFolder>
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
-
+        <hypersistence-utils.version>3.15.4</hypersistence-utils.version>
     </properties>
 
     <dependencies>
@@ -78,6 +78,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.hypersistence</groupId>
+            <artifactId>hypersistence-utils-hibernate-73</artifactId>
+            <version>${hypersistence-utils.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

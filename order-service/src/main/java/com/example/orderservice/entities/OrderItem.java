@@ -6,11 +6,10 @@
 
 package com.example.orderservice.entities;
 
+import io.hypersistence.utils.hibernate.id.Tsid;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -29,9 +28,7 @@ import org.hibernate.proxy.HibernateProxy;
                         columnNames = {"product_code", "order_id"}))
 public class OrderItem implements Serializable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
+    @Id @Tsid private Long id;
 
     @Column(nullable = false, name = "product_code")
     private String productCode;
