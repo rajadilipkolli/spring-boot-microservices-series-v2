@@ -84,7 +84,7 @@ public class OutboxPublisher {
     private Mono<OutboxEvent> publishEvent(OutboxEvent event) {
         log.info("Sending outbox event to Kafka: {}", event.getId());
         return catalogKafkaProducer
-                .send(event.getAggregateId(), event.getPayload().toString())
+                .send(event.getAggregateId(), event.getPayload().asString())
                 .flatMap(
                         success -> {
                             if (success) {

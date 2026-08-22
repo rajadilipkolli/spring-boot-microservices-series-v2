@@ -6,6 +6,8 @@
 
 package com.example.catalogservice.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +27,7 @@ public class TestKafkaListenerConfig {
     @KafkaListener(id = "products", topics = "productTopic", groupId = "product")
     public void onSaveProductEvent(@Payload String productDto) {
         log.info("Received Product Payload: {}", productDto);
+        assertThat(productDto.startsWith("{") && productDto.endsWith("}")).isTrue();
         messages.offer(productDto);
     }
 
