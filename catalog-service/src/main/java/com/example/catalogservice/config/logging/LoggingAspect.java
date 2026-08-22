@@ -47,17 +47,25 @@ class LoggingAspect {
         // Pointcut definition
     }
 
-    @Around(
-            value = "methodLoggablePointcut() && @annotation(loggable)",
-            argNames = "joinPoint,loggable")
-    public Object logMethod(ProceedingJoinPoint joinPoint, Loggable loggable) throws Throwable {
-
+    @Around("methodLoggablePointcut()")
+    public Object logMethod(ProceedingJoinPoint joinPoint) throws Throwable {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Loggable loggable =
+                org.springframework.core.annotation.AnnotationUtils.findAnnotation(
+                        signature.getMethod(), Loggable.class);
+        if (loggable == null) {
+            loggable =
+                    org.springframework.core.annotation.AnnotationUtils.findAnnotation(
+                            joinPoint.getTarget().getClass(), Loggable.class);
+        }
         return executeLogging(joinPoint, loggable);
     }
 
-    @Around(value = "classLoggablePointcut() && @within(loggable)", argNames = "joinPoint,loggable")
-    public Object logClass(ProceedingJoinPoint joinPoint, Loggable loggable) throws Throwable {
-
+    @Around("classLoggablePointcut()")
+    public Object logClass(ProceedingJoinPoint joinPoint) throws Throwable {
+        Loggable loggable =
+                org.springframework.core.annotation.AnnotationUtils.findAnnotation(
+                        joinPoint.getTarget().getClass(), Loggable.class);
         return executeLogging(joinPoint, loggable);
     }
 

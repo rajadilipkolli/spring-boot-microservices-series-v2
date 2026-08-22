@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.client.loadbalancer.reactive.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,8 +40,16 @@ public class WebClientConfiguration {
     }
 
     @Bean
-    WebClient webClient(WebClient.Builder webClientBuilder) {
-        return webClientBuilder.baseUrl(applicationProperties.inventoryServiceUrl()).build();
+    @LoadBalanced
+    WebClient.Builder loadBalancedWebClientBuilder() {
+        return WebClient.builder();
+    }
+
+    @Bean
+    WebClient webClient(WebClient.Builder loadBalancedWebClientBuilder) {
+        return loadBalancedWebClientBuilder
+                .baseUrl(applicationProperties.inventoryServiceUrl())
+                .build();
     }
 
     @Bean
