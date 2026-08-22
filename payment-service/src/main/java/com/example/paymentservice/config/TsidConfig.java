@@ -11,7 +11,10 @@ public class TsidConfig {
     @Bean
     public TSID.Factory tsidFactory() {
         String nodeStr = System.getProperty("tsid.node", System.getenv("TSID_NODE"));
-        int node = (nodeStr != null && !nodeStr.trim().isEmpty()) ? Integer.parseInt(nodeStr) : 0;
-        return TSID.Factory.builder().withNode(node).build();
+        TSID.Factory.Builder builder = TSID.Factory.builder();
+        if (nodeStr != null && !nodeStr.trim().isEmpty()) {
+            builder.withNode(Integer.parseInt(nodeStr));
+        }
+        return builder.build();
     }
 }

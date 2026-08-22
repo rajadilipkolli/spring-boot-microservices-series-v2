@@ -14,8 +14,11 @@ public class TsidSupplier implements Supplier<TSID.Factory> {
 
     static {
         String nodeStr = System.getProperty("tsid.node", System.getenv("TSID_NODE"));
-        int node = (nodeStr != null && !nodeStr.trim().isEmpty()) ? Integer.parseInt(nodeStr) : 0;
-        FACTORY = TSID.Factory.builder().withNode(node).build();
+        TSID.Factory.Builder builder = TSID.Factory.builder();
+        if (nodeStr != null && !nodeStr.trim().isEmpty()) {
+            builder.withNode(Integer.parseInt(nodeStr));
+        }
+        FACTORY = builder.build();
     }
 
     @Override
