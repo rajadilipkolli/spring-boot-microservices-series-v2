@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
@@ -21,10 +21,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dslContext;
@@ -71,14 +72,19 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     @Override
     public Optional<Customer> findByEmail(String customerEmail) {
+        String normalizedEmail =
+                customerEmail == null ? null : customerEmail.toLowerCase(Locale.ROOT);
         return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(customerEmail))
+                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(normalizedEmail))
                 .map(r -> r.into(Customer.class));
     }
 
     @Override
     @Transactional
     public Customer save(Customer customer) {
+        if (customer.getEmail() != null) {
+            customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
+        }
         if (customer.getId() == null) {
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext

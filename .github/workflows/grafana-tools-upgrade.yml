@@ -1,0 +1,15 @@
+name: Test grafana Tools Upgrade
+
+on:
+  push:
+    paths:
+      - 'deployment/docker-compose-tools.yml'
+  pull_request:
+    paths:
+      - 'deployment/docker-compose-tools.yml'
+
+jobs:
+  test-tools-upgrade:
+    uses: ./.github/workflows/end-to-end-tests.yml
+    with:
+      command_args: 'setup teardown'

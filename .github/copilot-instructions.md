@@ -1,5 +1,8 @@
 ## Repository Overview
 
+> **Note:** For IDE-agnostic AI agent rules and skill playbooks, please also refer to [AI.md](../AI.md) and the `.ai/skills/` directory in the root of the project.
+
+
 This repository implements a Spring Boot microservices reference architecture (API Gateway, Config Server, Eureka service registry, multiple domain services) wired together with Docker Compose for local development. Services communicate primarily via HTTP through the API Gateway and asynchronously via Kafka. Databases are PostgreSQL, and Liquibase is used for schema management.
 
 Keep guidance short and actionable — why an agent is here: to edit, extend, or debug services while preserving cross-service contracts and Docker-based local workflows.
@@ -28,7 +31,7 @@ mvnw.cmd clean install`
   - Linux/macOS: `bash run.sh` or `docker compose -f deployment/docker-compose.yml up -d --remove-orphans`
   - Windows: `.
 start-services.ps1` or `docker compose -f deployment/docker-compose.yml up -d`
-- Start infra only (Kafka, Postgres, Zipkin, Redis): `docker compose -f deployment/docker-compose.yml up -d zipkin-server postgresql kafka redis`
+- Start infra only (Kafka, Postgres, Grafana, Redis): `docker compose -f deployment/docker-compose.yml up -d grafana-lgtm postgresql kafka redis`
 - Stop everything: `docker compose -f deployment/docker-compose.yml down`
 
 When running a single service locally, prefer the service's README instructions and start dependent infra (Kafka/Postgres) using the docker compose targets shown above.
@@ -64,7 +67,7 @@ mvnw.cmd -pl <module> test` on Windows).
 
 ### Examples (copy-paste friendly)
 - Start infra (Kafka + Postgres) only:
-  docker compose -f deployment/docker-compose.yml up -d kafka postgresql zipkin-server redis
+  docker compose -f deployment/docker-compose.yml up -d kafka postgresql grafana-lgtm redis
 - Start gateway + UI + backend services:
   docker compose -f deployment/docker-compose.yml up -d api-gateway retail-store-webapp catalog-service inventory-service order-service payment-service
 - Run Catalog Service locally (Windows PowerShell):

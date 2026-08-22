@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 import org.springframework.web.server.ServerWebExchange;
@@ -17,6 +19,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 class LoggingFilter implements GlobalFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingFilter.class);

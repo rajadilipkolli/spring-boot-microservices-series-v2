@@ -1,5 +1,7 @@
 package com.example.retailstore.webapp.exception;
 
+import com.example.retailstore.webapp.util.LogSanitizer;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -10,20 +12,24 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.servlet.ModelAndView;
 
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
+    Object handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/validation"));
@@ -34,11 +40,13 @@ public class GlobalExceptionHandler {
 
         problemDetail.setProperty("errors", errors);
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
+    Object handleConstraintViolationException(ConstraintViolationException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/constraint-violation"));
@@ -49,12 +57,11 @@ public class GlobalExceptionHandler {
 
         problemDetail.setProperty("errors", errors);
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler({HttpClientErrorException.class, HttpServerErrorException.class})
-    ProblemDetail handleHttpException(Exception ex) {
-        log.error("HTTP error occurred", ex);
+    Object handleHttpException(Exception ex, HttpServletRequest request) {
         HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof HttpClientErrorException clientError) {
             status = clientError.getStatusCode();
@@ -62,53 +69,81 @@ public class GlobalExceptionHandler {
             status = serverError.getStatusCode();
         }
 
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), status);
+
+        log.error("HTTP error occurred: {}", LogSanitizer.sanitizeException(ex));
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
         problemDetail.setTitle("Service Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/service-error"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(status).body(problemDetail);
     }
 
     @ExceptionHandler(InvalidRequestException.class)
-    ProblemDetail handleInvalidRequestException(InvalidRequestException ex) {
+    Object handleInvalidRequestException(InvalidRequestException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Bad Request");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/bad-request"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    ProblemDetail handleResourceNotFoundException(ResourceNotFoundException ex) {
+    Object handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.NOT_FOUND);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problemDetail.setTitle("Not Found");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
-        problemDetail.setDetail(ex.getMessage());
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ProblemDetail handleSpringAccessDeniedException(AccessDeniedException ex) {
-        log.warn("Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}", ex.getMessage());
+    public Object handleSpringAccessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.FORBIDDEN);
+
+        log.warn(
+                "Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}",
+                LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
         problemDetail.setTitle("Forbidden");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/forbidden"));
         problemDetail.setDetail("You do not have the necessary permissions to access this resource.");
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
-    ProblemDetail handleGenericException(Exception ex) {
-        log.error("Unexpected error occurred", ex);
+    Object handleGenericException(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error occurred: {}", LogSanitizer.sanitizeException(ex));
+
+        if (!isApiRequest(request))
+            return renderUiError(
+                    "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
+
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/internal-error"));
         problemDetail.setDetail("An unexpected error occurred. Please try again later.");
         problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
+    }
+
+    private boolean isApiRequest(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/api/");
+    }
+
+    private ModelAndView renderUiError(String message, HttpStatusCode status) {
+        ModelAndView mav = new ModelAndView("error");
+        mav.setStatus(status);
+        mav.addObject("message", message);
+        return mav;
     }
 }

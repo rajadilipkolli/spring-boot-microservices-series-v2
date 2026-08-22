@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -119,6 +119,15 @@ class GlobalExceptionHandler {
         problemDetail.setProperty("timestamp", Instant.now());
         addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    @ExceptionHandler(ProductAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleProductAlreadyExistsException(
+            ProductAlreadyExistsException ex, WebRequest request) {
+        log.warn("Product already exists: {}", ex.getMessage());
+        ProblemDetail problemDetail = ex.getBody();
+        addCorrelationId(problemDetail, request);
+        return ResponseEntity.status(ex.getStatusCode()).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

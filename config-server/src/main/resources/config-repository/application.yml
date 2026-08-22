@@ -35,6 +35,8 @@ management:
   observations:
     key-values:
       application: ${spring.application.name}
+    annotations:
+      enabled: true
   # For Exemplars to work we need histogram buckets
   metrics:
     distribution:
@@ -104,7 +106,7 @@ spring:
         session:
           events:
             log:
-              LOG_QUERIES_SLOWER_THAN_MS: 5
+              LOG_QUERIES_SLOWER_THAN_MS: "5"
     # show-sql: true
   main:
     allow-bean-definition-overriding: true

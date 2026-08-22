@@ -1,14 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.web.controllers;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -16,17 +16,22 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
+import com.example.orderservice.utils.LogSanitizer;
 import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,6 +40,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -93,15 +99,16 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+    ResponseEntity<OrderResponse> hardcodedResponse(Long id, Integer delay, Exception ex) {
         if (ex instanceof OrderNotFoundException orderNotFoundException) {
             throw orderNotFoundException;
         }
-        log.error("Exception occurred ", ex);
-        return ResponseEntity.ok("fallback-response for id : " + id);
+        log.error("Exception occurred: {}", LogSanitizer.sanitizeException(ex));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(OrderResponse.emptyResponse(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
@@ -131,13 +138,18 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    @GetMapping("/generate")
-    boolean createMockOrders() {
-        orderGeneratorService.generateOrders();
-        return true;
+    @PostMapping("/generate")
+    GenericResponse createMockOrders(
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
+            @RequestParam(required = false)
+                    @Min(1)
+                    @Max(OrderGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize) {
+        orderGeneratorService.generateOrders(idempotencyKey, batchSize);
+        return new GenericResponse(true);
     }
 
-    @GetMapping("/all")
+    @GetMapping("/store")
     @Override
     public List<OrderDto> all(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
@@ -147,9 +159,20 @@ class OrderController implements OrderApi {
         return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
     }
 
+    @GetMapping("/store/{id}")
+    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable String id) {
+        return orderKafkaStreamService
+                .getOrderFromStoreById(id)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new OrderNotFoundException(Long.valueOf(id)));
+    }
+
     @GetMapping("/customer/{id}")
-    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
+
+    private record GenericResponse(boolean success) {}
 }

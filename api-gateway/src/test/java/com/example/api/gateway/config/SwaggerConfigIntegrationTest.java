@@ -89,7 +89,9 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isTemporaryRedirect()
                 .expectHeader()
-                .valueEquals("Location", "swagger-ui.html");
+                .valueEquals("Location", "swagger-ui.html")
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -102,6 +104,8 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .contentType("application/json")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectBody()
                 .jsonPath("$.info.title")
                 .isEqualTo("api-gateway")

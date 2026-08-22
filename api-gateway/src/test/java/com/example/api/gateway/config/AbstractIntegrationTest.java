@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -20,7 +20,7 @@ import org.wiremock.integrations.testcontainers.WireMockContainer;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "spring.cloud.discovery.reactive.enabled=false",
-            "spring.cloud.discovery.enabled=false",
+            "eureka.client.enabled=false",
             "spring.cloud.config.enabled=false"
         },
         classes = ContainerConfig.class)
@@ -57,7 +57,22 @@ public abstract class AbstractIntegrationTest {
                             "correlation-test",
                             CorrelationIdFilterIntegrationTest.class,
                             CorrelationIdFilterIntegrationTest.class.getSimpleName()
-                                    + "/correlation-test.json");
+                                    + "/correlation-test.json")
+                    .withMappingFromResource(
+                            "catalog-service-cache",
+                            CacheAndTransformationIntegrationTest.class,
+                            CacheAndTransformationIntegrationTest.class.getSimpleName()
+                                    + "/catalog-service-cache.json")
+                    .withMappingFromResource(
+                            "catalog-service-cache-second",
+                            CacheAndTransformationIntegrationTest.class,
+                            CacheAndTransformationIntegrationTest.class.getSimpleName()
+                                    + "/catalog-service-cache-second.json")
+                    .withMappingFromResource(
+                            "transform-service",
+                            CacheAndTransformationIntegrationTest.class,
+                            CacheAndTransformationIntegrationTest.class.getSimpleName()
+                                    + "/transform-service.json");
 
     static {
         wireMockServer.start();

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0</version>
+        <version>4.1.1</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.microservices</groupId>
@@ -18,12 +18,11 @@
 
     <properties>
         <java.version>25</java.version>
-        <spring-cloud.version>2025.1.0</spring-cloud.version>
-        <spotless.version>3.1.0</spotless.version>
-        <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>5.5.0.6356</sonar-maven-plugin.version>
-        <CI_DOCKER_PASSWORD />
-        <CI_DOCKER_USERNAME />
+        <spring-cloud.version>2025.1.3</spring-cloud.version>
+        <spotless.version>3.10.0</spotless.version>
+        <properties-maven-plugin.version>1.3.0</properties-maven-plugin.version>
+        <sonar-maven-plugin.version>5.7.0.6970</sonar-maven-plugin.version>
+
     </properties>
 
     <dependencies>
@@ -72,46 +71,55 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.graalvm.buildtools</groupId>
-                <artifactId>native-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.11.0</version>
                 <executions>
                     <execution>
+                        <id>copy-opentelemetry-agent</id>
+                        <phase>package</phase>
                         <goals>
-                            <goal>compile-no-fork</goal>
+                            <goal>copy</goal>
                         </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.opentelemetry.javaagent</groupId>
+                                    <artifactId>opentelemetry-javaagent</artifactId>
+                                    <version>2.31.0</version>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/classes/agent</outputDirectory>
+                                    <destFileName>opentelemetry-javaagent.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
                     </execution>
                 </executions>
+            </plugin>
+             <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.example.configserver.ConfigServerApplication</mainClass>
                     <buildArgs>
-                        <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
-                        <buildArg>-H:-AddAllFileSystemProviders</buildArg>
-                        <buildArg>--strict-image-heap</buildArg>
-                        <buildArg>--initialize-at-build-time=org.apache.sshd.sftp.client.fs.SftpFileSystemProvider</buildArg>
-                        <buildArg>--initialize-at-build-time=org.bouncycastle</buildArg>
-                        <buildArg>--initialize-at-build-time=net.i2p.crypto.eddsa.EdDSASecurityProvider</buildArg>
-                        <buildArg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default</buildArg>
-                        <buildArg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</buildArg>
+                        <arg>-H:-AddAllFileSystemProviders</arg>
+                        <arg>--strict-image-heap</arg>
+                        <arg>--initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider</arg>
+                        <arg>--initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV</arg>
                     </buildArgs>
                 </configuration>
-            </plugin>
+             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <image>
-                        <name>dockertmt/mmv2-${project.artifactId}-${java.version}:${project.version}</name>
-                        <builder>paketobuildpacks/builder-jammy-base:latest</builder>
+                        <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <env>
-                             <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--enable-preview --initialize-at-build-time=org.apache.sshd.sftp.client.fs.SftpFileSystemProvider</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
+                            <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
+                            <THC_PORT>8888</THC_PORT>
                         </env>
                     </image>
-                    <docker>
-                        <publishRegistry>
-                            <username>${CI_DOCKER_USERNAME}</username>
-                            <password>${CI_DOCKER_PASSWORD}</password>
-                        </publishRegistry>
-                    </docker>
                 </configuration>
                 <executions>
                     <execution>
@@ -178,7 +186,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat>
-                            <version>1.28.0</version>
+                            <version>1.36.1</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
                         <licenseHeader>

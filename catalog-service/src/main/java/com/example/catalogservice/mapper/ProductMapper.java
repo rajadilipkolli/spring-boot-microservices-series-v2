@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -25,7 +25,7 @@ public interface ProductMapper {
     Product toEntity(ProductRequest productRequest);
 
     @Mapping(target = "code", source = "productCode")
-    ProductDto toProductDto(ProductRequest productRequest);
+    ProductDto toProductDto(Product product);
 
     @Mapping(target = "id", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);

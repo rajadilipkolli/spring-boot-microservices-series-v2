@@ -1,14 +1,17 @@
 package com.example.retailstore.webapp.common;
 
+import com.redis.testcontainers.RedisContainer;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
+import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
-    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.4.7";
+    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.7.1";
     private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 
@@ -18,6 +21,12 @@ public class ContainerConfig {
                 .withAdminUsername("junitAdmin")
                 .withAdminPassword("junitPasscode")
                 .withRealmImportFile(REALM_IMPORT_FILE);
+    }
+
+    @Bean
+    @ServiceConnection(name = "redis")
+    RedisContainer redisContainer() {
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.1-alpine"));
     }
 
     @Bean

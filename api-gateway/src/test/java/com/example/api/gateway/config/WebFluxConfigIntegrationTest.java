@@ -28,7 +28,9 @@ class WebFluxConfigIntegrationTest extends AbstractIntegrationTest {
                 .expectHeader()
                 .valueEquals(ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:8765")
                 .expectHeader()
-                .valueEquals(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+                .valueEquals(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -40,7 +42,9 @@ class WebFluxConfigIntegrationTest extends AbstractIntegrationTest {
                 .header("Access-Control-Request-Method", HttpMethod.GET.name())
                 .exchange()
                 .expectStatus()
-                .isForbidden();
+                .isForbidden()
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -52,7 +56,9 @@ class WebFluxConfigIntegrationTest extends AbstractIntegrationTest {
                 .header("Access-Control-Request-Method", HttpMethod.PUT.name())
                 .exchange()
                 .expectStatus()
-                .isOk();
+                .isOk()
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -66,6 +72,8 @@ class WebFluxConfigIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isForbidden()
                 .expectHeader()
-                .doesNotExist(ACCESS_CONTROL_ALLOW_ORIGIN);
+                .doesNotExist(ACCESS_CONTROL_ALLOW_ORIGIN)
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 }

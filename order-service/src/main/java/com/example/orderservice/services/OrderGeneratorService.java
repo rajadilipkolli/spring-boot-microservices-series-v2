@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -13,6 +13,8 @@ import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.scheduling.annotation.Async;
@@ -22,9 +24,12 @@ import org.springframework.stereotype.Service;
 @Loggable
 public class OrderGeneratorService {
 
-    private static final int NUM_ORDERS = 10_000;
+    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
+    private static final int NUM_ORDERS = MAX_GENERATION_BATCH_SIZE;
     private static final int BATCH_SIZE = 100;
     private static final SecureRandom RAND = new SecureRandom();
+
+    private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
 
     private final OrderService orderService;
 
@@ -33,8 +38,15 @@ public class OrderGeneratorService {
     }
 
     @Async
-    public void generateOrders() {
-        IntStream.range(0, NUM_ORDERS)
+    public void generateOrders(String idempotencyKey, Integer batchSize) {
+        validateBatchSize(batchSize);
+        if (!processedIdempotencyKeys.add(idempotencyKey)) {
+            return;
+        }
+
+        int resolvedBatchSize = batchSize != null ? batchSize : NUM_ORDERS;
+
+        IntStream.range(0, resolvedBatchSize)
                 .boxed()
                 .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))
                 .values()
@@ -46,7 +58,7 @@ public class OrderGeneratorService {
                                             .map(
                                                     value -> {
                                                         List<OrderItemRequest> orderItems =
-                                                                generateOrderItems();
+                                                                generateOrderItems(idempotencyKey);
                                                         long customerId =
                                                                 RAND.nextLong(100)
                                                                         + 1; // Range 1-100
@@ -67,7 +79,14 @@ public class OrderGeneratorService {
                         });
     }
 
-    private List<OrderItemRequest> generateOrderItems() {
+    private static void validateBatchSize(Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
+            throw new IllegalArgumentException(
+                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
+        }
+    }
+
+    private List<OrderItemRequest> generateOrderItems(String idempotencyKey) {
         int x = RAND.nextInt(5) + 1;
         int orderItem1 = RAND.nextInt(100);
         int orderItem2 = RAND.nextInt(100);
@@ -76,12 +95,18 @@ public class OrderGeneratorService {
         }
 
         OrderItemRequest orderItemRequest =
-                new OrderItemRequest("ProductCode" + orderItem1, x, new BigDecimal(100 * x));
+                new OrderItemRequest(
+                        "ProductCode_" + idempotencyKey + "_" + orderItem1,
+                        x,
+                        new BigDecimal(100 * x));
 
         int y = RAND.nextInt(5) + 1;
 
         OrderItemRequest orderItemRequest2 =
-                new OrderItemRequest("ProductCode" + orderItem2, y, new BigDecimal(100 * y));
+                new OrderItemRequest(
+                        "ProductCode_" + idempotencyKey + "_" + orderItem2,
+                        y,
+                        new BigDecimal(100 * y));
 
         return List.of(orderItemRequest, orderItemRequest2);
     }

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Ingress
+      name: retailstore-ingress
+    patch: |-
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts:
+            - retailstore.local
+            secretName: retailstore-tls

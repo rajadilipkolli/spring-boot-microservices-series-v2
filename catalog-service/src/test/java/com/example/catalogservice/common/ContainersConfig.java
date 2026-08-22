@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -11,7 +11,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -22,15 +21,7 @@ public class ContainersConfig {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.1.1"))
-                .withReuse(true);
-    }
-
-    @Bean
-    @ServiceConnection(name = "openzipkin/zipkin")
-    GenericContainer<?> zipkinContainer() {
-        return new GenericContainer<>(DockerImageName.parse("openzipkin/zipkin:latest"))
-                .withExposedPorts(9411)
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.1"))
                 .withReuse(true);
     }
 

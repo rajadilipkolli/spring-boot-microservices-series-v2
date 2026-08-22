@@ -1,14 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.services;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import org.slf4j.Logger;

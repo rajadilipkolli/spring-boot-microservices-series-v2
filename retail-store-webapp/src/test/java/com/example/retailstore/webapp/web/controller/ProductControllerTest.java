@@ -31,7 +31,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = ProductController.class)
 @Import(TestSecurityConfig.class)
@@ -44,7 +44,7 @@ class ProductControllerTest {
     private CatalogServiceClient catalogServiceClient;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     private PagedResult<ProductResponse> pagedResult;
 
@@ -143,7 +143,7 @@ class ProductControllerTest {
         mockMvc.perform(post("/api/products")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(productRequest)))
+                        .content(jsonMapper.writeValueAsString(productRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(4)))
                 .andExpect(jsonPath("$.productCode", is("PROD-4")))
@@ -160,7 +160,7 @@ class ProductControllerTest {
 
         mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(productRequest)))
+                        .content(jsonMapper.writeValueAsString(productRequest)))
                 .andExpect(status().isForbidden());
     }
 

@@ -1,13 +1,13 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -64,7 +64,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -90,7 +90,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // When
         kafkaTemplate.send(
                 "orders",
-                orderDto.orderId(),
+                String.valueOf(orderDto.orderId()),
                 TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
         // Then
@@ -113,7 +113,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)
@@ -136,7 +136,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
         // When
-        kafkaTemplate.send("orders", orderDto.orderId(), orderDto.withSource("PAYMENT"));
+        kafkaTemplate.send(
+                "orders", String.valueOf(orderDto.orderId()), orderDto.withSource("PAYMENT"));
 
         // Then
         await().pollDelay(3, TimeUnit.SECONDS)

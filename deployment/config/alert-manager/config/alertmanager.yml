@@ -4,8 +4,13 @@ route:
 receivers:
   - name: 'app-down-alert-manager'
     email_configs:
-      - to: 'dockertmt@gmail.com'
-        from: 'no-reply-retail@gmail.com'
-        smarthost: 'smtp.gmail.com:587'
-        auth_username: 'username'
-        auth_password: 'password'
+      - to: 'placeholder@gmail.com'   # Set recipient; keep configurable
+        from: 'no-reply-retail@gmail.com'   # Set sender address; keep configurable
+        smarthost: 'smtp.gmail.com:587'   # Gmail SMTP server and port (verified)
+        auth_username: 'username'   # auth_username should be the full Gmail address (e.g. user@gmail.com)
+        auth_password: 'password'   # Use a 16-character Gmail App Password here (NOT your regular account password)
+        require_tls: true   # Require STARTTLS/TLS for Gmail; ensures encrypted delivery
+        # Note: When using Gmail, you MUST enable 2-Step Verification on the account
+        # and create an App Password (16 characters) for AlertManager. Regular account
+        # passwords or OAuth tokens are NOT configured here. The App Password is single-purpose
+        # and should be treated as a secret (do NOT commit it to version control).

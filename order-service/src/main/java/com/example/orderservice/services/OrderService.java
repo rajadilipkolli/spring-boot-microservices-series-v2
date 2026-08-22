@@ -1,59 +1,64 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.services;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 @Loggable
 @Observed(name = "orderService")
 public class OrderService {
 
+    private static final int PRODUCT_VALIDATION_BATCH_SIZE = 25;
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CatalogService catalogService;
-    private final KafkaOrderProducer kafkaOrderProducer;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
             CatalogService catalogService,
-            KafkaOrderProducer kafkaOrderProducer) {
+            ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
-        this.kafkaOrderProducer = kafkaOrderProducer;
+        this.eventPublisher = eventPublisher;
     }
 
     public PagedResult<OrderResponse> findAllOrders(
@@ -85,16 +90,20 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        if (productsExistsAndInStock(productCodes)) {
-            log.debug("ProductCodes :{} exists in db, hence proceeding", productCodes);
+        if (productsExistsAndInStock(productCodes).exists()) {
+            log.debug(
+                    "ProductCodes :{} exists in db, hence proceeding",
+                    LogSanitizer.sanitizeCollection(productCodes));
             Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
             Order savedOrder = this.orderRepository.save(orderEntity);
             OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
             // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            kafkaOrderProducer.sendOrder(persistedOrderDto);
+            eventPublisher.publishEvent(persistedOrderDto);
             return this.orderMapper.toResponse(savedOrder);
         } else {
-            log.debug("one or more of product codes :{} does not exists in db", productCodes);
+            log.debug(
+                    "one or more of product codes :{} does not exists in db",
+                    LogSanitizer.sanitizeCollection(productCodes));
             throw new ProductNotFoundException(productCodes);
         }
     }
@@ -109,27 +118,50 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .distinct()
                         .toList();
+        // TODO once Catalog-service migrates to QUERY HttpMethod we should change below
+        // implementation to validate all product codes in a single call instead of batch processing
+        boolean allProductsExist =
+                IntStream.iterate(
+                                0,
+                                index -> index < allProductCodes.size(),
+                                index -> index + PRODUCT_VALIDATION_BATCH_SIZE)
+                        .mapToObj(
+                                start ->
+                                        allProductCodes.subList(
+                                                start,
+                                                Math.min(
+                                                        start + PRODUCT_VALIDATION_BATCH_SIZE,
+                                                        allProductCodes.size())))
+                        .allMatch(productBatch -> productsExistsAndInStock(productBatch).exists());
 
-        if (productsExistsAndInStock(allProductCodes)) {
-            log.debug("All ProductCodes exist in db, proceeding with batch save");
+        if (allProductsExist) {
+            log.debug(
+                    "All ProductCodes exist in db, proceeding with batch save: {}",
+                    LogSanitizer.sanitizeCollection(allProductCodes));
             List<Order> orderEntities =
                     orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
 
             List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
 
-            // Send messages to Kafka in parallel
-            savedOrders.parallelStream()
-                    .map(this.orderMapper::toDto)
-                    .forEach(kafkaOrderProducer::sendOrder);
+            // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
+            // OrderEventPublisher
+            savedOrders.forEach(
+                    order -> {
+                        OrderDto dto = orderMapper.toDto(order);
+                        eventPublisher.publishEvent(dto);
+                    });
 
             return savedOrders.stream().map(this.orderMapper::toResponse).toList();
         } else {
-            log.debug("One or more product codes do not exist in db");
+            log.debug(
+                    "One or more product codes do not exist in db: {}",
+                    LogSanitizer.sanitizeCollection(allProductCodes));
             throw new ProductNotFoundException(allProductCodes);
         }
     }
 
-    private boolean productsExistsAndInStock(List<String> productIds) {
+    private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
+            List<String> productIds) {
         return catalogService.productsExistsByCodes(productIds);
     }
 
@@ -189,16 +221,27 @@ public class OrderService {
     }
 
     @Job(name = "reProcessNewOrders", retries = 2)
+    @Transactional
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order
         List<Order> byStatusOrderByIdAsc =
-                orderRepository.findByStatusAndCreatedDateLessThanOrderByIdAsc(
+                orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
                         OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
         byStatusOrderByIdAsc.forEach(
                 order -> {
-                    OrderDto persistedOrderDto = this.orderMapper.toDto(order);
-                    log.info("Retrying Order :{}", persistedOrderDto);
-                    kafkaOrderProducer.sendOrder(persistedOrderDto);
+                    try {
+                        OrderDto persistedOrderDto = this.orderMapper.toDto(order);
+                        log.info(
+                                "Retrying Order :{}",
+                                LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
+                        eventPublisher.publishEvent(persistedOrderDto);
+
+                        // Update lastModifiedDate to prevent immediate repolling and endless spam
+                        order.setLastModifiedDate(LocalDateTime.now());
+                        orderRepository.save(order);
+                    } catch (Exception e) {
+                        log.error("Failed to retry publishing order :{}", order.getId(), e);
+                    }
                 });
     }
 }

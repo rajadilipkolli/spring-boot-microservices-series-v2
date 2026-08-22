@@ -23,8 +23,8 @@ function stop() {
 }
 
 function start_infra() {
-    echo "Starting zipkin-server postgresql kafka redis config-server naming-server  ...."
-    docker compose -f ${dc_main} up -d zipkin-server postgresql kafka redis config-server naming-server
+    echo "Starting grafana-lgtm postgresql kafka redis config-server naming-server  ...."
+    docker compose -f ${dc_main} up -d grafana-lgtm postgresql kafka redis config-server naming-server
     docker compose -f ${dc_main} logs -f
 }
 

@@ -1,13 +1,13 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2024-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.util;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
 import java.math.BigDecimal;
 import java.util.List;
 

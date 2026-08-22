@@ -2,6 +2,7 @@
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,11 +35,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = CustomerController.class)
 @ActiveProfiles(PROFILE_TEST)
@@ -46,9 +49,11 @@ class CustomerControllerTest {
 
     @Autowired private MockMvc mockMvc;
 
+    @Autowired private MockMvcTester mockMvcTester;
+
     @MockitoBean private CustomerService customerService;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JsonMapper jsonMapper;
 
     private List<Customer> customerList;
 
@@ -177,6 +182,55 @@ class CustomerControllerTest {
                             jsonPath("$.detail")
                                     .value("Customer with Name 'junitCustomer' not found"));
         }
+
+        @Test
+        void shouldFindCustomerByEmail() throws Exception {
+            String email = "junit@email.com";
+            CustomerResponse customerResponse =
+                    new CustomerResponse(1L, "text 1", email, "9876543210", "junitAddress", 100);
+            given(customerService.findCustomerByEmail(email))
+                    .willReturn(Optional.of(customerResponse));
+
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.OK)
+                    .bodyJson()
+                    .extractingPath("$.name")
+                    .isEqualTo(customerResponse.name());
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingCustomerByEmail() throws Exception {
+            String email = "notfound@email.com";
+            given(customerService.findCustomerByEmail(email)).willReturn(Optional.empty());
+
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.NOT_FOUND)
+                    .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                    .bodyJson()
+                    .satisfies(
+                            json -> {
+                                assertThat(json)
+                                        .extractingPath("$.type")
+                                        .isEqualTo(
+                                                "https://api.microservices.com/errors/not-found");
+                                assertThat(json)
+                                        .extractingPath("$.title")
+                                        .isEqualTo("Customer Not Found");
+                                assertThat(json).extractingPath("$.status").isEqualTo(404);
+                                assertThat(json)
+                                        .extractingPath("$.detail")
+                                        .isEqualTo(
+                                                "Customer with Email 'notfound@email.com' not found");
+                            });
+        }
     }
 
     @Nested
@@ -196,7 +250,7 @@ class CustomerControllerTest {
             mockMvc.perform(
                             post("/api/customers")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                                    .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.name", is(customerRequest.name())));
         }
@@ -208,7 +262,7 @@ class CustomerControllerTest {
             mockMvc.perform(
                             post("/api/customers")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                                    .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             header().string(
@@ -256,7 +310,7 @@ class CustomerControllerTest {
             mockMvc.perform(
                             put("/api/customers/{id}", 1L)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                                    .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.customerId", is(1L), Long.class));
         }
@@ -277,7 +331,7 @@ class CustomerControllerTest {
             mockMvc.perform(
                             put("/api/customers/{id}", customerId)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(customerRequest)))
+                                    .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isNotFound())
                     .andExpect(
                             header().string(

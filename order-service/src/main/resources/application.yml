@@ -6,16 +6,15 @@ server:
 spring:
   application:
     name: order-service
+  cloud:
+    refresh:
+      enabled: false
+  config:
+    import: optional:configserver:http://${CONFIG_SERVER_USR:dev-usr}:${CONFIG_SERVER_PWD:dev-pass}@${CONFIG_SERVER_HOST:localhost}:${CONFIG_SERVER_PORT:8888}/
   kafka:
     producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring:
-          json:
-            add:
-              type:
-                headers: true
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
@@ -26,22 +25,40 @@ spring:
         commit:
           interval:
             ms: 100
+        num:
+          stream:
+            threads: 2
         default:
           timestamp:
             extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
           key:
-            serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+            serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
         spring:
           json:
             trusted:
-              packages: 'com.example.common.dtos'
+              packages: '*'
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
+  modulith:
+    events:
+      # to enable auto initialization need to add the dependency spring-modulith-starter-jpa and a datasource configuration
+      #      jdbc:
+      #        schema-initialization:
+      #          enabled: true
+      externalization:
+        enabled: true
+        mode: outbox
+      republish-outstanding-events-on-restart: true
+      completion-mode: archive
+
   threads:
     virtual:
       enabled: true
+  testcontainers:
+    beans:
+      startup: parallel
 
 ### the background-job-server and dashboard are disabled by default
 jobrunr:
@@ -49,6 +66,7 @@ jobrunr:
     enabled: true
   background-job-server:
     enabled: true
+    poll-interval-in-seconds: 5  #This is the minimum interval in seconds between two polls for new jobs. Default is 15 seconds.
     metrics.enabled: true
   dashboard:
     enabled: true

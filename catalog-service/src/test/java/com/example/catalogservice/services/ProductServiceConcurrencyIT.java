@@ -13,11 +13,9 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
-import com.example.catalogservice.repositories.ProductRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import reactor.core.publisher.Mono;
@@ -28,10 +26,6 @@ import reactor.test.StepVerifier;
  * method.
  */
 class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
-
-    @Autowired private ProductRepository productRepository;
-
-    @Autowired private ProductService productService;
 
     private static final String TEST_PRODUCT_CODE = "RACE_CONDITION_TEST";
     private static final String TEST_PRODUCT_CODE_2 = "RACE_CONDITION_TEST_2";

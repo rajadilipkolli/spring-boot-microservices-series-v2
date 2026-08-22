@@ -1,6 +1,7 @@
-/*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
@@ -15,9 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
+import com.example.paymentservice.model.response.CustomerResponse;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -139,10 +143,36 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
-                .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.email", is(customerRequest.email().toLowerCase())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"first@customer.email", "FIRST@CUSTOMER.EMAIL", "FiRsT@CuStOmEr.EmAiL"})
+    void shouldFindCustomerByEmail(String email) {
+        Customer customer = customerList.getFirst(); // first@customer.email
+
+        this.mockMvcTester
+                .get()
+                .uri("/api/customers/by-email")
+                .param("email", email)
+                .assertThat()
+                .hasStatusOk()
+                .hasContentType(MediaType.APPLICATION_JSON)
+                .bodyJson()
+                .convertTo(CustomerResponse.class)
+                .satisfies(
+                        customerResponse -> {
+                            assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
+                            assertThat(customerResponse.name()).isEqualTo(customer.getName());
+                            assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
+                            assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
+                            assertThat(customerResponse.address()).isEqualTo(customer.getAddress());
+                            assertThat(customerResponse.amountAvailable())
+                                    .isEqualTo(customer.getAmountAvailable());
+                        });
     }
 
     @Test

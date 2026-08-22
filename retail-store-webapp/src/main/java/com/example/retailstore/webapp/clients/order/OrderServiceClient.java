@@ -19,6 +19,10 @@ public interface OrderServiceClient {
     @GetExchange("/api/orders/{id}")
     OrderResponse getOrder(@RequestHeader Map<String, ?> headers, @PathVariable String id);
 
+    @GetExchange("/api/orders/customer/{customerId}")
+    PagedResult<OrderResponse> getOrdersByCustomer(
+            @RequestHeader Map<String, ?> headers, @PathVariable("customerId") Long customerId);
+
     @PostExchange("/api/orders")
     OrderConfirmationDTO createOrder(
             @RequestHeader Map<String, ?> headers, @Valid @RequestBody OrderRequestExternal orderRequestExternal);

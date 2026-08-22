@@ -1,27 +1,59 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.common;
 
-import com.example.common.dtos.OrderDto;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+
+import com.example.orderservice.OrderServiceApplication;
+import com.example.orderservice.config.TestKafkaListenerConfig;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderItemRepository;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.services.OrderManageService;
 import com.example.orderservice.services.OrderService;
+import com.example.orderservice.utils.AppConstants;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import io.micrometer.observation.tck.TestObservationRegistry;
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.wiremock.spring.ConfigureWireMock;
+import org.wiremock.spring.EnableWireMock;
+import org.wiremock.spring.InjectWireMock;
 import tools.jackson.databind.json.JsonMapper;
 
-@IntegrationTest
-public abstract class AbstractIntegrationTest extends ContainerInitializer {
+@ActiveProfiles({AppConstants.PROFILE_TEST})
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        classes = {
+            OrderServiceApplication.class,
+            ContainersConfig.class,
+            OrderServicePostGreSQLContainer.class,
+            TestKafkaListenerConfig.class
+        })
+@AutoConfigureMockMvc
+@AutoConfigureTracing
+@EnableWireMock(
+        @ConfigureWireMock(
+                name = "catalog-service",
+                baseUrlProperties = "application.catalog-service-url"))
+public abstract class AbstractIntegrationTest {
 
     @Autowired protected MockMvc mockMvc;
 
@@ -33,19 +65,49 @@ public abstract class AbstractIntegrationTest extends ContainerInitializer {
     @Autowired protected OrderRepository orderRepository;
     @Autowired protected OrderItemRepository orderItemRepository;
 
-    @Autowired protected KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    @Autowired protected KafkaTemplate<String, byte[]> kafkaTemplate;
 
-    @BeforeEach
-    void setUpAbstractIntegrationTest() {
-        // Ensure containers are started before tests run (idempotent)
-        ensureContainersStarted();
-    }
+    @Autowired protected JdbcTemplate jdbcTemplate;
+
+    @Autowired protected TestKafkaListenerConfig testKafkaListenerConfig;
+
+    @InjectWireMock("catalog-service")
+    protected WireMockServer wireMockServer;
 
     @TestConfiguration
     static class ObservationTestConfiguration {
         @Bean
         TestObservationRegistry observationRegistry() {
             return TestObservationRegistry.create();
+        }
+    }
+
+    /**
+     * Mocks the catalog service /api/catalog/exists endpoint. Resets all existing stubs before
+     * setting up the new mock.
+     *
+     * @param status whether the products exist
+     * @param productCodes the product codes to check (passed as repeated query parameters)
+     */
+    public void mockProductsExistsRequest(boolean status, String... productCodes) {
+        wireMockServer.resetAll();
+        var mappingBuilder = get(urlPathEqualTo("/api/catalog/exists"));
+        for (String code : productCodes) {
+            mappingBuilder.withQueryParam("productCodes", equalTo(code));
+        }
+        wireMockServer.stubFor(
+                mappingBuilder.willReturn(
+                        aResponse()
+                                .withHeader(
+                                        HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .withBody("{\"exists\": " + status + "}")));
+    }
+
+    protected byte[] toJsonBytes(OrderDto orderDto) {
+        try {
+            return jsonMapper.writeValueAsBytes(orderDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

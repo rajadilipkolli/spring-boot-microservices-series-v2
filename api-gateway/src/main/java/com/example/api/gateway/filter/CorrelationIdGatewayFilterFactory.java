@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -13,7 +13,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 @Order(1)
@@ -29,32 +28,22 @@ public class CorrelationIdGatewayFilterFactory extends AbstractGatewayFilterFact
             String correlationId =
                     exchange.getRequest().getHeaders().getFirst(CORRELATION_ID_HEADER);
 
-            final String finalCorrelationId;
             if (correlationId == null || correlationId.isEmpty()) {
-                finalCorrelationId = UUID.randomUUID().toString();
-                log.debug("Generated new correlation ID: {}", finalCorrelationId);
+                correlationId = UUID.randomUUID().toString();
+                log.debug("Generated new correlation ID: {}", correlationId);
             } else {
-                finalCorrelationId = correlationId;
-                log.debug("Using existing correlation ID: {}", finalCorrelationId);
+                log.debug("Using existing correlation ID: {}", correlationId);
             }
 
             // Add correlation ID to request
             var request =
                     exchange.getRequest()
                             .mutate()
-                            .header(CORRELATION_ID_HEADER, finalCorrelationId)
+                            .header(CORRELATION_ID_HEADER, correlationId)
                             .build();
 
             // Add correlation ID to response
-            exchange.getResponse()
-                    .beforeCommit(
-                            () -> {
-                                exchange.getResponse()
-                                        .getHeaders()
-                                        .add(CORRELATION_ID_HEADER, finalCorrelationId);
-                                return Mono.empty();
-                            });
-
+            exchange.getResponse().getHeaders().add(CORRELATION_ID_HEADER, correlationId);
             return chain.filter(exchange.mutate().request(request).build());
         };
     }

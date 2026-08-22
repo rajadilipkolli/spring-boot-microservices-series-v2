@@ -11,11 +11,13 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,7 +27,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.mapper.InventoryMapper;
 import com.example.inventoryservice.model.request.InventoryRequest;
+import com.example.inventoryservice.model.response.InventoryResponse;
 import com.example.inventoryservice.model.response.PagedResult;
 import com.example.inventoryservice.services.InventoryService;
 import java.util.Arrays;
@@ -37,6 +41,8 @@ import org.instancio.junit.InstancioExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -47,7 +53,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = InventoryController.class)
 @ActiveProfiles("test")
@@ -57,20 +63,41 @@ class InventoryControllerTest {
     @Autowired private MockMvc mockMvc;
 
     @MockitoBean private InventoryService inventoryService;
+    @MockitoBean private InventoryMapper inventoryMapper;
 
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired private JsonMapper jsonMapper;
 
     private List<Inventory> inventoryList;
 
     @BeforeEach
     void setUp() {
         inventoryList = Instancio.ofList(Inventory.class).size(10).create();
+        given(inventoryMapper.toResponse(any(Inventory.class)))
+                .willAnswer(
+                        invocation -> {
+                            Inventory inv = invocation.getArgument(0);
+                            return new InventoryResponse(
+                                    inv.getId(),
+                                    inv.getProductCode(),
+                                    inv.getAvailableQuantity(),
+                                    inv.getReservedItems());
+                        });
     }
 
     @Test
     void shouldFetchAllInventories() throws Exception {
-        Page<Inventory> page = new PageImpl<>(inventoryList);
-        PagedResult<Inventory> inventoryPagedResult = new PagedResult<>(page);
+        List<InventoryResponse> responses =
+                inventoryList.stream()
+                        .map(
+                                inv ->
+                                        new InventoryResponse(
+                                                inv.getId(),
+                                                inv.getProductCode(),
+                                                inv.getAvailableQuantity(),
+                                                inv.getReservedItems()))
+                        .toList();
+        Page<InventoryResponse> page = new PageImpl<>(responses);
+        PagedResult<InventoryResponse> inventoryPagedResult = new PagedResult<>(page);
         given(inventoryService.findAllInventories(0, 10, "id", "asc"))
                 .willReturn(inventoryPagedResult);
 
@@ -92,12 +119,12 @@ class InventoryControllerTest {
     @Test
     void shouldFetchAllInventoriesWithCustomParams() throws Exception {
         // Page number is 1-based in PagedResult constructor (page.getNumber() + 1)
-        Page<Inventory> page =
+        Page<InventoryResponse> page =
                 new PageImpl<>(
                         Collections.emptyList(),
                         PageRequest.of(1, 20, Sort.by("productCode").descending()),
                         0);
-        PagedResult<Inventory> paged = new PagedResult<>(page);
+        PagedResult<InventoryResponse> paged = new PagedResult<>(page);
 
         given(inventoryService.findAllInventories(1, 20, "productCode", "desc")).willReturn(paged);
 
@@ -166,39 +193,35 @@ class InventoryControllerTest {
 
     @Test
     void shouldReturnInventoriesByProductCodes() throws Exception {
-        Inventory inv1 =
-                new Inventory()
-                        .setId(1L)
-                        .setProductCode("P1")
-                        .setAvailableQuantity(3)
-                        .setReservedItems(0);
-        Inventory inv2 =
-                new Inventory()
-                        .setId(2L)
-                        .setProductCode("P2")
-                        .setAvailableQuantity(7)
-                        .setReservedItems(0);
+        InventoryResponse inv1 = new InventoryResponse(1L, "P1", 3, 0);
+        InventoryResponse inv2 = new InventoryResponse(2L, "P2", 7, 0);
 
-        given(inventoryService.getInventoryByProductCodes(Arrays.asList("P1", "P2")))
-                .willReturn(Arrays.asList(inv1, inv2));
+        Page<InventoryResponse> page = new PageImpl<>(Arrays.asList(inv1, inv2));
+        given(
+                        inventoryService.getInventoryByProductCodes(
+                                Arrays.asList("P1", "P2"), 0, 10, "id", "asc"))
+                .willReturn(new PagedResult<>(page));
 
         this.mockMvc
                 .perform(get("/api/inventory/product").param("codes", "P1", "P2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(2)))
-                .andExpect(jsonPath("$[0].productCode", is("P1")))
-                .andExpect(jsonPath("$[1].productCode", is("P2")));
+                .andExpect(jsonPath("$.data.size()", is(2)))
+                .andExpect(jsonPath("$.data[0].productCode", is("P1")))
+                .andExpect(jsonPath("$.data[1].productCode", is("P2")));
     }
 
     @Test
     void shouldReturnEmptyListWhenCodesNotFound() throws Exception {
-        given(inventoryService.getInventoryByProductCodes(Arrays.asList("X1", "X2")))
-                .willReturn(Collections.emptyList());
+        Page<InventoryResponse> page = new PageImpl<>(Collections.emptyList());
+        given(
+                        inventoryService.getInventoryByProductCodes(
+                                Arrays.asList("X1", "X2"), 0, 10, "id", "asc"))
+                .willReturn(new PagedResult<>(page));
 
         this.mockMvc
                 .perform(get("/api/inventory/product").param("codes", "X1", "X2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()", is(0)));
+                .andExpect(jsonPath("$.data.size()", is(0)));
     }
 
     @Test
@@ -221,7 +244,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
@@ -236,7 +259,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
@@ -260,7 +283,7 @@ class InventoryControllerTest {
                 .perform(
                         post("/api/inventory")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(bad)))
+                                .content(jsonMapper.writeValueAsString(bad)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -275,7 +298,7 @@ class InventoryControllerTest {
                 .perform(
                         put("/api/inventory/{id}", inventoryId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(inventoryRequest)))
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isNotFound());
     }
 
@@ -297,7 +320,7 @@ class InventoryControllerTest {
                 .perform(
                         put("/api/inventory/{id}", inventoryId)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(req)))
+                                .content(jsonMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(inventoryId.intValue())))
                 .andExpect(jsonPath("$.productCode", is("updated")))
@@ -348,10 +371,10 @@ class InventoryControllerTest {
     @Test
     void testUpdateInventoryWithRandomValue() throws Exception {
         // Setup
-        doNothing().when(inventoryService).updateGeneratedInventory();
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), isNull());
 
         // Execute & Verify
-        mockMvc.perform(get("/api/inventory/generate"))
+        mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
                 .andExpect(
                         result ->
@@ -361,13 +384,45 @@ class InventoryControllerTest {
                                         .isTrue());
 
         // Verify interactions
-        verify(inventoryService, times(1)).updateGeneratedInventory();
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", null);
+    }
+
+    @Test
+    void shouldUpdateInventoryWithBatchSize() throws Exception {
+        doNothing().when(inventoryService).updateGeneratedInventory(any(String.class), eq(25));
+
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=25")
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                Boolean.parseBoolean(
+                                                        result.getResponse().getContentAsString()))
+                                        .isTrue());
+
+        verify(inventoryService, times(1)).updateGeneratedInventory("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
+        mockMvc.perform(
+                        post("/api/inventory/generate?batchSize=" + batchSize)
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(inventoryService);
     }
 
     @Test
     void shouldReturn500WhenGenerationFails() throws Exception {
-        doThrow(new RuntimeException("failure")).when(inventoryService).updateGeneratedInventory();
+        doThrow(new RuntimeException("failure"))
+                .when(inventoryService)
+                .updateGeneratedInventory(any(String.class), isNull());
 
-        mockMvc.perform(get("/api/inventory/generate")).andExpect(status().isInternalServerError());
+        mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isInternalServerError());
     }
 }

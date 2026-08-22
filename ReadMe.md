@@ -100,7 +100,7 @@ This project implements a **microservices pattern** where different functionalit
 
 ### Architecture Highlights:
 - 🌐 **API Gateway** as the single entry point
-- 📋 **Service Registry** for dynamic service discovery  
+- 📋 **Service Registry** for dynamic service discovery
 - ⚙️ **Configuration Server** for centralized config management
 - 📨 **Event-driven communication** via Kafka
 - 📊 **Distributed monitoring** and tracing
@@ -109,16 +109,16 @@ This project implements a **microservices pattern** where different functionalit
 
 <div align="center">
 
-| Service | Port | Description | Tech Stack |
-|---------|------|-------------|------------|
-| 🌐 **API Gateway** | 8765 | Single entry point, routing & load balancing | Spring Cloud Gateway |
-| 📁 **Config Server** | 8888 | Centralized configuration management | Spring Cloud Config |
-| 🏢 **Service Registry** | 8761 | Service discovery with Eureka | Spring Cloud Netflix |
-| 📚 **Catalog Service** | 18080 | Product catalog management | PostgreSQL + Liquibase (YAML) |
-| 📦 **Inventory Service** | 18181 | Stock level management | PostgreSQL + Liquibase (JSON) |
-| 🛍️ **Order Service** | 18282 | Order processing & orchestration | PostgreSQL + Liquibase (XML) |
-| 💳 **Payment Service** | 18085 | Payment processing | PostgreSQL + Liquibase (XML) |
-| 🛒 **Retail Store Web** | 8080 | Customer-facing web application | Thymeleaf + Alpine.js |
+| Service                  | Port  | Description                                  | Tech Stack                    |
+|--------------------------|-------|----------------------------------------------|-------------------------------|
+| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
+| 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
+| 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
+| 📦 **Inventory Service** | 18181 | Stock level management                       | PostgreSQL + Liquibase (JSON) |
+| 🛍️ **Order Service**     | 18282 | Order processing & orchestration             | PostgreSQL + Liquibase (XML)  |
+| 💳 **Payment Service**   | 18085 | Payment processing                           | PostgreSQL + Liquibase (XML)  |
+| 🛒 **Retail Store Web**  | 8080  | Customer-facing web application              | Thymeleaf + Alpine.js         |
 
 </div>
 
@@ -199,6 +199,8 @@ graph TB
 ### Containerization & CI/CD
 * ![Docker](https://img.shields.io/badge/Docker-Latest-blue?style=flat-square&logo=docker) [Docker](https://www.docker.com/)
 * ![Docker Compose](https://img.shields.io/badge/Docker_Compose-Latest-blue?style=flat-square&logo=docker) [Docker Compose](https://github.com/docker/compose)
+* [Kubernetes deployment guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md)
+* [Kubernetes E2E workflow](.github/workflows/k8s-e2e.yml)
 * ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Latest-black?style=flat-square&logo=github) [GitHub Actions](https://github.com/features/actions)
 
 </details>
@@ -209,7 +211,6 @@ graph TB
 ### Metrics & Tracing
 * ![Prometheus](https://img.shields.io/badge/Prometheus-Latest-orange?style=flat-square&logo=prometheus) [Prometheus](http://prometheus.io/)
 * ![Grafana](https://img.shields.io/badge/Grafana-Latest-orange?style=flat-square&logo=grafana) [Grafana](http://grafana.org/)
-* ![Zipkin](https://img.shields.io/badge/Zipkin-Latest-yellow?style=flat-square) [Zipkin](https://zipkin.io/)
 * ![Micrometer](https://img.shields.io/badge/Micrometer-Latest-blue?style=flat-square) Micrometer
 
 ### Logging
@@ -235,13 +236,15 @@ graph TB
 
 Before you begin, ensure you have the following installed:
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| ☕ **Java** | 21+ | Runtime environment |
-| 📦 **Maven** | 3.9.x+ | Build tool |
-| 🐳 **Docker** | Latest | Containerization |
-| 🔧 **Docker Compose** | Latest | Orchestration |
-| 📚 **Git** | Latest | Version control |
+| Tool                  | Version | Purpose             |
+|-----------------------|---------|---------------------|
+| ☕ **Java**           | 25+     | Runtime environment |
+| 📦 **Maven**          | 3.9.x+  | Build tool          |
+| 🐳 **Docker**         | Latest  | Containerization    |
+| 🔧 **Docker Compose** | Latest  | Orchestration       |
+| **Kind**              | Latest  | Local Kubernetes cluster |
+| **kubectl**           | Latest  | Kubernetes CLI       |
+| 📚 **Git**            | Latest  | Version control     |
 
 > 💡 **Tip:** Ensure `JAVA_HOME` environment variable is properly set
 
@@ -295,6 +298,20 @@ bash run.sh
 .\start-services.ps1
 ```
 
+#### Option 4: Local Kubernetes with Kind
+
+For a local Kubernetes deployment, use Kind with the manifests under
+[`deployment/k8s/`](deployment/k8s/). See the
+[Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
+the complete setup and validation flow.
+
+```bash
+./deployment/scripts/run-local-kubernetes-e2e.sh
+```
+
+The same Kubernetes end-to-end gate runs in
+[`k8s-e2e.yml`](.github/workflows/k8s-e2e.yml).
+
 ### 🛑 Stopping Services
 
 ```bash
@@ -313,7 +330,7 @@ Once all services are running, verify the setup:
 - 📚 **API Documentation:** [http://localhost:8765/swagger-ui.html](http://localhost:8765/swagger-ui.html)
 - 🛒 **Retail Store App:** [http://localhost:8080](http://localhost:8080)
 - 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (user/password)
-- 🔍 **Zipkin Tracing:** [http://localhost:9411](http://localhost:9411)
+- 🔍 **Loki Tracing:** [http://localhost:3000](http://localhost:3000)
 
 ## 🎛️ Service Discovery & API Access
 
@@ -330,6 +347,34 @@ Access all microservice APIs through a unified interface:
 ![Swagger Documentation](images/swagger.jpg)
 
 > 💡 **Pro Tip:** Use the dropdown menu in Swagger UI to switch between different service APIs
+
+## 🔐 Keycloak Security Configuration
+
+To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+
+### 1. Create the ADMIN Client Role
+1. Open the Keycloak Admin Console (`http://localhost:9191`).
+2. Select the `retailstore` realm.
+3. Go to **Clients** -> click on **`retailstore-webapp`**.
+4. Go to the **Roles** tab and click **Create Role**.
+5. Name the role **`ADMIN`** and click **Save**.
+
+### 2. Map the Client Role to the ID Token
+By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
+1. On the left menu, go to **Client Scopes**.
+2. Click on the **`roles`** scope in the list.
+3. Go to the **Mappers** tab.
+4. Click on the **`client roles`** mapper.
+5. Toggle **ON** both **Add to ID token** and **Add to userinfo**.
+6. Click **Save**.
+
+### 3. Assign the Role to Your User
+1. On the left menu, go to **Users**.
+2. Search for your user (e.g., `raja`) and click on the username.
+3. Go to the **Role mapping** tab.
+4. Click **Assign role**.
+5. From the dropdown at the top, select **Filter by clients**.
+6. Find `retailstore-webapp ADMIN`, check the box, and click **Assign**.
 
 ## 📊 Observability
 
@@ -369,8 +414,8 @@ Access all microservice APIs through a unified interface:
 
 ### 🔍 Distributed Tracing
 
-**Zipkin Integration**
-- **URL:** [http://localhost:9411/zipkin/](http://localhost:9411/zipkin/)
+**LGTM Integration**
+- **URL:** [http://localhost:3000/](http://localhost:3000/)
 - **Features:** Request flow visualization, latency analysis, dependency mapping
 - **Integration:** Micrometer Tracing with Spring Boot
 
@@ -421,12 +466,12 @@ This project demonstrates **flexible database schema management** using Liquibas
 
 <div align="center">
 
-| 🏷️ Format | 📁 Service Examples | 📝 Use Case |
-|-----------|-------------------|-------------|
-| **XML** | `order-service`, `payment-service` | Complex migrations, detailed documentation |
-| **YAML** | `catalog-service` | Human-readable, simple structure |
-| **JSON** | `inventory-service` | API-friendly, structured data |
-| **SQL** | Custom implementations | Direct SQL control, legacy migrations |
+| 🏷️ Format | 📁 Service Examples                | 📝 Use Case                                |
+|-----------|------------------------------------|--------------------------------------------|
+| **XML**   | `order-service`, `payment-service` | Complex migrations, detailed documentation |
+| **YAML**  | `catalog-service`                  | Human-readable, simple structure           |
+| **JSON**  | `inventory-service`                | API-friendly, structured data              |
+| **SQL**   | Custom implementations             | Direct SQL control, legacy migrations      |
 
 </div>
 
@@ -449,7 +494,7 @@ src/main/resources/db/changelog/
 **🐘 PostgreSQL Services**
 - 📚 Catalog Service
 - 📦 Inventory Service
-- 🛍️ Order Service  
+- 🛍️ Order Service
 - 💳 Payment Service
 
 *Features: ACID compliance, complex queries, relational integrity*
@@ -610,6 +655,7 @@ We welcome contributions from the community! Here's how you can help:
 - 🧪 **Testing:** Add tests for new functionality
 - 🎨 **Code Style:** Follow existing code conventions
 - 💬 **Discussion:** Open an issue first for significant changes
+- 🏗️ **Kafka Event Contract:** Kafka event DTOs are resolved by explicit consumer-side typing (`JsonSerde<T>` / manual `readValue(..., Dto.class)`), not by the `type`/`__TypeId__` header. Producers must not add type headers.
 
 ### 🤗 Community Standards
 

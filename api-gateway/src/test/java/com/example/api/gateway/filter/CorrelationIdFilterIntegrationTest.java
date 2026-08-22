@@ -44,6 +44,8 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .expectHeader()
                 .exists("X-Correlation-ID")
                 .expectHeader()
+                .exists("X-Trace-Id")
+                .expectHeader()
                 .value(
                         "X-Correlation-ID",
                         correlationId -> {
@@ -69,7 +71,9 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", providedCorrelationId);
+                .valueEquals("X-Correlation-ID", providedCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 
     @Test
@@ -84,6 +88,8 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .isOk()
                 .expectHeader()
                 .exists("X-Correlation-ID")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectHeader()
                 .value(
                         "X-Correlation-ID",
@@ -109,6 +115,8 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .isOk()
                 .expectHeader()
                 .exists("X-Correlation-ID")
+                .expectHeader()
+                .exists("X-Trace-Id")
                 .expectHeader()
                 .value(
                         "X-Correlation-ID",
@@ -137,7 +145,9 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", firstCorrelationId);
+                .valueEquals("X-Correlation-ID", firstCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
 
         // Second request with different correlation ID
         webTestClient
@@ -149,6 +159,8 @@ public class CorrelationIdFilterIntegrationTest extends AbstractIntegrationTest 
                 .expectStatus()
                 .isOk()
                 .expectHeader()
-                .valueEquals("X-Correlation-ID", secondCorrelationId);
+                .valueEquals("X-Correlation-ID", secondCorrelationId)
+                .expectHeader()
+                .exists("X-Trace-Id");
     }
 }

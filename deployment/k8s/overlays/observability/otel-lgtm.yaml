@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-lgtm
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-lgtm
+  template:
+    metadata:
+      labels:
+        app: grafana-lgtm
+    spec:
+      containers:
+      - name: lgtm
+        image: grafana/otel-lgtm:0.30.2
+        ports:
+        - containerPort: 3000
+        - containerPort: 4317
+        - containerPort: 4318
+        - containerPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: retailstore
+spec:
+  ports:
+  - port: 4318
+    targetPort: 4318
+  selector:
+    app: grafana-lgtm

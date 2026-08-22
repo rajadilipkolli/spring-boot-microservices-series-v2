@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -10,10 +10,10 @@ import static com.example.orderservice.util.TestData.getPaymentOrderDto;
 import static com.example.orderservice.util.TestData.getStockOrderDto;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.util.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,15 +1,16 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.services;
 
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.ProductDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
+import com.example.inventoryservice.utils.logging.Loggable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -18,15 +19,19 @@ import org.springframework.stereotype.Service;
 public class ProductManageService {
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
 
-    public ProductManageService(InventoryRepository inventoryRepository) {
+    public ProductManageService(
+            InventoryRepository inventoryRepository,
+            InventoryJOOQRepository inventoryJOOQRepository) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
     }
 
     public void manage(ProductDto productDto) {
         String productCode = productDto.code();
         // avoid inserting duplicate inventory records when retries or duplicate events arrive
-        if (this.inventoryRepository.existsByProductCode(productCode)) {
+        if (this.inventoryJOOQRepository.existsByProductCode(productCode)) {
             return;
         }
 
@@ -34,7 +39,7 @@ public class ProductManageService {
         try {
             this.inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
-            if (!this.inventoryRepository.existsByProductCode(productCode)) {
+            if (!this.inventoryJOOQRepository.existsByProductCode(productCode)) {
                 throw ex;
             }
             // Another thread created the same product_code concurrently; ignore to keep

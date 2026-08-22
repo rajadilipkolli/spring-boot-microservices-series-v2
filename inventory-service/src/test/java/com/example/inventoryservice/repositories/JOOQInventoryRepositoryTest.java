@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -10,6 +10,7 @@ import static com.example.inventoryservice.jooq.tables.Inventory.INVENTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.inventoryservice.common.SQLContainersConfig;
+import com.example.inventoryservice.config.JooqConfig;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.jooq.DSLContext;
@@ -21,7 +22,7 @@ import org.springframework.boot.jooq.test.autoconfigure.JooqTest;
 import org.springframework.context.annotation.Import;
 
 @JooqTest(properties = {"spring.cloud.config.enabled=false"})
-@Import(SQLContainersConfig.class)
+@Import({SQLContainersConfig.class, JooqConfig.class})
 @AutoConfigureTestDatabase
 class JOOQInventoryRepositoryTest {
 
@@ -58,5 +59,21 @@ class JOOQInventoryRepositoryTest {
                         .fetchInto(Inventory.class);
 
         assertThat(findAvailableInventory).isNotEmpty().hasSize(1);
+
+        boolean exists =
+                dslContext.fetchExists(
+                        dslContext
+                                .selectOne()
+                                .from(INVENTORY)
+                                .where(INVENTORY.PRODUCT_CODE.eq("product2")));
+        assertThat(exists).isTrue();
+
+        exists =
+                dslContext.fetchExists(
+                        dslContext
+                                .selectOne()
+                                .from(INVENTORY)
+                                .where(INVENTORY.PRODUCT_CODE.eq("product200")));
+        assertThat(exists).isFalse();
     }
 }

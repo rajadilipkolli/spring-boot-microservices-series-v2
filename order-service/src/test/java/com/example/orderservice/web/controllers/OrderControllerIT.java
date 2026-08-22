@@ -1,17 +1,21 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.web.controllers;
 
+import static com.example.orderservice.util.TestData.getOrderDto;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,30 +29,30 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
 
-@Disabled
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
 
     @BeforeEach
     void setUp() {
+        testKafkaListenerConfig.reset();
         orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch();
 
@@ -190,7 +194,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(true, "Product10");
+            mockProductsExistsRequest(true, "PRODUCT10");
 
             mockMvc.perform(
                             post("/api/orders")
@@ -225,13 +229,63 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .hasSize(orderList.size() + 1); // Original orders plus the new one
 
             // Verify the last order in the database matches our request
+            savedOrders.sort(Comparator.comparing(Order::getId));
             Long orderId = savedOrders.getLast().getId();
-            Order lastOrder = orderRepository.findOrderById(orderId).get();
+            Order lastOrder = orderRepository.findOrderById(orderId).orElseThrow();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
             assertThat(lastOrder.getItems()).hasSize(1);
             assertThat(lastOrder.getItems().getFirst().getProductCode()).isEqualTo("Product10");
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
+
+            // Verify Kafka message
+            await().atMost(Duration.ofSeconds(10))
+                    .pollInterval(Duration.ofSeconds(1))
+                    .untilAsserted(
+                            () -> {
+                                OrderDto orderDto = testKafkaListenerConfig.pollPayload(1, SECONDS);
+                                assertThat(orderDto).isNotNull();
+                                assertThat(orderDto.orderId()).isEqualTo(orderId);
+                                assertThat(orderDto.customerId()).isEqualTo(1L);
+                                assertThat(orderDto.status()).isEqualTo("NEW");
+                            });
+
+            // Waiting for a short duration to ensure the order is committed before sending events
+            SECONDS.sleep(1);
+            // Sending events to both payment-orders, stock-orders for streaming to process
+            // and confirm the order is created successfully
+            OrderDto paymentOrderDto = getOrderDto("PAYMENT", orderId);
+
+            kafkaTemplate
+                    .send(
+                            "payment-orders",
+                            String.valueOf(paymentOrderDto.orderId()),
+                            toJsonBytes(paymentOrderDto))
+                    .get();
+            OrderDto stockOrderDto = getOrderDto("STOCK", orderId);
+
+            kafkaTemplate
+                    .send(
+                            "stock-orders",
+                            String.valueOf(stockOrderDto.orderId()),
+                            toJsonBytes(stockOrderDto))
+                    .get();
+
+            await().atMost(15, SECONDS)
+                    .pollDelay(1, SECONDS)
+                    .pollInterval(Duration.ofSeconds(1))
+                    .untilAsserted(
+                            () ->
+                                    mockMvc.perform(get("/api/orders/store/{id}", orderId))
+                                            .andExpect(status().isOk())
+                                            .andExpect(jsonPath("orderId", is(orderId), Long.class))
+                                            .andExpect(jsonPath("status", is("CONFIRMED")))
+                                            .andExpect(jsonPath("source", emptyOrNullString()))
+                                            .andExpect(jsonPath("customerId", is(1)))
+                                            .andExpect(
+                                                    jsonPath(
+                                                            "items.size()",
+                                                            is(orderRequest.items().size()))));
         }
 
         @Test
@@ -247,7 +301,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "state",
                                     "zipCode",
                                     "country"));
-            mockProductsExistsRequest(false, "Product2");
+            mockProductsExistsRequest(false, "PRODUCT2");
 
             mockMvc.perform(
                             post("/api/orders")
@@ -425,7 +479,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
-            mockProductsExistsRequest(true, "Product1");
+            mockProductsExistsRequest(true, "PRODUCT1");
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
@@ -453,7 +507,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
-            mockProductsExistsRequest(true, "Product1");
+            mockProductsExistsRequest(true, "PRODUCT1");
             mockMvc.perform(
                             post("/api/orders")
                                     .contentType(MediaType.APPLICATION_JSON)
@@ -478,7 +532,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void shouldUpdateOrder() throws Exception {
-        mockProductsExistsRequest(true, "product1", "product4");
+        mockProductsExistsRequest(true, "PRODUCT1", "PRODUCT4");
         Order order = orderList.getFirst();
 
         OrderRequest orderRequest = TestData.getOrderRequest(order);
@@ -577,7 +631,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 "54321",
                                 "New Country"));
 
-        mockProductsExistsRequest(true, "UpdatedProduct", "SecondProduct");
+        mockProductsExistsRequest(true, "UPDATEDPRODUCT", "SECONDPRODUCT");
 
         // Perform the update
         mockMvc.perform(

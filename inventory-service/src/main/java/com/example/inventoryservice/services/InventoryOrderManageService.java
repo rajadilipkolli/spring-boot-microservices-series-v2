@@ -1,17 +1,18 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.services;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import com.example.inventoryservice.utils.logging.Loggable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,11 +32,15 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
-    private final KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
+    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     public InventoryOrderManageService(
-            InventoryRepository inventoryRepository, KafkaTemplate<Long, OrderDto> kafkaTemplate) {
+            InventoryRepository inventoryRepository,
+            InventoryJOOQRepository inventoryJOOQRepository,
+            KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -50,7 +55,10 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
-        // Using JPA repository instead of JOOQ
+        // Using JPA repository for reading unpaged list to keep entities managed.
+        // NOTE: Do not change this back to JOOQ for mutating operations.
+        // JOOQ returns detached entities which can lead to StaleObjectStateException
+        // when merged and saved if the version field mapping is not perfectly synchronized.
         List<Inventory> inventoryListFromDB =
                 inventoryRepository.findByProductCodeIn(productCodeList);
 
@@ -63,7 +71,9 @@ public class InventoryOrderManageService {
                     productCodeList);
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
             kafkaTemplate.send(
-                    AppConstants.STOCK_ORDERS_TOPIC, rejectedOrderDto.orderId(), rejectedOrderDto);
+                    AppConstants.STOCK_ORDERS_TOPIC,
+                    String.valueOf(rejectedOrderDto.orderId()),
+                    rejectedOrderDto);
             LOGGER.info(
                     "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
                     rejectedOrderDto,
@@ -119,7 +129,9 @@ public class InventoryOrderManageService {
         // Send order to Kafka
         OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
         kafkaTemplate.send(
-                AppConstants.STOCK_ORDERS_TOPIC, orderWithSource.orderId(), orderWithSource);
+                AppConstants.STOCK_ORDERS_TOPIC,
+                String.valueOf(orderWithSource.orderId()),
+                orderWithSource);
         LOGGER.info(
                 "Sent Order with status {} : {} from inventory service to topic {}",
                 orderWithSource.status(),
@@ -135,6 +147,8 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
+        // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
+        // detached entities
         Map<String, Inventory> inventoryMap =
                 inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

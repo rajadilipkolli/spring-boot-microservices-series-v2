@@ -1,0 +1,38 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+</p>
+***/
+
+package com.example.orderservice.model.dtos;
+
+import com.example.orderservice.utils.AppConstants;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Objects;
+import org.springframework.modulith.events.Externalized;
+
+@Externalized(AppConstants.ORDERS_TOPIC + "::#{orderId()}")
+public record OrderDto(
+        Long orderId,
+        @Positive(message = "CustomerId should be positive") Long customerId,
+        String status,
+        String source,
+        @NotEmpty(message = "Order without items not valid")
+                List<@NotNull @Valid OrderItemDto> items)
+        implements Serializable {
+
+    @Serial private static final long serialVersionUID = 1L;
+
+    public OrderDto withStatusAndSource(String status, String source) {
+        if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
+            return this;
+        }
+        return new OrderDto(orderId(), customerId(), status, source, items());
+    }
+}

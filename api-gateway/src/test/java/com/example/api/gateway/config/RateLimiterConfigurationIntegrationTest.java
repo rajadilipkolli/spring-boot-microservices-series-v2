@@ -52,6 +52,8 @@ class RateLimiterConfigurationIntegrationTest extends AbstractIntegrationTest {
                         .uri("/order-service/api/{id}", 1)
                         .accept(MediaType.APPLICATION_JSON)
                         .exchange()
+                        .expectHeader()
+                        .exists("X-Trace-Id")
                         .expectBody(String.class)
                         .returnResult();
 

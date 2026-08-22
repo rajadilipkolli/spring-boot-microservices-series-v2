@@ -45,7 +45,7 @@ public interface ProductApi {
                                     schema = @Schema(implementation = ProblemDetail.class))
                         })
             })
-    public Mono<PagedResult<ProductResponse>> searchProducts(
+    Mono<PagedResult<ProductResponse>> searchProducts(
             @Parameter(
                             name = "term",
                             description = "Text to search for in product name or description")

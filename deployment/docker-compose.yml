@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: "pg_isready -U appuser -d appdb"
       interval: 2s
@@ -22,8 +22,8 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.4.0-alpine'
-    extra_hosts: ['host.docker.internal:host-gateway']
+    image: 'redis:8.10.1-alpine'
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - '6379:6379'
     volumes:
@@ -36,36 +36,43 @@ services:
     networks:
       - microservice-network
 
-  zipkin-server:
-    image: openzipkin/zipkin
-    container_name: zipkin-server
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.31.0
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    expose:
-      - "9411"
+    container_name: grafana-lgtm
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
     ports:
-      - "9411:9411"
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
     networks:
       - microservice-network
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9411/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    networks:
+      - microservice-network
 
   kafka:
     container_name: kafka
-    image: apache/kafka-native:4.1.1
+    image: apache/kafka-native:4.3.1
     hostname: broker
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - "9092:9092"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -96,7 +103,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.4.7
+    image: quay.io/keycloak/keycloak:26.7.2
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
@@ -124,17 +131,28 @@ services:
       - KC_HTTP_ENABLED=true
       # Additional production settings
       - KC_FEATURES=token-exchange
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_TRACING_ENABLED=true
+      - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
+      - KC_TELEMETRY_PROTOCOL=http/protobuf
+      - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
       - "9191:9191"
+      - "9000:9000"
     depends_on:
       postgresql:
         condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
+      otel-collector:
+        condition: service_started
     deploy:
       resources:
         limits:
           memory: 2gb
     healthcheck:
-      test: ["CMD", "sh", "-c", "cat < /dev/null > /dev/tcp/localhost/9191 || exit 1"]
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep \"HTTP/1.1 200 OK\" <&3" ]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -144,23 +162,28 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1400m
     ports:
       - "8888:8888"
     depends_on:
-      zipkin-server:
-        condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
+      otel-collector:
+        condition: service_started
     networks:
       - microservice-network
     environment:
-      SPRING_PROFILES_ACTIVE: native
-      SPRING_SECURITY_USER_NAME: docker-dev
-      SPRING_SECURITY_USER_PASSWORD: docker-pass
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_SECURITY_USER_NAME=docker-dev
+      - SPRING_SECURITY_USER_PASSWORD=docker-pass
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=config-server
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
 
   naming-server:
     container_name: naming-server
@@ -169,7 +192,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1400m
     ports:
       - "8761:8761"
     networks:
@@ -177,9 +200,14 @@ services:
     depends_on:
       config-server:
         condition: service_started
+      otel-collector:
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=naming-server
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   api-gateway:
@@ -189,7 +217,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "8765:8765"
     networks:
@@ -199,14 +227,17 @@ services:
         condition: service_started
       naming-server:
         condition: service_started
-      zipkin-server:
-        condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - SPRING_DATA_REDIS_HOST=redis
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=api-gateway
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
   catalog-service:
@@ -216,7 +247,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18080:18080"
     networks:
@@ -233,6 +264,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=catalog-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
   inventory-service:
@@ -242,9 +276,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
-      - "18081:18081"
+      - "18181:18181"
     networks:
       - microservice-network
     depends_on:
@@ -259,7 +293,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=inventory-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   order-service:
@@ -269,7 +306,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18282:18282"
     networks:
@@ -286,7 +323,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=order-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
 
   payment-service:
@@ -296,7 +336,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1050m
+          memory: 1400m
     ports:
       - "18085:18085"
     networks:
@@ -313,7 +353,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
-      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=payment-service
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
   retailstore-webapp:
@@ -323,10 +365,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
-      - OAUTH2_SERVER_URL=http://keycloak:9191
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-server:9411
+      - OAUTH2_SERVER_URL=http://localhost:9191
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=retail-store-webapp
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
       - "8080:8080"
     networks:
@@ -350,7 +394,16 @@ services:
     deploy:
       resources:
         limits:
-          memory: 700m
+          memory: 1400m
+
+  retailstore-webapp-proxy:
+    image: alpine/socat
+    container_name: retailstore-webapp-proxy
+    command: tcp-listen:9191,fork,bind=127.0.0.1 tcp-connect:keycloak:9191
+    network_mode: "service:retailstore-webapp"
+    depends_on:
+      retailstore-webapp:
+        condition: service_started
 
 networks:
   microservice-network:

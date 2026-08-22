@@ -1,0 +1,102 @@
+{
+  "reflection": [
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.entities.Inventory"},
+      "type": "com.example.inventoryservice.entities.Inventory",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.exception.GlobalExceptionHandler$ApiValidationError"},
+      "type": "com.example.inventoryservice.exception.GlobalExceptionHandler$ApiValidationError",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.exception.ProductAlreadyExistsException"},
+      "type": "com.example.inventoryservice.exception.ProductAlreadyExistsException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.jooq.DefaultCatalog"},
+      "type": "com.example.inventoryservice.jooq.DefaultCatalog",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.jooq.Public"},
+      "type": "com.example.inventoryservice.jooq.Public",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.jooq.tables.Inventory"},
+      "type": "com.example.inventoryservice.jooq.tables.Inventory",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.jooq.tables.records.InventoryRecord"},
+      "type": "com.example.inventoryservice.jooq.tables.records.InventoryRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderDto"},
+      "type": "com.example.inventoryservice.model.payload.OrderDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderItemDto"},
+      "type": "com.example.inventoryservice.model.payload.OrderItemDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.payload.ProductDto"},
+      "type": "com.example.inventoryservice.model.payload.ProductDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.request.InventoryRequest"},
+      "type": "com.example.inventoryservice.model.request.InventoryRequest",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.response.InventoryResponse"},
+      "type": "com.example.inventoryservice.model.response.InventoryResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.inventoryservice.model.response.PagedResult"},
+      "type": "com.example.inventoryservice.model.response.PagedResult",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    }
+  ],
+  "resources": [
+    {"glob": "application*.properties"},
+    {"glob": "application*.yml"},
+    {"glob": "application*.yaml"},
+    {"glob": "logback-spring.xml"},
+    {"glob": "log4j2-spring.xml"}
+  ]
+}
