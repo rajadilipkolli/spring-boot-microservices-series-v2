@@ -137,6 +137,11 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     @Override
+    public int count() {
+        return dslContext.fetchCount(CUSTOMERS);
+    }
+
+    @Override
     @Transactional
     public void deleteById(Long id) {
         dslContext.deleteFrom(CUSTOMERS).where(CUSTOMERS.ID.eq(id)).execute();

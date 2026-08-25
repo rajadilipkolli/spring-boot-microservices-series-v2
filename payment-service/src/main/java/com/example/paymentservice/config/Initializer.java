@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
 import com.example.paymentservice.entities.Customer;
@@ -26,6 +26,10 @@ class Initializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
+        if (this.customerRepository.count() > 0) {
+            log.info("Database already initialized.");
+            return;
+        }
         SecureRandom secureRandom = new SecureRandom();
         Faker faker = new Faker();
         List<Customer> customerList = new ArrayList<>();
