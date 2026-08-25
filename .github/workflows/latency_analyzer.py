@@ -278,8 +278,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python latency_analyzer.py sample_metrics.txt
-  python latency_analyzer.py /path/to/your/metrics.txt
+  python main.py sample_metrics.txt
+  python main.py /path/to/your/metrics.txt
         """
     )
     parser.add_argument(
@@ -294,12 +294,40 @@ Examples:
 
     if not args.metrics_file:
         import time
-        print("Running in background mode... (waiting for metrics)")
+        import urllib.request
+        import signal
+        
+        last_metrics_text = ""
+        
+        def handle_exit(signum, frame):
+            print("\nShutting down background analyzer. Analyzing collected metrics...")
+            if last_metrics_text:
+                try:
+                    parser = MetricsParser(last_metrics_text)
+                    detector = IssueDetector(parser)
+                    print_results(detector.detect_all())
+                except Exception as e:
+                    print(f"Error during analysis: {e}")
+            else:
+                print("No metrics collected.")
+            sys.exit(0)
+            
+        signal.signal(signal.SIGTERM, handle_exit)
+        signal.signal(signal.SIGINT, handle_exit)
+        
+        print("Running in background mode... (scraping Prometheus every 10s)")
         try:
             while True:
-                time.sleep(60)
-        except KeyboardInterrupt:
-            sys.exit(0)
+                try:
+                    req = urllib.request.Request('http://localhost:9090/federate?match[]={__name__=~".*"}')
+                    with urllib.request.urlopen(req) as response:
+                        last_metrics_text = response.read().decode('utf-8')
+                except Exception:
+                    pass # Ignore errors if prometheus is down or starting
+                time.sleep(10)
+        except Exception:
+            pass
+        sys.exit(0)
     
     try:
         with open(args.metrics_file, 'r') as f:
