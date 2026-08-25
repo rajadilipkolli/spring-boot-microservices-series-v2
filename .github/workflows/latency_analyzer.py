@@ -278,17 +278,28 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py sample_metrics.txt
-  python main.py /path/to/your/metrics.txt
+  python latency_analyzer.py sample_metrics.txt
+  python latency_analyzer.py /path/to/your/metrics.txt
         """
     )
     parser.add_argument(
         'metrics_file',
         type=str,
+        nargs='?',
+        default=None,
         help='Path to Prometheus metrics file (text format)'
     )
     
     args = parser.parse_args()
+
+    if not args.metrics_file:
+        import time
+        print("Running in background mode... (waiting for metrics)")
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            sys.exit(0)
     
     try:
         with open(args.metrics_file, 'r') as f:
