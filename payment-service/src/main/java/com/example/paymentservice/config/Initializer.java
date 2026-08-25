@@ -42,25 +42,25 @@ class Initializer implements CommandLineRunner {
             customerList.add(customer);
         }
 
-        Customer retailCustomer =
-                new Customer()
-                        .setName("retail")
-                        .setEmail("retail@gmail.com")
-                        .setAddress(faker.address().fullAddress())
-                        .setPhone(faker.phoneNumber().phoneNumber())
-                        .setAmountAvailable(secureRandom.nextInt(100_000))
-                        .setAmountReserved(0);
-
         // Using BatchMode to save Entities
         this.customerRepository.saveAll(customerList);
 
         // Save retail customer separately with conflict handling
         if (this.customerRepository.findByEmail("retail@gmail.com").isEmpty()) {
             try {
+                Customer retailCustomer =
+                        new Customer()
+                                .setName("retail")
+                                .setEmail("retail@gmail.com")
+                                .setAddress(faker.address().fullAddress())
+                                .setPhone(faker.phoneNumber().phoneNumber())
+                                .setAmountAvailable(secureRandom.nextInt(100_000))
+                                .setAmountReserved(0);
                 this.customerRepository.save(retailCustomer);
             } catch (Exception e) {
                 // Handle race condition - another instance may have created the retail customer
-                log.debug("Retail customer already exists (concurrent creation): {}", e.getMessage());
+                log.debug(
+                        "Retail customer already exists (concurrent creation): {}", e.getMessage());
             }
         }
     }
