@@ -183,6 +183,7 @@ services:
       - SPRING_SECURITY_USER_PASSWORD=docker-pass
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=config-server
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
 
   naming-server:
@@ -207,6 +208,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=naming-server
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
@@ -237,6 +239,7 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
@@ -266,6 +269,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=catalog-service
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
@@ -291,10 +295,13 @@ services:
       postgresql:
         condition: service_healthy
     environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=inventory-service
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
@@ -321,10 +328,13 @@ services:
       postgresql:
         condition: service_healthy
     environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=order-service
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
     restart: unless-stopped
@@ -351,10 +361,13 @@ services:
       postgresql:
         condition: service_healthy
     environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=payment-service
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
 
@@ -368,6 +381,7 @@ services:
       - OAUTH2_SERVER_URL=http://localhost:9191
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=retail-store-webapp
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
