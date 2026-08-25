@@ -34,7 +34,7 @@ class Initializer implements CommandLineRunner {
             Customer customer =
                     new Customer()
                             .setName(faker.name().fullName())
-                            .setEmail(faker.name().lastName() + "@gmail.com")
+                            .setEmail(faker.name().lastName() + i + "@gmail.com")
                             .setAddress(faker.address().fullAddress())
                             .setPhone(faker.phoneNumber().phoneNumber())
                             .setAmountAvailable(randomNumber)
@@ -42,21 +42,26 @@ class Initializer implements CommandLineRunner {
             customerList.add(customer);
         }
 
-        if (this.customerRepository.findByEmail("retail@gmail.com").isEmpty()) {
-            Customer retailCustomer =
-                    new Customer()
-                            .setName("retail")
-                            .setEmail("retail@gmail.com")
-                            .setAddress(faker.address().fullAddress())
-                            .setPhone(faker.phoneNumber().phoneNumber())
-                            .setAmountAvailable(secureRandom.nextInt(100_000))
-                            .setAmountReserved(0);
-            customerList.add(retailCustomer);
-        }
+        Customer retailCustomer =
+                new Customer()
+                        .setName("retail")
+                        .setEmail("retail@gmail.com")
+                        .setAddress(faker.address().fullAddress())
+                        .setPhone(faker.phoneNumber().phoneNumber())
+                        .setAmountAvailable(secureRandom.nextInt(100_000))
+                        .setAmountReserved(0);
 
-        if (!customerList.isEmpty()) {
-            // Using BatchMode to save Entities
-            this.customerRepository.saveAll(customerList);
+        // Using BatchMode to save Entities
+        this.customerRepository.saveAll(customerList);
+
+        // Save retail customer separately with conflict handling
+        if (this.customerRepository.findByEmail("retail@gmail.com").isEmpty()) {
+            try {
+                this.customerRepository.save(retailCustomer);
+            } catch (Exception e) {
+                // Handle race condition - another instance may have created the retail customer
+                log.debug("Retail customer already exists (concurrent creation): {}", e.getMessage());
+            }
         }
     }
 }

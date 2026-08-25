@@ -555,8 +555,8 @@ This guide provides a concise reference of useful `kubectl` commands for everyda
 ## 1. Viewing Logs
 | Command                                                                                           | Purpose                                                                                        |
 |---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| `kubectl logs order-service-8696474b5d-ztxlq -n retailstore --previous \| Select-Object -Last 30` | Show the last 30 lines of the **previous** container instance (useful after a crash/restart).  |
-| `kubectl logs order-service-8696474b5d-ztxlq -n retailstore --previous`                           | Get the full logs of the previous container run (full crash dump).                             |
+| `kubectl logs deployment/order-service -n retailstore --previous \| Select-Object -Last 30` | Show the last 30 lines of the **previous** container instance (useful after a crash/restart).  |
+| `kubectl logs deployment/order-service -n retailstore --previous`                           | Get the full logs of the previous container run (full crash dump).                             |
 | `kubectl logs deployment/inventory-service -n retailstore --tail=40 2>&1`                         | Show the most recent 40 lines of the **inventory‑service** deployment logs (including errors). |
 | `kubectl logs deployment/keycloak -n retailstore \| Select-Object -Last 50`                       | Retrieve the last 50 lines of the **keycloak** deployment logs.                                |
 
@@ -564,7 +564,7 @@ This guide provides a concise reference of useful `kubectl` commands for everyda
 ## 2. Cleaning Up & Restarting Pods
 | Command                                                           | Purpose                                                                                               |
 |-------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| `kubectl delete pods -l app=keycloak -n retailstore`              | Force‑delete all pods with label `app=keycloak`; they will be recreated by the Deployment controller. |
+| `kubectl delete pods -l app=keycloak -n retailstore`              | Delete all pods with label `app=keycloak` normally; they will be recreated by the Deployment controller. |
 | `kubectl rollout restart deployment config-server -n retailstore` | Trigger a rolling restart of the **config‑server** deployment (e.g., after config changes).           |
 
 ---

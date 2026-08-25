@@ -35,7 +35,7 @@ Without Kubernetes you would have to manually restart crashed apps, manually mov
 | **Service**            | The internal phone directory     | Gives each app a stable address so other apps can find it                                |
 | **Ingress**            | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app                  |
 | **Namespace**          | A separate wing of the building  | Logical boundary to group related resources — all retailstore apps live in `retailstore` |
-| **ConfigMap / Secret** | Employee handbook / safe         | Stores configuration values and sensitive data (passwords, API keys)                     |
+| **ConfigMap / Secret** | Employee handbook / safe         | ConfigMap stores non-sensitive configuration values; Secret stores sensitive values such as passwords and API keys |
 
 ---
 
