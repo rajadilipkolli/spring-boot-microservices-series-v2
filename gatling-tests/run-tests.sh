@@ -140,8 +140,15 @@ case $TEST_PROFILE in
         ;;
 esac
 
+# Detect OS to use the correct maven wrapper
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    MVNW="./mvnw.cmd"
+else
+    MVNW="./mvnw"
+fi
+
 # Run the tests
-CMD="./mvnw clean gatling:test $MAVEN_PARAMS"
+CMD="$MVNW clean gatling:test $MAVEN_PARAMS"
 echo "Executing: $CMD"
 eval $CMD
 STATUS=$?
@@ -160,9 +167,15 @@ if [ $STATUS -ne 0 ]; then
 fi
 
 if [ -n "$LATEST_REPORT" ]; then
-    BASELINE_FILE="baselines/${TEST_PROFILE}.json"
+    BASELINE_FILE="docs/baselines/main-baseline.json"
     THRESHOLD=10.0
     echo "Running performance regression check..."
+    
+    if [ ! -f "$BASELINE_FILE" ]; then
+        echo "Error: Baseline file $BASELINE_FILE not found! Cannot perform regression check."
+        exit 1
+    fi
+
     if [ -f "scripts/compare-baseline.sh" ]; then
         bash scripts/compare-baseline.sh "$BASELINE_FILE" "$LATEST_REPORT" "$THRESHOLD"
         COMPARE_STATUS=$?

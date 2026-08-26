@@ -1,8 +1,8 @@
 package simulation;
 
 import static config.Configuration.*;
-import static data.Feeders.*;
 import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -38,6 +38,8 @@ public class ServiceHealthCheckSimulation extends BaseLoadSimulation {
     // Constructor that will trigger the health checks
     public ServiceHealthCheckSimulation() {
         // Set up the simulation with minimal load since we're just testing health checks
-        setUp(healthCheckScenario.injectOpen(atOnceUsers(1))).protocols(HTTP_PROTOCOL);
+        setUp(healthCheckScenario.injectOpen(atOnceUsers(1)))
+                .protocols(HTTP_PROTOCOL)
+                .assertions(global().failedRequests().count().is(0L));
     }
 }

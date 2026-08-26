@@ -48,18 +48,23 @@ public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
     private final ChainBuilder rapidRequests =
             repeat(5)
                     .on(
-                            exec(http("Rapid catalog request")
-                                            .get("/catalog-service/api/catalog")
-                                            .check(status().in(200, 429, 503).saveAs("status")))
+                            exec(session -> session.remove("status"))
+                                    .exec(
+                                            http("Rapid catalog request")
+                                                    .get("/catalog-service/api/catalog")
+                                                    .check(
+                                                            status().saveAs("status"),
+                                                            status().in(200, 429, 503)))
                                     .exec(
                                             session -> {
-                                                int status =
-                                                        Integer.parseInt(
-                                                                session.getString("status"));
-                                                if (status == 429) {
-                                                    rateLimitedCount.incrementAndGet();
-                                                } else if (status == 503) {
-                                                    serviceUnavailableCount.incrementAndGet();
+                                                String statusStr = session.getString("status");
+                                                if (statusStr != null) {
+                                                    int status = Integer.parseInt(statusStr);
+                                                    if (status == 429) {
+                                                        rateLimitedCount.incrementAndGet();
+                                                    } else if (status == 503) {
+                                                        serviceUnavailableCount.incrementAndGet();
+                                                    }
                                                 }
                                                 return session;
                                             })
@@ -67,9 +72,13 @@ public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
 
     // Define a chain to test circuit breaker on error responses
     private final ChainBuilder errorTriggeringRequests =
-            exec(http("Trigger error path")
-                            .get("/catalog-service/api/catalog/error")
-                            .check(status().in(404, 500, 503, 504).saveAs("errorStatus")))
+            exec(session -> session.remove("errorStatus"))
+                    .exec(
+                            http("Trigger error path")
+                                    .get("/catalog-service/api/catalog/error")
+                                    .check(
+                                            status().saveAs("errorStatus"),
+                                            status().in(404, 500, 503, 504)))
                     .pause(Duration.ofMillis(200));
 
     // Define a mixed request pattern using ScenarioBuilders
