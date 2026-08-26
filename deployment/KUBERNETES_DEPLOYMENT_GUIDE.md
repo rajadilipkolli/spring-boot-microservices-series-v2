@@ -2,6 +2,117 @@
 
 This guide describes how to deploy the Spring Boot microservices on Kubernetes using Kind, Minikube, or another Kubernetes cluster.
 
+---
+
+## 🗺️ Understanding Kubernetes – A Simple Overview
+
+> **No prior Kubernetes knowledge required.** This section explains what Kubernetes is and how it works in plain language, using everyday analogies.
+
+### 🏢 What is Kubernetes?
+
+Think of Kubernetes like the **manager of a large office building**.
+
+- Your **applications** (microservices) are the **employees** doing actual work.
+- **Kubernetes** is the building manager who decides:
+  - Which floor (server) each employee sits on.
+  - What happens when an employee calls in sick (crashes) — hire a replacement immediately.
+  - How many employees are needed when it gets busy (auto-scaling).
+  - Who is allowed through the front door (security / ingress).
+
+Without Kubernetes you would have to manually restart crashed apps, manually move apps between servers, and manually decide how many copies to run. Kubernetes does all of this **automatically**.
+
+---
+
+### 🧱 Key Building Blocks
+
+| Concept                | Plain English Analogy            | What it does in this project                                                             |
+|------------------------|----------------------------------|------------------------------------------------------------------------------------------|
+| **Cluster**            | The whole office building        | A group of computers that run your apps together                                         |
+| **Node**               | A single floor of the building   | One physical or virtual machine in the cluster                                           |
+| **Pod**                | One desk on a floor              | The smallest unit — holds one running app container                                      |
+| **Deployment**         | HR policy for a team             | Declares how many copies of an app should run and keeps them healthy                     |
+| **StatefulSet**        | A department with assigned desks | Like a Deployment, but for apps that need a stable identity (e.g. Kafka, databases)      |
+| **Service**            | The internal phone directory     | Gives each app a stable address so other apps can find it                                |
+| **Ingress**            | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app                  |
+| **Namespace**          | A separate wing of the building  | Logical boundary to group related resources — all retailstore apps live in `retailstore` |
+| **ConfigMap / Secret** | Employee handbook / safe         | ConfigMap stores non-sensitive configuration values; Secret stores sensitive values such as passwords and API keys |
+
+---
+
+### 🏗️ How the Retail Store Fits Together
+
+Here is how a customer's web request travels through the system:
+
+```
+Browser / curl
+     │
+     ▼
+┌─────────────────────────────────────┐
+│           NGINX Ingress             │  ← Front door: routes api.retailstore.local
+│         (api.retailstore.local)     │    to the right service
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌──────────────────────────┐
+│       API Gateway        │  ← Reception desk: decides which service
+│       (port 8765)        │    should handle the request
+└──┬──────┬──────┬─────────┘
+   │      │      │
+   ▼      ▼      ▼
+Catalog  Inventory  Order  ← The actual worker services
+Service  Service    Service
+   │                  │
+   │     ┌────────────┘
+   ▼     ▼
+ Kafka (message bus)  ← Like an internal memo system between services
+   │
+   ▼
+Payment Service       ← Reacts to order events asynchronously
+```
+
+Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address.
+
+---
+
+### 🔄 What Happens When Something Goes Wrong?
+
+Kubernetes is **self-healing**:
+
+1. A Pod crashes → Kubernetes automatically starts a replacement within seconds.
+2. A Node (machine) dies → Kubernetes reschedules all Pods onto healthy Nodes.
+3. Load spikes → (with autoscaling enabled) Kubernetes adds more Pod copies automatically.
+
+This means the retail store can survive individual failures without manual intervention.
+
+---
+
+### 📦 Namespaces Used in This Project
+
+| Namespace       | Purpose                                                                                                          |
+|-----------------|------------------------------------------------------------------------------------------------------------------|
+| `retailstore`   | All application services (catalog, order, payment, etc.) and infrastructure (Kafka, PostgreSQL, Redis, Keycloak) |
+| `ingress-nginx` | The NGINX Ingress Controller that handles external HTTP traffic                                                  |
+
+---
+
+### 🗂️ Directory Layout at a Glance
+
+```
+deployment/k8s/
+├── base/          # Core manifests shared by all environments
+├── overlays/
+│   ├── dev/       # Local development tweaks
+│   ├── ci/        # CI/CD-specific settings (image pull policy, replica counts)
+│   ├── prod/      # Production settings (TLS, higher replica counts)
+│   ├── observability/  # Tracing & metrics stack
+│   └── autoscaling/    # Horizontal Pod Autoscalers
+```
+
+**Kustomize** is the tool that combines the `base` with an `overlay` to produce the final set of manifests for a given environment — no template engines needed.
+
+---
+
+
 ## Prerequisites
 
 - **Docker**: Required by Kind.
@@ -136,3 +247,9 @@ GitHub Actions run. It contains:
 Start with pod phases and events, then inspect matching rollout files, describe
 output, and logs for probe failures, image errors, OOMKills, or config and
 service-discovery startup failures.
+
+## 5. Kafka Topic Inspection
+
+| Command                                                                                                                          | Purpose                                                                                                                                                                                                          |
+|----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `kubectl exec kafka-0 -n retailstore -- bin/kafka-topics.sh --describe --topic __consumer_offsets --bootstrap-server kafka:9092` | Show detailed description (partitions, replication factor, ISR, etc.) for the `__consumer_offsets` internal topic. Useful for verifying that the replication factor matches the Kafka StatefulSet replica count. |

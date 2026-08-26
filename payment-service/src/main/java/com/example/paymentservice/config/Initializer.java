@@ -26,35 +26,42 @@ class Initializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
-        if (this.customerRepository.count() > 0) {
-            log.info("Database already initialized.");
-            return;
-        }
         SecureRandom secureRandom = new SecureRandom();
         Faker faker = new Faker();
         List<Customer> customerList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
-            int count = secureRandom.nextInt(1000);
+            int randomNumber = secureRandom.nextInt(10_000);
             Customer customer =
                     new Customer()
                             .setName(faker.name().fullName())
-                            .setEmail(faker.name().lastName() + "@gmail.com")
+                            .setEmail(faker.name().lastName() + i + "@gmail.com")
                             .setAddress(faker.address().fullAddress())
                             .setPhone(faker.phoneNumber().phoneNumber())
-                            .setAmountAvailable(count)
+                            .setAmountAvailable(randomNumber)
                             .setAmountReserved(0);
             customerList.add(customer);
         }
-        Customer retailCustomer =
-                new Customer()
-                        .setName("retail")
-                        .setEmail("retail@gmail.com")
-                        .setAddress(faker.address().fullAddress())
-                        .setPhone(faker.phoneNumber().phoneNumber())
-                        .setAmountAvailable(secureRandom.nextInt(1000))
-                        .setAmountReserved(0);
-        customerList.add(retailCustomer);
+
         // Using BatchMode to save Entities
         this.customerRepository.saveAll(customerList);
+
+        // Save retail customer separately with conflict handling
+        if (this.customerRepository.findByEmail("retail@gmail.com").isEmpty()) {
+            try {
+                Customer retailCustomer =
+                        new Customer()
+                                .setName("retail")
+                                .setEmail("retail@gmail.com")
+                                .setAddress(faker.address().fullAddress())
+                                .setPhone(faker.phoneNumber().phoneNumber())
+                                .setAmountAvailable(secureRandom.nextInt(100_000))
+                                .setAmountReserved(0);
+                this.customerRepository.save(retailCustomer);
+            } catch (Exception e) {
+                // Handle race condition - another instance may have created the retail customer
+                log.debug(
+                        "Retail customer already exists (concurrent creation): {}", e.getMessage());
+            }
+        }
     }
 }

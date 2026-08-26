@@ -8,11 +8,10 @@ scrape_configs:
         labels:
           application: 'prometheus'
   - job_name: 'otel-collector'
+    honor_labels: true
     scrape_interval: 2s
     static_configs:
       - targets: [ 'otel-collector:8889' ]
-        labels:
-          application: 'otel-collector'
   - job_name: 'keycloak'
     scrape_interval: 2s
     metrics_path: '/metrics'
