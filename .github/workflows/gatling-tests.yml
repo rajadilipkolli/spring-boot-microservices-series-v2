@@ -77,33 +77,29 @@ jobs:
       - name: Update baseline on main branch
         if: success() && github.ref == 'refs/heads/main'
         run: |
-          LATEST_LOG=$(find target/gatling -name "simulation.log" -printf '%T@ %p\n' 2>/dev/null \
+          LATEST_HTML=$(find target/gatling -name "index.html" -printf '%T@ %p\n' 2>/dev/null \
             | sort -nr | head -n1 | awk '{print $2}')
-          if [[ -z "${LATEST_LOG}" ]]; then
-            echo "No simulation.log found; skipping baseline update."
+          if [[ -z "${LATEST_HTML}" ]]; then
+            echo "No index.html found; skipping baseline update."
             exit 0
           fi
-          python3 - "${LATEST_LOG}" > docs/baselines/main-baseline.json <<'PYEOF'
-          import sys, json, statistics
-          log_file = sys.argv[1]
-          response_times = []
-          with open(log_file, encoding="utf-8", errors="replace") as f:
-              for line in f:
-                  parts = line.rstrip().split("\t")
-                  if len(parts) >= 7 and parts[0] == "REQUEST":
-                      try:
-                          start_ms = int(parts[4]); end_ms = int(parts[5]); status = parts[6].strip()
-                          if status == "OK":
-                              response_times.append(end_ms - start_ms)
-                      except (ValueError, IndexError):
-                          continue
-          if not response_times:
+          python3 - "${LATEST_HTML}" > docs/baselines/main-baseline.json <<'PYEOF'
+          import sys, json, re
+          with open(sys.argv[1], 'r', encoding='utf-8', errors="replace") as f: html = f.read()
+          cols = {}
+          for i in range(2, 15):
+              m = re.search(r'<td class="value [a-z]+ col-' + str(i) + r'">([\d\.]+)</td>', html)
+              if m: cols[i] = m.group(1)
+          ok_count = int(cols.get(3, 0))
+          if ok_count == 0:
               print(json.dumps({})); sys.exit(0)
-          response_times.sort()
-          def pct(d, p):
-              k=(len(d)-1)*p/100.0; f=int(k); c=min(f+1,len(d)-1)
-              return d[f]+(d[c]-d[f])*(k-f)
-          print(json.dumps({"sample_count":len(response_times),"mean_ms":round(statistics.mean(response_times),1),"p50_ms":round(pct(response_times,50),1),"p95_ms":round(pct(response_times,95),1),"p99_ms":round(pct(response_times,99),1)},indent=2))
+          print(json.dumps({
+              "sample_count": int(cols.get(2, 0)),
+              "mean_ms": float(cols.get(13, 0)),
+              "p50_ms": float(cols.get(8, 0)),
+              "p95_ms": float(cols.get(10, 0)),
+              "p99_ms": float(cols.get(11, 0))
+          }, indent=2))
           PYEOF
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"

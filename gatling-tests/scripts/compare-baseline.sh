@@ -33,64 +33,53 @@ require() {
 require python3
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Locate the latest simulation.log
+# Locate the latest index.html
 # ─────────────────────────────────────────────────────────────────────────────
-LATEST_LOG=$(find "${RESULTS_DIR}" -name "simulation.log" -printf '%T@ %p\n' 2>/dev/null \
+LATEST_HTML=$(find "${RESULTS_DIR}" -name "index.html" -printf '%T@ %p\n' 2>/dev/null \
     | sort -nr | head -n1 | awk '{print $2}')
 
-if [[ -z "${LATEST_LOG}" ]]; then
-    log_error "No simulation.log found under ${RESULTS_DIR}"
+if [[ -z "${LATEST_HTML}" ]]; then
+    log_error "No index.html found under ${RESULTS_DIR}"
     exit 1
 fi
 
-log_info "Parsing: ${LATEST_LOG}"
+log_info "Parsing: ${LATEST_HTML}"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Extract global stats from simulation.log using Python
-# The log format uses lines like:
-#   REQUEST\t\t<name>\t<start_ms>\t<end_ms>\t<status>\t<message>
+# Extract global stats from index.html using Python
+# Gatling 3.10+ uses a binary simulation.log, so we must parse the HTML report.
 # ─────────────────────────────────────────────────────────────────────────────
-CURRENT_JSON=$(python3 - "${LATEST_LOG}" <<'PYEOF'
-import sys, json, statistics
+CURRENT_JSON=$(python3 - "${LATEST_HTML}" <<'PYEOF'
+import sys, json, re
 
-log_file = sys.argv[1]
-response_times = []
+html_file = sys.argv[1]
+with open(html_file, 'r', encoding='utf-8', errors="replace") as f:
+    html = f.read()
 
-with open(log_file, encoding="utf-8", errors="replace") as f:
-    for line in f:
-        parts = line.rstrip().split("\t")
-        # REQUEST lines: parts[0]=="REQUEST", parts[4]==start_ms, parts[5]==end_ms, parts[6]==OK/KO
-        if len(parts) >= 7 and parts[0] == "REQUEST":
-            try:
-                start_ms = int(parts[4])
-                end_ms   = int(parts[5])
-                status   = parts[6].strip()
-                if status == "OK":
-                    response_times.append(end_ms - start_ms)
-            except (ValueError, IndexError):
-                continue
+cols = {}
+for i in range(2, 15):
+    m = re.search(r'<td class="value [a-z]+ col-' + str(i) + r'">([\d\.]+)</td>', html)
+    if m:
+        cols[i] = m.group(1)
 
-if not response_times:
+data = {
+    "sample_count": int(cols.get(2, 0)),
+    "mean_ms": float(cols.get(13, 0)),
+    "p50_ms": float(cols.get(8, 0)),
+    "p95_ms": float(cols.get(10, 0)),
+    "p99_ms": float(cols.get(11, 0)),
+    "ok_count": int(cols.get(3, 0))
+}
+
+if data["ok_count"] == 0 and data["sample_count"] > 0:
     print(json.dumps({"error": "no_ok_requests"}))
     sys.exit(1)
+elif data["sample_count"] == 0:
+    print(json.dumps({}))
+    sys.exit(0)
 
-response_times.sort()
-n = len(response_times)
-
-def percentile(data, p):
-    k = (len(data) - 1) * p / 100.0
-    f = int(k)
-    c = min(f + 1, len(data) - 1)
-    return data[f] + (data[c] - data[f]) * (k - f)
-
-result = {
-    "sample_count": n,
-    "mean_ms":      round(statistics.mean(response_times), 1),
-    "p50_ms":       round(percentile(response_times, 50), 1),
-    "p95_ms":       round(percentile(response_times, 95), 1),
-    "p99_ms":       round(percentile(response_times, 99), 1),
-}
-print(json.dumps(result, indent=2))
+del data["ok_count"]
+print(json.dumps(data, indent=2))
 PYEOF
 )
 
