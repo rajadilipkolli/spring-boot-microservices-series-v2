@@ -56,7 +56,7 @@ import sys, json, statistics
 log_file = sys.argv[1]
 response_times = []
 
-with open(log_file, encoding="utf-8") as f:
+with open(log_file, encoding="utf-8", errors="replace") as f:
     for line in f:
         parts = line.rstrip().split("\t")
         # REQUEST lines: parts[0]=="REQUEST", parts[4]==start_ms, parts[5]==end_ms, parts[6]==OK/KO

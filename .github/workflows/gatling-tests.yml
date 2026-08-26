@@ -87,7 +87,7 @@ jobs:
           import sys, json, statistics
           log_file = sys.argv[1]
           response_times = []
-          with open(log_file, encoding="utf-8") as f:
+          with open(log_file, encoding="utf-8", errors="replace") as f:
               for line in f:
                   parts = line.rstrip().split("\t")
                   if len(parts) >= 7 and parts[0] == "REQUEST":
