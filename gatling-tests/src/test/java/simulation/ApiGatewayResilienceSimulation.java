@@ -50,7 +50,7 @@ public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
                     .on(
                             exec(http("Rapid catalog request")
                                             .get("/catalog-service/api/catalog")
-                                            .check(status().saveAs("status")))
+                                            .check(status().in(200, 429, 503).saveAs("status")))
                                     .exec(
                                             session -> {
                                                 int status =
@@ -69,7 +69,7 @@ public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
     private final ChainBuilder errorTriggeringRequests =
             exec(http("Trigger error path")
                             .get("/catalog-service/api/catalog/error")
-                            .check(status().saveAs("errorStatus")))
+                            .check(status().in(404, 500, 503, 504).saveAs("errorStatus")))
                     .pause(Duration.ofMillis(200));
 
     // Define a mixed request pattern using ScenarioBuilders

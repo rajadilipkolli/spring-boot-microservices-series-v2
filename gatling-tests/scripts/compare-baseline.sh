@@ -72,7 +72,7 @@ with open(log_file, encoding="utf-8") as f:
 
 if not response_times:
     print(json.dumps({"error": "no_ok_requests"}))
-    sys.exit(0)
+    sys.exit(1)
 
 response_times.sort()
 n = len(response_times)
@@ -114,7 +114,7 @@ cat "${BASELINE_FILE}"
 # ─────────────────────────────────────────────────────────────────────────────
 # Compare metrics; fail if any key metric degrades beyond threshold
 # ─────────────────────────────────────────────────────────────────────────────
-REGRESSION_DETECTED=$(python3 - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
+if REGRESSION_DETECTED=$(python3 - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
 import sys, json
 
 baseline_file = sys.argv[1]
@@ -149,9 +149,12 @@ else:
     print("\nAll metrics within threshold. No regression.")
     sys.exit(0)
 PYEOF
-)
+); then
+    COMPARE_EXIT=0
+else
+    COMPARE_EXIT=$?
+fi
 
-COMPARE_EXIT=$?
 echo "${REGRESSION_DETECTED}"
 
 if [[ ${COMPARE_EXIT} -ne 0 ]]; then

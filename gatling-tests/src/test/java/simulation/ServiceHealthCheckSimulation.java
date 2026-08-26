@@ -38,6 +38,6 @@ public class ServiceHealthCheckSimulation extends BaseLoadSimulation {
     // Constructor that will trigger the health checks
     public ServiceHealthCheckSimulation() {
         // Set up the simulation with minimal load since we're just testing health checks
-        setUp(healthCheckScenario.injectOpen(atOnceUsers(1)));
+        setUp(healthCheckScenario.injectOpen(atOnceUsers(1))).protocols(HTTP_PROTOCOL);
     }
 }

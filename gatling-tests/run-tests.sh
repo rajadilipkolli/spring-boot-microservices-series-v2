@@ -98,9 +98,8 @@ echo "All services are healthy. Proceeding with tests."
 
 echo "Warming up services via API Gateway /api/v1/generate endpoint..."
 BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
-if ! curl -X POST -f -m 120 -s -k -H "Idempotency-Key: ${BATCH_ID}" "${BASE_URL}/api/v1/generate?batchSize=10" > /dev/null 2>&1; then
-    echo "ERROR: Warm-up request failed. Aborting."
-    exit 1
+if ! curl -v -X POST -f -m 120 --retry 3 --retry-connrefused --retry-delay 5 -k -H "Idempotency-Key: ${BATCH_ID}" "${BASE_URL}/api/v1/generate?batchSize=10"; then
+    echo "WARNING: Warm-up request failed or timed out. Proceeding with tests anyway."
 fi
 echo "Sleeping for 10 sec for warmup processing to complete..."
 sleep 10
@@ -159,3 +158,20 @@ if [ $STATUS -ne 0 ]; then
     echo "Gatling tests failed with status $STATUS"
     exit $STATUS
 fi
+
+if [ -n "$LATEST_REPORT" ]; then
+    BASELINE_FILE="baselines/${TEST_PROFILE}.json"
+    THRESHOLD=10.0
+    echo "Running performance regression check..."
+    if [ -f "scripts/compare-baseline.sh" ]; then
+        bash scripts/compare-baseline.sh "$BASELINE_FILE" "$LATEST_REPORT" "$THRESHOLD"
+        COMPARE_STATUS=$?
+        if [ $COMPARE_STATUS -ne 0 ]; then
+            echo "Performance regression detected! (Exit $COMPARE_STATUS)"
+            exit $COMPARE_STATUS
+        fi
+    else
+        echo "Warning: scripts/compare-baseline.sh not found, skipping regression check."
+    fi
+fi
+
