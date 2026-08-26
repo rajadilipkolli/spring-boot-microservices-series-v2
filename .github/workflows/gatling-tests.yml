@@ -49,7 +49,13 @@ jobs:
         run: |
           echo "Running Gatling tests via run-tests.sh"
           chmod +x ./run-tests.sh || true
-          ./run-tests.sh
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Running smoke test tier for PR"
+            ./run-tests.sh --profile quick --users 1 --duration 10
+          else
+            echo "Running full test tier for push"
+            ./run-tests.sh
+          fi
 
       - name: Upload Gatling Reports
         if: always()
@@ -57,3 +63,58 @@ jobs:
         with:
           name: gatling-reports
           path: gatling-tests/target/gatling/
+
+      - name: Compare against performance baseline
+        if: success()
+        run: |
+          chmod +x ./scripts/compare-baseline.sh
+          ./scripts/compare-baseline.sh \
+            docs/baselines/main-baseline.json \
+            target/gatling \
+            15
+        shell: bash
+
+      - name: Update baseline on main branch
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          LATEST_LOG=$(find target/gatling -name "simulation.log" -printf '%T@ %p\n' 2>/dev/null \
+            | sort -nr | head -n1 | awk '{print $2}')
+          if [[ -z "${LATEST_LOG}" ]]; then
+            echo "No simulation.log found; skipping baseline update."
+            exit 0
+          fi
+          python3 - "${LATEST_LOG}" > docs/baselines/main-baseline.json <<'PYEOF'
+          import sys, json, statistics
+          log_file = sys.argv[1]
+          response_times = []
+          with open(log_file, encoding="utf-8") as f:
+              for line in f:
+                  parts = line.rstrip().split("\t")
+                  if len(parts) >= 7 and parts[0] == "REQUEST":
+                      try:
+                          start_ms = int(parts[4]); end_ms = int(parts[5]); status = parts[6].strip()
+                          if status == "OK":
+                              response_times.append(end_ms - start_ms)
+                      except (ValueError, IndexError):
+                          continue
+          if not response_times:
+              print(json.dumps({})); sys.exit(0)
+          response_times.sort()
+          def pct(d, p):
+              k=(len(d)-1)*p/100.0; f=int(k); c=min(f+1,len(d)-1)
+              return d[f]+(d[c]-d[f])*(k-f)
+          print(json.dumps({"sample_count":len(response_times),"mean_ms":round(statistics.mean(response_times),1),"p50_ms":round(pct(response_times,50),1),"p95_ms":round(pct(response_times,95),1),"p99_ms":round(pct(response_times,99),1)},indent=2))
+          PYEOF
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/baselines/main-baseline.json
+          if git diff --staged --quiet; then
+            echo "Baseline unchanged."
+          else
+            git commit -m "perf: update performance baseline [skip ci]"
+            git push
+          fi
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

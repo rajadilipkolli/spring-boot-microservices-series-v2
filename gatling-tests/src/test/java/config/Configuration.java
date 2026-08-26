@@ -17,6 +17,20 @@ public class Configuration {
     public static final int TEST_DURATION_SECONDS = config.getInt("simulation.load.testDuration");
     public static final int BURST_USERS_PER_SEC = config.getInt("simulation.load.burstUsersPerSec");
 
+    // SLAs
+    public static final int SLA_MEAN_MS = config.getInt("simulation.sla.meanMs");
+    public static final int SLA_P95_MS = config.getInt("simulation.sla.p95Ms");
+    public static final int SLA_P99_MS = config.getInt("simulation.sla.p99Ms");
+    public static final int SLA_STRESS_MEAN_MS = config.getInt("simulation.sla.stressMeanMs");
+    public static final int SLA_STRESS_P95_MS = config.getInt("simulation.sla.stressP95Ms");
+    public static final int SLA_STRESS_P99_MS = config.getInt("simulation.sla.stressP99Ms");
+    public static final int SLA_RESILIENCE_P95_MS = config.getInt("simulation.sla.resilienceP95Ms");
+    public static final int SLA_GATEWAY_P99_MS = config.getInt("simulation.sla.gatewayP99Ms");
+    public static final double SLA_MAX_ERROR_PERCENT =
+            config.getDouble("simulation.sla.maxErrorPercent");
+    public static final double SLA_MIN_SUCCESS_PERCENT =
+            config.getDouble("simulation.sla.minSuccessPercent");
+
     public static final HttpProtocolBuilder HTTP_PROTOCOL =
             http.baseUrl(BASE_URL)
                     .acceptHeader("application/json")

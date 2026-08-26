@@ -59,14 +59,10 @@
                 <artifactId>gatling-maven-plugin</artifactId>
                 <version>${gatling-plugin.version}</version>
                 <configuration>
-                    <simulationClass>${gatling.simulationClass}</simulationClass>
                     <jvmArgs>
                         <jvmArg>-Xmx1g</jvmArg>
                         <jvmArg>-Xms512m</jvmArg>
                     </jvmArgs>
-                    <includes>
-                        <include>simulation.*</include>
-                    </includes>
                     <runMultipleSimulations>true</runMultipleSimulations>
                     <!-- Enable more detailed reporting -->
                     <noReports>false</noReports>
@@ -107,9 +103,6 @@
         </profile>
         <profile>
             <id>all</id>
-            <properties>
-                <gatling.simulationClass>simulation.*</gatling.simulationClass>
-            </properties>
         </profile>
         <profile>
             <id>health</id>

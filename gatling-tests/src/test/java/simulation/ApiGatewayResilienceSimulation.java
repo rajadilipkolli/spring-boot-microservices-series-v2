@@ -3,6 +3,7 @@ package simulation;
 import static config.Configuration.*;
 import static data.Feeders.enhancedProductFeeder;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
+import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.rampUsersPerSec;
@@ -12,10 +13,10 @@ import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
+import io.gatling.javaapi.core.Assertion;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.Choice;
 import io.gatling.javaapi.core.ScenarioBuilder;
-import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
@@ -26,7 +27,7 @@ import scenarios.ScenarioBuilders;
  * This simulation tests API Gateway resilience patterns like circuit breakers and rate limiting. It
  * identifies breaking points in the system by generating targeted load patterns.
  */
-public class ApiGatewayResilienceSimulation extends Simulation {
+public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
 
     private static final Logger LOGGER =
             LoggerFactory.getLogger(ApiGatewayResilienceSimulation.class);
@@ -98,31 +99,36 @@ public class ApiGatewayResilienceSimulation extends Simulation {
     public ApiGatewayResilienceSimulation() {
         LOGGER.info("Starting ApiGatewayResilienceSimulation with 3-phase injection profile");
 
-        setUp(
-                        rateLimitingScenario.injectOpen(
-                                rampUsersPerSec(0).to(RATE_LIMIT_RATE).during(RAMP_DURATION),
-                                constantUsersPerSec(RATE_LIMIT_RATE).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(RATE_LIMIT_RATE).to(0).during(RAMP_DURATION)),
-                        circuitBreakerScenario.injectOpen(
-                                rampUsersPerSec(0).to(CIRCUIT_BREAKER_RATE).during(RAMP_DURATION),
-                                constantUsersPerSec(CIRCUIT_BREAKER_RATE).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(CIRCUIT_BREAKER_RATE).to(0).during(RAMP_DURATION)),
-                        mixedLoadScenario.injectOpen(
-                                rampUsersPerSec(0).to(MIXED_LOAD_RATE).during(RAMP_DURATION),
-                                constantUsersPerSec(MIXED_LOAD_RATE).during(SUSTAIN_DURATION),
-                                rampUsersPerSec(MIXED_LOAD_RATE).to(0).during(RAMP_DURATION)))
-                .protocols(HTTP_PROTOCOL)
-                .maxDuration(
-                        RAMP_DURATION
-                                .plus(SUSTAIN_DURATION)
-                                .plus(RAMP_DURATION)
-                                .plus(Duration.ofMinutes(1)))
-                .assertions(
-                        global().responseTime().percentile(99).lt(4000),
-                        global().failedRequests()
-                                .percent()
-                                .is(0.0) // 429/503 are checked as OK, 500s/Timeouts are KO
-                        );
+        this.setUpSimulation(
+                RAMP_DURATION
+                        .plus(SUSTAIN_DURATION)
+                        .plus(RAMP_DURATION)
+                        .plus(Duration.ofMinutes(1)),
+                new Assertion[] {
+                    // P99 latency SLA across all gateway scenarios
+                    global().responseTime().percentile(99).lt(SLA_GATEWAY_P99_MS),
+                    // Rate limiting: rapid requests return 429 which is accepted — no timeouts
+                    // or 500s allowed
+                    details("Rapid catalog request").failedRequests().percent().is(0.0),
+                    // Circuit breaker: error-path requests may return 503 — no true failures
+                    // allowed
+                    details("Trigger error path").failedRequests().percent().is(0.0),
+                    // Mixed load: normal browse/search/inventory — must succeed fully
+                    details("Browse catalog").failedRequests().percent().is(0.0),
+                    details("Get inventory").failedRequests().percent().is(0.0)
+                },
+                rateLimitingScenario.injectOpen(
+                        rampUsersPerSec(0).to(RATE_LIMIT_RATE).during(RAMP_DURATION),
+                        constantUsersPerSec(RATE_LIMIT_RATE).during(SUSTAIN_DURATION),
+                        rampUsersPerSec(RATE_LIMIT_RATE).to(0).during(RAMP_DURATION)),
+                circuitBreakerScenario.injectOpen(
+                        rampUsersPerSec(0).to(CIRCUIT_BREAKER_RATE).during(RAMP_DURATION),
+                        constantUsersPerSec(CIRCUIT_BREAKER_RATE).during(SUSTAIN_DURATION),
+                        rampUsersPerSec(CIRCUIT_BREAKER_RATE).to(0).during(RAMP_DURATION)),
+                mixedLoadScenario.injectOpen(
+                        rampUsersPerSec(0).to(MIXED_LOAD_RATE).during(RAMP_DURATION),
+                        constantUsersPerSec(MIXED_LOAD_RATE).during(SUSTAIN_DURATION),
+                        rampUsersPerSec(MIXED_LOAD_RATE).to(0).during(RAMP_DURATION)));
     }
 
     @Override
