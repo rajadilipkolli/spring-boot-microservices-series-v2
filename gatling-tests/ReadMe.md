@@ -1,10 +1,10 @@
 # Gatling Performance Tests Suite for Microservices
 
-This module contains a modernized Gatling performance testing suite designed for high-concurrency validation of the Spring Boot microservices architecture.
+This module contains a Gatling performance testing suite designed for high-concurrency validation of the Spring Boot microservices architecture.
 
 ## Overview
 
-The test suite has been refactored to use a **three-phase injection profile** (Ramp-up, Steady-state, Ramp-down) and centralized lifecycle management. All simulations now perform pre-flight health checks and data initialization in the `before()` hook, ensuring a stable environment for performance measurements.
+The test suite uses a **three-phase injection profile** (Ramp-up, Steady-state, Ramp-down). All pre-flight health checks and the service warm-up request are handled by the `run-tests.sh` (or `run-tests.ps1`) orchestration scripts before Gatling starts, ensuring a stable environment for performance measurements.
 
 ## Prerequisites
 
@@ -15,12 +15,12 @@ The test suite has been refactored to use a **three-phase injection profile** (R
 
 ## Available Simulations
 
-| Simulation | Description | Use Case |
-|------------|-------------|----------|
-| `CreateProductSimulation` | Single-user end-to-end workflow validation. | Verifies core business logic: Create Product -> Get Product -> Update Inventory -> Place Order. |
-| `StressTestSimulation` | High-load multi-path user journey testing. | Simulates realistic user behavior including browsing, searching, and purchasing under heavy load. |
-| `ResilienceTestSimulation` | Service resilience and error handling. | Tests how the system handles invalid data and high concurrency on shared resources. |
-| `ApiGatewayResilienceSimulation` | Gateway-level resilience patterns. | Specifically targets rate limiting and circuit breaker behavior at the API Gateway level. |
+| Simulation                       | Description                                 | Use Case                                                                                          |
+|----------------------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `CreateProductSimulation`        | Single-user end-to-end workflow validation. | Verifies core business logic: Create Product -> Get Product -> Update Inventory -> Place Order.   |
+| `StressTestSimulation`           | High-load multi-path user journey testing.  | Simulates realistic user behavior including browsing, searching, and purchasing under heavy load. |
+| `ResilienceTestSimulation`       | Service resilience and error handling.      | Tests how the system handles invalid data and high concurrency on shared resources.               |
+| `ApiGatewayResilienceSimulation` | Gateway-level resilience patterns.          | Specifically targets rate limiting and circuit breaker behavior at the API Gateway level.         |
 
 ## Load Profiles
 
@@ -34,14 +34,13 @@ All simulations follow a standard three-phase load pattern to provide reliable a
 
 The following properties can be customized via Maven system properties. Note that the **runner scripts** (`run-tests.sh` and `run-tests.ps1`) provide their own high-load defaults, which override the baseline defaults defined in the Java code.
 
-| Property | Description | Script Default | Simulation Default |
-|----------|-------------|----------------|-------------------|
-| `baseUrl` | Base URL for the API Gateway | `http://localhost:8765` | `http://localhost:8765` |
-| `constantUsers` | Target users per second during steady-state | `50` | `10` |
-| `rampDuration` | Duration of ramp-up phase (seconds) | `30` | `30` |
-| `testDuration` | Duration of steady-state phase (seconds) | `300` | `60` |
-| `burstUsersPerSec` | Target rate for API Gateway tests | `50` | `30` |
-| `kafkaInitDelay` | Delay for Kafka initialization (seconds) | `N/A` | `10` |
+| Property           | Description                                 | Script Default          | Simulation Default      |
+|--------------------|---------------------------------------------|-------------------------|-------------------------|
+| `baseUrl`          | Base URL for the API Gateway                | `http://localhost:8765` | `http://localhost:8765` |
+| `constantUsers`    | Target users per second during steady-state | `50`                    | `10`                    |
+| `rampDuration`     | Duration of ramp-up phase (seconds)         | `30`                    | `30`                    |
+| `testDuration`     | Duration of steady-state phase (seconds)    | `300`                   | `60`                    |
+| `burstUsersPerSec` | Target rate for API Gateway tests           | `50`                    | `30`                    |
 
 ## Running the Tests
 
@@ -90,9 +89,9 @@ Common causes:
 - Database connection issues (check microservice logs).
 
 ### Kafka Initialization Issues
-The `ResilienceTestSimulation` and `CreateProductSimulation` perform a warm-up request in the `before()` hook to initialize Kafka topics. If you see timeouts in the first few requests of a run:
+The warm-up `POST /api/v1/generate` call in `run-tests.sh` initialises Kafka topics before Gatling starts. If you see timeouts in the first few requests of a run:
 - Ensure Kafka/Zookeeper containers are healthy.
-- Check the `warmUpKafka()` implementation in `ResilienceTestSimulation.java` or `CreateProductSimulation.java` and increase the sleep duration if necessary (or update the `kafkaInitDelay` system property).
+- Increase the `sleep 10` delay after the warm-up call in `run-tests.sh` if Kafka is slow to initialise.
 
 ### High Error Rate (503/504)
 During `StressTestSimulation`, 503 (Service Unavailable) or 504 (Gateway Timeout) errors are often intentional indicators of system capacity limits. Check the Gatling reports for the specific bottleneck.

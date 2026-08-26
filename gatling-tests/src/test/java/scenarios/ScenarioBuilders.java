@@ -32,7 +32,11 @@ public class ScenarioBuilders {
                         .asJson()
                         .check(status().is(201))
                         .check(header("location").saveAs("productLocation")))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(2000, 5000)));
     }
 
     /** Chain to retrieve product details by product code. */
@@ -40,7 +44,11 @@ public class ScenarioBuilders {
         return exec(http("Get product detail")
                         .get("/catalog-service/api/catalog/product-code/#{productCode}")
                         .check(status().is(200)))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(500, 2000)));
     }
 
     /** Chain to update inventory for a product. */
@@ -57,7 +65,11 @@ public class ScenarioBuilders {
             """))
                         .asJson()
                         .check(status().is(200)))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(2000, 5000)));
     }
 
     /** Chain to create a new order. */
@@ -70,8 +82,10 @@ public class ScenarioBuilders {
             {
               "customerId": #{customerId},
               "deliveryAddress": {
-                "street": "#{street}",
+                "addressLine1": "#{street}",
+                "addressLine2": "",
                 "city": "#{city}",
+                "state": "TS",
                 "zipCode": "#{zipCode}",
                 "country": "#{country}"
               },
@@ -86,7 +100,11 @@ public class ScenarioBuilders {
             """))
                         .asJson()
                         .check(status().is(201)))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(2000, 5000)));
     }
 
     /** Chain to browse the product catalog. */
@@ -94,7 +112,11 @@ public class ScenarioBuilders {
         return exec(http("Browse catalog")
                         .get("/catalog-service/api/catalog?pageNo=0&pageSize=10")
                         .check(status().is(200)))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(500, 2000)));
     }
 
     /** Chain to search for products. */
@@ -102,6 +124,10 @@ public class ScenarioBuilders {
         return exec(http("Search products")
                         .get("/catalog-service/api/catalog/search?term=product")
                         .check(status().is(200)))
-                .pause(Duration.ofSeconds(1), Duration.ofSeconds(3));
+                .pause(
+                        session ->
+                                Duration.ofMillis(
+                                        java.util.concurrent.ThreadLocalRandom.current()
+                                                .nextLong(500, 2000)));
     }
 }

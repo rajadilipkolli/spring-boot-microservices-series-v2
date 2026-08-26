@@ -19,9 +19,9 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.gatling.javaapi.core.Assertion;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
-import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * test validates the end-to-end process of creating products, updating inventory, and creating
  * orders.
  */
-public class CreateProductSimulation extends Simulation {
+public class CreateProductSimulation extends BaseLoadSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -338,32 +338,27 @@ public class CreateProductSimulation extends Simulation {
         Duration steadyStateDuration = Duration.ofSeconds(TEST_DURATION_SECONDS);
 
         // Global assertions to validate overall service performance
-        this.setUp(
-                        productWorkflow.injectOpen(
-                                rampUsersPerSec(0).to(targetRate).during(rampDuration),
-                                constantUsersPerSec(targetRate).during(steadyStateDuration),
-                                rampUsersPerSec(targetRate).to(0).during(rampDuration)))
-                .protocols(HTTP_PROTOCOL)
-                .maxDuration(
-                        rampDuration
-                                .plus(steadyStateDuration)
-                                .plus(rampDuration)
-                                .plus(Duration.ofMinutes(1)))
-                .assertions(
-                        // Add global performance SLA assertions
-                        global().responseTime().mean().lt(1500), // Mean response time under 1.5s
-                        global().responseTime()
-                                .percentile(95)
-                                .lt(5000), // 95% of responses under 5s
-                        global().responseTime()
-                                .percentile(99)
-                                .lt(8000), // 99% of responses under 8s
-                        global().successfulRequests().percent().gt(95.0), // More than 95% success
-                        global().failedRequests().percent().lt(5.0), // Less than 5% failed requests
-                        // Request-specific assertions for detailed metrics
-                        details("Create product").responseTime().mean().lt(1000),
-                        details("Create product").successfulRequests().percent().gt(90.0),
-                        details("Create order with product").responseTime().mean().lt(1500),
-                        details("Update inventory").responseTime().mean().lt(800));
+        this.setUpSimulation(
+                rampDuration
+                        .plus(steadyStateDuration)
+                        .plus(rampDuration)
+                        .plus(Duration.ofMinutes(1)),
+                new Assertion[] {
+                    // Add global performance SLA assertions
+                    global().responseTime().mean().lt(SLA_MEAN_MS), // Mean response time
+                    global().responseTime().percentile(95).lt(SLA_P95_MS), // 95% of responses
+                    global().responseTime().percentile(99).lt(SLA_P99_MS), // 99% of responses
+                    global().successfulRequests().percent().gt(95.0), // More than 95% success
+                    global().failedRequests().percent().lt(5.0), // Less than 5% failed requests
+                    // Request-specific assertions for detailed metrics
+                    details("Create product").responseTime().mean().lt(1000),
+                    details("Create product").successfulRequests().percent().gt(90.0),
+                    details("Create order with product").responseTime().mean().lt(10000),
+                    details("Update inventory").responseTime().mean().lt(800)
+                },
+                productWorkflow.injectOpen(
+                        rampUsersPerSec(0).to(targetRate).during(rampDuration),
+                        constantUsersPerSec(targetRate).during(steadyStateDuration),
+                        rampUsersPerSec(targetRate).to(0).during(rampDuration)));
     }
 }

@@ -49,7 +49,13 @@ jobs:
         run: |
           echo "Running Gatling tests via run-tests.sh"
           chmod +x ./run-tests.sh || true
-          ./run-tests.sh
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Running smoke test tier for PR"
+            ./run-tests.sh --profile quick --users 1 --duration 10
+          else
+            echo "Running full test tier for push"
+            ./run-tests.sh
+          fi
 
       - name: Upload Gatling Reports
         if: always()
@@ -57,3 +63,54 @@ jobs:
         with:
           name: gatling-reports
           path: gatling-tests/target/gatling/
+
+      - name: Compare against performance baseline
+        if: success()
+        run: |
+          chmod +x ./scripts/compare-baseline.sh
+          ./scripts/compare-baseline.sh \
+            docs/baselines/main-baseline.json \
+            target/gatling \
+            15
+        shell: bash
+
+      - name: Update baseline on main branch
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          LATEST_HTML=$(find target/gatling -name "index.html" -printf '%T@ %p\n' 2>/dev/null \
+            | sort -nr | head -n1 | awk '{print $2}')
+          if [[ -z "${LATEST_HTML}" ]]; then
+            echo "No index.html found; skipping baseline update."
+            exit 0
+          fi
+          python3 - "${LATEST_HTML}" > docs/baselines/main-baseline.json <<'PYEOF'
+          import sys, json, re
+          with open(sys.argv[1], 'r', encoding='utf-8', errors="replace") as f: html = f.read()
+          cols = {}
+          for i in range(2, 15):
+              m = re.search(r'<td class="value [a-z]+ col-' + str(i) + r'">([\d\.]+)</td>', html)
+              if m: cols[i] = m.group(1)
+          ok_count = int(cols.get(3, 0))
+          if ok_count == 0:
+              print(json.dumps({})); sys.exit(0)
+          print(json.dumps({
+              "sample_count": int(cols.get(2, 0)),
+              "mean_ms": float(cols.get(13, 0)),
+              "p50_ms": float(cols.get(8, 0)),
+              "p95_ms": float(cols.get(10, 0)),
+              "p99_ms": float(cols.get(11, 0))
+          }, indent=2))
+          PYEOF
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/baselines/main-baseline.json
+          if git diff --staged --quiet; then
+            echo "Baseline unchanged."
+          else
+            git commit -m "perf: update performance baseline [skip ci]"
+            git push
+          fi
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
