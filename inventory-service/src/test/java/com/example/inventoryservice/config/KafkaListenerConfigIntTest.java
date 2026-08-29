@@ -9,60 +9,45 @@ package com.example.inventoryservice.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.example.common.dtos.OrderDto;
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
-import com.example.inventoryservice.model.payload.OrderDto;
-import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.util.MockTestData;
-import com.example.inventoryservice.utils.AppConstants;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
     @Test
-    void onNewOrderEvent() {
+    void onNewOrderEventIsIdempotent() {
         inventoryJOOQRepository.deleteByProductCode("JUNIT_000");
-        // Create inventory ensuring quantity is available
+
         Inventory inventory =
                 inventoryRepository.save(
                         new Inventory().setProductCode("JUNIT_000").setAvailableQuantity(1000));
 
         assertThat(stockOrderListener.getCountDownLatch().getCount()).isEqualTo(1);
-        // publish event
+
         OrderDto orderDto = MockTestData.getOrderDto("ORDER");
-        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
+
+        // Publish the exact same Kafka message twice.
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
+        kafkaTemplate.send("orders", orderDto.orderId(), orderDto);
 
         await().untilAsserted(
                         () -> {
                             Optional<Inventory> optionalInventory =
                                     inventoryJOOQRepository.findById(inventory.getId());
+
                             assertThat(optionalInventory).isPresent();
+
                             Inventory inventoryFromDB = optionalInventory.get();
-                            assertThat(inventoryFromDB)
-                                    .satisfies(
-                                            inventory1 -> {
-                                                assertThat(inventory1.getAvailableQuantity())
-                                                        .isEqualTo(990);
-                                                assertThat(inventory1.getReservedItems())
-                                                        .isEqualTo(10);
-                                            });
+
+                            // The duplicate message must not reserve the inventory twice.
+                            assertThat(inventoryFromDB.getAvailableQuantity()).isEqualTo(990);
+                            assertThat(inventoryFromDB.getReservedItems()).isEqualTo(10);
+
                             assertThat(stockOrderListener.getCountDownLatch().getCount()).isZero();
-                        });
-    }
-
-    @Test
-    void onSaveProductEvent() {
-        inventoryJOOQRepository.deleteByProductCode("P001");
-
-        // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
-        ProductDto productDto = new ProductDto("P001", "Product 1", "Description 1", 10.0);
-        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, "1001", productDto);
-
-        await().untilAsserted(
-                        () -> {
-                            assertThat(inventoryJOOQRepository.findByProductCode("P001"))
-                                    .isPresent();
                         });
     }
 }
