@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -e
+
+ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
+
+echo "Creating namespace first..."
+kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
+
+echo "Applying Strimzi operator explicitly (Operator before Operand)..."
+# Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
+# ensures CRDs exist before Kustomize applies the Kafka cluster resource.
+kubectl apply -f overlays/prod/strimzi-operator.yaml
+
+echo "Applying prod overlay..."
+kubectl apply -k overlays/prod/
+
+echo "Waiting for rollouts..."
+# CloudNativePG does not support 'rollout status' on its custom resources directly,
+# but we can wait for its pod to be ready.
+kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/redis -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+
+# Wait for Kafka (Strimzi) and Keycloak
+echo "Waiting for Kafka and Keycloak..."
+kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+
+echo "Waiting for infrastructure microservices..."
+kubectl rollout status deployment/config-server -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/service-registry -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+
+echo "Waiting for business microservices..."
+for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
+  kubectl rollout status deployment/$svc -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+done
+
+echo "Production Deployment complete."
+echo "Access URLs:"
+echo "Webapp (HTTPS): https://retailstore.local"
+echo "Keycloak (HTTPS): https://keycloak.local"

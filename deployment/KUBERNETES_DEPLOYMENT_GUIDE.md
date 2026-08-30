@@ -191,6 +191,20 @@ To apply the CI overlay directly:
 kubectl apply -k deployment/k8s/overlays/ci/
 ```
 
+### Deploying the Production Overlay
+
+For the `prod` overlay, the data tier leverages Kubernetes Operators for High Availability (CloudNativePG for PostgreSQL and Strimzi for Kafka). Operators must be installed explicitly so their CustomResourceDefinitions (CRDs) are registered before Kustomize attempts to create the custom cluster resources.
+
+To apply the production overlay safely:
+
+```bash
+cd deployment/k8s
+./deploy-prod.sh
+```
+
+**Note on Operator Sequencing (Step 4):**
+The `deploy-prod.sh` script performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
+
 ### Teardown
 
 ```bash
@@ -253,3 +267,7 @@ service-discovery startup failures.
 | Command                                                                                                                          | Purpose                                                                                                                                                                                                          |
 |----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `kubectl exec kafka-0 -n retailstore -- bin/kafka-topics.sh --describe --topic __consumer_offsets --bootstrap-server kafka:9092` | Show detailed description (partitions, replication factor, ISR, etc.) for the `__consumer_offsets` internal topic. Useful for verifying that the replication factor matches the Kafka StatefulSet replica count. |
+
+## Phase 1 Security Hardening & Overlays
+- All base workloads have been hardened to the Pod Security restricted standard.
+- Staging and Prod overlays implement advanced network policies, PDBs, Topology Spread Constraints, Pod Anti-Affinity, and cert-manager configured ingress with HTTPS enforcement.

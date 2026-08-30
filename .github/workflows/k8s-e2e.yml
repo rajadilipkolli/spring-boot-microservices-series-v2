@@ -127,6 +127,38 @@ jobs:
             elapsed=$((elapsed + 5))
           done
 
+
+
+      - name: Validate NetworkPolicy and PDBs
+        run: |
+          set -Eeuo pipefail
+          # Test PDB exists and is healthy
+          kubectl get pdb -n retailstore api-gateway-pdb
+          kubectl get pdb -n retailstore retail-store-webapp-pdb
+          
+          # Verify NetworkPolicies applied
+          kubectl get networkpolicy -n retailstore default-deny-all
+          kubectl get networkpolicy -n retailstore allow-dns-egress
+          
+      - name: Validate Kafka Persistence
+        run: |
+          set -Eeuo pipefail
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
+          
+          echo "Deleting Kafka Pod to test persistence..."
+          kubectl delete pod kafka-0 -n retailstore
+          
+          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
+          kubectl wait --namespace retailstore --for=condition=ready pod/kafka-0 --timeout=300s
+          
+          echo "Verifying Kafka data survived..."
+          result=$(kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
+          if [[ "$result" != *"hello-kafka"* ]]; then
+            echo "Kafka persistence test failed. Did not find message."
+            exit 1
+          else
+            echo "Kafka persistence test passed."
+          fi
       - name: Run E2E Validations
         run: |
           set -Eeuo pipefail
@@ -157,6 +189,32 @@ jobs:
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
 
+
+      - name: Load Test Autoscaling (KEDA/HPA)
+        run: |
+          set -Eeuo pipefail
+          
+          # Optional: Apply autoscaling overlay if not applied in base
+          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+
+          # Send bursts of traffic to trigger lag/CPU load
+          echo "Sending load..."
+          for i in {1..200}; do
+            curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+          done
+          wait
+          
+          # Wait and check if order-service scaled beyond minReplicas (1)
+          echo "Waiting for autoscaler to trigger..."
+          sleep 30
+          
+          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Order service replicas: $replicas"
+          if [ "$replicas" -gt 1 ]; then
+            echo "Autoscaling triggered successfully!"
+          else
+            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+          fi
       - name: Collect Diagnostics
         if: failure()
         run: |

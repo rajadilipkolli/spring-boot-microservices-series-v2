@@ -1,0 +1,53 @@
+﻿apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-service-scaler
+  namespace: retailstore
+spec:
+  scaleTargetRef:
+    name: order-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: kafka.retailstore.svc.cluster.local:9092
+      consumerGroup: order-group
+      topic: orders
+      lagThreshold: "100"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: payment-service-scaler
+  namespace: retailstore
+spec:
+  scaleTargetRef:
+    name: payment-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: kafka.retailstore.svc.cluster.local:9092
+      consumerGroup: payment-group
+      topic: payments
+      lagThreshold: "100"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: inventory-service-scaler
+  namespace: retailstore
+spec:
+  scaleTargetRef:
+    name: inventory-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: kafka.retailstore.svc.cluster.local:9092
+      consumerGroup: inventory-group
+      topic: inventory
+      lagThreshold: "100"

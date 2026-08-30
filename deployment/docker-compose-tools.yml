@@ -4,70 +4,70 @@ services:
   postgresql:
     container_name: postgresql
     image: postgres:18-alpine
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
-      - POSTGRES_USER=appuser
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=appdb
+    - POSTGRES_USER=appuser
+    - POSTGRES_PASSWORD=secret
+    - POSTGRES_DB=appdb
     healthcheck:
       test: "pg_isready -U appuser -d appdb"
       interval: 2s
       timeout: 20s
       retries: 10
     ports:
-      - "5432:5432"
+    - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+    - postgres_data:/var/lib/postgresql
     networks:
-      - microservice-network
+    - microservice-network
 
   pgadmin4:
     container_name: pgadmin4
     image: dpage/pgadmin4
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
-      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
-      - PGADMIN_DEFAULT_PASSWORD=admin
+    - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+    - PGADMIN_DEFAULT_PASSWORD=admin
     ports:
-      - "5050:80"
+    - "5050:80"
     depends_on:
       postgresql:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:80/misc/ping" ]
+      test: ["CMD", "wget", "-O", "/dev/null", "-q", "http://localhost:80/misc/ping"]
       interval: 30s
       timeout: 20s
       retries: 3
       start_period: 30s
     networks:
-      - microservice-network
+    - microservice-network
 
   redis:
     container_name: redis
     image: 'redis:8.10.1-alpine'
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     ports:
-      - '127.0.0.1:6379:6379/tcp'
+    - '127.0.0.1:6379:6379/tcp'
     volumes:
-      - 'redis_data:/data:rw'
+    - 'redis_data:/data:rw'
     healthcheck:
       test: redis-cli ping
       interval: 3s
       timeout: 5s
       retries: 5
     networks:
-      - microservice-network
+    - microservice-network
 
   kafka:
     container_name: kafka
     image: apache/kafka-native:4.3.1
     hostname: broker
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     ports:
-      - "9092:9092"
+    - "9092:9092"
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -89,71 +89,73 @@ services:
       KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
     networks:
-      - microservice-network
+    - microservice-network
 
   kafdrop:
     container_name: kafdrop
     image: obsidiandynamics/kafdrop
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     restart: "no"
     ports:
-      - "19000:9000"
+    - "19000:9000"
     environment:
       KAFKA_BROKERCONNECT: "broker:29092"
     depends_on:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9000"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
     networks:
-      - microservice-network
+    - microservice-network
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.2
-    command: [ 'start', '--import-realm', '--http-port=9191' ]
+    command: ['start', '--import-realm', '--http-port=9191']
     container_name: keycloak
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     hostname: keycloak
     volumes:
-      - ./realm-config:/opt/keycloak/data/import
+    - ./realm-config:/opt/keycloak/data/import
     environment:
       # Admin credentials
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+    - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+    - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
       # ✅ THESE FIX THE REDIRECT ISSUE
-      - KC_HOSTNAME=localhost
-      - KC_HOSTNAME_URL=http://localhost:9191
-      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
-      - KC_PROXY=edge
+    - KC_HOSTNAME=localhost
+    - KC_HOSTNAME_URL=http://localhost:9191
+    - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
+    - KC_PROXY=edge
       # Database configuration for PostgreSQL
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
-      - KC_DB_USERNAME=appuser
-      - KC_DB_PASSWORD=secret
-      - KC_DB_SCHEMA=public
+    - KC_DB=postgres
+    - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+    - KC_DB_USERNAME=appuser
+    - KC_DB_PASSWORD=secret
+    - KC_DB_SCHEMA=public
       # Hostname and HTTP configuration
-      - KC_HOSTNAME_STRICT=false
-      - KC_HOSTNAME_STRICT_HTTPS=false
-      - KC_HTTP_ENABLED=true
+    - KC_HOSTNAME_STRICT=false
+    - KC_HOSTNAME_STRICT_HTTPS=false
+    - KC_HTTP_ENABLED=true
       # Additional production settings
-      - KC_FEATURES=token-exchange
-      - KC_HEALTH_ENABLED=true
-      - KC_METRICS_ENABLED=true
-      - KC_TRACING_ENABLED=true
-      - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
-      - KC_TELEMETRY_PROTOCOL=http/protobuf
-      - KC_TELEMETRY_SERVICE_NAME=keycloak
+    - KC_FEATURES=token-exchange
+    - KC_HEALTH_ENABLED=true
+    - KC_METRICS_ENABLED=true
+    - KC_TRACING_ENABLED=true
+    - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
+    - KC_TELEMETRY_PROTOCOL=http/protobuf
+    - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
-      - "9191:9191"
-      - "9000:9000"
+    - "9191:9191"
+    - "9000:9000"
     healthcheck:
-      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep \"HTTP/1.1 200 OK\" <&3" ]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready
+          HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3;
+          grep \"HTTP/1.1 200 OK\" <&3"]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -166,71 +168,72 @@ services:
         limits:
           memory: 2gb
     networks:
-      - microservice-network
+    - microservice-network
 
   config-server:
     container_name: config-server
     image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "8888:8888"
+    - "8888:8888"
     depends_on:
       tempo:
         condition: service_healthy
       otel-collector:
         condition: service_started
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=config-server
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
-      - SPRING_PROFILES_ACTIVE=native
-      - SPRING_SECURITY_USER_NAME=dockerUser
-      - SPRING_SECURITY_USER_PASSWORD=dockerSecret
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=config-server
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M
+    - SPRING_PROFILES_ACTIVE=native
+    - SPRING_SECURITY_USER_NAME=dockerUser
+    - SPRING_SECURITY_USER_PASSWORD=dockerSecret
     networks:
-      - microservice-network
+    - microservice-network
 
   naming-server:
     container_name: naming-server
     image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "8761:8761"
+    - "8761:8761"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       config-server:
         condition: service_started
       tempo:
         condition: service_healthy
     environment:
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=naming-server
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=naming-server
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   api-gateway:
     container_name: api-gateway
     image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "8765:8765"
+    - "8765:8765"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       config-server:
         condition: service_started
@@ -245,27 +248,28 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - SPRING_DATA_REDIS_HOST=redis
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=api-gateway
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+    - SPRING_PROFILES_ACTIVE=docker
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - SPRING_DATA_REDIS_HOST=redis
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=api-gateway
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   catalog-service:
     container_name: catalog-service
     image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "18080:18080"
+    - "18080:18080"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -278,26 +282,27 @@ services:
       api-gateway:
         condition: service_started
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=catalog-service
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+    - SPRING_PROFILES_ACTIVE=docker
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=catalog-service
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   inventory-service:
     container_name: inventory-service
     image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "18181:18181"
+    - "18181:18181"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -309,28 +314,29 @@ services:
         condition: service_started
     environment:
       # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
-      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=inventory-service
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
+    - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+    - SPRING_PROFILES_ACTIVE= docker
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=inventory-service
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M -Xmx400m
     restart: unless-stopped
 
   order-service:
     container_name: order-service
     image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "18282:18282"
-      - "28282:28282"
+    - "18282:18282"
+    - "28282:28282"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -342,27 +348,28 @@ services:
         condition: service_started
     environment:
       # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
-      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=order-service
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+    - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+    - SPRING_PROFILES_ACTIVE= docker
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=order-service
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   payment-service:
     container_name: payment-service
     image: dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     deploy:
       resources:
         limits:
           memory: 1400m
     ports:
-      - "18085:18085"
+    - "18085:18085"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -374,33 +381,35 @@ services:
         condition: service_started
     environment:
       # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
-      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
-      - SPRING_PROFILES_ACTIVE= docker
-      - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=payment-service
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+    - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+    - SPRING_PROFILES_ACTIVE= docker
+    - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=payment-service
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M
     restart: unless-stopped
 
   retailstore-webapp:
     image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
     container_name: retailstore-webapp
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
-      - OAUTH2_SERVER_URL=http://localhost:9191
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-      - OTEL_SERVICE_NAME=retail-store-webapp
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - KEYCLOAK_ADMIN_USERNAME=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
+    - SPRING_PROFILES_ACTIVE=docker
+    - RETAILSTORE_API_GATEWAY_URL=http://api-gateway:8765
+    - OAUTH2_SERVER_URL=http://localhost:9191
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    - OTEL_SERVICE_NAME=retail-store-webapp
+    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+    - KEYCLOAK_ADMIN_USERNAME=admin
+    - KEYCLOAK_ADMIN_PASSWORD=admin1234
+    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
+      -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
-      - "8080:8080"
+    - "8080:8080"
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       keycloak:
         condition: service_healthy
@@ -435,7 +444,7 @@ services:
   grafana:
     image: grafana/grafana:13.2.0
     container_name: grafana
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     depends_on:
       loki:
         condition: service_started
@@ -444,49 +453,51 @@ services:
       tempo:
         condition: service_healthy
     ports:
-      - "3000:3000"
+    - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=user
-      - GF_SECURITY_ADMIN_PASSWORD=password
+    - GF_SECURITY_ADMIN_USER=user
+    - GF_SECURITY_ADMIN_PASSWORD=password
     volumes:
-      - ./config/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+    - ./config/grafana/provisioning/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3000/api/health || exit 1" ]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=3 --spider http://localhost:3000/api/health
+          || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 30s
     networks:
-      - microservice-network
+    - microservice-network
 
   loki:
     image: grafana/loki:3.7.7
     container_name: loki
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     command: -config.file=/etc/loki/local-config.yaml
     ports:
-      - "3100:3100"
+    - "3100:3100"
     networks:
-      - microservice-network
+    - microservice-network
 
   prometheus:
     image: prom/prometheus:v3.14.0
     container_name: prometheus
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     command:
-      - --web.enable-remote-write-receiver
-      - --config.file=/etc/prometheus/prometheus.yml
+    - --web.enable-remote-write-receiver
+    - --config.file=/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090"
+    - "9090:9090"
     volumes:
-      - ./config/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./config/prometheus/config/alert-rules.yml:/etc/prometheus/alert-rules.yml
+    - ./config/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+    - ./config/prometheus/config/alert-rules.yml:/etc/prometheus/alert-rules.yml
     networks:
-      - microservice-network
+    - microservice-network
     healthcheck:
-      test: [ "CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || wget --spider -q http://localhost:9090/-/ready || exit 1" ]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || wget
+          --spider -q http://localhost:9090/-/ready || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -495,32 +506,32 @@ services:
   tempo:
     image: grafana/tempo:3.0.3
     container_name: tempo
-    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    extra_hosts: ['host.docker.internal:host-gateway']
     command: -config.file /etc/tempo-config.yml
     ports:
-      - "3110:3100" # Tempo
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-      - "9411:9411" # Zipkin
+    - "3110:3100"   # Tempo
+    - "4317:4317"   # OTLP gRPC
+    - "4318:4318"   # OTLP HTTP
+    - "9411:9411"   # Zipkin
     volumes:
-      - ./config/tempo/tempo.yml:/etc/tempo-config.yml
+    - ./config/tempo/tempo.yml:/etc/tempo-config.yml
     networks:
-      - microservice-network
+    - microservice-network
     healthcheck:
-      test: [ "CMD", "/tempo", "-version" ]
+      test: ["CMD", "/tempo", "-version"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
-      
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.159.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
-      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    - ./otel-collector-config.yml:/etc/otel-collector-config.yml
     networks:
-      - microservice-network
+    - microservice-network
     depends_on:
       grafana:
         condition: service_started
@@ -529,15 +540,17 @@ services:
     image: prom/alertmanager:v0.34.0
     container_name: alertmanager
     ports:
-      - "9093:9093"
+    - "9093:9093"
     volumes:
-      - ./config/alert-manager/tmp:/data
-      - ./config/alert-manager/config:/config
+    - ./config/alert-manager/tmp:/data
+    - ./config/alert-manager/config:/config
     command: --config.file=/config/alertmanager.yml --log.level=debug
     networks:
-      - microservice-network
+    - microservice-network
     healthcheck:
-      test: [ "CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:9093/-/healthy || wget --quiet --tries=3 --spider http://localhost:9093/api/v1/status || exit 1" ]
+      test: ["CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:9093/-/healthy
+          || wget --quiet --tries=3 --spider http://localhost:9093/api/v1/status ||
+          exit 1"]
       interval: 30s
       timeout: 15s
       retries: 5
