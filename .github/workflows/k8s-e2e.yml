@@ -127,8 +127,6 @@ jobs:
             elapsed=$((elapsed + 5))
           done
 
-
-
       - name: Validate NetworkPolicy and PDBs
         run: |
           set -Eeuo pipefail
@@ -139,7 +137,7 @@ jobs:
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
           kubectl get networkpolicy -n retailstore allow-dns-egress
-          
+
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail

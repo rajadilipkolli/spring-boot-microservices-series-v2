@@ -4,20 +4,23 @@ metadata:
   name: default-deny-all
   namespace: retailstore
 spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+    - port: 6443
+      protocol: TCP
+    - port: 8443
+      protocol: TCP
+  ingress: []
   podSelector: {}
   policyTypes:
-    - Ingress
-    - Egress
-  ingress: []
-  egress:
-    # Allow DNS (UDP/TCP 53) and Kubernetes API (TCP 443) for all pods
-    - ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-        - protocol: TCP
-          port: 443
+  - Ingress
+  - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -25,16 +28,16 @@ metadata:
   name: allow-ingress-to-gateway
   namespace: retailstore
 spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
   podSelector:
     matchLabels:
       app: api-gateway
   policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+  - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -42,30 +45,30 @@ metadata:
   name: allow-gateway-to-apps
   namespace: retailstore
 spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - api-gateway
+          - retail-store-webapp
   podSelector:
     matchExpressions:
-      - key: app
-        operator: In
-        values:
-          - catalog-service
-          - inventory-service
-          - order-service
-          - payment-service
-          - retail-store-webapp
-          - keycloak
-          - config-server
-          - service-registry
+    - key: app
+      operator: In
+      values:
+      - catalog-service
+      - inventory-service
+      - order-service
+      - payment-service
+      - retail-store-webapp
+      - keycloak
+      - config-server
+      - service-registry
   policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchExpressions:
-              - key: app
-                operator: In
-                values:
-                  - api-gateway
-                  - retail-store-webapp
+  - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -73,32 +76,34 @@ metadata:
   name: allow-apps-to-infrastructure
   namespace: retailstore
 spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - catalog-service
+          - inventory-service
+          - order-service
+          - payment-service
+          - api-gateway
+          - retail-store-webapp
+          - keycloak
+          - service-registry
   podSelector:
     matchExpressions:
-      - key: app
-        operator: In
-        values:
-          - postgresql
-          - redis
-          - kafka
-          - config-server
-          - service-registry
-          - keycloak
+    - key: app
+      operator: In
+      values:
+      - postgresql
+      - redis
+      - kafka
+      - config-server
+      - service-registry
+      - keycloak
   policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchExpressions:
-              - key: app
-                operator: In
-                values:
-                  - catalog-service
-                  - inventory-service
-                  - order-service
-                  - payment-service
-                  - api-gateway
-                  - retail-store-webapp
+  - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -106,15 +111,15 @@ metadata:
   name: allow-apps-to-cnpg-and-strimzi
   namespace: retailstore
 spec:
+  ingress:
+  - from:
+    - podSelector: {}
   podSelector:
     matchExpressions:
-      - key: cnpg.io/cluster
-        operator: Exists
+    - key: cnpg.io/cluster
+      operator: Exists
   policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector: {}
+  - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -122,15 +127,15 @@ metadata:
   name: allow-apps-to-strimzi
   namespace: retailstore
 spec:
+  ingress:
+  - from:
+    - podSelector: {}
   podSelector:
     matchExpressions:
-      - key: strimzi.io/cluster
-        operator: Exists
+    - key: strimzi.io/cluster
+      operator: Exists
   policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector: {}
+  - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -138,18 +143,22 @@ metadata:
   name: explicit-egress-for-apps
   namespace: retailstore
 spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: retailstore
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+    - port: 6443
+      protocol: TCP
+    - port: 8443
+      protocol: TCP
   podSelector: {}
   policyTypes:
-    - Egress
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: retailstore
-    - ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-        - protocol: TCP
-          port: 443
+  - Egress

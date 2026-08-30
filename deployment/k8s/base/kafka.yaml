@@ -27,13 +27,6 @@ spec:
       labels:
         app: kafka
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
       - env:
         - name: KAFKA_NODE_ID
@@ -50,10 +43,8 @@ spec:
           value: 1@kafka-0.kafka.retailstore.svc.cluster.local:9093
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: PLAINTEXT
-            # Single-broker settings – must match docker-compose.yml to avoid
-            # INVALID_REPLICATION_FACTOR errors when only 1 broker is present
         - name: CLUSTER_ID
-          value: '4L6g3nShT-eMCtK--X86sw'
+          value: 4L6g3nShT-eMCtK--X86sw
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: '1'
         - name: KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS
@@ -79,22 +70,37 @@ spec:
           periodSeconds: 10
           tcpSocket:
             port: 9092
-        volumeMounts:
-        - mountPath: /var/lib/kafka/data
-          name: kafka-data
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 200m
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-        resources:
-          limits:
-            cpu: 1000m
-          requests:
-            cpu: 200m
+        volumeMounts:
+        - mountPath: /var/lib/kafka/data
+          name: kafka-data
+        - mountPath: /tmp
+          name: tmp-volume
+        - mountPath: /opt/kafka/config
+          name: config-volume
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: kafka
-      volumes: []
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume
+      - emptyDir: {}
+        name: config-volume
   volumeClaimTemplates:
   - metadata:
       name: kafka-data
