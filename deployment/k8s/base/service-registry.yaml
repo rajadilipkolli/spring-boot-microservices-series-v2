@@ -5,8 +5,8 @@ metadata:
   namespace: retailstore
 spec:
   ports:
-    - port: 8761
-      targetPort: 8761
+  - port: 8761
+    targetPort: 8761
   selector:
     app: service-registry
   type: ClusterIP
@@ -26,57 +26,86 @@ spec:
       labels:
         app: service-registry
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
-        - env:
-            - name: CONFIG_SERVER_USR
-              valueFrom:
-                secretKeyRef:
-                  key: CONFIG_SERVER_USR
-                  name: config-server-credentials
-            - name: CONFIG_SERVER_PWD
-              valueFrom:
-                secretKeyRef:
-                  key: CONFIG_SERVER_PWD
-                  name: config-server-credentials
-            - name: SPRING_CONFIG_IMPORT
-              value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
-          envFrom:
-            - configMapRef:
-                name: shared-config
-          image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8761
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          name: service-registry
-          ports:
-            - containerPort: 8761
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 8761
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            limits:
-              memory: 1400Mi
-            requests:
-              memory: 512Mi
-          startupProbe:
-            failureThreshold: 30
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8761
-            periodSeconds: 10
+      - env:
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        - name: SPRING_CONFIG_IMPORT
+          value: 
+            optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8761
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: service-registry
+        ports:
+        - containerPort: 8761
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8761
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1400Mi
+            cpu: 1000m
+          requests:
+            memory: 512Mi
+            cpu: 200m
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8761
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
       initContainers:
-        - command:
-            - sh
-            - -c
-            - 'until nc -z config-server 8888; do echo waiting for config-server;
-              sleep 2; done;
+      - command:
+        - sh
+        - -c
+        - 'until nc -z config-server 8888; do echo waiting for config-server; sleep
+          2; done;
 
-              '
-          image: busybox:1.36
-          name: wait-for-dependencies
+          '
+        image: busybox:1.36
+        name: wait-for-dependencies
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      serviceAccountName: service-registry
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}

@@ -5,11 +5,9 @@
 
 sequenceDiagram
     participant User as 👤 Test Engineer
-    participant Script as 📜 PowerShell Script
+    participant Script as 📜 run-tests Script
     participant Maven as 🔧 Maven
     participant Gatling as ⚡ Gatling Engine
-    participant Base as 🏗️ BaseSimulation
-    participant Health as 🏥 Health Checker
     participant Gateway as 🌐 API Gateway
     participant Catalog as 📚 Catalog Service
     participant Inventory as 📦 Inventory Service
@@ -21,116 +19,64 @@ sequenceDiagram
     Note over User, Reports: 🚀 Gatling Performance Testing Suite
     
     %% Test Initialization
-    User->>Script: ./run-tests.ps1 -TestProfile stress -Users 100
+    User->>Script: ./run-tests.sh --profile stress --users 100
     Script->>Script: Parse parameters & validate profile
-    Script->>Maven: mvn clean gatling:test -P stress
-    Maven->>Gatling: Initialize Gatling Engine
     
-    %% Health Check Phase
-    Note over Gatling, Payment: 🏥 Pre-Test Health Validation
-    Gatling->>Base: Create simulation instance
-    Base->>Health: runHealthChecks()
+    %% Health Check Phase (Now in Script)
+    Note over Script, Payment: 🏥 Pre-Test Health Validation
     
     loop Service Health Validation
-        Health->>Gateway: GET /actuator/health
-        Gateway-->>Health: 200 OK (Gateway healthy)
+        Script->>Gateway: GET /actuator/health
+        Gateway-->>Script: 200 OK (Gateway healthy)
         
-        Health->>Gateway: GET /CATALOG-SERVICE/catalog-service/actuator/health
+        Script->>Gateway: GET /catalog-service/actuator/health
         Gateway->>Catalog: Forward health check
         Catalog-->>Gateway: 200 OK
-        Gateway-->>Health: 200 OK (Catalog healthy)
+        Gateway-->>Script: 200 OK (Catalog healthy)
         
-        Health->>Gateway: GET /INVENTORY-SERVICE/inventory-service/actuator/health
+        Script->>Gateway: GET /inventory-service/actuator/health
         Gateway->>Inventory: Forward health check
         Inventory-->>Gateway: 200 OK
-        Gateway-->>Health: 200 OK (Inventory healthy)
+        Gateway-->>Script: 200 OK (Inventory healthy)
         
-        Health->>Gateway: GET /ORDER-SERVICE/order-service/actuator/health
+        Script->>Gateway: GET /order-service/actuator/health
         Gateway->>Order: Forward health check
         Order-->>Gateway: 200 OK
-        Gateway-->>Health: 200 OK (Order healthy)
+        Gateway-->>Script: 200 OK (Order healthy)
         
-        Health->>Gateway: GET /PAYMENT-SERVICE/payment-service/actuator/health
+        Script->>Gateway: GET /payment-service/actuator/health
         Gateway->>Payment: Forward health check
         Payment-->>Gateway: 200 OK
-        Gateway-->>Health: 200 OK (Payment healthy)
+        Gateway-->>Script: 200 OK (Payment healthy)
     end
     
     alt All Services Healthy
-        Health-->>Base: ✅ All services available
-        Base-->>Gatling: Health checks passed
+        Script->>Script: ✅ All services available
     else Service Unavailable
-        Health-->>Base: ❌ Service unavailable
-        Base->>Base: throw RuntimeException
-        Base-->>Gatling: Test execution stopped
-        Gatling-->>User: ❌ Test failed - services not ready
+        Script-->>User: ❌ Test failed - services not ready (Exit 1)
     end
 
     %% Test Data Generation
-    Note over Gatling, Kafka: 📊 Test Data Preparation
-    Gatling->>Gateway: POST /catalog-service/api/catalog/generate
-    Gateway->>Catalog: Generate test products
-    Catalog->>Kafka: Publish ProductCreated events
-    Catalog-->>Gateway: 200 OK (Products generated)
-    Gateway-->>Gatling: Test data ready
-    
-    Gatling->>Gateway: POST /inventory-service/api/inventory/generate
-    Gateway->>Inventory: Generate test inventory
-    Inventory->>Kafka: Publish InventoryCreated events
-    Inventory-->>Gateway: 200 OK (Inventory generated)
-    Gateway-->>Gatling: Inventory data ready
+    Note over Script, Kafka: 📊 Test Data Preparation & Warmup
+    Script->>Gateway: POST /api/v1/generate
+    Gateway->>Catalog: Generate test products & inventory
+    Catalog->>Kafka: Publish ProductCreated/InventoryCreated events
+    Catalog-->>Gateway: 200 OK
+    Gateway-->>Script: 200 OK (Data generated)
 
     %% Kafka Initialization Delay
-    Note over Gatling, Kafka: ⏱️ Kafka Initialization (15s delay)
-    Gatling->>Gatling: Wait for Kafka initialization
-    Kafka->>Kafka: Initialize topics and consumers
+    Note over Script, Kafka: ⏱️ Kafka Initialization
+    Script->>Script: sleep 10 (Wait for topics to initialize)
+    Kafka->>Kafka: Process events
     
-    %% Stress Test Simulation
-    Note over Gatling, Reports: 🔥 Stress Test Execution
-    
-    %% Smoke Test Phase
-    rect rgb(40, 40, 80)
-        Note over Gatling, Order: 💨 Smoke Test (Single User Validation)
-        
-        Gatling->>Gateway: POST /catalog-service/api/catalog (Create Product)
-        Gateway->>Catalog: Create smoke test product
-        Catalog->>Kafka: Publish ProductCreated event
-        Catalog-->>Gateway: 201 Created + Location header
-        Gateway-->>Gatling: Product created successfully
-        
-        Gatling->>Gateway: GET /catalog-service/api/catalog?pageNo=0&pageSize=10
-        Gateway->>Catalog: Browse catalog
-        Catalog-->>Gateway: 200 OK + Product list
-        Gateway-->>Gatling: Catalog browsing successful
-        
-        Gatling->>Gateway: GET /catalog-service/api/catalog/product-code/{code}
-        Gateway->>Catalog: Get product details
-        Catalog-->>Gateway: 200 OK + Product details
-        Gateway-->>Gatling: Product detail view successful
-        
-        Gatling->>Gateway: GET /inventory-service/api/inventory/{code}
-        Gateway->>Inventory: Check product inventory
-        Inventory-->>Gateway: 200 OK + Inventory data
-        Gateway-->>Gatling: Inventory check successful
-        
-        Gatling->>Gateway: POST /order-service/api/orders
-        Gateway->>Order: Create test order
-        Order->>Kafka: Publish OrderCreated event
-        Order-->>Gateway: 201 Created + Location header
-        Gateway-->>Gatling: Order creation successful
-        
-        alt Smoke Test Passed
-            Gatling->>Gatling: ✅ All smoke tests passed
-            Gatling->>Gatling: Wait 30s before main load test
-        else Smoke Test Failed
-            Gatling->>Gatling: ❌ Smoke test failed
-            Gatling->>Gatling: System.exit(1) - Stop execution
-        end
-    end
-    
+    %% Start Gatling
+    Script->>Maven: mvn clean gatling:test -Dgatling.simulationClass=...
+    Maven->>Gatling: Initialize Gatling Engine
+
     %% Main Load Test Phase
+    Note over Gatling, Reports: 🚀 Main Load Test (Multi-User Scenarios)
+    
     rect rgb(60, 20, 20)
-        Note over Gatling, Reports: 🚀 Main Load Test (Multi-User Scenarios)
         
         par Casual Browsers (30% traffic)
             loop Browse Catalog Flow
@@ -219,7 +165,7 @@ sequenceDiagram
     
     rect rgb(20, 60, 20)
         Note over Gatling: 🔄 Ramp-up Phase (5 minutes)
-        Gatling->>Gatling: rampUsersPerSec(0.1 → 25)
+        Gatling->>Gatling: rampUsersPerSec(0 → 25)
         Gatling->>Gatling: rampUsersPerSec(25 → 50)
         Gatling->>Gatling: rampUsersPerSec(50 → 100)
     end
@@ -231,7 +177,7 @@ sequenceDiagram
     
     rect rgb(20, 20, 60)
         Note over Gatling: 🔽 Cool-down Phase (2 minutes)
-        Gatling->>Gatling: rampUsersPerSec(100 → 1)
+        Gatling->>Gatling: rampUsersPerSec(100 → 0)
     end
 
     %% Resilience Testing Scenarios
@@ -327,10 +273,9 @@ sequenceDiagram
         Gatling->>Gatling: Monitor active users
         Gatling->>Gatling: Calculate throughput (RPS)
     and SLA Validation
-        Gatling->>Gatling: Assert mean response time < 1500ms
-        Gatling->>Gatling: Assert 95th percentile < 3000ms
-        Gatling->>Gatling: Assert 99th percentile < 5000ms
-        Gatling->>Gatling: Assert error rate < 5%
+        Gatling->>Gatling: Assert mean response time < SLA
+        Gatling->>Gatling: Assert 95th percentile < SLA
+        Gatling->>Gatling: Assert error rate checks
     end
 
     %% Test Completion & Reporting
@@ -338,73 +283,26 @@ sequenceDiagram
     
     Gatling->>Reports: Generate HTML reports
     Reports->>Reports: Create performance dashboard
-    Reports->>Reports: Generate response time charts
-    Reports->>Reports: Create throughput graphs
-    Reports->>Reports: Generate error analysis
     
     Reports-->>Gatling: Reports generated
     Gatling-->>Maven: Test execution completed
     Maven-->>Script: Gatling tests finished
     
-    Script->>Script: Find latest report directory
+    Script->>Script: Run compare-baseline.sh (Regression check)
     Script->>Script: Open index.html in browser
-    Script-->>User: 📊 Performance report opened
-    
-    %% Final Results Summary
-    Note over User, Reports: 📋 Test Results Summary
-    alt All Tests Passed
-        User->>User: ✅ Performance targets met
-        User->>User: 📊 Review detailed metrics
-        User->>User: 🔍 Analyze bottlenecks
-    else Performance Issues Detected
-        User->>User: ❌ SLA violations detected
-        User->>User: 🔧 Identify optimization areas
-        User->>User: 📈 Plan performance improvements
-    end
-
-    %% Error Handling & Recovery
-    rect rgb(80, 20, 20)
-        Note over Gatling, Reports: ⚠️ Error Handling & Recovery Patterns
-        
-        alt Service Timeout
-            Gatling->>Gateway: Request with timeout
-            Gateway->>Catalog: Forward request
-            Catalog->>Catalog: Processing delay
-            Gateway-->>Gatling: 504 Gateway Timeout
-            Gatling->>Gatling: Record timeout metric
-        else Connection Refused
-            Gatling->>Gateway: Request to unavailable service
-            Gateway-->>Gatling: Connection refused
-            Gatling->>Gatling: Mark request as failed
-        else Invalid Response
-            Gatling->>Gateway: Request with malformed response
-            Gateway->>Catalog: Forward request
-            Catalog-->>Gateway: Invalid JSON
-            Gateway-->>Gatling: 502 Bad Gateway
-            Gatling->>Gatling: Record parsing error
-        end
-    end
-
-    %% Performance Optimization Insights
-    Note over User, Reports: 💡 Performance Optimization Insights
-    User->>User: 🎯 Identify slow endpoints
-    User->>User: 📊 Analyze resource utilization
-    User->>User: 🔄 Review caching effectiveness
-    User->>User: 🌐 Evaluate load balancing
-    User->>User: 📈 Plan capacity scaling
+    Script-->>User: 📊 Performance report ready
 ```
 
 ## Key Performance Testing Features
 
 ### 🏥 Health Check Validation
-- **Pre-test verification** of all microservices
+- **Pre-test verification** of all microservices via the orchestration scripts (`run-tests.sh` / `run-tests.ps1`)
 - **Automated service discovery** through API Gateway
-- **Fail-fast approach** if services are unavailable
-- **Configurable retry logic** with exponential backoff
+- **Fail-fast approach** if services are unavailable before Gatling starts
+- **Automated warm-up** triggered by scripts to generate test data and initialize Kafka
 
 ### 🔥 Stress Testing Scenarios
-- **Smoke Test Phase**: Single-user validation before load testing
-- **Ramp-up Strategy**: Gradual load increase to find breaking points
+- **Ramp-up Strategy**: Gradual load increase from zero to find breaking points
 - **Mixed User Journeys**: Realistic traffic patterns (browsers, searchers, shoppers)
 - **Plateau Testing**: Sustained load to test system stability
 
@@ -418,7 +316,7 @@ sequenceDiagram
 - **Real-time Metrics**: Response times, throughput, error rates
 - **SLA Validation**: Automated assertion checking
 - **Percentile Analysis**: P95, P99 response time tracking
-- **Resource Utilization**: System performance under load
+- **Regression Detection**: Post-run comparison against baselines via `compare-baseline.sh`
 
 ### 🎯 Test Profiles
 - **Default**: Basic functionality testing
@@ -433,4 +331,4 @@ sequenceDiagram
 - **Response Time Charts**: Visual performance analysis
 - **Throughput Graphs**: Request rate visualization
 - **Error Analysis**: Failure pattern identification
-- **Trend Analysis**: Performance comparison over time
+- **Trend Analysis**: Handled by CI/CD pipeline baseline comparisons

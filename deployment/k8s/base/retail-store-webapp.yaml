@@ -26,6 +26,13 @@ spec:
       labels:
         app: retail-store-webapp
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - env:
         - name: SERVER_FORWARD_HEADERS_STRATEGY
@@ -51,7 +58,8 @@ spec:
           value: http://api-gateway:8765
         - name: OAUTH2_SERVER_URL
           value: http://keycloak.local
-        - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_RETAILSTORE_WEBAPP_ISSUER_URI
+        - name: 
+            SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_RETAILSTORE_WEBAPP_ISSUER_URI
           value: http://keycloak.local/realms/retailstore
         - name: JAVA_TOOL_OPTIONS
           value: -XX:MaxDirectMemorySize=64m -Xmx400m
@@ -77,15 +85,30 @@ spec:
         resources:
           limits:
             memory: 1400Mi
+            cpu: 1000m
           requests:
             memory: 512Mi
+            cpu: 200m
         startupProbe:
           failureThreshold: 30
           httpGet:
             path: /actuator/health/liveness
             port: 8080
           periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
       hostAliases:
       - hostnames:
         - keycloak.local
         ip: 10.43.243.75
+      serviceAccountName: retail-store-webapp
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}

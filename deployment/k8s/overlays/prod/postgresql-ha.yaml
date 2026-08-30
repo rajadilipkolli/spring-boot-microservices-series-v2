@@ -1,0 +1,47 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgresql-ha
+  namespace: retailstore
+spec:
+  instances: 1
+
+  # Superuser secret must match what we provide in 'postgres-credentials' if desired, 
+  # but CNPG manages its own app user by default. We will inject the existing secret.
+  bootstrap:
+    initdb:
+      database: appdb
+      owner: appuser
+      secret:
+        name: postgres-credentials
+
+  # Encryption and TLS
+  enableSuperuserAccess: true
+
+  # Resource requirements
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1"
+
+  storage:
+    size: 5Gi
+
+  # Automated Backups & WAL Archiving
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://cnpg-backups/retailstore/"
+      endpointURL: "http://minio.default.svc:9000"
+      s3Credentials:
+        accessKeyId:
+          name: s3-credentials
+          key: access-key
+        secretAccessKey:
+          name: s3-credentials
+          key: secret-key
+      wal:
+        compression: gzip
+    retentionPolicy: "30d"

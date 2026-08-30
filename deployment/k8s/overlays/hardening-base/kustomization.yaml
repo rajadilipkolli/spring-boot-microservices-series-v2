@@ -1,0 +1,141 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+patches:
+- target:
+    kind: Deployment
+    name: api-gateway
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: api-gateway\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - api-gateway\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: catalog-service
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: catalog-service\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - catalog-service\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: config-server
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: config-server\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - config-server\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: inventory-service
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: inventory-service\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - inventory-service\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: keycloak
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: keycloak\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - keycloak\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: order-service
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: order-service\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - order-service\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: payment-service
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: payment-service\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - payment-service\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: retail-store-webapp
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: retail-store-webapp\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - retail-store-webapp\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: service-registry
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: service-registry\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - service-registry\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Deployment
+    name: redis
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: redis\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - redis\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: StatefulSet
+    name: kafka
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: kafka\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - kafka\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: StatefulSet
+    name: postgresql
+  patch: "- op: add\n  path: /spec/template/spec/topologySpreadConstraints\n  value:\n\
+    \    - maxSkew: 1\n      topologyKey: kubernetes.io/hostname\n      whenUnsatisfiable:
+    ScheduleAnyway\n      labelSelector:\n        matchLabels:\n          app: postgresql\n\
+    - op: add\n  path: /spec/template/spec/affinity\n  value:\n    podAntiAffinity:\n\
+    \      preferredDuringSchedulingIgnoredDuringExecution:\n      - weight: 100\n\
+    \        podAffinityTerm:\n          labelSelector:\n            matchExpressions:\n\
+    \            - key: app\n              operator: In\n              values:\n \
+    \             - postgresql\n          topologyKey: kubernetes.io/hostname"
+- target:
+    kind: Namespace
+    name: retailstore
+  path: namespace-patch.yaml

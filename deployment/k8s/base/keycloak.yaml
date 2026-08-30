@@ -33,6 +33,13 @@ spec:
       labels:
         app: keycloak
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - args:
         - start
@@ -79,8 +86,10 @@ spec:
         resources:
           requests:
             memory: 512Mi
+            cpu: 200m
           limits:
             memory: 1400Mi
+            cpu: 1000m
         ports:
         - containerPort: 8080
         - containerPort: 9000
@@ -93,7 +102,17 @@ spec:
         volumeMounts:
         - mountPath: /opt/keycloak/data/import
           name: realm-config
+        - name: tmp-volume
+          mountPath: /tmp
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       volumes:
       - configMap:
           name: keycloak-realm-config
         name: realm-config
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: keycloak
