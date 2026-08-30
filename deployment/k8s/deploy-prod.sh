@@ -6,6 +6,17 @@ ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
 echo "Creating namespace first..."
 kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
 
+echo "Installing Cert-Manager..."
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout="$ROLLOUT_TIMEOUT" || true
+# wait for webhook to be up
+sleep 15
+
+echo "Installing CloudNativePG..."
+kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+sleep 15
+
+
 echo "Applying Strimzi operator explicitly (Operator before Operand)..."
 # Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
 # ensures CRDs exist before Kustomize applies the Kafka cluster resource.
