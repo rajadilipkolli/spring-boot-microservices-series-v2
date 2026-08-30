@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: retailstore
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    spec:
+      containers:
+      - name: keycloak
+        env:
+        - name: KC_CACHE
+          value: ispn
+        - name: KC_CACHE_STACK
+          value: kubernetes
+        - name: JAVA_OPTS_APPEND
+          value: -Djgroups.dns.query=keycloak-discovery.retailstore.svc.cluster.local
+        ports:
+        - containerPort: 7800
+          name: jgroups
+          protocol: TCP
