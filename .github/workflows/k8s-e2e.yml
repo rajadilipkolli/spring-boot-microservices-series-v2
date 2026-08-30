@@ -74,10 +74,12 @@ jobs:
           set -Eeuo pipefail
                     # Wait for CNPG PostgreSQL
           echo "Waiting for CNPG PostgreSQL..."
+          until kubectl get pod -l cnpg.io/cluster=postgresql-ha -n retailstore | grep postgresql; do sleep 2; done
           kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha --timeout=600s
           
           # Wait for Strimzi Kafka
           echo "Waiting for Strimzi Kafka..."
+          until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
           kubectl wait --namespace retailstore --for=condition=ready pod -l strimzi.io/cluster=kafka --timeout=600s
           
           # Wait for Redis and Keycloak
@@ -156,7 +158,7 @@ jobs:
           kubectl delete pod kafka-dual-role-0 -n retailstore
           
           echo "Waiting for Kafka pod to recreate..."
-          sleep 10
+          until kubectl get pod kafka-dual-role-0 -n retailstore 2>/dev/null; do sleep 2; done
           kubectl wait --namespace retailstore --for=condition=ready pod/kafka-dual-role-0 --timeout=300s
           
           echo "Verifying Kafka data survived..."

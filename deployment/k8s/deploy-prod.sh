@@ -26,13 +26,14 @@ echo "Applying prod overlay..."
 kubectl apply -k overlays/prod/
 
 echo "Waiting for rollouts..."
-# CloudNativePG does not support 'rollout status' on its custom resources directly,
-# but we can wait for its pod to be ready.
+
+echo "Waiting for CNPG pod to be created..."
+until kubectl get pod -l cnpg.io/cluster=postgresql-ha -n retailstore | grep postgresql; do sleep 2; done
 kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/redis -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
-# Wait for Kafka (Strimzi) and Keycloak
-echo "Waiting for Kafka and Keycloak..."
+echo "Waiting for Strimzi Kafka pod to be created..."
+until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
 kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
