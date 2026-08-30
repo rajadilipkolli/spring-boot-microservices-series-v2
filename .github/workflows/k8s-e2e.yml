@@ -36,8 +36,6 @@ jobs:
           set -Eeuo pipefail
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
           kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
-          kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--allow-snippet-annotations=true"}]'
-          kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
 
       - name: Obtain and Load Images
         run: |
@@ -148,7 +146,7 @@ jobs:
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
           kubectl get networkpolicy -n retailstore explicit-egress-for-apps
-          
+
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail
