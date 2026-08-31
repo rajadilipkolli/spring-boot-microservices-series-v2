@@ -14,6 +14,7 @@ sleep 15
 
 echo "Installing CloudNativePG..."
 kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n cnpg-system --timeout="$ROLLOUT_TIMEOUT" || true
 sleep 15
 
 
@@ -21,6 +22,8 @@ echo "Applying Strimzi operator explicitly (Operator before Operand)..."
 # Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
 # ensures CRDs exist before Kustomize applies the Kafka cluster resource.
 kubectl apply -f overlays/prod/strimzi-operator.yaml
+kubectl wait --for=condition=ready pod -l name=strimzi-cluster-operator -n retailstore --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
 
 echo "Applying prod overlay..."
 kubectl apply -k overlays/prod/
