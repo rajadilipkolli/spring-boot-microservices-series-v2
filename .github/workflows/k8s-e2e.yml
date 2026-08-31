@@ -74,8 +74,8 @@ jobs:
           set -Eeuo pipefail
                     # Wait for CNPG PostgreSQL
           echo "Waiting for CNPG PostgreSQL..."
-          until kubectl get pod -l cnpg.io/cluster=postgresql-ha -n retailstore | grep postgresql; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha --timeout=600s
+          until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
+          kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance --timeout=600s
           
           # Wait for Strimzi Kafka
           echo "Waiting for Strimzi Kafka..."

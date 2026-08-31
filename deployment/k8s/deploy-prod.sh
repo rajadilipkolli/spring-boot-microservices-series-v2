@@ -28,8 +28,8 @@ kubectl apply -k overlays/prod/
 echo "Waiting for rollouts..."
 
 echo "Waiting for CNPG pod to be created..."
-until kubectl get pod -l cnpg.io/cluster=postgresql-ha -n retailstore | grep postgresql; do sleep 2; done
-kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
+kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/redis -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
 echo "Waiting for Strimzi Kafka pod to be created..."
