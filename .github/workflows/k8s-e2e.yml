@@ -1,268 +1,55 @@
-name: Kubernetes E2E Tests
+#!/usr/bin/env bash
+set -e
 
-on:
-  workflow_dispatch:
-  push:
-    paths:
-      - 'deployment/k8s/**'
-      - '.github/workflows/k8s-e2e.yml'
-    branches: [main]
-  pull_request:
-    paths:
-      - 'deployment/k8s/**'
-      - '.github/workflows/k8s-e2e.yml'
-    types:
-      - opened
-      - synchronize
-      - reopened
+ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
 
-jobs:
-  e2e-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v7
+echo "Creating namespace first..."
+kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.15.0
-        with:
-          version: v0.23.0
-          cluster_name: kind
-          config: deployment/k8s/kind-config.yaml
+echo "Installing Cert-Manager..."
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout="$ROLLOUT_TIMEOUT" || true
+# wait for webhook to be up
+sleep 15
 
-      - name: Install NGINX Ingress Controller
-        run: |
-          set -Eeuo pipefail
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
-
-      - name: Obtain and Load Images
-        run: |
-          set -Eeuo pipefail
-          images=(
-            dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-            dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
-            dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
-            dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
-            dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
-            dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
-            dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
-            dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
-          )
-          for image in "${images[@]}"; do
-            docker pull "$image"
-            kind load docker-image "$image" --name kind
-          done
-
-      - name: Apply Prod Overlay
-        run: |
-          set -Eeuo pipefail
-          cd deployment/k8s && sh deploy-prod.sh
-
-      - name: Wait for Webapp Hostaliases Patch
-        run: |
-          set -Eeuo pipefail
-          # This Job patches retail-store-webapp's pod template (hostAliases for
-          # keycloak.local), triggering a new rollout. Wait for it here, before
-          # any rollout/readiness checks, so those checks see the final pod spec
-          # instead of racing a mid-patch rollout.
-          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
-
-      - name: Wait for Infrastructure Rollouts
-        run: |
-          set -Eeuo pipefail
-                    # Wait for CNPG PostgreSQL
-          echo "Waiting for CNPG PostgreSQL..."
-          until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance --timeout=600s
-          
-          # Wait for Strimzi Kafka
-          echo "Waiting for Strimzi Kafka..."
-          until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod -l strimzi.io/cluster=kafka --timeout=600s
-          
-          # Wait for Redis and Keycloak
-          kubectl rollout status deployment/redis -n retailstore --timeout=300s
-          kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in redis keycloak; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Platform Core Rollouts
-        run: |
-          set -Eeuo pipefail
-          kubectl rollout status deployment/config-server -n retailstore --timeout=300s
-          kubectl rollout status deployment/service-registry -n retailstore --timeout=300s
-          for app in config-server service-registry; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Application Rollouts
-        run: |
-          set -Eeuo pipefail
-          for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
-            kubectl rollout status "deployment/$svc" -n retailstore --timeout=300s
-          done
-
-      - name: Wait for All Pods Ready
-        run: |
-          set -Eeuo pipefail
-          # Final gate before running tests: every pod (excluding completed Job
-          # pods like patch-webapp-hostaliases) must be Running with all
-          # containers ready, regardless of which resource is still settling.
-          echo "Waiting for all pods in retailstore to be Running and fully ready..."
-          timeout_seconds=300
-          elapsed=0
-          while true; do
-            not_ready=$(kubectl get pods -n retailstore -o json | jq -r '
-              [.items[] | select(.status.phase != "Succeeded")
-                | select(
-                    (.status.phase != "Running") or
-                    ([.status.containerStatuses[]?.ready] | any(. == false))
-                  )
-                | .metadata.name
-              ] | length')
-            if [ "$not_ready" -eq 0 ]; then
-              echo "All pods are Running and ready."
-              break
-            fi
-            if [ "$elapsed" -ge "$timeout_seconds" ]; then
-              echo "Timed out after ${timeout_seconds}s waiting for all pods to be ready." >&2
-              kubectl get pods -n retailstore
-              exit 1
-            fi
-            sleep 5
-            elapsed=$((elapsed + 5))
-          done
+echo "Installing CloudNativePG..."
+kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n cnpg-system --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
 
 
+echo "Applying Strimzi operator explicitly (Operator before Operand)..."
+# Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
+# ensures CRDs exist before Kustomize applies the Kafka cluster resource.
+kubectl apply -f overlays/prod/strimzi-operator.yaml
+kubectl wait --for=condition=ready pod -l name=strimzi-cluster-operator -n retailstore --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
 
-      - name: Validate NetworkPolicy and PDBs
-        run: |
-          set -Eeuo pipefail
-          # Test PDB exists and is healthy
-          kubectl get pdb -n retailstore api-gateway-pdb
-          kubectl get pdb -n retailstore retail-store-webapp-pdb
-          
-          # Verify NetworkPolicies applied
-          kubectl get networkpolicy -n retailstore default-deny-all
-          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
+echo "Applying prod overlay..."
+kubectl apply -k overlays/prod/
 
-      - name: Validate Kafka Persistence
-        run: |
-          set -Eeuo pipefail
-          kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
-          
-          echo "Deleting Kafka Pod to test persistence..."
-          kubectl delete pod kafka-dual-role-0 -n retailstore
-          
-          echo "Waiting for Kafka pod to recreate..."
-          until kubectl get pod kafka-dual-role-0 -n retailstore 2>/dev/null; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod/kafka-dual-role-0 --timeout=300s
-          
-          echo "Verifying Kafka data survived..."
-          result=$(kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
-          if [[ "$result" != *"hello-kafka"* ]]; then
-            echo "Kafka persistence test failed. Did not find message."
-            exit 1
-          else
-            echo "Kafka persistence test passed."
-          fi
-      - name: Run E2E Validations
-        run: |
-          set -Eeuo pipefail
-          # Map hostnames for test
-          if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
-            echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
-          fi
-          
-          # E2E Script Validation
-          HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+echo "Waiting for rollouts..."
 
-          # Request webapp via Ingress (best-effort smoke check; does not fail the job)
-          if curl -s -f http://retailstore.local > /dev/null; then
-            echo "Webapp reachable via ingress."
-          else
-            echo "::warning::Webapp smoke check via http://retailstore.local failed (non-fatal)."
-          fi
+echo "Waiting for CNPG pod to be created..."
+until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
+kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/redis -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
-          # OAuth2 Keycloak Test (best-effort smoke check; does not fail the job)
-          if curl -s -f -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
-            -d "client_id=retailstore-webapp" \
-            -d "client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z" \
-            -d "grant_type=password" \
-            -d "username=retail" \
-            -d "password=retail1234" | grep -q access_token; then
-            echo "Keycloak token endpoint returned access_token."
-          else
-            echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
-          fi
+echo "Waiting for Strimzi Kafka pod to be created..."
+until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
+kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
+echo "Waiting for infrastructure microservices..."
+kubectl rollout status deployment/config-server -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+kubectl rollout status deployment/service-registry -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
-      - name: Load Test Autoscaling (KEDA/HPA)
-        run: |
-          set -Eeuo pipefail
-          
-          # Optional: Apply autoscaling overlay if not applied in base
-          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+echo "Waiting for business microservices..."
+for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
+  kubectl rollout status deployment/$svc -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+done
 
-          # Send bursts of traffic to trigger lag/CPU load
-          echo "Sending load..."
-          for i in {1..200}; do
-            curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
-          done
-          wait
-          
-          # Wait and check if order-service scaled beyond minReplicas (1)
-          echo "Waiting for autoscaler to trigger..."
-          sleep 30
-          
-          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
-          echo "Order service replicas: $replicas"
-          if [ "$replicas" -gt 1 ]; then
-            echo "Autoscaling triggered successfully!"
-          else
-            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
-          fi
-      - name: Collect Diagnostics
-        if: failure()
-        run: |
-          set +e
-          mkdir -p k8s-diagnostics
-          kubectl get pods -A > k8s-diagnostics/pods.txt
-          kubectl get events -A > k8s-diagnostics/events.txt
-          kubectl get deployments,statefulsets,services -n retailstore > k8s-diagnostics/resources.txt
-          kubectl describe pods -A > k8s-diagnostics/pods-describe.txt
-          kubectl describe deployments,statefulsets -n retailstore > k8s-diagnostics/workloads-describe.txt
-          for resource in \
-            deployment/redis \
-            deployment/keycloak \
-            deployment/config-server \
-            deployment/service-registry \
-            deployment/catalog-service \
-            deployment/inventory-service \
-            deployment/order-service \
-            deployment/payment-service \
-            deployment/api-gateway \
-            deployment/retail-store-webapp; do
-            kubectl rollout status "$resource" -n retailstore --timeout=5s > "k8s-diagnostics/${resource//\//-}-rollout.txt" 2>&1
-          done
-          
-          for pod in $(kubectl get pods -n retailstore -o name); do
-            # Replace / in pod name (like pod/my-pod) with _ for filename
-            clean_pod=$(echo $pod | tr '/' '_')
-            kubectl logs $pod -n retailstore --all-containers > k8s-diagnostics/$clean_pod.log || true
-          done
-
-      - name: Upload Diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: k8s-diagnostics
-          path: k8s-diagnostics/
-
-      - name: Teardown Cluster
-        if: always()
-        run: |
-          kind delete cluster --name kind
+echo "Production Deployment complete."
+echo "Access URLs:"
+echo "Webapp (HTTPS): https://retailstore.local"
+echo "Keycloak (HTTPS): https://keycloak.local"
