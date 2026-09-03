@@ -5,8 +5,8 @@ metadata:
   namespace: retailstore
 spec:
   ports:
-    - port: 6379
-      targetPort: 6379
+  - port: 6379
+    targetPort: 6379
   selector:
     app: redis
   type: ClusterIP
@@ -26,26 +26,42 @@ spec:
       labels:
         app: redis
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
-        - image: redis:8.10.0-alpine
-          name: redis
-          ports:
-            - containerPort: 6379
-          resources:
-            requests:
-              memory: 256Mi
-            limits:
-              memory: 512Mi
-          readinessProbe:
-            exec:
-              command:
-                - redis-cli
-                - ping
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          volumeMounts:
-            - mountPath: /data
-              name: redis-data
-      volumes:
-        - emptyDir: {}
+      - image: redis:8.10.0-alpine
+        name: redis
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 200m
+          limits:
+            memory: 512Mi
+            cpu: 1000m
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /data
           name: redis-data
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      volumes:
+      - emptyDir: {}
+        name: redis-data
+      serviceAccountName: redis

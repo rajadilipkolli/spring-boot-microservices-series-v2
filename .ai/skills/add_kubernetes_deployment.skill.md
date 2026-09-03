@@ -74,3 +74,6 @@ Use an `if: always()` workflow step to delete the named Kind cluster, including 
 ### 10. Update Documentation and Verification
 
 When changing the deployment contract, update `deployment/KUBERNETES_DEPLOYMENT_GUIDE.md`, the root `ReadMe.md`, and this skill when applicable. Validate workflow YAML, shell syntax, Kustomize rendering, and the narrowest available Kubernetes checks before broad integration testing.
+
+### Security Standards
+Ensure new workloads follow Pod Security restricted standard (runAsNonRoot: true, allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities dropped). Network policies must be updated to explicitly allow ingress/egress for the new workload.

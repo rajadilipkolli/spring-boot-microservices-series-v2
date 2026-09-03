@@ -1,0 +1,33 @@
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: retail-store-webapp-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: retail-store-webapp
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-service-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: order-service

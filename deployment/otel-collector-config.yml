@@ -1,4 +1,4 @@
-receivers:
+﻿receivers:
   otlp:
     protocols:
       grpc:
@@ -12,6 +12,14 @@ processors:
     check_interval: 1s
     limit_mib: 1000
     spike_limit_mib: 200
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ""
+        action: insert
+      - key: service.namespace
+        value: "retailstore"
+        action: insert
 
 exporters:
   otlp/tempo:
@@ -27,13 +35,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resource, batch]
       exporters: [otlp/tempo]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resource, batch]
       exporters: [prometheus]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, resource, batch]
       exporters: [otlphttp/loki]

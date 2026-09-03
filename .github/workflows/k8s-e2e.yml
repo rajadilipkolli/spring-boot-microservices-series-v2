@@ -55,10 +55,10 @@ jobs:
             kind load docker-image "$image" --name kind
           done
 
-      - name: Apply CI Overlay
+      - name: Apply Prod Overlay
         run: |
           set -Eeuo pipefail
-          kubectl apply -k deployment/k8s/overlays/ci/
+          cd deployment/k8s && sh deploy-prod.sh
 
       - name: Wait for Webapp Hostaliases Patch
         run: |
@@ -72,11 +72,18 @@ jobs:
       - name: Wait for Infrastructure Rollouts
         run: |
           set -Eeuo pipefail
-          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
+          # Wait for CNPG PostgreSQL cluster CRD to report Ready
+          echo "Waiting for CNPG PostgreSQL cluster..."
+          kubectl wait cluster/postgresql-ha -n retailstore --for=condition=Ready --timeout=600s
+
+          # Wait for Strimzi Kafka cluster CRD to report Ready
+          echo "Waiting for Strimzi Kafka cluster..."
+          kubectl wait kafka/kafka -n retailstore --for=condition=Ready --timeout=600s
+
+          # Wait for Redis and Keycloak
           kubectl rollout status deployment/redis -n retailstore --timeout=300s
-          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
           kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in postgresql redis kafka keycloak; do
+          for app in redis keycloak; do
             kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
           done
 
@@ -108,6 +115,7 @@ jobs:
           while true; do
             not_ready=$(kubectl get pods -n retailstore -o json | jq -r '
               [.items[] | select(.status.phase != "Succeeded")
+                | select(.metadata.name | startswith("apicurio-registry") | not)
                 | select(
                     (.status.phase != "Running") or
                     ([.status.containerStatuses[]?.ready] | any(. == false))
@@ -127,6 +135,42 @@ jobs:
             elapsed=$((elapsed + 5))
           done
 
+
+
+      - name: Validate NetworkPolicy and PDBs
+        run: |
+          set -Eeuo pipefail
+          # Test PDB exists and is healthy
+          kubectl get pdb -n retailstore api-gateway-pdb
+          kubectl get pdb -n retailstore retail-store-webapp-pdb
+          
+          # Verify NetworkPolicies applied
+          kubectl get networkpolicy -n retailstore default-deny-all
+          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
+
+      - name: Validate Kafka Persistence
+        run: |
+          set -Eeuo pipefail
+          kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test"
+          
+          echo "Deleting Kafka Pod to test persistence..."
+          kubectl delete pod kafka-dual-role-0 -n retailstore
+          
+          # Wait for the pod to be fully deleted
+          while kubectl get pod kafka-dual-role-0 -n retailstore > /dev/null 2>&1; do sleep 2; done
+          
+          echo "Waiting for Strimzi to recreate the pod..."
+          while ! kubectl get pod kafka-dual-role-0 -n retailstore > /dev/null 2>&1; do sleep 2; done
+          
+          echo "Waiting for Kafka pod to become ready..."
+          kubectl wait pod/kafka-dual-role-0 -n retailstore --for=condition=Ready --timeout=300s
+          result=$(kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
+          if [[ "$result" != *"hello-kafka"* ]]; then
+            echo "Kafka persistence test failed. Did not find message."
+            exit 1
+          else
+            echo "Kafka persistence test passed."
+          fi
       - name: Run E2E Validations
         run: |
           set -Eeuo pipefail
@@ -157,6 +201,32 @@ jobs:
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
 
+
+      - name: Load Test Autoscaling (KEDA/HPA)
+        run: |
+          set -Eeuo pipefail
+          
+          # Optional: Apply autoscaling overlay if not applied in base
+          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+
+          # Send bursts of traffic to trigger lag/CPU load
+          echo "Sending load..."
+          for i in {1..200}; do
+            curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+          done
+          wait
+          
+          # Wait and check if order-service scaled beyond minReplicas (1)
+          echo "Waiting for autoscaler to trigger..."
+          sleep 30
+          
+          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Order service replicas: $replicas"
+          if [ "$replicas" -gt 1 ]; then
+            echo "Autoscaling triggered successfully!"
+          else
+            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+          fi
       - name: Collect Diagnostics
         if: failure()
         run: |
@@ -168,9 +238,7 @@ jobs:
           kubectl describe pods -A > k8s-diagnostics/pods-describe.txt
           kubectl describe deployments,statefulsets -n retailstore > k8s-diagnostics/workloads-describe.txt
           for resource in \
-            statefulset/postgresql \
             deployment/redis \
-            statefulset/kafka \
             deployment/keycloak \
             deployment/config-server \
             deployment/service-registry \

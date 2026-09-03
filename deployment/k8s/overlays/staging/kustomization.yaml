@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../hardening-base
+- cluster-issuer.yaml
+patches:
+- target:
+    kind: Deployment
+  patch: "- op: replace\n  path: /spec/replicas\n  value: 2"
+- target:
+    kind: Ingress
+    name: retailstore-ingress
+  path: ingress-patch.yaml
