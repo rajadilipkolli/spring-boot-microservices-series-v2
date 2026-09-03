@@ -29,19 +29,3 @@ spec:
 
   storage:
     size: 5Gi
-
-  # Automated Backups & WAL Archiving
-  backup:
-    barmanObjectStore:
-      destinationPath: "s3://cnpg-backups/retailstore/"
-      endpointURL: "http://minio.default.svc:9000"
-      s3Credentials:
-        accessKeyId:
-          name: s3-credentials
-          key: access-key
-        secretAccessKey:
-          name: s3-credentials
-          key: secret-key
-      wal:
-        compression: gzip
-    retentionPolicy: "30d"
