@@ -138,7 +138,7 @@ jobs:
           
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
-          kubectl get networkpolicy -n retailstore allow-dns-egress
+          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
 
       - name: Validate Kafka Persistence
         run: |
