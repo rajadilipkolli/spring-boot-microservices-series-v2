@@ -88,6 +88,8 @@ spec:
           name: tmp-volume
         - mountPath: /opt/kafka/config
           name: config-volume
+        - mountPath: /opt/kafka/logs
+          name: logs-volume
       securityContext:
         fsGroup: 1000
         runAsGroup: 1000
@@ -101,6 +103,8 @@ spec:
         name: tmp-volume
       - emptyDir: {}
         name: config-volume
+      - emptyDir: {}
+        name: logs-volume
   volumeClaimTemplates:
   - metadata:
       name: kafka-data
