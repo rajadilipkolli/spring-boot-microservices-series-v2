@@ -128,7 +128,7 @@
         <dependency>
             <groupId>com.julien-dubois.bootui</groupId>
             <artifactId>bootui-spring-boot-starter-reactive</artifactId>
-            <version>1.15.0</version>
+            <version>1.16.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
