@@ -58,7 +58,7 @@ jobs:
       - name: Apply Prod Overlay
         run: |
           set -Eeuo pipefail
-          cd deployment/k8s && sh deploy-prod.sh
+          cd deployment/k8s && ROLLOUT_TIMEOUT=900s sh deploy-prod.sh
 
       - name: Wait for Webapp Hostaliases Patch
         run: |
