@@ -34,7 +34,7 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-      - image: redis:8.10.0-alpine
+      - image: redis:8.10.1-alpine
         name: redis
         ports:
         - containerPort: 6379

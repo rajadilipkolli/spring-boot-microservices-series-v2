@@ -143,7 +143,7 @@ jobs:
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail
-          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test"
           
           echo "Deleting Kafka Pod to test persistence..."
           kubectl delete pod kafka-0 -n retailstore

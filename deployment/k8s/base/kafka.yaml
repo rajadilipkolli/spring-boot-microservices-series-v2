@@ -61,7 +61,7 @@ spec:
           value: 'true'
         - name: KAFKA_LOG_DIRS
           value: /var/lib/kafka/data
-        image: apache/kafka-native:4.3.1
+        image: apache/kafka:4.3.1
         name: kafka
         ports:
         - containerPort: 9092
