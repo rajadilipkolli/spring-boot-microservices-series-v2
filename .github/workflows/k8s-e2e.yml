@@ -208,8 +208,8 @@ jobs:
           echo "Created customer with ID: $CUSTOMER_ID"
           
           echo "Sending load..."
-          for i in {1..250}; do
-            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 10},{"productCode": "P0002","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
+          for i in {1..1500}; do
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 0.1},{"productCode": "P0002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
           done
           wait
           
