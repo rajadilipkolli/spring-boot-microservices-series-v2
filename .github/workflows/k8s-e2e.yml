@@ -194,8 +194,13 @@ jobs:
         run: |
           set -Eeuo pipefail
           
-          # Optional: Apply autoscaling overlay if not applied in base
-          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+          # Install KEDA before applying autoscaling overlay
+          echo "Installing KEDA..."
+          kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+          kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s || true
+          
+          # Apply autoscaling overlay
+          kubectl apply -k deployment/k8s/overlays/autoscaling/
 
           # Send bursts of traffic to trigger lag/CPU load
           echo "Sending load..."
@@ -213,7 +218,8 @@ jobs:
           if [ "$replicas" -gt 1 ]; then
             echo "Autoscaling triggered successfully!"
           else
-            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            echo "::error::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            exit 1
           fi
       - name: Collect Diagnostics
         if: failure()
