@@ -203,9 +203,13 @@ jobs:
           kubectl apply -k deployment/k8s/overlays/autoscaling/
 
           # Send bursts of traffic to trigger lag/CPU load
+          echo "Creating customer for load test..."
+          CUSTOMER_ID=$(curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
+          echo "Created customer with ID: $CUSTOMER_ID"
+          
           echo "Sending load..."
           for i in {1..250}; do
-            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": 101,"items":[{"productCode": "P0001","quantity": 1,"productPrice": 10},{"productCode": "P0002","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 10},{"productCode": "P0002","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
           done
           wait
           
