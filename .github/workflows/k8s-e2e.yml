@@ -205,7 +205,7 @@ jobs:
           # Send bursts of traffic to trigger lag/CPU load
           echo "Sending load..."
           for i in {1..250}; do
-            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productCode":"P0001", "quantity":2, "productPrice": 10.0}]}' > /dev/null &
           done
           wait
           

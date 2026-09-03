@@ -12,8 +12,14 @@ spec:
   - type: kafka
     metadata:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
-      consumerGroup: order-group
-      topic: orders
+      consumerGroup: order-service
+      topic: payment-orders
+      lagThreshold: "100"
+  - type: kafka
+    metadata:
+      bootstrapServers: kafka.retailstore.svc.cluster.local:9092
+      consumerGroup: order-service
+      topic: stock-orders
       lagThreshold: "100"
 ---
 apiVersion: keda.sh/v1alpha1
@@ -30,8 +36,8 @@ spec:
   - type: kafka
     metadata:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
-      consumerGroup: payment-group
-      topic: payments
+      consumerGroup: payment
+      topic: orders
       lagThreshold: "100"
 ---
 apiVersion: keda.sh/v1alpha1
@@ -48,6 +54,6 @@ spec:
   - type: kafka
     metadata:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
-      consumerGroup: inventory-group
-      topic: inventory
+      consumerGroup: stock
+      topic: orders
       lagThreshold: "100"
