@@ -29,9 +29,24 @@ Keycloak handles identity and access management (IAM). Downtime in Keycloak prev
 ## Decision
 We will deploy **Keycloak in HA mode** using a shared external PostgreSQL database and Infinispan.
 - **Topology**: 3 Keycloak replicas.
-- **State Management**: Keycloak instances will cluster using Infinispan (JGroups) over Kubernetes DNS (ping).
+- **State Management**: Keycloak instances use embedded Infinispan with the Keycloak `kubernetes` cache stack, which selects the JGroups `DNS_PING` discovery protocol. Do not configure a second discovery protocol.
+- **Discovery**: `jgroups.dns.query` resolves `keycloak-discovery.retailstore.svc.cluster.local`, a headless Service with `publishNotReadyAddresses: true` that selects every Keycloak pod.
+- **Network**: Cluster DNS must be reachable on UDP/TCP 53, and Keycloak pods must be able to connect to one another on TCP 7800. Any NetworkPolicy introduced for this namespace must explicitly preserve both paths.
 - **Database**: The instances will point to the CloudNativePG HA cluster to ensure the persistence layer is robust.
+
+### Production validation
+After applying `deployment/k8s/overlays/prod`, verify that the rendered and live configuration remain aligned with this decision:
+
+```bash
+kubectl kustomize deployment/k8s/overlays/prod | grep -E 'replicas: 3|KC_CACHE_STACK|keycloak-discovery'
+kubectl -n retailstore rollout status deployment/keycloak --timeout=5m
+kubectl -n retailstore get deployment/keycloak -o jsonpath='{.spec.replicas}{" replicas; stack="}{.spec.template.spec.containers[0].env[?(@.name=="KC_CACHE_STACK")].value}{"\n"}'
+kubectl -n retailstore get endpoints keycloak-discovery
+kubectl -n retailstore logs -l app=keycloak --prefix --since=10m | grep -E 'ISPN000078|ISPN000094'
+```
+
+The gate passes only when the Deployment reports 3 available replicas, the discovery Service exposes 3 pod addresses, every pod logs the `kubernetes` stack, and the latest `ISPN000094` cluster view contains all 3 members. A one-member view on each pod is a failed deployment, even if all readiness probes pass.
 
 ## Consequences
 - **Positive**: Identity provider can survive node failures; scales horizontally to handle login spikes.
-- **Negative**: Requires careful configuration of JGroups (e.g., JDBC_PING or DNS_PING) to ensure cluster nodes discover each other; relies heavily on the database's HA capabilities.
+- **Negative**: Requires the headless-Service DNS record and pod-to-pod JGroups traffic to remain available; relies heavily on the database's HA capabilities. Keycloak deprecates the built-in `kubernetes` cache stack, so a future ADR must select and test a supported replacement before upgrading to a release that removes it.

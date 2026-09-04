@@ -20,5 +20,6 @@ resources:
 - retail-store-webapp.yaml
 - ingress.yaml
 - patch-job.yaml
+- network-policies.yaml
 - pdb.yaml
 - internal-ingress.yaml

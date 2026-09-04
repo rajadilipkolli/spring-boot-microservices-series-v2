@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.14.0
+        uses: helm/kind-action@v1.15.0
         with:
           version: v0.23.0
           cluster_name: kind
@@ -194,26 +194,36 @@ jobs:
         run: |
           set -Eeuo pipefail
           
-          # Optional: Apply autoscaling overlay if not applied in base
-          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+          # Install KEDA before applying autoscaling overlay
+          echo "Installing KEDA..."
+          kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+          kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s || true
+          
+          # Apply autoscaling overlay
+          kubectl apply -k deployment/k8s/overlays/autoscaling/
 
           # Send bursts of traffic to trigger lag/CPU load
+          echo "Creating customer for load test..."
+          CUSTOMER_ID=$(curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
+          echo "Created customer with ID: $CUSTOMER_ID"
+          
           echo "Sending load..."
-          for i in {1..200}; do
-            curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+          for i in {1..1500}; do
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 0.1},{"productCode": "P0002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
           done
           wait
           
-          # Wait and check if order-service scaled beyond minReplicas (1)
+          # Wait and check if inventory-service scaled beyond minReplicas (1)
           echo "Waiting for autoscaler to trigger..."
-          sleep 30
+          sleep 60
           
-          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
-          echo "Order service replicas: $replicas"
+          replicas=$(kubectl get deployment inventory-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Inventory service replicas: $replicas"
           if [ "$replicas" -gt 1 ]; then
             echo "Autoscaling triggered successfully!"
           else
-            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            echo "::error::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            exit 1
           fi
       - name: Collect Diagnostics
         if: failure()
