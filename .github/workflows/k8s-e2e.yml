@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.15.0
+        uses: helm/kind-action@v1.14.0
         with:
           version: v0.23.0
           cluster_name: kind
@@ -55,10 +55,10 @@ jobs:
             kind load docker-image "$image" --name kind
           done
 
-      - name: Apply CI Overlay
+      - name: Apply Prod Overlay
         run: |
           set -Eeuo pipefail
-          kubectl apply -k deployment/k8s/overlays/ci/
+          cd deployment/k8s && sh deploy-prod.sh
 
       - name: Wait for Webapp Hostaliases Patch
         run: |
@@ -72,11 +72,20 @@ jobs:
       - name: Wait for Infrastructure Rollouts
         run: |
           set -Eeuo pipefail
-          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
+                    # Wait for CNPG PostgreSQL
+          echo "Waiting for CNPG PostgreSQL..."
+          until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
+          kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance --timeout=600s
+          
+          # Wait for Strimzi Kafka
+          echo "Waiting for Strimzi Kafka..."
+          until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
+          kubectl wait --namespace retailstore --for=condition=ready pod -l strimzi.io/cluster=kafka --timeout=600s
+          
+          # Wait for Redis and Keycloak
           kubectl rollout status deployment/redis -n retailstore --timeout=300s
-          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
           kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in postgresql redis kafka keycloak; do
+          for app in redis keycloak; do
             kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
           done
 
@@ -236,9 +245,7 @@ jobs:
           kubectl describe pods -A > k8s-diagnostics/pods-describe.txt
           kubectl describe deployments,statefulsets -n retailstore > k8s-diagnostics/workloads-describe.txt
           for resource in \
-            statefulset/postgresql \
             deployment/redis \
-            statefulset/kafka \
             deployment/keycloak \
             deployment/config-server \
             deployment/service-registry \

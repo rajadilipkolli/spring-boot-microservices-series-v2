@@ -51,22 +51,37 @@ spec:
             - appdb
           initialDelaySeconds: 5
           periodSeconds: 10
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: postgresql-data
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 200m
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-        resources:
-          limits:
-            cpu: 1000m
-          requests:
-            cpu: 200m
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgresql-data
+        - mountPath: /tmp
+          name: tmp-volume
+        - mountPath: /var/run/postgresql
+          name: run-volume
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: postgresql
-      volumes: []
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume
+      - emptyDir: {}
+        name: run-volume
   volumeClaimTemplates:
   - metadata:
       name: postgresql-data

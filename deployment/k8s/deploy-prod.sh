@@ -6,22 +6,37 @@ ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
 echo "Creating namespace first..."
 kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
 
+echo "Installing Cert-Manager..."
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout="$ROLLOUT_TIMEOUT" || true
+# wait for webhook to be up
+sleep 15
+
+echo "Installing CloudNativePG..."
+kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n cnpg-system --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
+
+
 echo "Applying Strimzi operator explicitly (Operator before Operand)..."
 # Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
 # ensures CRDs exist before Kustomize applies the Kafka cluster resource.
 kubectl apply -f overlays/prod/strimzi-operator.yaml
+kubectl wait --for=condition=ready pod -l name=strimzi-cluster-operator -n retailstore --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
 
 echo "Applying prod overlay..."
 kubectl apply -k overlays/prod/
 
 echo "Waiting for rollouts..."
-# CloudNativePG does not support 'rollout status' on its custom resources directly,
-# but we can wait for its pod to be ready.
-kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+
+echo "Waiting for CNPG pod to be created..."
+until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
+kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/redis -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
-# Wait for Kafka (Strimzi) and Keycloak
-echo "Waiting for Kafka and Keycloak..."
+echo "Waiting for Strimzi Kafka pod to be created..."
+until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
 kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
