@@ -127,6 +127,38 @@ jobs:
             elapsed=$((elapsed + 5))
           done
 
+
+
+      - name: Validate NetworkPolicy and PDBs
+        run: |
+          set -Eeuo pipefail
+          # Test PDB exists and is healthy
+          kubectl get pdb -n retailstore api-gateway-pdb
+          kubectl get pdb -n retailstore retail-store-webapp-pdb
+          
+          # Verify NetworkPolicies applied
+          kubectl get networkpolicy -n retailstore default-deny-all
+          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
+
+      - name: Validate Kafka Persistence
+        run: |
+          set -Eeuo pipefail
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test"
+          
+          echo "Deleting Kafka Pod to test persistence..."
+          kubectl delete pod kafka-0 -n retailstore
+          
+          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
+          kubectl wait --namespace retailstore --for=condition=ready pod/kafka-0 --timeout=300s
+          
+          echo "Verifying Kafka data survived..."
+          result=$(kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
+          if [[ "$result" != *"hello-kafka"* ]]; then
+            echo "Kafka persistence test failed. Did not find message."
+            exit 1
+          else
+            echo "Kafka persistence test passed."
+          fi
       - name: Run E2E Validations
         run: |
           set -Eeuo pipefail
@@ -157,6 +189,42 @@ jobs:
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
 
+
+      - name: Load Test Autoscaling (KEDA/HPA)
+        run: |
+          set -Eeuo pipefail
+          
+          # Install KEDA before applying autoscaling overlay
+          echo "Installing KEDA..."
+          kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+          kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s || true
+          
+          # Apply autoscaling overlay
+          kubectl apply -k deployment/k8s/overlays/autoscaling/
+
+          # Send bursts of traffic to trigger lag/CPU load
+          echo "Creating customer for load test..."
+          CUSTOMER_ID=$(curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
+          echo "Created customer with ID: $CUSTOMER_ID"
+          
+          echo "Sending load..."
+          for i in {1..1500}; do
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 0.1},{"productCode": "P0002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
+          done
+          wait
+          
+          # Wait and check if inventory-service scaled beyond minReplicas (1)
+          echo "Waiting for autoscaler to trigger..."
+          sleep 60
+          
+          replicas=$(kubectl get deployment inventory-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Inventory service replicas: $replicas"
+          if [ "$replicas" -gt 1 ]; then
+            echo "Autoscaling triggered successfully!"
+          else
+            echo "::error::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            exit 1
+          fi
       - name: Collect Diagnostics
         if: failure()
         run: |

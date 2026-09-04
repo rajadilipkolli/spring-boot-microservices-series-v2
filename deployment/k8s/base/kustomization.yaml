@@ -1,21 +1,25 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - namespace.yaml
-  - secrets.yaml
-  - configmap.yaml
-  - postgresql.yaml
-  - redis.yaml
-  - kafka.yaml
-  - keycloak-realm-configmap.yaml
-  - keycloak.yaml
-  - config-server.yaml
-  - service-registry.yaml
-  - catalog-service.yaml
-  - inventory-service.yaml
-  - order-service.yaml
-  - payment-service.yaml
-  - api-gateway.yaml
-  - retail-store-webapp.yaml
-  - ingress.yaml
-  - patch-job.yaml
+- namespace.yaml
+- secrets.yaml
+- configmap.yaml
+- postgresql.yaml
+- redis.yaml
+- service-accounts.yaml
+- kafka.yaml
+- keycloak-realm-configmap.yaml
+- keycloak.yaml
+- config-server.yaml
+- service-registry.yaml
+- catalog-service.yaml
+- inventory-service.yaml
+- order-service.yaml
+- payment-service.yaml
+- api-gateway.yaml
+- retail-store-webapp.yaml
+- ingress.yaml
+- patch-job.yaml
+- network-policies.yaml
+- pdb.yaml
+- internal-ingress.yaml

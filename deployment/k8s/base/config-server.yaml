@@ -5,8 +5,8 @@ metadata:
   namespace: retailstore
 spec:
   ports:
-    - port: 8888
-      targetPort: 8888
+  - port: 8888
+    targetPort: 8888
   selector:
     app: config-server
   type: ClusterIP
@@ -26,53 +26,79 @@ spec:
       labels:
         app: config-server
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
-        - env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: native
-            - name: CONFIG_SERVER_USR
-              valueFrom:
-                secretKeyRef:
-                  key: CONFIG_SERVER_USR
-                  name: config-server-credentials
-            - name: CONFIG_SERVER_PWD
-              valueFrom:
-                secretKeyRef:
-                  key: CONFIG_SERVER_PWD
-                  name: config-server-credentials
-          image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
-          livenessProbe:
-            httpGet:
-              httpHeaders:
-                - name: Authorization
-                  value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
-              path: /actuator/health/liveness
-              port: 8888
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          name: config-server
-          ports:
-            - containerPort: 8888
-          readinessProbe:
-            httpGet:
-              httpHeaders:
-                - name: Authorization
-                  value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
-              path: /actuator/health/readiness
-              port: 8888
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            limits:
-              memory: 1400Mi
-            requests:
-              memory: 512Mi
-          startupProbe:
-            failureThreshold: 30
-            httpGet:
-              httpHeaders:
-                - name: Authorization
-                  value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
-              path: /actuator/health/liveness
-              port: 8888
-            periodSeconds: 10
+      - env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: native
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            httpHeaders:
+            - name: Authorization
+              value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
+            path: /actuator/health/liveness
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: config-server
+        ports:
+        - containerPort: 8888
+        readinessProbe:
+          httpGet:
+            httpHeaders:
+            - name: Authorization
+              value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
+            path: /actuator/health/readiness
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1400Mi
+            cpu: 1000m
+          requests:
+            memory: 512Mi
+            cpu: 200m
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            httpHeaders:
+            - name: Authorization
+              value: Basic ZGV2LXVzcjpkZXYtcGFzcw==
+            path: /actuator/health/liveness
+            port: 8888
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: config-volume
+          mountPath: /var/lib/config-server
+      serviceAccountName: config-server
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: config-volume
+        emptyDir: {}

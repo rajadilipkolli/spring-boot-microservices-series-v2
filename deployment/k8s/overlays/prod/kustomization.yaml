@@ -1,21 +1,42 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../base
+- ../hardening-base
+- cluster-issuer.yaml
+- postgresql-ha.yaml
+- kafka-ha.yaml
+- apicurio-registry.yaml
+- strimzi-operator.yaml
+- keycloak-discovery.yaml
 patches:
-  - target:
-      kind: Deployment
-    patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 3
-  - target:
-      kind: Ingress
-      name: retailstore-ingress
-    patch: |-
-      - op: add
-        path: /spec/tls
-        value:
-          - hosts:
-            - retailstore.local
-            secretName: retailstore-tls
+- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+- path: keycloak-ha-patch.yaml
+- path: ingress-patch.yaml
+  target:
+    kind: Ingress
+    name: retailstore-ingress
+- target:
+    kind: StatefulSet
+    name: postgresql
+  patch: |
+    $patch: delete
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      name: postgresql
+- target:
+    kind: StatefulSet
+    name: kafka
+  patch: |
+    $patch: delete
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      name: kafka
+- path: postgres-alias.yaml
+- path: kafka-alias.yaml

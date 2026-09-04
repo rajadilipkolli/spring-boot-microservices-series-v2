@@ -39,6 +39,7 @@ function jq() {
 }
 
 # Default variables with fallback values using parameter expansion
+: ${PROTOCOL=http}
 : ${HOST=localhost}
 : ${PORT=8765}
 : ${PROD_CODE=P0001}
@@ -303,8 +304,8 @@ function recreateComposite() {
     local methodType=$4
     local testName="API Request to $baseURL"
 
-    echo -e "${CYAN}Calling URL http://${HOST}:${PORT}/${baseURL} with body -${NC} $composite"
-    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+    echo -e "${CYAN}Calling URL $PROTOCOL://${HOST}:${PORT}/${baseURL} with body -${NC} $composite"
+    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k $PROTOCOL://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
 
     # Check if curl was successful
@@ -345,7 +346,7 @@ function setupTestData() {
     sleep ${RETRY_SLEEP_TIME}
     
     # Verify that a normal request works, expect record exists with product code
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE" || return 1
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode) || return 1
 
     body="{\"productCode\":\"$PROD_CODE"
@@ -356,7 +357,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that a normal request works, expect record exists with product code_1
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
 
     body="{\"productCode\":\"$PROD_CODE_1"
@@ -367,7 +368,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that communication between catalog-service and inventory service is established
-    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/product-code/$PROD_CODE_1?fetchInStock=true" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/catalog-service/api/catalog/product-code/$PROD_CODE_1?fetchInStock=true" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
     assertEqual true $(echo ${RESPONSE} | jq .inStock) || return 1
 
@@ -406,15 +407,15 @@ function testCircuitBreaker() {
     local SERVICES_TEST=("catalog-service" "inventory-service" "order-service")
     for s in "${SERVICES_TEST[@]}"; do
       if [[ "$s" == "catalog-service" ]]; then
-        url="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
+        url="$PROTOCOL://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
       elif [[ "$s" == "order-service" ]]; then
         ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
         if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
           ORDER_ID_FROM_COMPOSITE=1
         fi
-        url="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+        url="$PROTOCOL://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
       else
-        url="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+        url="$PROTOCOL://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
       fi
 
       start_ts=$(date +%s)
@@ -445,7 +446,7 @@ function testCircuitBreaker() {
     echo "\nStart Circuit Breaker tests for ${svc}!"
 
     # Health endpoint (gateway)
-    HEALTH_URL="http://${HOST}:${PORT}/${svc}/actuator/health"
+    HEALTH_URL="$PROTOCOL://${HOST}:${PORT}/${svc}/actuator/health"
     health_payload=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
 
     # function to extract CB state (tries multiple paths)
@@ -486,9 +487,9 @@ function testCircuitBreaker() {
 
     # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
     if [[ "$svc" == "catalog-service" ]]; then
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
+      SLOW_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/catalog-service/api/catalog/product-code/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
     elif [[ "$svc" == "order-service" ]]; then
       # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
       ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
@@ -496,13 +497,13 @@ function testCircuitBreaker() {
         # fall back to 1 (many test runs create id=1) — conservative best-effort
         ORDER_ID_FROM_COMPOSITE=1
       fi
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/9999999"
+      SLOW_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
+      NOT_FOUND_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/order-service/api/orders/9999999"
     else
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/DOESNOTEXIST"
+      SLOW_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="$PROTOCOL://${HOST}:${PORT}/inventory-service/api/inventory/DOESNOTEXIST"
     fi
 
     # Run 3 slow calls expecting failures (accept 500 or fallback 200)
@@ -654,7 +655,7 @@ function testCircuitBreaker() {
 
     # Try to fetch circuit breaker events (best-effort)
     if [[ -n "$cb_key" ]]; then
-      events_url="http://${HOST}:${PORT}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
+      events_url="$PROTOCOL://${HOST}:${PORT}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
       ev=$(curl -s "${events_url}" 2>/dev/null || true)
       if [[ -n "$ev" && "$ev" != "" ]]; then
         t1=$(echo "$ev" | jq -r '.circuitBreakerEvents[-3].stateTransition' 2>/dev/null || true)
@@ -699,14 +700,14 @@ function verifyAPIs() {
 
     log_info "Sleeping for ${KAFKA_STARTUP_SLEEP_TIME} sec as it is first order, letting kafka start in all services. Processing orderId - $ORDER_ID"
     sleep ${KAFKA_STARTUP_SLEEP_TIME}    # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" "Order status check for $ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" "Order status check for $ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) "Order ID check" || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) "Customer ID check" || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) "Order status check" || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) "Order source check" || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" "Customer payment check" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" "Customer payment check" || return 1
     assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) "Customer balance check" || return 1
 
     # Step2, Order Should be rejected
@@ -728,14 +729,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 3, Order Should be CONFIRMED 
@@ -757,14 +758,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 4, Order Should be ROLLBACK 
@@ -786,14 +787,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 5, Order Should be REJECTED 
@@ -815,14 +816,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
@@ -849,14 +850,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
@@ -883,14 +884,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is REJECTED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $PROTOCOL://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
     
     API_VERIFY_END_TIME=$(date +%s)
@@ -967,7 +968,7 @@ fi
 if [[ $@ == *"circuit-test"* ]]; then
   log_info "Running only circuit breaker checks (skipping full setup)..."
   # Ensure gateway is reachable
-  waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
+  waitForService curl -k $PROTOCOL://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
   testCircuitBreaker || error_exit "Circuit breaker tests failed or encountered an error"
   print_summary
   exit ${TEST_STATUS}
@@ -983,7 +984,7 @@ fi
 
 # Wait for gateway health check endpoint
 log_info "Checking API Gateway availability..."
-waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
+waitForService curl -k $PROTOCOL://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
 
 # Waiting for services to come up
 log_info "Sleeping for ${INITIAL_SLEEP_TIME} sec for services to start"
@@ -991,14 +992,14 @@ sleep ${INITIAL_SLEEP_TIME}
 
 # Check all required services 
 log_info "Checking service health..."
-waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health || error_exit "Catalog service is not available"
-waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
-waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
-waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+waitForService curl -k $PROTOCOL://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health || error_exit "Catalog service is not available"
+waitForService curl -k $PROTOCOL://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
+waitForService curl -k $PROTOCOL://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
+waitForService curl -k $PROTOCOL://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
 
 log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
 BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
-curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "http://$HOST:$PORT/api/v1/generate?batchSize=1" > /dev/null 2>&1
+curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "$PROTOCOL://$HOST:$PORT/api/v1/generate?batchSize=1" > /dev/null 2>&1
 log_info "Sleeping for 10 sec for warmup processing to complete..."
 sleep 10
 

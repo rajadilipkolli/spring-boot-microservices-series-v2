@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../base
-resources:
-  - hpa.yaml
+- ../../base
+- hpa.yaml
+- keda.yaml
+- allow-keda-to-kafka.yaml

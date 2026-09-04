@@ -1,0 +1,31 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgresql-ha
+  namespace: retailstore
+spec:
+  instances: 1
+
+  # Superuser secret must match what we provide in 'postgres-credentials' if desired, 
+  # but CNPG manages its own app user by default. We will inject the existing secret.
+  bootstrap:
+    initdb:
+      database: appdb
+      owner: appuser
+      secret:
+        name: postgres-credentials
+
+  # Encryption and TLS
+  enableSuperuserAccess: true
+
+  # Resource requirements
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "0.5"
+
+  storage:
+    size: 5Gi
