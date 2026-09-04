@@ -213,12 +213,12 @@ jobs:
           done
           wait
           
-          # Wait and check if order-service scaled beyond minReplicas (1)
+          # Wait and check if inventory-service scaled beyond minReplicas (1)
           echo "Waiting for autoscaler to trigger..."
-          sleep 30
+          sleep 60
           
-          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
-          echo "Order service replicas: $replicas"
+          replicas=$(kubectl get deployment inventory-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Inventory service replicas: $replicas"
           if [ "$replicas" -gt 1 ]; then
             echo "Autoscaling triggered successfully!"
           else
