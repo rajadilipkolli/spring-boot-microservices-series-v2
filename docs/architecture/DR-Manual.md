@@ -2,12 +2,12 @@
 
 ## 1. Objectives
 
-- **PostgreSQL Recovery Point Objective (RPO)**: 5 minutes (maximum acceptable database data loss).
-- **Component Recovery Time Objective (RTO)**: 15 minutes for the PostgreSQL recovery and ingress/DNS cutover path. This is not a full-service RTO. A full-service RTO will be set only after the Kafka, Redis/Sentinel, Keycloak, configuration, secrets, and application path passes the drill in section 4.
+- **Recovery Point Objective (RPO)**: 5 minutes. (Maximum acceptable data loss).
+- **Recovery Time Objective (RTO)**: 15 minutes. (Maximum time to restore full service after a catastrophic failure).
 
 ## 2. PostgreSQL HA & Backup Strategy (CloudNativePG)
 
-The target production topology uses the **CloudNativePG** operator for PostgreSQL high availability. The checked-in production overlay currently requests one database instance; it must be raised to the topology below and pass failover testing before it can be treated as HA.
+We utilize the **CloudNativePG** operator to maintain a Highly Available PostgreSQL cluster in production.
 
 ### Architecture
 - **Instances**: 3 nodes (1 Primary, 2 Synchronous Replicas).

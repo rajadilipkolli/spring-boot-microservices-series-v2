@@ -56,7 +56,7 @@ services:
       - microservice-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.160.0
+    image: otel/opentelemetry-collector-contrib:0.159.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
@@ -103,7 +103,7 @@ services:
       - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.3
+    image: quay.io/keycloak/keycloak:26.7.2
     command: [ 'start', '--import-realm', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]

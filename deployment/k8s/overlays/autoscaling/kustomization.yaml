@@ -4,3 +4,4 @@ resources:
 - ../../base
 - hpa.yaml
 - keda.yaml
+- allow-keda-to-kafka.yaml

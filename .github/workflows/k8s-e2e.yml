@@ -147,22 +147,21 @@ jobs:
           
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
-          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
-
+          kubectl get networkpolicy -n retailstore allow-dns-egress
+          
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail
-          kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
           
           echo "Deleting Kafka Pod to test persistence..."
-          kubectl delete pod kafka-dual-role-0 -n retailstore
+          kubectl delete pod kafka-0 -n retailstore
           
-          echo "Waiting for Kafka pod to recreate..."
-          until kubectl get pod kafka-dual-role-0 -n retailstore 2>/dev/null; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod/kafka-dual-role-0 --timeout=300s
+          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
+          kubectl wait --namespace retailstore --for=condition=ready pod/kafka-0 --timeout=300s
           
           echo "Verifying Kafka data survived..."
-          result=$(kubectl exec -n retailstore pod/kafka-dual-role-0 -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
+          result=$(kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000")
           if [[ "$result" != *"hello-kafka"* ]]; then
             echo "Kafka persistence test failed. Did not find message."
             exit 1
@@ -204,26 +203,36 @@ jobs:
         run: |
           set -Eeuo pipefail
           
-          # Optional: Apply autoscaling overlay if not applied in base
-          kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
+          # Install KEDA before applying autoscaling overlay
+          echo "Installing KEDA..."
+          kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+          kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s || true
+          
+          # Apply autoscaling overlay
+          kubectl apply -k deployment/k8s/overlays/autoscaling/
 
           # Send bursts of traffic to trigger lag/CPU load
+          echo "Creating customer for load test..."
+          CUSTOMER_ID=$(curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
+          echo "Created customer with ID: $CUSTOMER_ID"
+          
           echo "Sending load..."
-          for i in {1..200}; do
-            curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+          for i in {1..1500}; do
+            curl -s -X POST http://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 0.1},{"productCode": "P0002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
           done
           wait
           
-          # Wait and check if order-service scaled beyond minReplicas (1)
+          # Wait and check if inventory-service scaled beyond minReplicas (1)
           echo "Waiting for autoscaler to trigger..."
-          sleep 30
+          sleep 60
           
-          replicas=$(kubectl get deployment order-service -n retailstore -o jsonpath='{.spec.replicas}')
-          echo "Order service replicas: $replicas"
+          replicas=$(kubectl get deployment inventory-service -n retailstore -o jsonpath='{.spec.replicas}')
+          echo "Inventory service replicas: $replicas"
           if [ "$replicas" -gt 1 ]; then
             echo "Autoscaling triggered successfully!"
           else
-            echo "::warning::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            echo "::error::Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+            exit 1
           fi
       - name: Collect Diagnostics
         if: failure()

@@ -112,8 +112,14 @@ metadata:
   namespace: retailstore
 spec:
   ingress:
+  # Allow from any pod within retailstore namespace
   - from:
     - podSelector: {}
+  # Allow CNPG operator (cnpg-system ns) to poll pod status endpoint (port 8000)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
   podSelector:
     matchExpressions:
     - key: cnpg.io/cluster
@@ -128,6 +134,7 @@ metadata:
   namespace: retailstore
 spec:
   ingress:
+  # Allow from any pod within retailstore namespace (including strimzi-cluster-operator)
   - from:
     - podSelector: {}
   podSelector:
