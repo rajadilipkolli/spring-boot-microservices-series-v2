@@ -6,7 +6,6 @@ import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
-import static io.gatling.javaapi.core.CoreDsl.doIf;
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
@@ -80,8 +79,13 @@ public class CreateProductSimulation extends BaseLoadSimulation {
     private final ChainBuilder getInventory =
             tryMax(5, "inventoryRetryCounter")
                     .on(
-                            doIf(session -> session.getInt("inventoryRetryCounter") > 0)
-                                    .then(exec(session -> session).pause(Duration.ofSeconds(1)))
+                            exec(session -> {
+                                        // Clear previous response to prevent stale data on retries
+                                        return session.remove("inventoryResponseBody")
+                                                .remove("inventoryStatus");
+                                    })
+                                    .doIf(session -> session.getInt("inventoryRetryCounter") > 0)
+                                    .then(exec(session -> session).pause(Duration.ofSeconds(2)))
                                     .exec(
                                             http("Get product inventory")
                                                     .get(
@@ -102,17 +106,34 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                             "inventoryResponseBody")))
                                     .doIf(
                                             session ->
-                                                    session.contains("inventoryStatus")
-                                                            && session.getInt("inventoryStatus")
-                                                                    == 404)
-                                    .then(exec(session -> session.markAsFailed())))
+                                                    !session.contains("inventoryResponseBody")
+                                                            || session.getString(
+                                                                            "inventoryResponseBody")
+                                                                    == null
+                                                            || session.getString(
+                                                                            "inventoryResponseBody")
+                                                                    .trim()
+                                                                    .isEmpty())
+                                    .then(
+                                            exec(
+                                                    session -> {
+                                                        LOGGER.warn(
+                                                                "Inventory not yet available for"
+                                                                        + " product code: {},"
+                                                                        + " attempt: {}",
+                                                                session.getString("productCode"),
+                                                                session.getInt(
+                                                                        "inventoryRetryCounter"));
+                                                        return session.markAsFailed();
+                                                    })))
                     .exec(
                             session -> {
-                                // Validate the response body
+                                // Validate the response body after all retries
                                 String responseBody = session.getString("inventoryResponseBody");
                                 if (responseBody == null || responseBody.trim().isEmpty()) {
                                     LOGGER.warn(
-                                            "Empty inventory response detected for product code: {}",
+                                            "Inventory not available after all retries for product"
+                                                    + " code: {}",
                                             session.getString("productCode"));
                                     return session.markAsFailed();
                                 }
