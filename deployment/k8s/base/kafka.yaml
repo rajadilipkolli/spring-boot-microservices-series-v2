@@ -97,12 +97,16 @@ spec:
           name: tmp-volume
         - mountPath: /opt/kafka/config
           name: config-volume
+        - mountPath: /opt/kafka/logs
+          name: logs-volume
       serviceAccountName: kafka
       volumes:
       - emptyDir: {}
         name: tmp-volume
       - emptyDir: {}
         name: config-volume
+      - emptyDir: {}
+        name: logs-volume
   volumeClaimTemplates:
   - metadata:
       name: kafka-data
