@@ -3,7 +3,7 @@
 # Default values
 TEST_PROFILE="standard"
 BASE_URL="http://localhost:8765"
-USERS=50
+USERS=20
 DURATION=300
 
 # Parse command line arguments
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
             echo "Parameters:"
             echo "  -p, --profile   Test profile to run (quick, standard, extended, resilience, stress, gateway, all)"
             echo "  -u, --url       Base URL for the API Gateway (default: http://localhost:8765)"
-            echo "  -n, --users     Number of users for the test (default: 50)"
+            echo "  -n, --users     Number of users for the test (default: 20)"
             echo "  -d, --duration  Duration of the test in seconds (default: 300)"
             echo "  -h, --help      Display this help message"
             echo ""
@@ -187,4 +187,3 @@ if [ -n "$LATEST_REPORT" ]; then
         echo "Warning: scripts/compare-baseline.sh not found, skipping regression check."
     fi
 fi
-

@@ -1,7 +1,12 @@
 package simulation;
 
-import static config.Configuration.*;
-import static data.Feeders.*;
+import static config.Configuration.CONSTANT_USERS;
+import static config.Configuration.RAMP_DURATION_SECONDS;
+import static config.Configuration.SLA_MEAN_MS;
+import static config.Configuration.SLA_P95_MS;
+import static config.Configuration.SLA_P99_MS;
+import static config.Configuration.TEST_DURATION_SECONDS;
+import static data.Feeders.enhancedProductFeeder;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
@@ -76,64 +81,85 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                     jsonPath("$.productCode")
                                             .is(session -> session.getString("productCode"))));
 
+    // Pause 3 s unconditionally before the first inventory check so Kafka has time to process the
+    // ProductCreated event. Then retry up to 8 times with 3 s between each attempt.
     private final ChainBuilder getInventory =
-            tryMax(5, "inventoryRetryCounter")
-                    .on(
-                            exec(session -> {
-                                        // Clear previous response to prevent stale data on retries
-                                        return session.remove("inventoryResponseBody")
-                                                .remove("inventoryStatus");
-                                    })
-                                    .doIf(session -> session.getInt("inventoryRetryCounter") > 0)
-                                    .then(exec(session -> session).pause(Duration.ofSeconds(2)))
-                                    .exec(
-                                            http("Get product inventory")
-                                                    .get(
-                                                            "/inventory-service/api/inventory/#{productCode}")
-                                                    .check(
-                                                            status().in(200, 404)
-                                                                    .saveAs("inventoryStatus"))
-                                                    .checkIf(
+            exec(session -> session)
+                    .pause(Duration.ofSeconds(3))
+                    .exec(
+                            tryMax(8, "inventoryRetryCounter")
+                                    .on(
+                                            exec(session -> {
+                                                        // Clear stale session data before
+                                                        // each attempt
+                                                        return session.remove(
+                                                                        "inventoryResponseBody")
+                                                                .remove("inventoryStatus");
+                                                    })
+                                                    .doIf(
                                                             session ->
-                                                                    session.contains(
-                                                                                    "inventoryStatus")
-                                                                            && session.getInt(
-                                                                                            "inventoryStatus")
-                                                                                    == 200)
+                                                                    session.getInt(
+                                                                                    "inventoryRetryCounter")
+                                                                            > 0)
                                                     .then(
-                                                            bodyString()
-                                                                    .saveAs(
-                                                                            "inventoryResponseBody")))
-                                    .doIf(
-                                            session ->
-                                                    !session.contains("inventoryResponseBody")
-                                                            || session.getString(
-                                                                            "inventoryResponseBody")
-                                                                    == null
-                                                            || session.getString(
-                                                                            "inventoryResponseBody")
-                                                                    .trim()
-                                                                    .isEmpty())
-                                    .then(
-                                            exec(
-                                                    session -> {
-                                                        LOGGER.warn(
-                                                                "Inventory not yet available for"
-                                                                        + " product code: {},"
-                                                                        + " attempt: {}",
-                                                                session.getString("productCode"),
-                                                                session.getInt(
-                                                                        "inventoryRetryCounter"));
-                                                        return session.markAsFailed();
-                                                    })))
+                                                            exec(session -> session)
+                                                                    .pause(Duration.ofSeconds(3)))
+                                                    .exec(
+                                                            http("Get product inventory")
+                                                                    .get(
+                                                                            "/inventory-service/api/inventory/#{productCode}")
+                                                                    .check(
+                                                                            status().in(200, 404)
+                                                                                    .saveAs(
+                                                                                            "inventoryStatus"))
+                                                                    .checkIf(
+                                                                            session ->
+                                                                                    session
+                                                                                                    .contains(
+                                                                                                            "inventoryStatus")
+                                                                                            && session
+                                                                                                            .getInt(
+                                                                                                                    "inventoryStatus")
+                                                                                                    == 200)
+                                                                    .then(
+                                                                            bodyString()
+                                                                                    .saveAs(
+                                                                                            "inventoryResponseBody")))
+                                                    .doIf(
+                                                            session ->
+                                                                    !session.contains(
+                                                                                    "inventoryResponseBody")
+                                                                            || session.getString(
+                                                                                            "inventoryResponseBody")
+                                                                                    == null
+                                                                            || session.getString(
+                                                                                            "inventoryResponseBody")
+                                                                                    .trim()
+                                                                                    .isEmpty())
+                                                    .then(
+                                                            exec(
+                                                                    session -> {
+                                                                        LOGGER.warn(
+                                                                                "Inventory not yet"
+                                                                                        + " available"
+                                                                                        + " for product"
+                                                                                        + " code: {},"
+                                                                                        + " attempt: {}",
+                                                                                session.getString(
+                                                                                        "productCode"),
+                                                                                session.getInt(
+                                                                                        "inventoryRetryCounter"));
+                                                                        return session
+                                                                                .markAsFailed();
+                                                                    }))))
                     .exec(
                             session -> {
                                 // Validate the response body after all retries
                                 String responseBody = session.getString("inventoryResponseBody");
                                 if (responseBody == null || responseBody.trim().isEmpty()) {
                                     LOGGER.warn(
-                                            "Inventory not available after all retries for product"
-                                                    + " code: {}",
+                                            "Inventory not available after all retries for"
+                                                    + " product code: {}",
                                             session.getString("productCode"));
                                     return session.markAsFailed();
                                 }
@@ -145,7 +171,8 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                     return session;
                                 } catch (Exception e) {
                                     LOGGER.warn(
-                                            "Invalid JSON response for product code: {}, Error: {}",
+                                            "Invalid JSON response for product code: {},"
+                                                    + " Error: {}",
                                             session.getString("productCode"),
                                             e.getMessage());
                                     return session.markAsFailed();
