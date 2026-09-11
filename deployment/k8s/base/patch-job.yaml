@@ -3,6 +3,7 @@ kind: ServiceAccount
 metadata:
   name: webapp-patcher
   namespace: retailstore
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -13,9 +14,15 @@ rules:
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get"]
+
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "patch"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -29,6 +36,7 @@ roleRef:
   kind: Role
   name: webapp-patcher-role
   apiGroup: rbac.authorization.k8s.io
+
 ---
 apiVersion: batch/v1
 kind: Job
@@ -40,11 +48,11 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
 
       serviceAccountName: webapp-patcher
       restartPolicy: OnFailure
@@ -52,43 +60,50 @@ spec:
       containers:
         - name: patcher
           image: bitnami/kubectl:latest
+
           command:
             - /bin/bash
             - -c
             - |
+              set -e
+
               echo "Waiting for keycloak service..."
-              
-              while ! kubectl get svc keycloak -n retailstore > /dev/null 2>&1; do
+
+              until kubectl get svc keycloak -n retailstore >/dev/null 2>&1; do
+                echo "  keycloak service not found yet, sleeping 2s..."
                 sleep 2
               done
-              
-              IP=$(kubectl get svc keycloak -n retailstore -o jsonpath='{.spec.clusterIP}')
-              
+
+              IP=$(kubectl get svc keycloak \
+                -n retailstore \
+                -o jsonpath='{.spec.clusterIP}')
+
               echo "Keycloak IP is $IP."
               echo "Waiting for at least one keycloak pod to be Ready..."
-              
+
               while true; do
-                ready=$(kubectl get pods \
+                READY=$(kubectl get pods \
                   -l app=keycloak \
                   -n retailstore \
                   -o jsonpath='{.items[*].status.containerStatuses[*].ready}' \
                   2>/dev/null || true)
-              
-                if echo "$ready" | grep -q "true"; then
-                  echo "Keycloak is ready."
+
+                if [[ "$READY" == *"true"* ]]; then
                   break
                 fi
-              
+
                 echo "  keycloak not ready yet, sleeping 5s..."
                 sleep 5
               done
-              
+
+              echo "Keycloak is ready."
               echo "Patching retail-store-webapp hostAliases..."
-              
+
               kubectl patch deployment retail-store-webapp \
                 -n retailstore \
+                --type='strategic' \
                 -p "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"$IP\",\"hostnames\":[\"keycloak.local\"]}]}}}}"
-              
+
               echo "Patch complete."
 
           securityContext:
