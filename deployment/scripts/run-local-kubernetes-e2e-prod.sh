@@ -20,9 +20,6 @@ if [[ ! "$POD_CREATION_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
-read -r -a hosts_entry_fields <<< "$HOSTS_ENTRY"
-HOST_ALIASES=("${hosts_entry_fields[@]:1}")
-
 IMAGES=(
   "dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"
   "dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT"
@@ -96,61 +93,35 @@ require_commands() {
   done
 }
 
-# Returns success when /etc/hosts contains the requested alias.
-hosts_file_contains_alias() {
-  local alias_regex="${1//./\\.}"
-
-  grep -Eq "(^|[[:space:]])${alias_regex}([[:space:]]|$)" /etc/hosts
-}
-
-# Returns success when /etc/hosts contains every alias in HOSTS_ENTRY.
-hosts_file_contains_all_aliases() {
-  local alias
-
-  for alias in "${HOST_ALIASES[@]}"; do
-    hosts_file_contains_alias "$alias" || return 1
-  done
+# Returns success when /etc/hosts contains the exact mapping owned by this script.
+hosts_file_contains_entry() {
+  grep -Fqx "$HOSTS_ENTRY" /etc/hosts
 }
 
 # Adds and verifies the local retail-store hostnames using elevated privileges.
 add_hosts_entry() {
-  local alias
-
-  if hosts_file_contains_all_aliases; then
-    warn "Hosts entries already present; skipping."
+  if hosts_file_contains_entry; then
+    warn "Script-owned hosts entry already present; skipping."
     return
   fi
 
   printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null ||
     fail "Could not add local aliases to /etc/hosts."
 
-  for alias in "${HOST_ALIASES[@]}"; do
-    hosts_file_contains_alias "$alias" ||
-      fail "Alias '$alias' was not added to /etc/hosts."
-  done
+  hosts_file_contains_entry ||
+    fail "Script-owned hosts entry was not added to /etc/hosts."
 
   ok "Added and verified /etc/hosts entries."
 }
 
 # Removes and verifies the local retail-store hostnames using elevated privileges.
 remove_hosts_entry() {
-  local alias
-  local alias_regex
-  local sed_args=()
-
-  for alias in "${HOST_ALIASES[@]}"; do
-    alias_regex="${alias//./\\.}"
-    sed_args+=(-e "/(^|[[:space:]])${alias_regex}([[:space:]]|$)/d")
-  done
-
-  sudo sed -i -E "${sed_args[@]}" /etc/hosts ||
+  sudo sed -i "\\|^${HOSTS_ENTRY//./\\.}$|d" /etc/hosts ||
     fail "Could not remove local aliases from /etc/hosts."
 
-  for alias in "${HOST_ALIASES[@]}"; do
-    if hosts_file_contains_alias "$alias"; then
-      fail "Alias '$alias' remains in /etc/hosts after removal."
-    fi
-  done
+  if hosts_file_contains_entry; then
+    fail "Script-owned hosts entry remains in /etc/hosts after removal."
+  fi
 
   ok "Removed and verified local hosts entries."
 }
@@ -165,6 +136,7 @@ wait_for_pod_creation() {
     -n "$NAMESPACE" \
     -l "$label" \
     --no-headers \
+    --request-timeout=5s \
     2>/dev/null |
     awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
   do
@@ -486,10 +458,11 @@ pods_elapsed=0
 
 while true; do
 
-  not_ready="$(
+  if ! not_ready="$(
     kubectl get pods \
       -n "$NAMESPACE" \
       -o json \
+      --request-timeout=5s \
       2>/dev/null |
       jq -r '
         [
@@ -517,7 +490,9 @@ while true; do
       ' \
       2>/dev/null |
       tr -d '\r\n'
-  )"
+  )"; then
+    not_ready=1
+  fi
 
   # If kubectl or jq failed, do not perform an integer comparison
   # against an empty/malformed value.
