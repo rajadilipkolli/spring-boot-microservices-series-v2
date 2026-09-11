@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v6.0.0
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: ${{ matrix.java }}
           distribution: "temurin"
@@ -69,7 +69,7 @@ jobs:
         run: |
           chmod +x ./scripts/compare-baseline.sh
           ./scripts/compare-baseline.sh \
-            docs/baselines/main-baseline.json \
+            ../docs/baselines/main-baseline.json \
             target/gatling \
             15
         shell: bash
@@ -83,7 +83,7 @@ jobs:
             echo "No index.html found; skipping baseline update."
             exit 0
           fi
-          python3 - "${LATEST_HTML}" > docs/baselines/main-baseline.json <<'PYEOF'
+          python3 - "${LATEST_HTML}" > ../docs/baselines/main-baseline.json <<'PYEOF'
           import sys, json, re
           with open(sys.argv[1], 'r', encoding='utf-8', errors="replace") as f: html = f.read()
           cols = {}
@@ -103,7 +103,7 @@ jobs:
           PYEOF
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add docs/baselines/main-baseline.json
+          git add ../docs/baselines/main-baseline.json
           if git diff --staged --quiet; then
             echo "Baseline unchanged."
           else
@@ -113,4 +113,3 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

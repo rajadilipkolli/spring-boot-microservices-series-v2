@@ -48,6 +48,10 @@
             <column name="last_modified_date" type="timestamptz" />
         </createTable>
 
+        <createIndex tableName="orders" indexName="idx_orders_customer_id">
+            <column name="customer_id"/>
+        </createIndex>
+
         <createTable tableName="order_items">
             <column name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_items"/>
@@ -61,6 +65,10 @@
             <column name="product_price" type="NUMERIC(19,2)"/>
             <column name="order_id" type="BIGINT"/>
         </createTable>
+
+        <createIndex tableName="order_items" indexName="idx_order_items_order_id">
+            <column name="order_id"/>
+        </createIndex>
 
         <addForeignKeyConstraint baseColumnNames="order_id" baseTableName="order_items"
                                  constraintName="FK_ORDER_ITEMS_ON_ORDER" referencedColumnNames="id"

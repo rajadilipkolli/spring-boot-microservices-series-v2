@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <spotless.version>3.10.1</spotless.version>
+        <spotless.version>3.10.2</spotless.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -103,7 +103,7 @@
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>alpinejs</artifactId>
-            <version>3.16.3</version>
+            <version>3.17.2</version>
         </dependency>
 
         <dependency>
@@ -115,7 +115,7 @@
         <dependency>
             <groupId>com.julien-dubois.bootui</groupId>
             <artifactId>bootui-spring-boot-starter</artifactId>
-            <version>1.16.0</version>
+            <version>1.17.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -153,7 +153,7 @@
         <dependency>
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
-            <version>4.2.2</version>
+            <version>4.2.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
