@@ -52,6 +52,16 @@ public class OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
+    /**
+     * Creates an order service with its persistence, mapping, catalog, event, and transaction
+     * collaborators.
+     *
+     * @param orderRepository repository used to access orders
+     * @param orderMapper mapper between order API models and entities
+     * @param catalogService service used to validate products
+     * @param eventPublisher publisher for persisted order events
+     * @param transactionTemplate template used to run persistence operations in a transaction
+     */
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
@@ -65,6 +75,15 @@ public class OrderService {
         this.transactionTemplate = transactionTemplate;
     }
 
+    /**
+     * Finds a page of orders using the requested sort order.
+     *
+     * @param pageNo zero-based page number
+     * @param pageSize number of orders per page
+     * @param sortBy order property to sort by
+     * @param sortDir sort direction
+     * @return the requested page of order responses
+     */
     public PagedResult<OrderResponse> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -82,10 +101,23 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
+    /**
+     * Finds an order by its identifier.
+     *
+     * @param id order identifier
+     * @return the order, or an empty optional if it does not exist
+     */
     public Optional<Order> findOrderById(Long id) {
         return orderRepository.findOrderById(id);
     }
 
+    /**
+     * Validates and saves an order, then publishes its persisted representation.
+     *
+     * @param orderRequest order to save
+     * @return the persisted order response
+     * @throws ProductNotFoundException if a requested product does not exist or is out of stock
+     */
     public OrderResponse saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
@@ -106,6 +138,12 @@ public class OrderService {
         }
     }
 
+    /**
+     * Persists an order and publishes its persisted representation.
+     *
+     * @param orderRequest order to persist
+     * @return the persisted order response
+     */
     private OrderResponse persistOrder(OrderRequest orderRequest) {
         Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
         Order savedOrder = this.orderRepository.save(orderEntity);
@@ -115,6 +153,13 @@ public class OrderService {
         return this.orderMapper.toResponse(savedOrder);
     }
 
+    /**
+     * Validates and saves a batch of orders, then publishes each persisted order.
+     *
+     * @param orderRequests orders to save
+     * @return the persisted order responses
+     * @throws ProductNotFoundException if a requested product does not exist or is out of stock
+     */
     public List<OrderResponse> saveBatchOrders(List<OrderRequest> orderRequests) {
         // Collect all product codes to validate
         List<String> allProductCodes =
@@ -153,6 +198,12 @@ public class OrderService {
         }
     }
 
+    /**
+     * Persists a batch of orders and publishes each persisted representation.
+     *
+     * @param orderRequests orders to persist
+     * @return the persisted order responses
+     */
     private List<OrderResponse> persistBatchOrders(List<OrderRequest> orderRequests) {
         List<Order> orderEntities =
                 orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
@@ -170,6 +221,12 @@ public class OrderService {
         return savedOrders.stream().map(this.orderMapper::toResponse).toList();
     }
 
+    /**
+     * Checks whether the requested products exist and are in stock.
+     *
+     * @param productIds product identifiers to check
+     * @return the catalog product-existence response
+     */
     private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
             List<String> productIds) {
         return catalogService.productsExistsByCodes(productIds);
