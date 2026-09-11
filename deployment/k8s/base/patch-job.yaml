@@ -10,12 +10,12 @@ metadata:
   name: webapp-patcher-role
   namespace: retailstore
 rules:
-- apiGroups: [""]
-  resources: ["services"]
-  verbs: ["get"]
-- apiGroups: ["apps"]
-  resources: ["deployments"]
-  verbs: ["get", "patch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -23,8 +23,8 @@ metadata:
   name: webapp-patcher-binding
   namespace: retailstore
 subjects:
-- kind: ServiceAccount
-  name: webapp-patcher
+  - kind: ServiceAccount
+    name: webapp-patcher
 roleRef:
   kind: Role
   name: webapp-patcher-role
@@ -45,29 +45,55 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+
       serviceAccountName: webapp-patcher
       restartPolicy: OnFailure
+
       containers:
-      - name: patcher
-        image: bitnami/kubectl:latest
-        command:
-        - /bin/bash
-        - -c
-        - |
-          echo "Waiting for keycloak service..."
-          while ! kubectl get svc keycloak > /dev/null 2>&1; do sleep 2; done
-          IP=$(kubectl get svc keycloak -o jsonpath='{.spec.clusterIP}')
-          echo "Keycloak IP is $IP. Waiting for at least one keycloak pod to be Ready..."
-          until kubectl get pods -l app=keycloak -n retailstore -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -q "true"; do
-            echo "  keycloak not ready yet, sleeping 5s..."
-            sleep 5
-          done
-          echo "Keycloak is ready. Patching retail-store-webapp hostAliases..."
-          kubectl patch deployment retail-store-webapp -p "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"$IP\",\"hostnames\":[\"keycloak.local\"]}]}}}}"
-          echo "Patch complete."
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
+        - name: patcher
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Waiting for keycloak service..."
+              
+              while ! kubectl get svc keycloak -n retailstore > /dev/null 2>&1; do
+                sleep 2
+              done
+              
+              IP=$(kubectl get svc keycloak -n retailstore -o jsonpath='{.spec.clusterIP}')
+              
+              echo "Keycloak IP is $IP."
+              echo "Waiting for at least one keycloak pod to be Ready..."
+              
+              while true; do
+                ready=$(kubectl get pods \
+                  -l app=keycloak \
+                  -n retailstore \
+                  -o jsonpath='{.items[*].status.containerStatuses[*].ready}' \
+                  2>/dev/null || true)
+              
+                if echo "$ready" | grep -q "true"; then
+                  echo "Keycloak is ready."
+                  break
+                fi
+              
+                echo "  keycloak not ready yet, sleeping 5s..."
+                sleep 5
+              done
+              
+              echo "Patching retail-store-webapp hostAliases..."
+              
+              kubectl patch deployment retail-store-webapp \
+                -n retailstore \
+                -p "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"$IP\",\"hostnames\":[\"keycloak.local\"]}]}}}}"
+              
+              echo "Patch complete."
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
