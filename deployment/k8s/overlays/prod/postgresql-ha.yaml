@@ -4,7 +4,9 @@ metadata:
   name: postgresql-ha
   namespace: retailstore
 spec:
-  instances: 1
+  instances: 3
+  minSyncReplicas: 2
+  maxSyncReplicas: 2
 
   # Superuser secret must match what we provide in 'postgres-credentials' if desired, 
   # but CNPG manages its own app user by default. We will inject the existing secret.

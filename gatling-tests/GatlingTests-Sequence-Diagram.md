@@ -59,14 +59,17 @@ sequenceDiagram
     %% Test Data Generation
     Note over Script, Kafka: 📊 Test Data Preparation & Warmup
     Script->>Gateway: POST /api/v1/generate
-    Gateway->>Catalog: Generate test products & inventory
-    Catalog->>Kafka: Publish ProductCreated/InventoryCreated events
+    Gateway->>Catalog: POST CATALOG_SERVICE_URL (Generate products)
+    Catalog->>Kafka: Publish ProductCreated events
     Catalog-->>Gateway: 200 OK
+    Gateway->>Inventory: POST INVENTORY_SERVICE_URL (Generate inventory)
+    Inventory->>Kafka: Publish InventoryCreated events
+    Inventory-->>Gateway: 200 OK
     Gateway-->>Script: 200 OK (Data generated)
 
-    %% Kafka Initialization Delay
-    Note over Script, Kafka: ⏱️ Kafka Initialization
-    Script->>Script: sleep 10 (Wait for topics to initialize)
+    %% Warm-up Processing Delay
+    Note over Script, Kafka: ⏱️ Warm-up Processing
+    Script->>Script: sleep 10 (Allow warm-up processing to complete)
     Kafka->>Kafka: Process events
     
     %% Start Gatling
@@ -165,19 +168,17 @@ sequenceDiagram
     
     rect rgb(20, 60, 20)
         Note over Gatling: 🔄 Ramp-up Phase (5 minutes)
-        Gatling->>Gatling: rampUsersPerSec(0 → 25)
-        Gatling->>Gatling: rampUsersPerSec(25 → 50)
-        Gatling->>Gatling: rampUsersPerSec(50 → 100)
+        Gatling->>Gatling: rampUsersPerSec(1 → MAX_USERS)
     end
     
     rect rgb(60, 60, 20)
         Note over Gatling: 🏔️ Plateau Phase (10 minutes)
-        Gatling->>Gatling: constantUsersPerSec(100)
+        Gatling->>Gatling: constantUsersPerSec(MAX_USERS)
     end
     
     rect rgb(20, 20, 60)
         Note over Gatling: 🔽 Cool-down Phase (2 minutes)
-        Gatling->>Gatling: rampUsersPerSec(100 → 0)
+        Gatling->>Gatling: rampUsersPerSec(MAX_USERS → 1)
     end
 
     %% Resilience Testing Scenarios
@@ -275,7 +276,9 @@ sequenceDiagram
     and SLA Validation
         Gatling->>Gatling: Assert mean response time < SLA
         Gatling->>Gatling: Assert 95th percentile < SLA
-        Gatling->>Gatling: Assert error rate checks
+        Gatling->>Gatling: Assert 99th percentile < SLA
+        Gatling->>Gatling: Assert failed-request percentage < SLA
+        Gatling->>Gatling: Assert request-specific success and P95 checks
     end
 
     %% Test Completion & Reporting
@@ -299,10 +302,10 @@ sequenceDiagram
 - **Pre-test verification** of all microservices via the orchestration scripts (`run-tests.sh` / `run-tests.ps1`)
 - **Automated service discovery** through API Gateway
 - **Fail-fast approach** if services are unavailable before Gatling starts
-- **Automated warm-up** triggered by scripts to generate test data and initialize Kafka
+- **Automated warm-up** triggered by scripts to generate test data and allow asynchronous processing to complete
 
 ### 🔥 Stress Testing Scenarios
-- **Ramp-up Strategy**: Gradual load increase from zero to find breaking points
+- **Ramp-up Strategy**: Gradual load increase from 1 user per second to `MAX_USERS`, then back to 1
 - **Mixed User Journeys**: Realistic traffic patterns (browsers, searchers, shoppers)
 - **Plateau Testing**: Sustained load to test system stability
 
@@ -328,7 +331,4 @@ sequenceDiagram
 
 ### 📈 Reporting & Analysis
 - **HTML Dashboards**: Interactive performance reports
-- **Response Time Charts**: Visual performance analysis
-- **Throughput Graphs**: Request rate visualization
-- **Error Analysis**: Failure pattern identification
 - **Trend Analysis**: Handled by CI/CD pipeline baseline comparisons

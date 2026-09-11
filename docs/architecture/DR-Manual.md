@@ -2,8 +2,8 @@
 
 ## 1. Objectives
 
-- **Recovery Point Objective (RPO)**: 5 minutes. (Maximum acceptable data loss).
-- **Recovery Time Objective (RTO)**: 15 minutes. (Maximum time to restore full service after a catastrophic failure).
+- **Recovery Point Objective (RPO) target**: 5 minutes (maximum acceptable data loss). This remains a target until a full-service regional drill passes.
+- **Recovery Time Objective (RTO) target**: 15 minutes (maximum time to restore full service after a catastrophic failure). This remains a target until a full-service regional drill passes.
 
 ## 2. PostgreSQL HA & Backup Strategy (CloudNativePG)
 

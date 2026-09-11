@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="C:/tools/git/spring-boot-microservices-series-v2"
+PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/prod"
 E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
@@ -10,9 +10,18 @@ E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
 HOSTS_ENTRY="127.0.0.1 retailstore.local api.retailstore.local keycloak.local jobrunr.local"
-INGRESS_MANIFEST="https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml"
+INGRESS_MANIFEST="https://raw.githubusercontent.com/kubernetes/ingress-nginx/64780b1fed3af99f4eccbc3fdad7ad785e8a83b6/deploy/static/provider/kind/deploy.yaml"
+POD_CREATION_TIMEOUT_SECONDS="${POD_CREATION_TIMEOUT_SECONDS:-300}"
 SKIP_CLUSTER=false
 TEARDOWN=false
+
+if [[ ! "$POD_CREATION_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  printf 'FAIL: POD_CREATION_TIMEOUT_SECONDS must be a positive integer.\n' >&2
+  exit 1
+fi
+
+read -r -a hosts_entry_fields <<< "$HOSTS_ENTRY"
+HOST_ALIASES=("${hosts_entry_fields[@]:1}")
 
 IMAGES=(
   "dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"
@@ -87,23 +96,90 @@ require_commands() {
   done
 }
 
-# Adds the local retail-store hostnames to /etc/hosts when absent.
-add_hosts_entry() {
-  if grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
-    warn "Hosts entries already present; skipping."
-  else
-    if printf '%s\n' "$HOSTS_ENTRY" >> /etc/hosts 2>/dev/null; then
-      ok "Added /etc/hosts entries."
-    else
-      warn "Could not modify /etc/hosts. You may need to run Git Bash as Administrator."
-    fi
-  fi
+# Returns success when /etc/hosts contains the requested alias.
+hosts_file_contains_alias() {
+  local alias_regex="${1//./\\.}"
+
+  grep -Eq "(^|[[:space:]])${alias_regex}([[:space:]]|$)" /etc/hosts
 }
 
-# Removes the local retail-store hostnames from /etc/hosts.
+# Returns success when /etc/hosts contains every alias in HOSTS_ENTRY.
+hosts_file_contains_all_aliases() {
+  local alias
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    hosts_file_contains_alias "$alias" || return 1
+  done
+}
+
+# Adds and verifies the local retail-store hostnames using elevated privileges.
+add_hosts_entry() {
+  local alias
+
+  if hosts_file_contains_all_aliases; then
+    warn "Hosts entries already present; skipping."
+    return
+  fi
+
+  printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null ||
+    fail "Could not add local aliases to /etc/hosts."
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    hosts_file_contains_alias "$alias" ||
+      fail "Alias '$alias' was not added to /etc/hosts."
+  done
+
+  ok "Added and verified /etc/hosts entries."
+}
+
+# Removes and verifies the local retail-store hostnames using elevated privileges.
 remove_hosts_entry() {
-  sed -i '\|retailstore\.local|d' /etc/hosts 2>/dev/null || true
-  ok "Removed local hosts entries."
+  local alias
+  local alias_regex
+  local sed_args=()
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    alias_regex="${alias//./\\.}"
+    sed_args+=(-e "/(^|[[:space:]])${alias_regex}([[:space:]]|$)/d")
+  done
+
+  sudo sed -i -E "${sed_args[@]}" /etc/hosts ||
+    fail "Could not remove local aliases from /etc/hosts."
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    if hosts_file_contains_alias "$alias"; then
+      fail "Alias '$alias' remains in /etc/hosts after removal."
+    fi
+  done
+
+  ok "Removed and verified local hosts entries."
+}
+
+# Waits for a matching pod to exist before readiness checks begin.
+wait_for_pod_creation() {
+  local label="$1"
+  local description="$2"
+  local deadline=$((SECONDS + POD_CREATION_TIMEOUT_SECONDS))
+
+  until kubectl get pods \
+    -n "$NAMESPACE" \
+    -l "$label" \
+    --no-headers \
+    2>/dev/null |
+    awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
+  do
+    if ((SECONDS >= deadline)); then
+      warn "Timed out after ${POD_CREATION_TIMEOUT_SECONDS}s waiting for ${description} pod creation."
+      printf '%s\n' "Current pod status:" >&2
+      kubectl get pods -n "$NAMESPACE" -o wide >&2 || true
+      printf '%s\n' "Recent namespace events:" >&2
+      kubectl get events -n "$NAMESPACE" --sort-by='.lastTimestamp' >&2 || true
+      return 1
+    fi
+
+    printf '  waiting for %s pods...\n' "$description"
+    sleep 2
+  done
 }
 
 # Captures Kubernetes pod, event, and log diagnostics after a failure.
@@ -140,7 +216,7 @@ collect_diagnostics() {
 ###############################################################################
 
 if [[ "$TEARDOWN" == true ]]; then
-  require_commands kind
+  require_commands kind sudo
 
   step "Tearing down Kind cluster"
 
@@ -158,7 +234,7 @@ fi
 
 step "Verifying required tools"
 
-require_commands docker kind kubectl jq curl
+require_commands docker kind kubectl jq curl sudo
 
 ok "All tools found."
 
@@ -244,7 +320,7 @@ sleep 15
 ###############################################################################
 
 kubectl apply \
-  -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+  -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/c7be872e75719de35b6c84e97372dbb77e2df605/releases/cnpg-1.22.1.yaml
 
 kubectl wait \
   --for=condition=ready pod \
@@ -289,16 +365,9 @@ step "Waiting for infrastructure rollouts"
 # POSTGRES / CNPG
 ###############################################################################
 
-until kubectl get pods \
-  -n "$NAMESPACE" \
-  -l 'cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance' \
-  --no-headers \
-  2>/dev/null |
-  awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
-do
-  printf '  waiting for PostgreSQL pods...\n'
-  sleep 2
-done
+wait_for_pod_creation \
+  'cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance' \
+  'PostgreSQL'
 
 kubectl wait \
   --for=condition=ready pod \
@@ -319,16 +388,7 @@ kubectl rollout status \
 # KAFKA
 ###############################################################################
 
-until kubectl get pods \
-  -n "$NAMESPACE" \
-  -l 'strimzi.io/cluster=kafka' \
-  --no-headers \
-  2>/dev/null |
-  awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
-do
-  printf '  waiting for Kafka pods...\n'
-  sleep 2
-done
+wait_for_pod_creation 'strimzi.io/cluster=kafka' 'Kafka'
 
 kubectl wait \
   --for=condition=ready pod \
@@ -571,7 +631,7 @@ if (( test_exit == 0 )); then
     --silent \
     --fail \
     -X POST \
-    http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
+    https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
     -d 'client_id=retailstore-webapp' \
     -d "client_secret=$client_secret" \
     -d 'grant_type=password' \
