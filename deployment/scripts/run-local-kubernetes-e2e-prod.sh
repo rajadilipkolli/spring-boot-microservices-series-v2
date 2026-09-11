@@ -25,11 +25,16 @@ IMAGES=(
   "dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT"
 )
 
+# Prints a section heading for the current deployment step.
 step() { printf '\n=== %s ===\n' "$1"; }
+# Prints a successful status message.
 ok() { printf 'OK: %s\n' "$1"; }
+# Prints a warning message to standard error.
 warn() { printf 'WARN: %s\n' "$1" >&2; }
+# Prints a failure message to standard error and exits the script.
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
+# Displays the supported command-line options.
 usage() {
   cat <<'EOF'
 Usage: ./run-local-kubernetes-e2e.sh [options]
@@ -51,6 +56,7 @@ while (($# > 0)); do
   shift
 done
 
+# Verifies that every command passed as an argument is available.
 require_commands() {
   local command_name
   for command_name in "$@"; do
@@ -58,6 +64,7 @@ require_commands() {
   done
 }
 
+# Adds the local retail-store hostnames to /etc/hosts when absent.
 add_hosts_entry() {
   if grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
     warn "Hosts entries already present; skipping."
@@ -67,11 +74,13 @@ add_hosts_entry() {
   fi
 }
 
+# Removes the local retail-store hostnames from /etc/hosts.
 remove_hosts_entry() {
   sed -i '\|retailstore\.local|d' /etc/hosts 2>/dev/null || true
   ok "Removed local hosts entries."
 }
 
+# Captures Kubernetes pod, event, and log diagnostics after a failure.
 collect_diagnostics() {
   local diagnostics_dir="k8s-diagnostics"
   mkdir -p "$diagnostics_dir"
