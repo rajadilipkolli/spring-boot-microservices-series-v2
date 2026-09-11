@@ -97,13 +97,6 @@ spec:
           name: tmp-volume
         - mountPath: /opt/kafka/config
           name: config-volume
-      securityContext:
-        fsGroup: 1000
-        runAsGroup: 1000
-        runAsNonRoot: true
-        runAsUser: 1000
-        seccompProfile:
-          type: RuntimeDefault
       serviceAccountName: kafka
       volumes:
       - emptyDir: {}
