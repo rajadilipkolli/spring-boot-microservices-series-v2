@@ -35,6 +35,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -49,16 +50,19 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final CatalogService catalogService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
 
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
             CatalogService catalogService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TransactionTemplate transactionTemplate) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
         this.eventPublisher = eventPublisher;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public PagedResult<OrderResponse> findAllOrders(
@@ -82,7 +86,6 @@ public class OrderService {
         return orderRepository.findOrderById(id);
     }
 
-    @Transactional
     public OrderResponse saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
@@ -94,12 +97,7 @@ public class OrderService {
             log.debug(
                     "ProductCodes :{} exists in db, hence proceeding",
                     LogSanitizer.sanitizeCollection(productCodes));
-            Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
-            Order savedOrder = this.orderRepository.save(orderEntity);
-            OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
-            // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            eventPublisher.publishEvent(persistedOrderDto);
-            return this.orderMapper.toResponse(savedOrder);
+            return transactionTemplate.execute(_ -> persistOrder(orderRequest));
         } else {
             log.debug(
                     "one or more of product codes :{} does not exists in db",
@@ -108,7 +106,15 @@ public class OrderService {
         }
     }
 
-    @Transactional
+    private OrderResponse persistOrder(OrderRequest orderRequest) {
+        Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
+        Order savedOrder = this.orderRepository.save(orderEntity);
+        OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
+        // Should send persistedOrderDto as it contains OrderId used for subsequent processing
+        eventPublisher.publishEvent(persistedOrderDto);
+        return this.orderMapper.toResponse(savedOrder);
+    }
+
     public List<OrderResponse> saveBatchOrders(List<OrderRequest> orderRequests) {
         // Collect all product codes to validate
         List<String> allProductCodes =
@@ -138,26 +144,30 @@ public class OrderService {
             log.debug(
                     "All ProductCodes exist in db, proceeding with batch save: {}",
                     LogSanitizer.sanitizeCollection(allProductCodes));
-            List<Order> orderEntities =
-                    orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
-
-            List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
-
-            // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
-            // OrderEventPublisher
-            savedOrders.forEach(
-                    order -> {
-                        OrderDto dto = orderMapper.toDto(order);
-                        eventPublisher.publishEvent(dto);
-                    });
-
-            return savedOrders.stream().map(this.orderMapper::toResponse).toList();
+            return transactionTemplate.execute(_ -> persistBatchOrders(orderRequests));
         } else {
             log.debug(
                     "One or more product codes do not exist in db: {}",
                     LogSanitizer.sanitizeCollection(allProductCodes));
             throw new ProductNotFoundException(allProductCodes);
         }
+    }
+
+    private List<OrderResponse> persistBatchOrders(List<OrderRequest> orderRequests) {
+        List<Order> orderEntities =
+                orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
+
+        List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
+
+        // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
+        // OrderEventPublisher
+        savedOrders.forEach(
+                order -> {
+                    OrderDto dto = orderMapper.toDto(order);
+                    eventPublisher.publishEvent(dto);
+                });
+
+        return savedOrders.stream().map(this.orderMapper::toResponse).toList();
     }
 
     private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
