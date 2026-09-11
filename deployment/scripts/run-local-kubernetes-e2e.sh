@@ -132,7 +132,7 @@ step "Waiting for webapp hostAliases patch"
 # keycloak.local), triggering a new rollout. Wait for it here, before any
 # rollout/readiness checks, so those checks see the final pod spec instead of
 # racing a mid-patch rollout.
-kubectl wait --namespace "$NAMESPACE" --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
+kubectl wait --namespace "$NAMESPACE" --for=condition=complete job/patch-webapp-hostaliases --timeout=300s
 ok "Webapp hostAliases patch applied."
 
 step "Waiting for infrastructure rollouts"
