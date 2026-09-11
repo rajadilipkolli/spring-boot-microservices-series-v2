@@ -57,8 +57,14 @@ spec:
           echo "Waiting for keycloak service..."
           while ! kubectl get svc keycloak > /dev/null 2>&1; do sleep 2; done
           IP=$(kubectl get svc keycloak -o jsonpath='{.spec.clusterIP}')
-          echo "Keycloak IP is $IP. Patching retail-store-webapp..."
+          echo "Keycloak IP is $IP. Waiting for at least one keycloak pod to be Ready..."
+          until kubectl get pods -l app=keycloak -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -q "true"; do
+            echo "  keycloak not ready yet, sleeping 5s..."
+            sleep 5
+          done
+          echo "Keycloak is ready. Patching retail-store-webapp hostAliases..."
           kubectl patch deployment retail-store-webapp -p "{\"spec\":{\"template\":{\"spec\":{\"hostAliases\":[{\"ip\":\"$IP\",\"hostnames\":[\"keycloak.local\"]}]}}}}"
+          echo "Patch complete."
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

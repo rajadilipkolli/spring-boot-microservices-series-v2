@@ -55,10 +55,10 @@ jobs:
             kind load docker-image "$image" --name kind
           done
 
-      - name: Apply Prod Overlay
+      - name: Apply CI Overlay
         run: |
           set -Eeuo pipefail
-          cd deployment/k8s && sh deploy-prod.sh
+          kubectl apply -k deployment/k8s/overlays/ci/
 
       - name: Wait for Webapp Hostaliases Patch
         run: |
@@ -72,20 +72,11 @@ jobs:
       - name: Wait for Infrastructure Rollouts
         run: |
           set -Eeuo pipefail
-                    # Wait for CNPG PostgreSQL
-          echo "Waiting for CNPG PostgreSQL..."
-          until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n retailstore | grep postgresql; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance --timeout=600s
-          
-          # Wait for Strimzi Kafka
-          echo "Waiting for Strimzi Kafka..."
-          until kubectl get pod -l strimzi.io/cluster=kafka -n retailstore | grep kafka; do sleep 2; done
-          kubectl wait --namespace retailstore --for=condition=ready pod -l strimzi.io/cluster=kafka --timeout=600s
-          
-          # Wait for Redis and Keycloak
+          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
           kubectl rollout status deployment/redis -n retailstore --timeout=300s
+          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
           kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in redis keycloak; do
+          for app in postgresql redis kafka keycloak; do
             kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
           done
 
@@ -147,12 +138,12 @@ jobs:
           
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
-          kubectl get networkpolicy -n retailstore allow-dns-egress
-          
+          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
+
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail
-          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test"
           
           echo "Deleting Kafka Pod to test persistence..."
           kubectl delete pod kafka-0 -n retailstore
@@ -245,7 +236,9 @@ jobs:
           kubectl describe pods -A > k8s-diagnostics/pods-describe.txt
           kubectl describe deployments,statefulsets -n retailstore > k8s-diagnostics/workloads-describe.txt
           for resource in \
+            statefulset/postgresql \
             deployment/redis \
+            statefulset/kafka \
             deployment/keycloak \
             deployment/config-server \
             deployment/service-registry \

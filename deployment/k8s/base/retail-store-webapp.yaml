@@ -104,10 +104,21 @@ spec:
         volumeMounts:
         - name: tmp-volume
           mountPath: /tmp
-      hostAliases:
-      - hostnames:
-        - keycloak.local
-        ip: 10.43.243.75
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - 'until nc -z keycloak 80; do echo waiting for keycloak; sleep 3; done;
+
+          '
+        image: busybox:1.36
+        name: wait-for-keycloak
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
       serviceAccountName: retail-store-webapp
       volumes:
       - name: tmp-volume
