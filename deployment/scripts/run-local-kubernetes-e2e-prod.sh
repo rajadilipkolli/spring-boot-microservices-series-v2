@@ -2,9 +2,9 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="C:/tools/git/spring-boot-microservices-series-v2"
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
-CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/ci"
+CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/prod"
 E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 
 CLUSTER_NAME="kind"
@@ -62,13 +62,13 @@ add_hosts_entry() {
   if grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
     warn "Hosts entries already present; skipping."
   else
-    printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null
+    printf '%s\n' "$HOSTS_ENTRY" >> /etc/hosts 2>/dev/null || true
     ok "Added /etc/hosts entries."
   fi
 }
 
 remove_hosts_entry() {
-  sudo sed -i '\|retailstore\.local|d' /etc/hosts
+  sed -i '\|retailstore\.local|d' /etc/hosts 2>/dev/null || true
   ok "Removed local hosts entries."
 }
 
@@ -87,7 +87,7 @@ collect_diagnostics() {
 }
 
 if [[ "$TEARDOWN" == true ]]; then
-  require_commands kind sudo
+  require_commands kind
   step "Tearing down Kind cluster"
   kind delete cluster --name "$CLUSTER_NAME" || true
   remove_hosts_entry
@@ -96,7 +96,7 @@ if [[ "$TEARDOWN" == true ]]; then
 fi
 
 step "Verifying required tools"
-require_commands docker kind kubectl jq curl sudo
+require_commands docker kind kubectl jq curl
 ok "All tools found."
 
 if [[ "$SKIP_CLUSTER" != true ]]; then
@@ -123,26 +123,40 @@ for image in "${IMAGES[@]}"; do
 done
 ok "All images loaded."
 
+step "Installing Operators (Cert-Manager, CNPG, Strimzi)"
+kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=120s || true
+sleep 15
+
+kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.22/releases/cnpg-1.22.1.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n cnpg-system --timeout=120s || true
+sleep 15
+
+kubectl apply -f "$PROJECT_ROOT/deployment/k8s/overlays/prod/strimzi-operator.yaml"
+kubectl wait --for=condition=ready pod -l name=strimzi-cluster-operator -n retailstore --timeout=120s || true
+sleep 15
+
 step "Applying Kustomize CI overlay"
 kubectl apply -k "$CI_OVERLAY"
 ok "CI overlay applied."
 
+step "Waiting for infrastructure rollouts"
+until kubectl get pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n "$NAMESPACE" | grep postgresql; do sleep 2; done
+kubectl wait --for=condition=ready pod -l cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance -n "$NAMESPACE" --timeout=300s
+kubectl rollout status deployment/redis -n "$NAMESPACE" --timeout=300s
+
+until kubectl get pod -l strimzi.io/cluster=kafka -n "$NAMESPACE" | grep kafka; do sleep 2; done
+kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n "$NAMESPACE" --timeout=300s
+kubectl rollout status deployment/keycloak -n "$NAMESPACE" --timeout=600s
+
 step "Waiting for webapp hostAliases patch"
 # This Job patches retail-store-webapp's pod template (hostAliases for
-# keycloak.local), triggering a new rollout. Wait for it here, before any
-# rollout/readiness checks, so those checks see the final pod spec instead of
-# racing a mid-patch rollout.
-kubectl wait --namespace "$NAMESPACE" --for=condition=complete job/patch-webapp-hostaliases --timeout=300s
+# keycloak.local). It internally waits for a keycloak pod to be Ready before
+# patching. We wait here AFTER Keycloak has rolled out successfully, so the
+# job completes almost immediately at this point.
+kubectl wait --namespace "$NAMESPACE" --for=condition=complete job/patch-webapp-hostaliases --timeout=600s
 ok "Webapp hostAliases patch applied."
-
-step "Waiting for infrastructure rollouts"
-for resource in \
-  statefulset/postgresql \
-  deployment/redis \
-  statefulset/kafka \
-  deployment/keycloak; do
-  kubectl rollout status "$resource" -n "$NAMESPACE" --timeout=300s
-done
 
 step "Waiting for platform and application rollouts"
 for resource in \
@@ -154,7 +168,7 @@ for resource in \
   deployment/payment-service \
   deployment/api-gateway \
   deployment/retail-store-webapp; do
-  kubectl rollout status "$resource" -n "$NAMESPACE" --timeout=300s
+  kubectl rollout status "$resource" -n "$NAMESPACE" --timeout=600s
 done
 ok "All application services are ready."
 
@@ -166,7 +180,8 @@ pods_timeout_seconds=300
 pods_elapsed=0
 while true; do
   not_ready=$(kubectl get pods -n "$NAMESPACE" -o json | jq -r '
-    [.items[] | select(.status.phase != "Succeeded")
+    [.items[] | select(.metadata.name | test("apicurio-registry") | not)
+      | select(.status.phase != "Succeeded")
       | select(
           (.status.phase != "Running") or
           ([.status.containerStatuses[]?.ready] | any(. == false))

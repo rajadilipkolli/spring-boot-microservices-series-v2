@@ -79,22 +79,34 @@ spec:
           periodSeconds: 10
           tcpSocket:
             port: 9092
-        volumeMounts:
-        - mountPath: /var/lib/kafka/data
-          name: kafka-data
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 200m
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-        resources:
-          limits:
-            cpu: 1000m
-          requests:
-            cpu: 200m
+        volumeMounts:
+        - mountPath: /var/lib/kafka/data
+          name: kafka-data
+        - mountPath: /tmp
+          name: tmp-volume
+        - mountPath: /opt/kafka/config
+          name: config-volume
+        - mountPath: /opt/kafka/logs
+          name: logs-volume
       serviceAccountName: kafka
-      volumes: []
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume
+      - emptyDir: {}
+        name: config-volume
+      - emptyDir: {}
+        name: logs-volume
   volumeClaimTemplates:
   - metadata:
       name: kafka-data

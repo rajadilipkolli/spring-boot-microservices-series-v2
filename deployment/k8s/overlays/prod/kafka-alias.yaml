@@ -5,4 +5,4 @@ metadata:
   namespace: retailstore
 spec:
   type: ExternalName
-  externalName: kafka-kafka-bootstrap.retailstore.svc.cluster.local
+  externalName: kafka-bootstrap.retailstore.svc.cluster.local

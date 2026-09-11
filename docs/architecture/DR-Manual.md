@@ -20,20 +20,47 @@ We utilize the **CloudNativePG** operator to maintain a Highly Available Postgre
 ### Restore Procedure (PITR)
 To perform a Point-in-Time Recovery (PITR):
 1. Locate the exact timestamp required for recovery (e.g., 2026-08-30T10:00:00Z).
-2. Create a new Cluster resource specifying the ootstrap.recovery section pointing to the S3 backup bucket.
+2. Copy the recovery manifest below, replace `targetTime`, and validate it with `kubectl apply --server-side --dry-run=server -f recovery.yaml`. The required field is `bootstrap.recovery`.
 3. Validate data integrity in the recovered cluster.
 4. Update application connection strings to point to the new recovered cluster service.
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgresql-recovery
+  namespace: retailstore
+spec:
+  instances: 3
+  bootstrap:
+    recovery:
+      source: postgresql-backup
+      recoveryTarget:
+        targetTime: "2026-08-30T10:00:00Z"
+  externalClusters:
+  - name: postgresql-backup
+    barmanObjectStore:
+      destinationPath: s3://cnpg-backups/retailstore/
+      endpointURL: http://minio.default.svc:9000
+      serverName: postgresql-ha
+      s3Credentials:
+        accessKeyId:
+          name: s3-credentials
+          key: access-key
+        secretAccessKey:
+          name: s3-credentials
+          key: secret-key
+  storage:
+    size: 5Gi
+```
+
+Store the exact applied manifest, operator version, backup identifier, target time, validation queries, start time, and ready time with each drill record. A client-side YAML parse is not a recovery test; the manifest is considered tested only after the operator reaches `Ready`, the target data is verified, and the record is retained.
 
 ### Validated Restore Run (Test)
 - **Date**: 2026-08-30
 - **Result**: SUCCESS. Simulated primary disk failure; operator promoted replica within 4 seconds. Simulated data corruption; PITR restored from WALs to exactly 5 minutes prior successfully.
 
 ## 3. Disaster Recovery Environment (Hot Standby)
-In the event of a total region failure, a secondary Kubernetes cluster operates in a hot-standby mode.
-- Storage volumes (S3) are cross-region replicated.
-- DNS failover triggers automatically via Route53 health checks if the primary ingress goes offline for > 2 minutes.
-- CloudNativePG replica cluster boots from the replicated S3 bucket.
-
 In the event of a total region failure, a secondary Kubernetes cluster is activated from hot-standby. S3 backup objects must be cross-region replicated before cutover. The repository does not currently define cross-region Kafka replication or a Redis/Sentinel production manifest, so operators must verify those external controls rather than infer readiness from Kubernetes pod status.
 
 ### Activation and readiness gates

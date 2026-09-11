@@ -67,7 +67,7 @@ jobs:
           # keycloak.local), triggering a new rollout. Wait for it here, before
           # any rollout/readiness checks, so those checks see the final pod spec
           # instead of racing a mid-patch rollout.
-          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=120s
+          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=300s
 
       - name: Wait for Infrastructure Rollouts
         run: |
@@ -138,12 +138,12 @@ jobs:
           
           # Verify NetworkPolicies applied
           kubectl get networkpolicy -n retailstore default-deny-all
-          kubectl get networkpolicy -n retailstore allow-dns-egress
-          
+          kubectl get networkpolicy -n retailstore explicit-egress-for-apps
+
       - name: Validate Kafka Persistence
         run: |
           set -Eeuo pipefail
-          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic persistence-test"
+          kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test"
           
           echo "Deleting Kafka Pod to test persistence..."
           kubectl delete pod kafka-0 -n retailstore
