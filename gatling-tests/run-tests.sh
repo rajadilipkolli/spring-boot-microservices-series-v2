@@ -167,7 +167,7 @@ if [ $STATUS -ne 0 ]; then
 fi
 
 if [ -n "$LATEST_REPORT" ]; then
-    BASELINE_FILE="docs/baselines/main-baseline.json"
+    BASELINE_FILE="../docs/baselines/main-baseline.json"
     THRESHOLD=10.0
     echo "Running performance regression check..."
     
