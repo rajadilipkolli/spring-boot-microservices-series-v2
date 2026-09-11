@@ -58,7 +58,7 @@ spec:
           while ! kubectl get svc keycloak > /dev/null 2>&1; do sleep 2; done
           IP=$(kubectl get svc keycloak -o jsonpath='{.spec.clusterIP}')
           echo "Keycloak IP is $IP. Waiting for at least one keycloak pod to be Ready..."
-          until kubectl get pods -l app=keycloak -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -q "true"; do
+          until kubectl get pods -l app=keycloak -n retailstore -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null | grep -q "true"; do
             echo "  keycloak not ready yet, sleeping 5s..."
             sleep 5
           done
