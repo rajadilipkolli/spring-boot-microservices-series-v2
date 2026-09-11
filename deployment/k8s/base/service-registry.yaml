@@ -93,8 +93,8 @@ spec:
       - command:
         - sh
         - -c
-        - 'until nc -z config-server 8888; do echo waiting for config-server; sleep
-          2; done;
+        - 'until wget -q -O /dev/null http://dev-usr:dev-pass@config-server:8888/actuator/health/readiness
+          2>/dev/null; do echo waiting for config-server; sleep 3; done;
 
           '
         image: busybox:1.36
