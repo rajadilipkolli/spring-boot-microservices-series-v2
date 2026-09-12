@@ -27,6 +27,13 @@ spec:
       labels:
         app: kafka
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - env:
         - name: KAFKA_NODE_ID
@@ -43,8 +50,10 @@ spec:
           value: 1@kafka-0.kafka.retailstore.svc.cluster.local:9093
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: PLAINTEXT
+            # Single-broker settings – must match docker-compose.yml to avoid
+            # INVALID_REPLICATION_FACTOR errors when only 1 broker is present
         - name: CLUSTER_ID
-          value: 4L6g3nShT-eMCtK--X86sw
+          value: '4L6g3nShT-eMCtK--X86sw'
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: '1'
         - name: KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS
@@ -90,13 +99,6 @@ spec:
           name: config-volume
         - mountPath: /opt/kafka/logs
           name: logs-volume
-      securityContext:
-        fsGroup: 1000
-        runAsGroup: 1000
-        runAsNonRoot: true
-        runAsUser: 1000
-        seccompProfile:
-          type: RuntimeDefault
       serviceAccountName: kafka
       volumes:
       - emptyDir: {}

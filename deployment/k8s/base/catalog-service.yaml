@@ -125,8 +125,8 @@ spec:
       - command:
         - sh
         - -c
-        - 'until nc -z config-server 8888; do echo waiting for config-server; sleep
-          2; done;
+        - 'until wget -q -O /dev/null http://dev-usr:dev-pass@config-server:8888/actuator/health/readiness
+          2>/dev/null; do echo waiting for config-server; sleep 3; done;
 
           until nc -z service-registry 8761; do echo waiting for service-registry;
           sleep 2; done;
@@ -148,3 +148,4 @@ spec:
       volumes:
       - name: tmp-volume
         emptyDir: {}
+

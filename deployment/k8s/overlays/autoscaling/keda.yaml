@@ -1,9 +1,10 @@
-﻿apiVersion: keda.sh/v1alpha1
+apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: order-service-scaler
   namespace: retailstore
 spec:
+  pollingInterval: 5
   scaleTargetRef:
     name: order-service
   minReplicaCount: 1
@@ -14,13 +15,13 @@ spec:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
       consumerGroup: order-service
       topic: payment-orders
-      lagThreshold: "10"
+      lagThreshold: "2"
   - type: kafka
     metadata:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
       consumerGroup: order-service
       topic: stock-orders
-      lagThreshold: "10"
+      lagThreshold: "2"
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -28,6 +29,7 @@ metadata:
   name: payment-service-scaler
   namespace: retailstore
 spec:
+  pollingInterval: 5
   scaleTargetRef:
     name: payment-service
   minReplicaCount: 1
@@ -38,7 +40,7 @@ spec:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
       consumerGroup: payment
       topic: orders
-      lagThreshold: "10"
+      lagThreshold: "2"
 ---
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -46,6 +48,7 @@ metadata:
   name: inventory-service-scaler
   namespace: retailstore
 spec:
+  pollingInterval: 5
   scaleTargetRef:
     name: inventory-service
   minReplicaCount: 1
@@ -56,4 +59,4 @@ spec:
       bootstrapServers: kafka.retailstore.svc.cluster.local:9092
       consumerGroup: stock
       topic: orders
-      lagThreshold: "10"
+      lagThreshold: "2"

@@ -60,21 +60,3 @@ spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
-    template:
-      pod:
-        securityContext:
-          runAsNonRoot: true
-          seccompProfile:
-            type: RuntimeDefault
-      topicOperatorContainer:
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      userOperatorContainer:
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
