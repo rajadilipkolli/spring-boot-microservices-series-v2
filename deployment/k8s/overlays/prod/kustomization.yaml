@@ -40,3 +40,4 @@ patches:
       name: kafka
 - path: postgres-alias.yaml
 - path: kafka-alias.yaml
+- path: network-policy-patch.yaml
