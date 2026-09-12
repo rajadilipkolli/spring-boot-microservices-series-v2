@@ -1,24 +1,49 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+###############################################################################
+# Configuration
+###############################################################################
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+
+if command -v cygpath >/dev/null 2>&1; then
+  PROJECT_ROOT="$(cygpath -m "$PROJECT_ROOT")"
+fi
+
+
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/prod"
 E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
+
 HOSTS_ENTRY="127.0.0.1 retailstore.local api.retailstore.local keycloak.local jobrunr.local"
+
 INGRESS_MANIFEST="https://raw.githubusercontent.com/kubernetes/ingress-nginx/64780b1fed3af99f4eccbc3fdad7ad785e8a83b6/deploy/static/provider/kind/deploy.yaml"
+
 POD_CREATION_TIMEOUT_SECONDS="${POD_CREATION_TIMEOUT_SECONDS:-300}"
+
 SKIP_CLUSTER=false
 TEARDOWN=false
+
+###############################################################################
+# Configuration validation
+###############################################################################
 
 if [[ ! "$POD_CREATION_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
   printf 'FAIL: POD_CREATION_TIMEOUT_SECONDS must be a positive integer.\n' >&2
   exit 1
 fi
+
+read -r -a hosts_entry_fields <<< "$HOSTS_ENTRY"
+HOST_ALIASES=("${hosts_entry_fields[@]:1}")
+
+###############################################################################
+# Docker images
+###############################################################################
 
 IMAGES=(
   "dockertmt/mmv2-config-server:0.0.1-SNAPSHOT"
@@ -31,28 +56,31 @@ IMAGES=(
   "dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT"
 )
 
-# Prints a section heading for the current deployment step.
+###############################################################################
+# Helper functions
+###############################################################################
+
 step() {
   printf '\n=== %s ===\n' "$1"
 }
 
-# Prints a successful status message.
 ok() {
   printf 'OK: %s\n' "$1"
 }
 
-# Prints a warning message to standard error.
 warn() {
   printf 'WARN: %s\n' "$1" >&2
 }
 
-# Prints a failure message to standard error and exits the script.
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
   exit 1
 }
 
-# Displays the supported command-line options.
+###############################################################################
+# Usage
+###############################################################################
+
 usage() {
   cat <<'EOF'
 Usage: ./run-local-kubernetes-e2e.sh [options]
@@ -63,6 +91,10 @@ Options:
   --help          Show this help.
 EOF
 }
+
+###############################################################################
+# Arguments
+###############################################################################
 
 while (($# > 0)); do
   case "$1" in
@@ -80,53 +112,100 @@ while (($# > 0)); do
       fail "Unknown option: $1"
       ;;
   esac
+
   shift
 done
 
-# Verifies that every command passed as an argument is available.
+###############################################################################
+# Required commands
+###############################################################################
+
 require_commands() {
   local command_name
 
   for command_name in "$@"; do
     command -v "$command_name" >/dev/null 2>&1 ||
-      fail "Required command '$command_name' was not found. Rebuild the Codespace or install it first."
+      fail "Required command '$command_name' was not found."
   done
 }
 
-# Returns success when /etc/hosts contains the exact mapping owned by this script.
-hosts_file_contains_entry() {
-  grep -Fqx "$HOSTS_ENTRY" /etc/hosts
+###############################################################################
+# Hosts file helpers
+###############################################################################
+
+hosts_file_contains_alias() {
+  local alias_regex
+
+  alias_regex="${1//./\\.}"
+
+  grep -Eq \
+    "(^|[[:space:]])${alias_regex}([[:space:]]|$)" \
+    /etc/hosts
 }
 
-# Adds and verifies the local retail-store hostnames using elevated privileges.
+hosts_file_contains_all_aliases() {
+  local alias
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    if ! hosts_file_contains_alias "$alias"; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 add_hosts_entry() {
-  if hosts_file_contains_entry; then
-    warn "Script-owned hosts entry already present; skipping."
+  local alias
+
+  if hosts_file_contains_all_aliases; then
+    warn "Hosts entries already present; skipping."
     return
   fi
 
-  printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null ||
+  printf '%s\n' "$HOSTS_ENTRY" |
+    sudo tee -a /etc/hosts >/dev/null ||
     fail "Could not add local aliases to /etc/hosts."
 
-  hosts_file_contains_entry ||
-    fail "Script-owned hosts entry was not added to /etc/hosts."
+  for alias in "${HOST_ALIASES[@]}"; do
+    hosts_file_contains_alias "$alias" ||
+      fail "Alias '$alias' was not added to /etc/hosts."
+  done
 
   ok "Added and verified /etc/hosts entries."
 }
 
-# Removes and verifies the local retail-store hostnames using elevated privileges.
 remove_hosts_entry() {
-  sudo sed -i "\\|^${HOSTS_ENTRY//./\\.}$|d" /etc/hosts ||
+  local alias
+  local alias_regex
+  local sed_args=()
+
+  for alias in "${HOST_ALIASES[@]}"; do
+    alias_regex="${alias//./\\.}"
+    sed_args+=(
+      -e
+      "/(^|[[:space:]])${alias_regex}([[:space:]]|$)/d"
+    )
+  done
+
+  sudo sed -i -E \
+    "${sed_args[@]}" \
+    /etc/hosts ||
     fail "Could not remove local aliases from /etc/hosts."
 
-  if hosts_file_contains_entry; then
-    fail "Script-owned hosts entry remains in /etc/hosts after removal."
-  fi
+  for alias in "${HOST_ALIASES[@]}"; do
+    if hosts_file_contains_alias "$alias"; then
+      fail "Alias '$alias' remains in /etc/hosts after removal."
+    fi
+  done
 
   ok "Removed and verified local hosts entries."
 }
 
-# Waits for a matching pod to exist before readiness checks begin.
+###############################################################################
+# Wait for pod creation
+###############################################################################
+
 wait_for_pod_creation() {
   local label="$1"
   local description="$2"
@@ -136,51 +215,196 @@ wait_for_pod_creation() {
     -n "$NAMESPACE" \
     -l "$label" \
     --no-headers \
-    --request-timeout=5s \
     2>/dev/null |
     awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
   do
+
     if ((SECONDS >= deadline)); then
-      warn "Timed out after ${POD_CREATION_TIMEOUT_SECONDS}s waiting for ${description} pod creation."
-      printf '%s\n' "Current pod status:" >&2
-      kubectl get pods -n "$NAMESPACE" -o wide >&2 || true
-      printf '%s\n' "Recent namespace events:" >&2
-      kubectl get events -n "$NAMESPACE" --sort-by='.lastTimestamp' >&2 || true
+
+      warn \
+        "Timed out after ${POD_CREATION_TIMEOUT_SECONDS}s waiting for ${description} pod creation."
+
+      printf '%s\n' \
+        "Current pod status:" >&2
+
+      kubectl get pods \
+        -n "$NAMESPACE" \
+        -o wide >&2 ||
+        true
+
+      printf '%s\n' \
+        "Recent namespace events:" >&2
+
+      kubectl get events \
+        -n "$NAMESPACE" \
+        --sort-by='.lastTimestamp' >&2 ||
+        true
+
       return 1
     fi
 
-    printf '  waiting for %s pods...\n' "$description"
+    printf \
+      '  waiting for %s pods...\n' \
+      "$description"
+
     sleep 2
   done
 }
 
-# Captures Kubernetes pod, event, and log diagnostics after a failure.
+###############################################################################
+# Kubernetes diagnostics
+###############################################################################
+
 collect_diagnostics() {
   local diagnostics_dir="k8s-diagnostics"
 
   mkdir -p "$diagnostics_dir"
 
-  kubectl get pods -A > "$diagnostics_dir/pods.txt" || true
-  kubectl get events -n "$NAMESPACE" > "$diagnostics_dir/events.txt" || true
-  kubectl describe pods -n "$NAMESPACE" > "$diagnostics_dir/pods-describe.txt" || true
+  kubectl get pods -A \
+    > "$diagnostics_dir/pods.txt" \
+    2>&1 ||
+    true
+
+  kubectl get events \
+    -n "$NAMESPACE" \
+    > "$diagnostics_dir/events.txt" \
+    2>&1 ||
+    true
+
+  kubectl describe pods \
+    -n "$NAMESPACE" \
+    > "$diagnostics_dir/pods-describe.txt" \
+    2>&1 ||
+    true
+
+  kubectl get deployments \
+    -n "$NAMESPACE" \
+    > "$diagnostics_dir/deployments.txt" \
+    2>&1 ||
+    true
+
+  kubectl get services \
+    -n "$NAMESPACE" \
+    > "$diagnostics_dir/services.txt" \
+    2>&1 ||
+    true
 
   while IFS= read -r pod; do
+
     local filename
+
     filename="${pod//\//_}"
 
     kubectl logs "$pod" \
       -n "$NAMESPACE" \
       --all-containers \
       > "$diagnostics_dir/$filename.log" \
-      2>/dev/null || true
+      2>&1 ||
+      true
+
   done < <(
     kubectl get pods \
       -n "$NAMESPACE" \
       -o name \
-      2>/dev/null || true
+      2>/dev/null ||
+      true
   )
 
   warn "Diagnostics written to ./$diagnostics_dir/"
+}
+
+###############################################################################
+# E2E script preparation
+###############################################################################
+
+prepare_e2e_script() {
+  local source_script="$1"
+  local prepared_script="$2"
+
+  if [[ ! -f "$source_script" ]]; then
+    fail "E2E script was not found: $source_script"
+  fi
+
+  if [[ ! -r "$source_script" ]]; then
+    fail "E2E script is not readable: $source_script"
+  fi
+
+  # Convert CRLF -> LF into a temporary file.
+  #
+  # This is particularly important when the repository is checked out on
+  # Windows and the shell script contains CRLF line endings.
+  #
+  # The original source file is NOT modified.
+  if command -v dos2unix >/dev/null 2>&1; then
+
+    dos2unix \
+      < "$source_script" \
+      > "$prepared_script" \
+      2>/dev/null ||
+      cp "$source_script" "$prepared_script"
+
+  else
+
+    tr -d '\r' \
+      < "$source_script" \
+      > "$prepared_script"
+
+  fi
+
+  chmod +x "$prepared_script" 2>/dev/null || true
+
+  # Verify syntax before execution.
+  if ! "${BASH:-bash}" -n "$prepared_script"; then
+    fail "E2E script contains a Bash syntax error: $source_script"
+  fi
+}
+
+###############################################################################
+# E2E script diagnostics
+###############################################################################
+
+collect_e2e_diagnostics() {
+  local diagnostics_dir="k8s-diagnostics"
+
+  mkdir -p "$diagnostics_dir"
+
+  {
+    printf '%s\n' "========================================"
+    printf '%s\n' "E2E FAILURE DIAGNOSTICS"
+    printf '%s\n' "========================================"
+    printf '\n'
+
+    printf 'Date: %s\n' "$(date)"
+    printf 'Bash version: %s\n' "${BASH_VERSION:-unknown}"
+    printf 'Bash executable: %s\n' "$(command -v bash || true)"
+    printf 'Project root: %s\n' "$PROJECT_ROOT"
+    printf 'E2E script: %s\n' "$E2E_SCRIPT"
+    printf '\n'
+
+    printf '%s\n' "E2E script file:"
+    ls -la "$E2E_SCRIPT" 2>&1 || true
+    printf '\n'
+
+    printf '%s\n' "File type:"
+    file "$E2E_SCRIPT" 2>&1 || true
+    printf '\n'
+
+    printf '%s\n' "E2E script first 10 lines:"
+    sed -n '1,10p' "$E2E_SCRIPT" 2>&1 || true
+    printf '\n'
+
+    printf '%s\n' "Environment:"
+    printf 'HOST=%s\n' "${HOST:-}"
+    printf 'PORT=%s\n' "${PORT:-}"
+    printf '\n'
+
+    printf '%s\n' "PATH:"
+    printf '%s\n' "$PATH"
+
+  } > "$diagnostics_dir/e2e-launch-diagnostics.txt"
+
+  warn \
+    "E2E launch diagnostics written to ./$diagnostics_dir/e2e-launch-diagnostics.txt"
 }
 
 ###############################################################################
@@ -188,15 +412,21 @@ collect_diagnostics() {
 ###############################################################################
 
 if [[ "$TEARDOWN" == true ]]; then
-  require_commands kind sudo
+
+  require_commands \
+    kind \
+    sudo
 
   step "Tearing down Kind cluster"
 
-  kind delete cluster --name "$CLUSTER_NAME" || true
+  kind delete cluster \
+    --name "$CLUSTER_NAME" ||
+    true
 
   remove_hosts_entry
 
   ok "Teardown complete."
+
   exit 0
 fi
 
@@ -206,18 +436,65 @@ fi
 
 step "Verifying required tools"
 
-require_commands docker kind kubectl jq curl sudo
+require_commands \
+  bash \
+  docker \
+  kind \
+  kubectl \
+  jq \
+  curl \
+  sudo \
+  awk \
+  tr \
+  tee
 
 ok "All tools found."
+
+###############################################################################
+# Verify E2E script
+###############################################################################
+
+step "Validating end-to-end test script"
+
+if [[ ! -f "$E2E_SCRIPT" ]]; then
+  fail "E2E test script not found: $E2E_SCRIPT"
+fi
+
+if [[ ! -r "$E2E_SCRIPT" ]]; then
+  fail "E2E test script is not readable: $E2E_SCRIPT"
+fi
+
+printf '  E2E script: %s\n' "$E2E_SCRIPT"
+
+E2E_WORK_DIR="$(mktemp -d ./.retailstore-e2e.XXXXXX)"
+
+# Always clean up the temporary E2E script.
+cleanup_e2e_temp() {
+  rm -rf "$E2E_WORK_DIR" 2>/dev/null || true
+}
+
+trap cleanup_e2e_temp EXIT
+
+E2E_PREPARED_SCRIPT="$E2E_WORK_DIR/test-em-all.sh"
+
+prepare_e2e_script \
+  "$E2E_SCRIPT" \
+  "$E2E_PREPARED_SCRIPT"
+
+ok "E2E script is present and Bash syntax is valid."
 
 ###############################################################################
 # KIND CLUSTER
 ###############################################################################
 
 if [[ "$SKIP_CLUSTER" != true ]]; then
+
   step "Creating Kind cluster '$CLUSTER_NAME'"
 
-  kind delete cluster --name "$CLUSTER_NAME" >/dev/null 2>&1 || true
+  kind delete cluster \
+    --name "$CLUSTER_NAME" \
+    >/dev/null 2>&1 ||
+    true
 
   kind create cluster \
     --name "$CLUSTER_NAME" \
@@ -225,8 +502,18 @@ if [[ "$SKIP_CLUSTER" != true ]]; then
     --wait 120s
 
   ok "Cluster '$CLUSTER_NAME' is up."
+
 else
+
   warn "Skipping cluster creation."
+
+  if ! kind get clusters 2>/dev/null |
+    grep -Fxq "$CLUSTER_NAME"
+  then
+    fail \
+      "Kind cluster '$CLUSTER_NAME' does not exist, but --skip-cluster was specified."
+  fi
+
 fi
 
 ###############################################################################
@@ -252,11 +539,17 @@ ok "NGINX Ingress controller is ready."
 step "Pulling and loading Docker images"
 
 for image in "${IMAGES[@]}"; do
+
   printf '  pulling %s ...\n' "$image"
+
   docker pull "$image"
 
   printf '  loading %s ...\n' "$image"
-  kind load docker-image "$image" --name "$CLUSTER_NAME"
+
+  kind load docker-image \
+    "$image" \
+    --name "$CLUSTER_NAME"
+
 done
 
 ok "All images loaded."
@@ -283,7 +576,8 @@ kubectl wait \
   --for=condition=ready pod \
   -l app.kubernetes.io/instance=cert-manager \
   -n cert-manager \
-  --timeout=120s || true
+  --timeout=120s ||
+  true
 
 sleep 15
 
@@ -298,7 +592,8 @@ kubectl wait \
   --for=condition=ready pod \
   -l app.kubernetes.io/name=cloudnative-pg \
   -n cnpg-system \
-  --timeout=120s || true
+  --timeout=120s ||
+  true
 
 sleep 15
 
@@ -313,7 +608,8 @@ kubectl wait \
   --for=condition=ready pod \
   -l name=strimzi-cluster-operator \
   -n "$NAMESPACE" \
-  --timeout=120s || true
+  --timeout=120s ||
+  true
 
 sleep 15
 
@@ -323,7 +619,8 @@ sleep 15
 
 step "Applying Kustomize CI overlay"
 
-kubectl apply -k "$CI_OVERLAY"
+kubectl apply \
+  -k "$CI_OVERLAY"
 
 ok "CI overlay applied."
 
@@ -360,7 +657,9 @@ kubectl rollout status \
 # KAFKA
 ###############################################################################
 
-wait_for_pod_creation 'strimzi.io/cluster=kafka' 'Kafka'
+wait_for_pod_creation \
+  'strimzi.io/cluster=kafka' \
+  'Kafka'
 
 kubectl wait \
   --for=condition=ready pod \
@@ -382,11 +681,6 @@ kubectl rollout status \
 ###############################################################################
 
 step "Waiting for webapp hostAliases patch"
-
-# This Job patches retail-store-webapp's pod template (hostAliases for
-# keycloak.local). It internally waits for a keycloak pod to be Ready before
-# patching. We wait here AFTER Keycloak has rolled out successfully, so the
-# job completes almost immediately at this point.
 
 kubectl wait \
   --namespace "$NAMESPACE" \
@@ -412,10 +706,14 @@ for resource in \
   deployment/api-gateway \
   deployment/retail-store-webapp
 do
+
+  printf '  waiting for %s ...\n' "$resource"
+
   kubectl rollout status \
     "$resource" \
     -n "$NAMESPACE" \
     --timeout=600s
+
 done
 
 ok "All application services are ready."
@@ -426,43 +724,15 @@ ok "All application services are ready."
 
 step "Waiting for all pods to be Running and fully ready"
 
-# Final gate before running tests:
-#
-# Every pod in the namespace must:
-#   1. Not be the known apicurio-registry pod.
-#   2. Not be in Succeeded state.
-#   3. Be in Running state.
-#   4. Have all containers reporting ready=true.
-#
-# This check is intentionally defensive because this script is commonly
-# executed from Git Bash on Windows, where command output can contain CRLF.
-#
-# The original implementation used:
-#
-#   if [ "$not_ready" -eq 0 ]; then
-#
-# which can produce:
-#
-#   integer expression expected
-#
-# when jq/kubectl output contains a carriage return or when the command
-# temporarily produces an empty value.
-#
-# This implementation:
-#   - strips CR/LF characters
-#   - validates that the value is actually numeric
-#   - uses Bash arithmetic (( ... )) instead of [ ... -eq ... ]
-
 pods_timeout_seconds=300
 pods_elapsed=0
 
 while true; do
 
-  if ! not_ready="$(
+  not_ready="$(
     kubectl get pods \
       -n "$NAMESPACE" \
       -o json \
-      --request-timeout=5s \
       2>/dev/null |
       jq -r '
         [
@@ -490,18 +760,14 @@ while true; do
       ' \
       2>/dev/null |
       tr -d '\r\n'
-  )"; then
-    not_ready=1
-  fi
+  )"
 
-  # If kubectl or jq failed, do not perform an integer comparison
-  # against an empty/malformed value.
   if [[ ! "$not_ready" =~ ^[0-9]+$ ]]; then
     warn "Could not determine pod readiness; retrying..."
     not_ready=1
   fi
 
-  if (( not_ready == 0 )); then
+  if ((not_ready == 0)); then
     ok "All pods are Running and ready."
     break
   fi
@@ -512,24 +778,36 @@ while true; do
     "$pods_elapsed" \
     "$pods_timeout_seconds"
 
-  if (( pods_elapsed >= pods_timeout_seconds )); then
+  if ((pods_elapsed >= pods_timeout_seconds)); then
 
     printf '\n'
     printf '%s\n' "Current pod status:"
-    kubectl get pods -n "$NAMESPACE" || true
+
+    kubectl get pods \
+      -n "$NAMESPACE" ||
+      true
 
     printf '\n'
     printf '%s\n' "Current pod status (wide):"
-    kubectl get pods -n "$NAMESPACE" -o wide || true
+
+    kubectl get pods \
+      -n "$NAMESPACE" \
+      -o wide ||
+      true
 
     printf '\n'
 
+    collect_diagnostics
+
     fail \
       "Timed out after ${pods_timeout_seconds}s waiting for all pods to be ready."
+
   fi
 
   sleep 5
+
   pods_elapsed=$((pods_elapsed + 5))
+
 done
 
 ###############################################################################
@@ -541,100 +819,161 @@ step "Adding local host entries"
 add_hosts_entry
 
 ###############################################################################
-# E2E TESTS
+# E2E TEST SUITE
 ###############################################################################
 
 step "Running end-to-end test suite"
 
+E2E_LOG="k8s-diagnostics/e2e-test-output.log"
+
+mkdir -p k8s-diagnostics
+
+printf '  E2E source:   %s\n' "$E2E_SCRIPT"
+printf '  E2E prepared: %s\n' "$E2E_PREPARED_SCRIPT"
+printf '  E2E log:      %s\n' "$E2E_LOG"
+printf '  Bash:         %s\n' "$(command -v bash)"
+printf '  Bash version: %s\n' "${BASH_VERSION:-unknown}"
+
+###############################################################################
+# IMPORTANT WINDOWS/GIT-BASH FIX
+#
+# Do NOT do this:
+#
+#   HOST=api.retailstore.local PORT=80 "$E2E_SCRIPT" --no-cb-strict
+#
+# Direct execution can invoke the Windows Bash service layer and result in:
+#
+#   Catastrophic failure
+#   Error code: Bash/Service/E_UNEXPECTED
+#
+# Instead, explicitly invoke Bash:
+#
+#   bash "$E2E_PREPARED_SCRIPT"
+#
+###############################################################################
+
 set +e
 
-HOST=api.retailstore.local \
-PORT=80 \
-"$E2E_SCRIPT" \
-  --no-cb-strict
+(
+  export HOST="api.retailstore.local"
+  export PORT="443"
+  export PROTOCOL="https"
 
-test_exit=$?
+  exec "${BASH:-bash}" \
+    "$E2E_PREPARED_SCRIPT" \
+    --no-cb-strict
+) 2>&1 |
+  tee "$E2E_LOG"
+
+test_exit=${PIPESTATUS[0]}
 
 set -e
 
 ###############################################################################
-# SMOKE CHECKS
+# E2E FAILURE
 ###############################################################################
 
-if (( test_exit == 0 )); then
+if ((test_exit != 0)); then
 
-  step "Running smoke checks"
+  warn \
+    "End-to-end test suite failed with exit code: $test_exit"
 
-  ###########################################################################
-  # RETAIL STORE WEBAPP
-  ###########################################################################
+  warn \
+    "E2E output saved to: $E2E_LOG"
 
-  if curl \
-    --silent \
-    --fail \
-    --output /dev/null \
-    http://retailstore.local
+  # Look specifically for the Windows Bash catastrophic failure.
+  if grep -Eq \
+    'Catastrophic failure|Bash/Service/E_UNEXPECTED' \
+    "$E2E_LOG" 2>/dev/null
   then
-    ok "retail-store-webapp returned HTTP 200."
-  else
-    warn "retail-store-webapp smoke check failed."
-  fi
-
-  ###########################################################################
-  # KEYCLOAK TOKEN ENDPOINT
-  ###########################################################################
-
-  # Fetch the client secret from the cluster Secret rather than hard-coding it.
-
-  client_secret="$(
-    kubectl get secret webapp-oauth2-credentials \
-      -n "$NAMESPACE" \
-      -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' \
-      2>/dev/null |
-      base64 -d \
-      2>/dev/null ||
-      true
-  )"
-
-  if [[ -z "$client_secret" ]]; then
 
     warn \
-      "Could not retrieve Keycloak client secret from Secret " \
-      "'webapp-oauth2-credentials' - skipping Keycloak smoke check."
+      "Detected Windows/Git Bash Bash/Service/E_UNEXPECTED while launching the E2E script."
 
-  elif curl \
-    --silent \
-    --fail \
-    -X POST \
-    https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
-    -d 'client_id=retailstore-webapp' \
-    -d "client_secret=$client_secret" \
-    -d 'grant_type=password' \
-    -d 'username=retail' \
-    -d 'password=retail1234' |
-    grep -q access_token
-  then
-
-    ok "Keycloak token endpoint returned an access token."
-
-  else
-
-    warn "Keycloak token smoke check failed."
+    collect_e2e_diagnostics
 
   fi
-
-  ok "All E2E tests passed."
-
-###############################################################################
-# TEST FAILURE
-###############################################################################
-
-else
-
-  warn "Some tests failed; collecting diagnostics."
 
   collect_diagnostics
 
   exit "$test_exit"
 
 fi
+
+ok "End-to-end test suite completed successfully."
+
+###############################################################################
+# SMOKE CHECKS
+###############################################################################
+
+step "Running smoke checks"
+
+###############################################################################
+# RETAIL STORE WEBAPP
+###############################################################################
+
+if curl \
+  --silent \
+  --fail \
+  --location \
+  --insecure \
+  --output /dev/null \
+  https://retailstore.local
+then
+
+  ok "retail-store-webapp returned HTTP 200."
+
+else
+
+  warn "retail-store-webapp smoke check failed."
+
+fi
+
+###############################################################################
+# KEYCLOAK TOKEN ENDPOINT
+###############################################################################
+
+client_secret="$(
+  kubectl get secret webapp-oauth2-credentials \
+    -n "$NAMESPACE" \
+    -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' \
+    2>/dev/null |
+    base64 -d \
+    2>/dev/null ||
+    true
+)"
+
+if [[ -z "$client_secret" ]]; then
+
+  warn \
+    "Could not retrieve Keycloak client secret from Secret " \
+    "'webapp-oauth2-credentials' - skipping Keycloak smoke check."
+
+elif curl \
+  --silent \
+  --fail \
+  --location \
+  --insecure \
+  -X POST \
+  https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
+  -d 'client_id=retailstore-webapp' \
+  -d "client_secret=$client_secret" \
+  -d 'grant_type=password' \
+  -d 'username=retail' \
+  -d 'password=retail1234' |
+  grep -q access_token
+then
+
+  ok "Keycloak token endpoint returned an access token."
+
+else
+
+  warn "Keycloak token smoke check failed."
+
+fi
+
+###############################################################################
+# COMPLETE
+###############################################################################
+
+ok "All E2E tests and smoke checks completed successfully."

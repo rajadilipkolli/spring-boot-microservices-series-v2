@@ -14,7 +14,12 @@ wait_for_pod_creation() {
   local description="$2"
   local deadline=$((SECONDS + POD_CREATION_TIMEOUT_SECONDS))
 
-  until kubectl get pods -n retailstore -l "$label" --no-headers 2>/dev/null |
+  local remain
+
+  until
+    remain=$((deadline - SECONDS))
+    if (( remain <= 0 )); then remain=1; fi
+    kubectl get pods -n retailstore -l "$label" --request-timeout="${remain}s" --no-headers 2>/dev/null |
     awk 'NF { found=1 } END { exit(found ? 0 : 1) }'
   do
     if ((SECONDS >= deadline)); then
