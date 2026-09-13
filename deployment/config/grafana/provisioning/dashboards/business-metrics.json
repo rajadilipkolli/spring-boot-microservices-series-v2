@@ -1,4 +1,4 @@
-﻿{
+{
   "annotations": {
     "list": [
       {
@@ -200,6 +200,71 @@
         }
       ],
       "title": "Payment Processing Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(inventory_reservations_total[5m]))",
+          "interval": "",
+          "legendFormat": "Inventory Reservations",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(rate(inventory_failures_total[5m]))",
+          "hide": false,
+          "legendFormat": "Inventory Failures",
+          "refId": "B"
+        }
+      ],
+      "title": "Inventory Operations",
       "type": "timeseries"
     }
   ],

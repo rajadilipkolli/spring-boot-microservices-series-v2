@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - ../hardening-base
 - cluster-issuer.yaml
+- secrets/external-secrets.yaml
 patches:
 - target:
     kind: Deployment

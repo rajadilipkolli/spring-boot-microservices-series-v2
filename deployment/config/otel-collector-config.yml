@@ -15,7 +15,7 @@ processors:
   resource:
     attributes:
       - key: deployment.environment
-        value: ""
+        value: "production"
         action: insert
       - key: service.namespace
         value: "retailstore"

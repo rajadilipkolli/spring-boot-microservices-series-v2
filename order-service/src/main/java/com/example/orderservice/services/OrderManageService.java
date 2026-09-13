@@ -11,6 +11,8 @@ import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,9 +24,13 @@ public class OrderManageService {
     private static final String REJECT = "REJECT";
     private static final Logger log = LoggerFactory.getLogger(OrderManageService.class);
     private final OrderRepository orderRepository;
+    private final Counter ordersCompletedCounter;
+    private final Counter ordersFailedCounter;
 
-    public OrderManageService(OrderRepository orderRepository) {
+    public OrderManageService(OrderRepository orderRepository, MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
+        this.ordersCompletedCounter = meterRegistry.counter("orders_completed");
+        this.ordersFailedCounter = meterRegistry.counter("orders_failed");
     }
 
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
@@ -40,6 +46,12 @@ public class OrderManageService {
                 orderDto.status(),
                 orderDto.orderId(),
                 rows);
+        if ("CONFIRMED".equals(orderDto.status())) {
+            this.ordersCompletedCounter.increment();
+        } else if ("REJECTED".equals(orderDto.status())
+                || com.example.orderservice.utils.AppConstants.ROLLBACK.equals(orderDto.status())) {
+            this.ordersFailedCounter.increment();
+        }
         return orderDto;
     }
 
@@ -53,6 +65,12 @@ public class OrderManageService {
         } else if (REJECT.equals(orderPayment.status()) || REJECT.equals(orderStock.status())) {
             String source = REJECT.equals(orderPayment.status()) ? "PAYMENT" : "INVENTORY";
             orderDto = orderDto.withStatusAndSource(AppConstants.ROLLBACK, source);
+        }
+        if ("CONFIRMED".equals(orderDto.status())) {
+            this.ordersCompletedCounter.increment();
+        } else if ("REJECTED".equals(orderDto.status())
+                || com.example.orderservice.utils.AppConstants.ROLLBACK.equals(orderDto.status())) {
+            this.ordersFailedCounter.increment();
         }
         return orderDto;
     }

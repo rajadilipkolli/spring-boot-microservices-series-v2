@@ -42,7 +42,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-gateway-to-apps
+  name: allow-apps-to-apps
   namespace: retailstore
 spec:
   ingress:
@@ -52,8 +52,13 @@ spec:
         - key: app
           operator: In
           values:
-          - api-gateway
+          - inventory-service
+          - keycloak
+          - order-service
           - retail-store-webapp
+          - catalog-service
+          - payment-service
+          - api-gateway
   podSelector:
     matchExpressions:
     - key: app

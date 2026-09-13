@@ -26,13 +26,6 @@ spec:
       labels:
         app: inventory-service
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
       - env:
         - name: CONFIG_SERVER_USR
@@ -46,8 +39,7 @@ spec:
               key: CONFIG_SERVER_PWD
               name: config-server-credentials
         - name: SPRING_CONFIG_IMPORT
-          value: 
-            optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+          value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
         - name: SPRING_DATASOURCE_URL
           value: jdbc:postgresql://postgresql:5432/appdb
         - name: SPRING_DATASOURCE_USERNAME
@@ -64,6 +56,10 @@ spec:
           value: kafka:9092
         - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
           value: http://service-registry:8761/eureka/
+        - name: OTEL_SERVICE_NAME
+          value: inventory-service
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=inventory-service,service.version=0.0.1-SNAPSHOT
         envFrom:
         - configMapRef:
             name: shared-config
@@ -85,26 +81,26 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            memory: 1400Mi
             cpu: 1000m
+            memory: 1400Mi
           requests:
-            memory: 512Mi
             cpu: 200m
-        startupProbe:
-          failureThreshold: 30
-          httpGet:
-            path: /inventory-service/actuator/health/liveness
-            port: 18181
-          periodSeconds: 10
+            memory: 512Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /inventory-service/actuator/health/liveness
+            port: 18181
+          periodSeconds: 10
         volumeMounts:
-        - name: tmp-volume
-          mountPath: /tmp
+        - mountPath: /tmp
+          name: tmp-volume
       initContainers:
       - command:
         - sh
@@ -128,7 +124,14 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: inventory-service
       volumes:
-      - name: tmp-volume
-        emptyDir: {}
+      - emptyDir: {}
+        name: tmp-volume

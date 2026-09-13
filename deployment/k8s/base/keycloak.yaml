@@ -33,13 +33,6 @@ spec:
       labels:
         app: keycloak
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
       - args:
         - start
@@ -81,15 +74,12 @@ spec:
           value: 'false'
         - name: KC_HTTP_ENABLED
           value: 'true'
-        image: quay.io/keycloak/keycloak:26.7.2
+        - name: OTEL_SERVICE_NAME
+          value: keycloak
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=keycloak,service.version=0.0.1-SNAPSHOT
+        image: quay.io/keycloak/keycloak:26.7.3
         name: keycloak
-        resources:
-          requests:
-            memory: 512Mi
-            cpu: 200m
-          limits:
-            memory: 1400Mi
-            cpu: 1000m
         ports:
         - containerPort: 8080
         - containerPort: 9000
@@ -99,20 +89,34 @@ spec:
             port: 9000
           initialDelaySeconds: 10
           periodSeconds: 10
-        volumeMounts:
-        - mountPath: /opt/keycloak/data/import
-          name: realm-config
-        - name: tmp-volume
-          mountPath: /tmp
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1400Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
+        volumeMounts:
+        - mountPath: /opt/keycloak/data/import
+          name: realm-config
+        - mountPath: /tmp
+          name: tmp-volume
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: keycloak
       volumes:
       - configMap:
           name: keycloak-realm-config
         name: realm-config
-      - name: tmp-volume
-        emptyDir: {}
-      serviceAccountName: keycloak
+      - emptyDir: {}
+        name: tmp-volume

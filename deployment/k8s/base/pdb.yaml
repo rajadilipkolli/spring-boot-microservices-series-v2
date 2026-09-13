@@ -1,4 +1,3 @@
-
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -31,3 +30,69 @@ spec:
   selector:
     matchLabels:
       app: order-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catalog-service-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: catalog-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inventory-service-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: config-server-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: config-server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: service-registry-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: service-registry
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: keycloak-pdb
+  namespace: retailstore
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: keycloak

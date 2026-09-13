@@ -26,25 +26,16 @@ spec:
       labels:
         app: redis
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
-      - image: redis:8.10.1-alpine
+      - env:
+        - name: OTEL_SERVICE_NAME
+          value: redis
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=redis,service.version=0.0.1-SNAPSHOT
+        image: redis:8.10.1-alpine
         name: redis
         ports:
         - containerPort: 6379
-        resources:
-          requests:
-            memory: 256Mi
-            cpu: 200m
-          limits:
-            memory: 512Mi
-            cpu: 1000m
         readinessProbe:
           exec:
             command:
@@ -52,16 +43,30 @@ spec:
             - ping
           initialDelaySeconds: 5
           periodSeconds: 10
-        volumeMounts:
-        - mountPath: /data
-          name: redis-data
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /data
+          name: redis-data
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: redis
       volumes:
       - emptyDir: {}
         name: redis-data
-      serviceAccountName: redis
