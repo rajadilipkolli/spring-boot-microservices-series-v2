@@ -183,6 +183,7 @@ services:
       - SPRING_SECURITY_USER_PASSWORD=docker-pass
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=config-server
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=config-server,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
 
@@ -208,6 +209,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=naming-server
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=naming-server,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     restart: unless-stopped
@@ -239,6 +241,7 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=api-gateway,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
@@ -269,6 +272,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=catalog-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=catalog-service,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
@@ -301,6 +305,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=inventory-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
@@ -334,6 +339,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=order-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
@@ -367,6 +373,7 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=payment-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=payment-service,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
     restart: unless-stopped
@@ -381,9 +388,11 @@ services:
       - OAUTH2_SERVER_URL=http://localhost:9191
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=retail-store-webapp
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=retail-store-webapp,service.version=0.0.1-SNAPSHOT
       - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
       - KEYCLOAK_ADMINUSERNAME=admin
       - KEYCLOAK_ADMINPASSWORD=admin1234
+      - OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
       - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
       - "8080:8080"

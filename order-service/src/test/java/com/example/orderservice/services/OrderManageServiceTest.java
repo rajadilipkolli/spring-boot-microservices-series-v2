@@ -17,9 +17,11 @@ import static org.mockito.Mockito.when;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,6 +30,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class OrderManageServiceTest {
 
     @Mock private OrderRepository orderRepository;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private MeterRegistry meterRegistry;
 
     @InjectMocks private OrderManageService orderManageService;
 
@@ -56,6 +61,7 @@ class OrderManageServiceTest {
                 .usingRecursiveComparison()
                 .isEqualTo(orderStock.withStatusAndSource("CONFIRMED", null));
         assertThat(actual).isExactlyInstanceOf(OrderDto.class);
+        verify(meterRegistry.counter("orders_completed"), times(1)).increment();
     }
 
     @Test
@@ -82,6 +88,7 @@ class OrderManageServiceTest {
                 .usingRecursiveComparison()
                 .isEqualTo(orderStock.withStatusAndSource("REJECTED", "INVENTORY"));
         assertThat(actual.source()).isEqualTo(orderStock.source());
+        verify(meterRegistry.counter("orders_failed"), times(1)).increment();
     }
 
     @Test

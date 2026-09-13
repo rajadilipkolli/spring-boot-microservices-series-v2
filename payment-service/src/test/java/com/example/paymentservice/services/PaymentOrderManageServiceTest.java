@@ -14,6 +14,7 @@ import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.util.TestData;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,6 +34,9 @@ class PaymentOrderManageServiceTest {
     @Mock private CustomerRepository customerRepository;
 
     @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private MeterRegistry meterRegistry;
 
     @InjectMocks private PaymentOrderManageService orderManageService;
 

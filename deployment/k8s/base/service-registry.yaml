@@ -26,13 +26,6 @@ spec:
       labels:
         app: service-registry
     spec:
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
       - env:
         - name: CONFIG_SERVER_USR
@@ -46,8 +39,11 @@ spec:
               key: CONFIG_SERVER_PWD
               name: config-server-credentials
         - name: SPRING_CONFIG_IMPORT
-          value: 
-            optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+          value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+        - name: OTEL_SERVICE_NAME
+          value: service-registry
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=service-registry,service.version=0.0.1-SNAPSHOT
         envFrom:
         - configMapRef:
             name: shared-config
@@ -69,26 +65,26 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            memory: 1400Mi
             cpu: 1000m
+            memory: 1400Mi
           requests:
-            memory: 512Mi
             cpu: 200m
-        startupProbe:
-          failureThreshold: 30
-          httpGet:
-            path: /actuator/health/liveness
-            port: 8761
-          periodSeconds: 10
+            memory: 512Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8761
+          periodSeconds: 10
         volumeMounts:
-        - name: tmp-volume
-          mountPath: /tmp
+        - mountPath: /tmp
+          name: tmp-volume
       initContainers:
       - command:
         - sh
@@ -105,7 +101,14 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: service-registry
       volumes:
-      - name: tmp-volume
-        emptyDir: {}
+      - emptyDir: {}
+        name: tmp-volume

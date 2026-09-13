@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-BASELINE_FILE="${1:-docs/baselines/main-baseline.json}"
+BASELINE_FILE="${1:-../docs/baselines/main-baseline.json}"
 RESULTS_DIR="${2:-target/gatling}"
 THRESHOLD="${3:-15}"
 

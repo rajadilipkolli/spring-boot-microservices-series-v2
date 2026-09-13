@@ -48,3 +48,4 @@ inventory-service/bin/
 inventory-service/target/
 order-service/bin/
 order-service/target/
+.env

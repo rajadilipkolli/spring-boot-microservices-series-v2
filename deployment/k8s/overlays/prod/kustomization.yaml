@@ -8,6 +8,7 @@ resources:
 - apicurio-registry.yaml
 - strimzi-operator.yaml
 - keycloak-discovery.yaml
+- secrets/external-secrets.yaml
 patches:
 - target:
     kind: Deployment
@@ -40,4 +41,3 @@ patches:
       name: kafka
 - path: postgres-alias.yaml
 - path: kafka-alias.yaml
-- path: network-policy-patch.yaml
