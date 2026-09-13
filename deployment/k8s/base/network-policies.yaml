@@ -47,42 +47,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-apps-to-apps
-  namespace: retailstore
-spec:
-  ingress:
-  - from:
-    - podSelector:
-        matchExpressions:
-        - key: app
-          operator: In
-          values:
-          - inventory-service
-          - keycloak
-          - order-service
-          - retail-store-webapp
-          - catalog-service
-          - payment-service
-          - api-gateway
-  podSelector:
-    matchExpressions:
-    - key: app
-      operator: In
-      values:
-      - catalog-service
-      - inventory-service
-      - order-service
-      - payment-service
-      - retail-store-webapp
-      - keycloak
-      - config-server
-      - service-registry
-  policyTypes:
-  - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
   name: allow-apps-to-infrastructure
   namespace: retailstore
 spec:
@@ -122,10 +86,8 @@ metadata:
   namespace: retailstore
 spec:
   ingress:
-  # Allow from any pod within retailstore namespace
   - from:
     - podSelector: {}
-  # Allow CNPG operator (cnpg-system ns) to poll pod status endpoint (port 8000)
   - from:
     - namespaceSelector:
         matchLabels:
@@ -144,7 +106,6 @@ metadata:
   namespace: retailstore
 spec:
   ingress:
-  # Allow from any pod within retailstore namespace (including strimzi-cluster-operator)
   - from:
     - podSelector: {}
   podSelector:
@@ -179,3 +140,104 @@ spec:
   podSelector: {}
   policyTypes:
   - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-apps-to-shared-services
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - catalog-service
+          - inventory-service
+          - order-service
+          - payment-service
+          - retail-store-webapp
+          - api-gateway
+          - keycloak
+          - service-registry
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - keycloak
+      - config-server
+      - service-registry
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webapp-to-gateway
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: retail-store-webapp
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-internal
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - catalog-service
+      - inventory-service
+      - order-service
+      - payment-service
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-to-internal
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - catalog-service
+          - inventory-service
+          - order-service
+          - payment-service
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - catalog-service
+      - inventory-service
+      - order-service
+      - payment-service
+  policyTypes:
+  - Ingress
