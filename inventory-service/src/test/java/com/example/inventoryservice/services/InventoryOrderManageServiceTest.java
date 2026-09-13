@@ -23,12 +23,14 @@ import com.example.inventoryservice.model.payload.OrderItemDto;
 import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -42,6 +44,9 @@ class InventoryOrderManageServiceTest {
     @Mock private InventoryRepository inventoryRepository;
     @Mock private InventoryJOOQRepository inventoryJOOQRepository;
     @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private MeterRegistry meterRegistry;
 
     @Captor ArgumentCaptor<Collection<Inventory>> argumentCaptor;
 
