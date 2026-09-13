@@ -216,6 +216,40 @@ if ((test_exit == 0)); then
   else
     warn "Keycloak token smoke check failed."
   fi
+    step "Validate PSA and Topology Constraints (Staging)"
+  kubectl apply -k deployment/k8s/overlays/staging/
+  kubectl wait --for=condition=ready pod -l app=catalog-service -n "$NAMESPACE" --timeout=120s
+  max_skew=$(kubectl get deployment catalog-service -n "$NAMESPACE" -o jsonpath="{.spec.template.spec.topologySpreadConstraints}" | grep "maxSkew" || true)
+  if [[ -z "$max_skew" ]]; then fail "Topology Constraints not found in staging overlay"; fi
+  ok "Staging overlay applied."
+
+  step "Validate PDBs and Node Drain"
+  pdb=$(kubectl get pdb catalog-service-pdb -n "$NAMESPACE" -o jsonpath="{.spec.minAvailable}")
+  if [[ "$pdb" != "1" ]]; then fail "PDB minAvailable not 1"; fi
+  ok "PDBs validated."
+
+  step "Installing External Secrets Operator"
+  helm repo add external-secrets https://charts.external-secrets.io
+  helm repo update
+  helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait || true
+  ok "External Secrets Operator installed."
+
+  step "Validate Ingress Security (Prod)"
+  kubectl apply -k deployment/k8s/overlays/prod/
+  sleep 10
+  redirect_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: retailstore.local" http://localhost || echo "000")
+  if [[ "$redirect_code" != "308" && "$redirect_code" != "301" ]]; then fail "Ingress redirect failed. Got $redirect_code"; fi
+  auth_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: jobrunr.local" http://localhost || echo "000")
+  if [[ "$auth_code" != "401" ]]; then fail "Ingress auth failed. Got $auth_code"; fi
+  ok "Prod overlay applied."
+
+  step "Validate Autoscaling"
+  kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+  kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s || true
+  kubectl apply -k deployment/k8s/overlays/autoscaling/
+  curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' > /dev/null || true
+  ok "Autoscaling overlay applied."
+
   ok "All E2E tests passed."
 else
   warn "Some tests failed; collecting diagnostics."

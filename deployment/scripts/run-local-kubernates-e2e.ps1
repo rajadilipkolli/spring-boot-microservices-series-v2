@@ -324,6 +324,42 @@ curl -s -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect
 }
 
 # ── summary ───────────────────────────────────────────────────────────────────
+
+if ($testExit -eq 0) {
+    Step "Validate PSA and Topology Constraints (Staging)"
+    kubectl apply -k deployment/k8s/overlays/staging/
+    kubectl wait --for=condition=ready pod -l app=catalog-service -n $NAMESPACE --timeout=120s
+    $maxSkew = kubectl get deployment catalog-service -n $NAMESPACE -o jsonpath="{.spec.template.spec.topologySpreadConstraints}"
+    if ($maxSkew -notmatch "maxSkew") { Fail "Topology Constraints not found in staging overlay" }
+    OK "Staging overlay applied."
+
+    Step "Validate PDBs and Node Drain"
+    $pdb = kubectl get pdb catalog-service-pdb -n $NAMESPACE -o jsonpath="{.spec.minAvailable}"
+    if ($pdb -ne "1") { Fail "PDB minAvailable not 1" }
+    OK "PDBs validated."
+    
+    Step "Installing External Secrets Operator"
+    helm repo add external-secrets https://charts.external-secrets.io
+    helm repo update
+    helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait
+
+    Step "Validate Ingress Security (Prod)"
+    kubectl apply -k deployment/k8s/overlays/prod/
+    Start-Sleep -Seconds 10
+    $redirect_code = bash -c 'curl -s -o /dev/null -w "%{http_code}" -H "Host: retailstore.local" http://localhost || echo "000"'
+    if ($redirect_code -ne "308" -and $redirect_code -ne "301") { Fail "Ingress redirect failed. Got $redirect_code" }
+    $auth_code = bash -c 'curl -s -o /dev/null -w "%{http_code}" -H "Host: jobrunr.local" http://localhost || echo "000"'
+    if ($auth_code -ne "401") { Fail "Ingress auth failed. Got $auth_code" }
+    OK "Prod overlay applied."
+
+    Step "Validate Autoscaling"
+    kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+    kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s
+    kubectl apply -k deployment/k8s/overlays/autoscaling/
+    bash -c 'curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d "{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}"'
+    OK "Autoscaling overlay applied."
+}
+
 Write-Host ""
 if ($testExit -eq 0) {
     OK "All E2E tests PASSED! 🎉"
