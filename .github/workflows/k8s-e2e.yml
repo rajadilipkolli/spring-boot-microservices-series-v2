@@ -31,6 +31,13 @@ jobs:
           cluster_name: kind
           config: deployment/k8s/kind-config.yaml
 
+      - name: Install Calico CNI
+        run: |
+          set -Eeuo pipefail
+          kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+          kubectl -n kube-system set env daemonset/calico-node FELIX_IGNORELOOSERPF=true
+          kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=calico-node --timeout=120s
+
       - name: Install NGINX Ingress Controller
         run: |
           set -Eeuo pipefail

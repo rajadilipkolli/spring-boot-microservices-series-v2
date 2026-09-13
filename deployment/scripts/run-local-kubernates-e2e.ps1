@@ -180,6 +180,12 @@ if ($TestOnly) {
         kind delete cluster --name $CLUSTER_NAME 2>$null
         kind create cluster --name $CLUSTER_NAME --config deployment/k8s/kind-config.yaml --wait 120s
         if ($LASTEXITCODE -ne 0) { Fail "kind create cluster failed." }
+        
+        Step "Installing Calico CNI for Network Policies"
+        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+        kubectl -n kube-system set env daemonset/calico-node FELIX_IGNORELOOSERPF=true
+        kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=calico-node --timeout=120s
+        if ($LASTEXITCODE -ne 0) { Fail "Failed to install Calico CNI." }
         OK "Cluster '$CLUSTER_NAME' is up."
     } else {
         Step "Reusing existing Kind cluster (-SkipCluster)"
@@ -379,3 +385,4 @@ if ($testExit -eq 0) {
     Warn "Diagnostics written to ./$diag/"
     exit 1
 }
+

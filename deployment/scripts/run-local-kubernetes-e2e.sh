@@ -104,6 +104,12 @@ if [[ "$SKIP_CLUSTER" != true ]]; then
   kind delete cluster --name "$CLUSTER_NAME" >/dev/null 2>&1 || true
   kind create cluster --name "$CLUSTER_NAME" --config "$KIND_CONFIG" --wait 120s
   ok "Cluster '$CLUSTER_NAME' is up."
+  
+  step "Installing Calico CNI for Network Policies"
+  kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+  kubectl -n kube-system set env daemonset/calico-node FELIX_IGNORELOOSERPF=true
+  kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=calico-node --timeout=120s
+  ok "Calico CNI is ready."
 else
   warn "Skipping cluster creation."
 fi
@@ -256,3 +262,4 @@ else
   collect_diagnostics
   exit "$test_exit"
 fi
+
