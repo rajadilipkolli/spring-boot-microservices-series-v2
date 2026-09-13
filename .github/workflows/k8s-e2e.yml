@@ -193,8 +193,8 @@ jobs:
       - name: Validate Network Policies
         run: |
           set -Eeuo pipefail
-          kubectl exec -n retailstore deployment/api-gateway -- nc -z catalog-service 18080 || (echo "Allowed path failed" && exit 1)
-          if kubectl exec -n retailstore deployment/catalog-service -- nc -w 3 -z api-gateway 8765; then
+          kubectl run test-api-gateway --rm -i --restart=Never --image=busybox:1.36 --labels="app=api-gateway" -n retailstore -- nc -w 5 -z catalog-service 18080 || (echo "Allowed path failed" && exit 1)
+          if kubectl run test-catalog-service --rm -i --restart=Never --image=busybox:1.36 --labels="app=catalog-service" -n retailstore -- nc -w 3 -z api-gateway 8765; then
             echo "Disallowed path succeeded!"
             exit 1
           else
