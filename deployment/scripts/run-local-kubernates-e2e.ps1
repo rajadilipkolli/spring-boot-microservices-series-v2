@@ -356,7 +356,8 @@ if ($testExit -eq 0) {
     kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
     kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s
     kubectl apply -k deployment/k8s/overlays/autoscaling/
-    bash -c 'curl -s -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d "{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}"'
+    bash -c 'curl --fail --silent --show-error -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" --data ''{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}'''
+    if ($LASTEXITCODE -ne 0) { Fail "Customer creation request failed." }
     OK "Autoscaling overlay applied."
 }
 
