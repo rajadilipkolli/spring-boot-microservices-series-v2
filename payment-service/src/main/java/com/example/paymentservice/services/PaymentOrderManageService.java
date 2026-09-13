@@ -44,6 +44,13 @@ public class PaymentOrderManageService {
         this.paymentsFailedCounter = meterRegistry.counter("payments_failed");
     }
 
+    /**
+     * Reserves the customer's available balance and publishes the payment outcome.
+     *
+     * @param orderDto order whose payment should be reserved
+     * @return the order with its payment status and source
+     * @throws CustomerNotFoundException if the order's customer does not exist
+     */
     @Timed(percentiles = 1.0)
     public OrderDto reserve(OrderDto orderDto) {
         this.paymentsStartedCounter.increment();

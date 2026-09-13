@@ -33,6 +33,13 @@ public class OrderManageService {
         this.ordersFailedCounter = meterRegistry.counter("orders_failed");
     }
 
+    /**
+     * Reconciles the payment and inventory outcomes and persists the resulting order status.
+     *
+     * @param orderPayment payment reservation outcome
+     * @param orderStock inventory reservation outcome
+     * @return the reconciled order outcome
+     */
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = getOrderDto(orderPayment, orderStock);
@@ -55,6 +62,13 @@ public class OrderManageService {
         return orderDto;
     }
 
+    /**
+     * Derives the final order outcome from the payment and inventory reservation statuses.
+     *
+     * @param orderPayment payment reservation outcome
+     * @param orderStock inventory reservation outcome
+     * @return the order with its final status and rejection source, when applicable
+     */
     private OrderDto getOrderDto(OrderDto orderPayment, OrderDto orderStock) {
         OrderDto orderDto = orderStock;
         if (OrderStatus.ACCEPT.name().equals(orderPayment.status())

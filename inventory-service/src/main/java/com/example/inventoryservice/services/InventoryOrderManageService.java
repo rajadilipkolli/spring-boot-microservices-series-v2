@@ -51,6 +51,12 @@ public class InventoryOrderManageService {
         this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
     }
 
+    /**
+     * Reserves available inventory for a new order and publishes the reservation outcome.
+     *
+     * @param orderDto order whose items should be reserved
+     * @return the order with its inventory status and source
+     */
     @Transactional
     public OrderDto reserve(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
