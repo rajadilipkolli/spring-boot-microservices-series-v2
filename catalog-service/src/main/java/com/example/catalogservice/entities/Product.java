@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -9,14 +9,18 @@ package com.example.catalogservice.entities;
 import java.io.Serial;
 import java.io.Serializable;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table(name = "products")
-public class Product implements Serializable {
+public class Product implements Serializable, Persistable<Long> {
 
     @Serial private static final long serialVersionUID = 1L;
 
     @Id private Long id;
+
+    @Transient private boolean isNew = false;
 
     private String productCode;
 
@@ -81,6 +85,17 @@ public class Product implements Serializable {
 
     public Product setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+        return this;
+    }
+
+    @Override
+    @Transient
+    public boolean isNew() {
+        return this.isNew || this.id == null;
+    }
+
+    public Product setNew(boolean isNew) {
+        this.isNew = isNew;
         return this;
     }
 }

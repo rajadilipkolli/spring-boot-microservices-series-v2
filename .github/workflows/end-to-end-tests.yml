@@ -26,46 +26,46 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Start main.py in background (capture logs)
-        id: start-main
+      - name: Start latency_analyzer.py in background (capture logs)
+        id: start-analyzer
         run: |
-          if [ -f ./main.py ]; then
-            nohup python3 ./main.py > main.log 2>&1 &
-            echo "main_pid=$!" >> $GITHUB_OUTPUT
-            echo "Started main.py with PID $!"
+          if [ -f .github/workflows/latency_analyzer.py ]; then
+            nohup python3 .github/workflows/latency_analyzer.py > latency_analyzer.log 2>&1 &
+            echo "analyzer_pid=$!" >> $GITHUB_OUTPUT
+            echo "Started latency_analyzer.py with PID $!"
           else
-            echo "main_missing=true" >> $GITHUB_OUTPUT
-            echo "main.py not found at workspace root"
+            echo "analyzer_missing=true" >> $GITHUB_OUTPUT
+            echo "latency_analyzer.py not found at .github/workflows/latency_analyzer.py"
           fi
 
       - name: Run End to End Tests
         run: ./test-em-all.sh --detailed-logs ${{ inputs.command_args || 'start stop' }}
 
-      - name: Stop main.py and collect logs
+      - name: Stop latency_analyzer.py and collect logs
         if: always()
         run: |
           echo "Collecting logs..."
-          if [ "${{ steps.start-main.outputs.main_missing }}" = "true" ]; then
-            echo "main.py was not present; no logs to collect" > main.log
+          if [ "${{ steps.start-analyzer.outputs.analyzer_missing }}" = "true" ]; then
+            echo "latency_analyzer.py was not present; no logs to collect" > latency_analyzer.log
           else
-            if [ -n "${{ steps.start-main.outputs.main_pid }}" ]; then
-              pid=${{ steps.start-main.outputs.main_pid }}
-              echo "Stopping main.py PID $pid"
+            if [ -n "${{ steps.start-analyzer.outputs.analyzer_pid }}" ]; then
+              pid=${{ steps.start-analyzer.outputs.analyzer_pid }}
+              echo "Stopping latency_analyzer.py PID $pid"
               kill $pid || true
               sleep 2
             else
               echo "No PID recorded; attempting to pkill by name"
-              pkill -f main.py || true
+              pkill -f latency_analyzer.py || true
               sleep 2
             fi
           fi
-          echo "=== tail of main.log ==="
-          tail -n +1 main.log || true
+          echo "=== tail of latency_analyzer.log ==="
+          tail -n +1 latency_analyzer.log || true
 
-      - name: Upload main.log artifact
+      - name: Upload latency_analyzer.log artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: main-py-logs
-          path: main.log
-          retention-days: 3
+          name: latency-analyzer-logs
+          path: latency_analyzer.log
+          retention-days: 5

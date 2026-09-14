@@ -76,11 +76,31 @@ class InventoryServiceTest {
                 .save(any(Inventory.class));
 
         // Execute the method to test
-        inventoryService.updateGeneratedInventory("test-batch-123");
+        inventoryService.updateGeneratedInventory("test-batch-123", null);
 
         // Verify interactions
         verify(inventoryRepository, times(101)).findByProductCode(anyString());
         verify(inventoryRepository, times(101)).save(any(Inventory.class));
+    }
+
+    @Test
+    void shouldUpdateRequestedGeneratedInventoryBatchSize() {
+        given(inventoryRepository.findByProductCode(anyString()))
+                .willReturn(
+                        Optional.of(
+                                new Inventory()
+                                        .setId(1L)
+                                        .setProductCode("ProductCode1")
+                                        .setAvailableQuantity(100)
+                                        .setReservedItems(0)));
+        willDoNothing()
+                .given(inventoryMapper)
+                .updateInventoryFromRequest(any(InventoryRequest.class), any(Inventory.class));
+
+        inventoryService.updateGeneratedInventory("test-batch-456", 5);
+
+        verify(inventoryRepository, times(5)).findByProductCode(anyString());
+        verify(inventoryRepository, times(5)).save(any(Inventory.class));
     }
 
     @Test

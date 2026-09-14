@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: retailstore
+spec:
+  ports:
+  - port: 8888
+    targetPort: 8888
+  selector:
+    app: config-server
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+      - env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: native
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        - name: OTEL_SERVICE_NAME
+          value: config-server
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=config-server,service.version=0.0.1-SNAPSHOT
+        image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
+              http://localhost:8888/actuator/health/liveness
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: config-server
+        ports:
+        - containerPort: 8888
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
+              http://localhost:8888/actuator/health/readiness
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1400Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
+              http://localhost:8888/actuator/health/liveness
+          failureThreshold: 30
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+        - mountPath: /var/lib/config-server
+          name: config-volume
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: config-server
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume
+      - emptyDir: {}
+        name: config-volume

@@ -1,0 +1,8 @@
+﻿apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: retailstore
+spec:
+  type: ExternalName
+  externalName: kafka-kafka-bootstrap.retailstore.svc.cluster.local

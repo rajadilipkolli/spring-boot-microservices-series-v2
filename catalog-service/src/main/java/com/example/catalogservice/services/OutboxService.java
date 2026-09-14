@@ -8,6 +8,7 @@ package com.example.catalogservice.services;
 
 import com.example.catalogservice.entities.OutboxEvent;
 import com.example.catalogservice.entities.OutboxEventStatus;
+import com.example.catalogservice.entities.OutboxPayload;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.OutboxEventRepository;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
@@ -48,14 +48,14 @@ public class OutboxService {
             if (payload instanceof Product product) {
                 finalPayload = productMapper.toProductDto(product);
             }
-            JsonNode payloadNode = jsonMapper.valueToTree(finalPayload);
+            String payloadString = jsonMapper.writeValueAsString(finalPayload);
             OutboxEvent event =
                     new OutboxEvent()
                             .setId(UUID.randomUUID())
                             .setAggregateType(aggregateType)
                             .setAggregateId(aggregateId)
                             .setEventType(eventType)
-                            .setPayload(payloadNode)
+                            .setPayload(new OutboxPayload(payloadString))
                             .setStatus(OutboxEventStatus.PENDING)
                             .setNew(true)
                             .setCreatedAt(OffsetDateTime.now())

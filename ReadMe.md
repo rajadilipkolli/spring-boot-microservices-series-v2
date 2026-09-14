@@ -109,16 +109,16 @@ This project implements a **microservices pattern** where different functionalit
 
 <div align="center">
 
-| Service | Port | Description | Tech Stack |
-|---------|------|-------------|------------|
-| 🌐 **API Gateway** | 8765 | Single entry point, routing & load balancing | Spring Cloud Gateway |
-| 📁 **Config Server** | 8888 | Centralized configuration management | Spring Cloud Config |
-| 🏢 **Service Registry** | 8761 | Service discovery with Eureka | Spring Cloud Netflix |
-| 📚 **Catalog Service** | 18080 | Product catalog management | PostgreSQL + Liquibase (YAML) |
-| 📦 **Inventory Service** | 18181 | Stock level management | PostgreSQL + Liquibase (JSON) |
-| 🛍️ **Order Service** | 18282 | Order processing & orchestration | PostgreSQL + Liquibase (XML) |
-| 💳 **Payment Service** | 18085 | Payment processing | PostgreSQL + Liquibase (XML) |
-| 🛒 **Retail Store Web** | 8080 | Customer-facing web application | Thymeleaf + Alpine.js |
+| Service                  | Port  | Description                                  | Tech Stack                    |
+|--------------------------|-------|----------------------------------------------|-------------------------------|
+| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
+| 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
+| 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
+| 📦 **Inventory Service** | 18181 | Stock level management                       | PostgreSQL + Liquibase (JSON) |
+| 🛍️ **Order Service**     | 18282 | Order processing & orchestration             | PostgreSQL + Liquibase (XML)  |
+| 💳 **Payment Service**   | 18085 | Payment processing                           | PostgreSQL + Liquibase (XML)  |
+| 🛒 **Retail Store Web**  | 8080  | Customer-facing web application              | Thymeleaf + Alpine.js         |
 
 </div>
 
@@ -199,6 +199,8 @@ graph TB
 ### Containerization & CI/CD
 * ![Docker](https://img.shields.io/badge/Docker-Latest-blue?style=flat-square&logo=docker) [Docker](https://www.docker.com/)
 * ![Docker Compose](https://img.shields.io/badge/Docker_Compose-Latest-blue?style=flat-square&logo=docker) [Docker Compose](https://github.com/docker/compose)
+* [Kubernetes deployment guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md)
+* [Kubernetes E2E workflow](.github/workflows/k8s-e2e.yml)
 * ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Latest-black?style=flat-square&logo=github) [GitHub Actions](https://github.com/features/actions)
 
 </details>
@@ -234,13 +236,15 @@ graph TB
 
 Before you begin, ensure you have the following installed:
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| ☕ **Java** | 21+ | Runtime environment |
-| 📦 **Maven** | 3.9.x+ | Build tool |
-| 🐳 **Docker** | Latest | Containerization |
-| 🔧 **Docker Compose** | Latest | Orchestration |
-| 📚 **Git** | Latest | Version control |
+| Tool                  | Version | Purpose             |
+|-----------------------|---------|---------------------|
+| ☕ **Java**           | 25+     | Runtime environment |
+| 📦 **Maven**          | 3.9.x+  | Build tool          |
+| 🐳 **Docker**         | Latest  | Containerization    |
+| 🔧 **Docker Compose** | Latest  | Orchestration       |
+| **Kind**              | Latest  | Local Kubernetes cluster |
+| **kubectl**           | Latest  | Kubernetes CLI       |
+| 📚 **Git**            | Latest  | Version control     |
 
 > 💡 **Tip:** Ensure `JAVA_HOME` environment variable is properly set
 
@@ -293,6 +297,20 @@ bash run.sh
 ```powershell
 .\start-services.ps1
 ```
+
+#### Option 4: Local Kubernetes with Kind
+
+For a local Kubernetes deployment, use Kind with the manifests under
+[`deployment/k8s/`](deployment/k8s/). See the
+[Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
+the complete setup and validation flow.
+
+```bash
+./deployment/scripts/run-local-kubernetes-e2e.sh
+```
+
+The same Kubernetes end-to-end gate runs in
+[`k8s-e2e.yml`](.github/workflows/k8s-e2e.yml).
 
 ### 🛑 Stopping Services
 
@@ -448,12 +466,12 @@ This project demonstrates **flexible database schema management** using Liquibas
 
 <div align="center">
 
-| 🏷️ Format | 📁 Service Examples | 📝 Use Case |
-|-----------|-------------------|-------------|
-| **XML** | `order-service`, `payment-service` | Complex migrations, detailed documentation |
-| **YAML** | `catalog-service` | Human-readable, simple structure |
-| **JSON** | `inventory-service` | API-friendly, structured data |
-| **SQL** | Custom implementations | Direct SQL control, legacy migrations |
+| 🏷️ Format | 📁 Service Examples                | 📝 Use Case                                |
+|-----------|------------------------------------|--------------------------------------------|
+| **XML**   | `order-service`, `payment-service` | Complex migrations, detailed documentation |
+| **YAML**  | `catalog-service`                  | Human-readable, simple structure           |
+| **JSON**  | `inventory-service`                | API-friendly, structured data              |
+| **SQL**   | Custom implementations             | Direct SQL control, legacy migrations      |
 
 </div>
 
@@ -529,6 +547,51 @@ docker-compose logs | grep ERROR
 
 </details>
 
+## 📋 Kubernetes Commands Cheat‑Sheet
+
+This guide provides a concise reference of useful `kubectl` commands for everyday debugging, maintenance, and inspection of the **retailstore** namespace used by this project. Each command includes a short description of when to use it.
+
+---
+## 1. Viewing Logs
+| Command                                                                                           | Purpose                                                                                        |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| `kubectl logs deployment/order-service -n retailstore --previous \| Select-Object -Last 30` | Show the last 30 lines of the **previous** container instance (useful after a crash/restart).  |
+| `kubectl logs deployment/order-service -n retailstore --previous`                           | Get the full logs of the previous container run (full crash dump).                             |
+| `kubectl logs deployment/inventory-service -n retailstore --tail=40 2>&1`                         | Show the most recent 40 lines of the **inventory‑service** deployment logs (including errors). |
+| `kubectl logs deployment/keycloak -n retailstore \| Select-Object -Last 50`                       | Retrieve the last 50 lines of the **keycloak** deployment logs.                                |
+
+---
+## 2. Cleaning Up & Restarting Pods
+| Command                                                           | Purpose                                                                                               |
+|-------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `kubectl delete pods -l app=keycloak -n retailstore`              | Delete all pods with label `app=keycloak` normally; they will be recreated by the Deployment controller. |
+| `kubectl rollout restart deployment config-server -n retailstore` | Trigger a rolling restart of the **config‑server** deployment (e.g., after config changes).           |
+
+---
+## 3. Inspecting Resources
+| Command                                                                                                | Purpose                                                                                          |
+|--------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `kubectl get deployment keycloak -n retailstore -o yaml`                                               | Dump the full YAML definition of the **keycloak** Deployment for inspection or debugging.        |
+| `kubectl get pods -n retailstore -l app=keycloak; kubectl describe pod -l app=keycloak -n retailstore` | List all Keycloak pods and then show a detailed description (events, conditions, env vars).      |
+| `kubectl get pods -l app=keycloak -n retailstore -w`                                                   | Watch the Keycloak pods in real‑time; useful while waiting for them to become **Ready**.         |
+| `kubectl wait --for=condition=ready pod -l app=keycloak -n retailstore --timeout=60s`                  | Block until all Keycloak pods reach the **Ready** condition (or timeout).                        |
+| `kubectl get all -n retailstore`                                                                       | Overview of every resource (pods, services, deployments, etc.) in the **retailstore** namespace. |
+
+---
+## 4. Port‑Forwarding (local testing)
+| Command                                                                 | Purpose                                                                                                |
+|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `kubectl port-forward service/order-service 28282:28282 -n retailstore` | Expose the `order-service` port locally on `28282` to interact with the service from your workstation. |
+
+---
+## 5. General Tips
+- **Namespace**: All commands target the `retailstore` namespace (`-n retailstore`). Adjust if you work in a different namespace.
+- **Label selectors** (`-l`) are handy for batch operations on a set of pods.
+- Use `--previous` to see logs from a terminated container (useful after a CrashLoopBackOff).
+- Combine commands with PowerShell pipelines (`| Select-Object -Last N`) to trim output.
+- For scripted CI pipelines, prefer `kubectl wait` to ensure resources are ready before proceeding.
+
+
 ### 🚫 Kill Processes by Port
 
 <details>
@@ -598,10 +661,11 @@ import static org.hamcrest.Matchers.closeTo;
 <details>
 <summary><strong>🏗️ Architecture Considerations</strong></summary>
 
-- **🔄 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
+- **💾 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
 - **📊 Event Sourcing:** Kafka integration for reliable message delivery
-- **🚀 Native Images:** Some services may need additional GraalVM configuration
+- **🚀 Native Images:** Some services may need additional GraalVM configuration. **Note:** For native builds, we cannot use `@RefreshScope`, OpenTelemetry Java agents, or Spring Boot DevTools.
 - **🔍 Service Discovery:** Health checks are crucial for proper load balancing
+- **🔑 TSID Generation:** If a deployment does not set a unique `tsid.node` or `TSID_NODE` for each generator, replicas can share a node and produce colliding IDs during an overlapping timestamp and counter window. Configure unique node IDs, or inject an explicitly configured `TSID.Factory`, for this service and the other TSID generators. The Hypersistence documentation states that exclusive node IDs avoid collisions and that the node is random when no setting is provided. This project's TSID implementation will fallback to this random node library default when `withNode` is omitted.
 
 </details>
 

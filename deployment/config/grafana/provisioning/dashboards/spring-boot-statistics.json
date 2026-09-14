@@ -105,7 +105,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "process_uptime_seconds{application=\"$application\", instance=\"$instance\"}",
+          "expr": "process_uptime_seconds{job=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -191,7 +191,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "sum(jvm_memory_used_bytes{application=\"$application\", instance=\"$instance\", area=\"heap\"})*100/sum(jvm_memory_max_bytes{application=\"$application\",instance=\"$instance\", area=\"heap\"})",
+          "expr": "sum(jvm_memory_used_bytes{job=\"$application\", instance=\"$instance\", area=\"heap\"})*100/sum(jvm_memory_max_bytes{job=\"$application\",instance=\"$instance\", area=\"heap\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -286,7 +286,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "sum(jvm_memory_used_bytes{application=\"$application\", instance=\"$instance\", area=\"nonheap\"})*100/sum(jvm_memory_max_bytes{application=\"$application\",instance=\"$instance\", area=\"nonheap\"})",
+          "expr": "sum(jvm_memory_used_bytes{job=\"$application\", instance=\"$instance\", area=\"nonheap\"})*100/sum(jvm_memory_max_bytes{job=\"$application\",instance=\"$instance\", area=\"nonheap\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -385,7 +385,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "process_files_open_files{application=\"$application\", instance=\"$instance\"}",
+          "expr": "process_files_open_files{job=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Open Files",
@@ -396,7 +396,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "process_files_max_files{application=\"$application\", instance=\"$instance\"}",
+          "expr": "process_files_max_files{job=\"$application\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max Files",
@@ -499,7 +499,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "system_cpu_usage{instance=\"$instance\", application=\"$application\"}",
+          "expr": "system_cpu_usage{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "System CPU Usage",
@@ -510,7 +510,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "process_cpu_usage{instance=\"$instance\", application=\"$application\"}",
+          "expr": "process_cpu_usage{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Process CPU Usage",
@@ -613,7 +613,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "system_load_average_1m{instance=\"$instance\", application=\"$application\"}",
+          "expr": "system_load_average_1m{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Load Average [1m]",
@@ -624,7 +624,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "system_cpu_count{instance=\"$instance\", application=\"$application\"}",
+          "expr": "system_cpu_count{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "CPU Core Size",
@@ -703,7 +703,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "process_start_time_seconds{application=\"$application\", instance=\"$instance\"}*1000",
+          "expr": "process_start_time_seconds{job=\"$application\", instance=\"$instance\"}*1000",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -758,7 +758,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_used_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_heap\"}",
+          "expr": "jvm_memory_used_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_heap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Used",
@@ -769,7 +769,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_committed_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_heap\"}",
+          "expr": "jvm_memory_committed_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_heap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Commited",
@@ -780,7 +780,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_max_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_heap\"}",
+          "expr": "jvm_memory_max_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_heap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max",
@@ -820,7 +820,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_used_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_nonheap\"}",
+          "expr": "jvm_memory_used_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_nonheap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Used",
@@ -831,7 +831,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_committed_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_nonheap\"}",
+          "expr": "jvm_memory_committed_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_nonheap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Commited",
@@ -842,7 +842,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_memory_max_bytes{instance=\"$instance\", application=\"$application\", id=\"$memory_pool_nonheap\"}",
+          "expr": "jvm_memory_max_bytes{instance=\"$instance\", job=\"$application\", id=\"$memory_pool_nonheap\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max",
@@ -940,7 +940,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(jvm_classes_unloaded_classes_total{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(jvm_classes_unloaded_classes_total{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Classes Unloaded",
@@ -1044,7 +1044,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_classes_loaded_classes{instance=\"$instance\", application=\"$application\"}",
+          "expr": "jvm_memory_used_bytes{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Classes Loaded",
@@ -1142,7 +1142,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_buffer_memory_used_bytes{instance=\"$instance\", application=\"$application\", id=\"mapped\"}",
+          "expr": "jvm_buffer_memory_used_bytes{instance=\"$instance\", job=\"$application\", id=\"mapped\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Used Bytes",
@@ -1153,7 +1153,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_buffer_total_capacity_bytes{instance=\"$instance\", application=\"$application\", id=\"mapped\"}",
+          "expr": "jvm_buffer_total_capacity_bytes{instance=\"$instance\", job=\"$application\", id=\"mapped\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Capacity Bytes",
@@ -1251,7 +1251,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(jvm_gc_memory_allocated_bytes_total{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(jvm_gc_memory_allocated_bytes_total{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "allocated",
@@ -1262,7 +1262,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(jvm_gc_memory_promoted_bytes_total{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(jvm_gc_memory_promoted_bytes_total{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "promoted",
@@ -1360,7 +1360,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_buffer_memory_used_bytes{instance=\"$instance\", application=\"$application\", id=\"direct\"}",
+          "expr": "jvm_buffer_memory_used_bytes{instance=\"$instance\", job=\"$application\", id=\"direct\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Used Bytes",
@@ -1371,7 +1371,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_buffer_total_capacity_bytes{instance=\"$instance\", application=\"$application\", id=\"direct\"}",
+          "expr": "jvm_buffer_total_capacity_bytes{instance=\"$instance\", job=\"$application\", id=\"direct\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Capacity Bytes",
@@ -1474,7 +1474,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_threads_daemon_threads{instance=\"$instance\", application=\"$application\"}",
+          "expr": "jvm_threads_daemon_threads{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Daemon",
@@ -1485,7 +1485,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_threads_live_threads{instance=\"$instance\", application=\"$application\"}",
+          "expr": "jvm_threads_live_threads{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Live",
@@ -1496,7 +1496,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "jvm_threads_peak_threads{instance=\"$instance\", application=\"$application\"}",
+          "expr": "jvm_threads_peak_threads{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Peak",
@@ -1653,7 +1653,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(jvm_gc_pause_seconds_count{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(jvm_gc_pause_seconds_count{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} [{{cause}}]",
@@ -1797,7 +1797,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(jvm_gc_pause_seconds_sum{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(jvm_gc_pause_seconds_sum{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} [{{cause}}]",
@@ -1889,7 +1889,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -2013,7 +2013,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_active{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_active{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Active",
@@ -2024,7 +2024,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_idle{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_idle{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Idle",
@@ -2035,7 +2035,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_pending{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_pending{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Pending",
@@ -2114,7 +2114,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_timeout_total{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_timeout_total{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -2212,7 +2212,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_creation_seconds_sum{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_creation_seconds_count{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_creation_seconds_sum{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_creation_seconds_count{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Creation Time",
@@ -2310,7 +2310,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_usage_seconds_sum{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_usage_seconds_count{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_usage_seconds_sum{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_usage_seconds_count{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Usage Time",
@@ -2408,7 +2408,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "hikaricp_connections_acquire_seconds_sum{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_acquire_seconds_count{instance=\"$instance\", application=\"$application\", pool=\"$hikaricp\"}",
+          "expr": "hikaricp_connections_acquire_seconds_sum{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"} / hikaricp_connections_acquire_seconds_count{instance=\"$instance\", job=\"$application\", pool=\"$hikaricp\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Acquire Time",
@@ -2506,7 +2506,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(http_server_requests_seconds_count{instance=\"$instance\", application=\"$application\", uri!~\".*actuator.*\"}[5m])",
+          "expr": "irate(http_server_requests_seconds_count{instance=\"$instance\", job=\"$application\", uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} [{{status}}] - {{uri}}",
@@ -2621,7 +2621,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(http_server_requests_seconds_sum{instance=\"$instance\", application=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m]) / irate(http_server_requests_seconds_count{instance=\"$instance\", application=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m])",
+          "expr": "irate(http_server_requests_seconds_sum{instance=\"$instance\", job=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m]) / irate(http_server_requests_seconds_count{instance=\"$instance\", job=\"$application\", exception=\"none\", uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} [{{status}}] - {{uri}}",
@@ -2714,7 +2714,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "tomcat_global_error_total{instance=\"$instance\", application=\"$application\"}",
+          "expr": "tomcat_global_error_total{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -2817,7 +2817,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "tomcat_sessions_active_current_sessions{instance=\"$instance\", application=\"$application\"}",
+          "expr": "tomcat_sessions_active_current{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "active sessions",
@@ -2920,7 +2920,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(tomcat_global_sent_bytes_total{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(tomcat_global_sent_bytes_total{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Sent Bytes",
@@ -2931,7 +2931,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(tomcat_global_received_bytes_total{instance=\"$instance\", application=\"$application\"}[5m])",
+          "expr": "irate(tomcat_global_received_bytes_total{instance=\"$instance\", job=\"$application\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Recieved Bytes",
@@ -3010,7 +3010,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "tomcat_threads_config_max{instance=\"$instance\", application=\"$application\"}",
+          "expr": "tomcat_threads_config_max{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -3113,7 +3113,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "tomcat_threads_current_threads{instance=\"$instance\", application=\"$application\"}",
+          "expr": "tomcat_threads_current_threads{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Current thread",
@@ -3124,7 +3124,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "tomcat_threads_busy_threads{instance=\"$instance\", application=\"$application\"}",
+          "expr": "tomcat_threads_busy_threads{instance=\"$instance\", job=\"$application\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Current thread busy",
@@ -3242,7 +3242,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(logback_events_total{instance=\"$instance\", application=\"$application\", level=\"info\"}[5m])",
+          "expr": "irate(logback_events_total{instance=\"$instance\", job=\"$application\", level=\"info\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "info",
@@ -3348,7 +3348,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(logback_events_total{instance=\"$instance\", application=\"$application\", level=\"error\"}[5m])",
+          "expr": "irate(logback_events_total{instance=\"$instance\", job=\"$application\", level=\"error\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "error",
@@ -3454,7 +3454,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(logback_events_total{instance=\"$instance\", application=\"$application\", level=\"warn\"}[5m])",
+          "expr": "irate(logback_events_total{instance=\"$instance\", job=\"$application\", level=\"warn\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "warn",
@@ -3560,7 +3560,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(logback_events_total{instance=\"$instance\", application=\"$application\", level=\"debug\"}[5m])",
+          "expr": "irate(logback_events_total{instance=\"$instance\", job=\"$application\", level=\"debug\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "debug",
@@ -3666,7 +3666,7 @@
             "type": "prometheus",
             "uid": "prometheus-micro-service"
           },
-          "expr": "irate(logback_events_total{instance=\"$instance\", application=\"$application\", level=\"trace\"}[5m])",
+          "expr": "irate(logback_events_total{instance=\"$instance\", job=\"$application\", level=\"trace\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trace",
@@ -3693,12 +3693,12 @@
           "type": "prometheus",
           "uid": "prometheus-micro-service"
         },
-        "definition": "label_values(application)",
+        "definition": "label_values(job)",
         "includeAll": false,
         "label": "Application",
         "name": "application",
         "options": [],
-        "query": "label_values(application)",
+        "query": "label_values(job)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -3713,12 +3713,12 @@
           "type": "prometheus",
           "uid": "prometheus-micro-service"
         },
-        "definition": "label_values(jvm_classes_loaded_classes{application=\"$application\"}, instance)",
+        "definition": "label_values(jvm_memory_used_bytes{job=\"$application\"}, instance)",
         "includeAll": false,
         "label": "Instance",
         "name": "instance",
         "options": [],
-        "query": "label_values(jvm_classes_loaded_classes{application=\"$application\"}, instance)",
+        "query": "label_values(jvm_memory_used_bytes{job=\"$application\"}, instance)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -3738,7 +3738,7 @@
         "label": "HikariCP-Pool",
         "name": "hikaricp",
         "options": [],
-        "query": "label_values(hikaricp_connections{instance=\"$instance\", application=\"$application\"}, pool)",
+        "query": "label_values(hikaricp_connections{instance=\"$instance\", job=\"$application\"}, pool)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -3758,7 +3758,7 @@
         "label": "Memory Pool (heap)",
         "name": "memory_pool_heap",
         "options": [],
-        "query": "label_values(jvm_memory_used_bytes{application=\"$application\", instance=\"$instance\", area=\"heap\"},id)",
+        "query": "label_values(jvm_memory_used_bytes{job=\"$application\", instance=\"$instance\", area=\"heap\"},id)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -3778,7 +3778,7 @@
         "label": "Memory Pool (nonheap)",
         "name": "memory_pool_nonheap",
         "options": [],
-        "query": "label_values(jvm_memory_used_bytes{application=\"$application\", instance=\"$instance\", area=\"nonheap\"},id)",
+        "query": "label_values(jvm_memory_used_bytes{job=\"$application\", instance=\"$instance\", area=\"nonheap\"},id)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
@@ -3792,7 +3792,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Spring Boot 3.4 Statistics",
+  "title": "Spring Boot 4.1 Statistics",
   "uid": "spring_boot_34",
   "version": 1
 }

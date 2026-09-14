@@ -15,6 +15,12 @@
 			"version": "latest",
 			"enableNonRootDocker": "true",
 			"moby": "false"
+		},
+		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+			"version": "latest"
+		},
+		"ghcr.io/devcontainers-contrib/features/kind:1": {
+			"version": "latest"
 		}
 	},
 	"customizations": {

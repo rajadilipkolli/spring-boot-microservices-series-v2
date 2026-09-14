@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
 
     private static final SecureRandom RAND = new SecureRandom();
+    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
+    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
 
@@ -122,12 +124,15 @@ public class InventoryService {
         return new PagedResult<>(page);
     }
 
-    public void updateGeneratedInventory(String idempotencyKey) {
+    public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
+        validateBatchSize(batchSize);
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
 
-        IntStream.rangeClosed(0, 100)
+        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
+
+        IntStream.range(0, resolvedBatchSize)
                 .forEach(
                         operand -> {
                             try {
@@ -150,6 +155,13 @@ public class InventoryService {
                                 // random inventory
                             }
                         });
+    }
+
+    private static void validateBatchSize(Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
+            throw new IllegalArgumentException(
+                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
+        }
     }
 
     @Transactional

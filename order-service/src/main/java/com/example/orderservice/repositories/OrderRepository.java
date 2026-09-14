@@ -49,6 +49,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Long> findAllOrders(Pageable pageable);
 
     @EntityGraph(attributePaths = {"items"})
-    List<Order> findByStatusAndCreatedDateLessThanOrderByIdAsc(
-            OrderStatus status, LocalDateTime createdDate);
+    List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+            OrderStatus status, LocalDateTime lastModifiedDate);
 }

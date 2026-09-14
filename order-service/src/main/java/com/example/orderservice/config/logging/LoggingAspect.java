@@ -8,14 +8,9 @@ package com.example.orderservice.config.logging;
 
 import com.example.orderservice.utils.AppConstants;
 import com.example.orderservice.utils.LogSanitizer;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
@@ -36,60 +31,60 @@ class LoggingAspect {
 
     private final Environment env;
 
-    public LoggingAspect(Environment env) {
+    LoggingAspect(Environment env) {
         this.env = env;
     }
 
-    @Pointcut(
-            "within(@org.springframework.stereotype.Repository *)"
-                    + " || within(@org.springframework.stereotype.Service *)"
-                    + " || within(@org.springframework.web.bind.annotation.RestController *)")
-    public void springBeanPointcut() {
-        // pointcut definition
+    @Pointcut("@annotation(com.example.orderservice.config.logging.Loggable)")
+    private void methodLoggablePointcut() {
+        // Pointcut definition
     }
 
     @Pointcut(
-            """
-                @within(com.example.orderservice.config.logging.Loggable)
-                || @annotation(com.example.orderservice.config.logging.Loggable)
-            """)
-    public void applicationPackagePointcut() {
-        // pointcut definition
+            "@within(com.example.orderservice.config.logging.Loggable)"
+                    + " && !@annotation(com.example.orderservice.config.logging.Loggable)")
+    private void classLoggablePointcut() {
+        // Pointcut definition
     }
 
-    @AfterThrowing(pointcut = "applicationPackagePointcut()", throwing = "e")
-    public void logAfterThrowing(JoinPoint joinPoint, Throwable e) {
-        if (env.acceptsProfiles(Profiles.of(AppConstants.PROFILE_NOT_PROD))) {
-            log.error(
-                    "Exception in {}.{}() with cause = '{}' and exception = '{}'",
-                    joinPoint.getSignature().getDeclaringTypeName(),
-                    joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : e.getCause(),
-                    LogSanitizer.sanitizeException(e),
-                    e);
+    @Around(
+            value = "methodLoggablePointcut() && @annotation(loggable)",
+            argNames = "joinPoint,loggable")
+    public Object logMethod(ProceedingJoinPoint joinPoint, Loggable loggable) throws Throwable {
 
-        } else {
-            log.error(
-                    "Exception in {}.{}() with cause = {}",
-                    joinPoint.getSignature().getDeclaringTypeName(),
-                    joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : e.getCause());
-        }
+        return executeLogging(joinPoint, loggable);
     }
 
-    @Around("applicationPackagePointcut()")
-    public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Around(value = "classLoggablePointcut() && @within(loggable)", argNames = "joinPoint,loggable")
+    public Object logClass(ProceedingJoinPoint joinPoint, Loggable loggable) throws Throwable {
+
+        return executeLogging(joinPoint, loggable);
+    }
+
+    private Object executeLogging(ProceedingJoinPoint joinPoint, Loggable loggable)
+            throws Throwable {
+
         String methodName = joinPoint.getSignature().getName();
-        LogLevel logLevel = determineLogLevel(joinPoint);
+
+        LogLevel logLevel = loggable.value();
 
         logMethodStart(joinPoint, methodName);
-        logMethodParams(joinPoint, logLevel, methodName);
+        logMethodParams(joinPoint, logLevel, methodName, loggable);
 
         long start = System.currentTimeMillis();
-        Object result = joinPoint.proceed();
+
+        Object result;
+
+        try {
+            result = joinPoint.proceed();
+        } catch (Throwable ex) {
+            logException(joinPoint, ex);
+            throw ex;
+        }
+
         long end = System.currentTimeMillis();
 
-        logMethodResult(joinPoint, result, logLevel, methodName);
+        logMethodResult(joinPoint, result, logLevel, methodName, loggable);
         logMethodCompletion(joinPoint, methodName, end - start);
 
         return result;
@@ -100,89 +95,107 @@ class LoggingAspect {
     }
 
     private void logMethodParams(
-            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
-        logMethodParamsIfEnabled(joinPoint, logLevel, methodName);
+            ProceedingJoinPoint joinPoint,
+            LogLevel logLevel,
+            String methodName,
+            Loggable loggable) {
+
+        if (!loggable.params() || ObjectUtils.isEmpty(joinPoint.getArgs())) {
+            return;
+        }
+
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+
+        String[] parameterNames = signature.getParameterNames();
+
+        Object[] args = joinPoint.getArgs();
+
+        List<String> values = new ArrayList<>(args.length);
+
+        for (int i = 0; i < args.length; i++) {
+
+            String paramName =
+                    parameterNames != null && i < parameterNames.length
+                            ? parameterNames[i]
+                            : "arg" + i;
+
+            Object argValue = args[i];
+
+            if (paramName.matches("(?i).*(password|creditCard|ssn).*")) {
+                argValue = "REDACTED";
+            }
+
+            values.add(paramName + " : " + argValue);
+        }
+
+        logExecutionDetails(
+                joinPoint,
+                logLevel,
+                methodName
+                        + "() args :: -> "
+                        + LogSanitizer.sanitizeForLog(String.join(", ", values), 1024));
     }
 
     private void logMethodResult(
-            ProceedingJoinPoint joinPoint, Object result, LogLevel logLevel, String methodName) {
-        logMethodResultIfEnabled(joinPoint, result, logLevel, methodName);
+            ProceedingJoinPoint joinPoint,
+            Object result,
+            LogLevel logLevel,
+            String methodName,
+            Loggable loggable) {
+
+        if (!loggable.result() || result == null) {
+            return;
+        }
+
+        logExecutionDetails(
+                joinPoint,
+                logLevel,
+                methodName
+                        + "() Returned : "
+                        + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
     }
 
     private void logMethodCompletion(
             ProceedingJoinPoint joinPoint, String methodName, long timeTaken) {
+
         logExecutionDetails(
                 joinPoint,
                 LogLevel.INFO,
-                methodName + "() finished execution and took (" + timeTaken + ") mills to execute");
+                methodName + "() finished execution and took (" + timeTaken + ") ms to execute");
     }
 
-    // Generic method to retrieve Loggable annotation
-    private Optional<Loggable> getLoggableAnnotation(ProceedingJoinPoint joinPoint) {
-        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
-        Method method = methodSignature.getMethod();
-        Loggable methodAnnotation = method.getAnnotation(Loggable.class);
-        Loggable classAnnotation = joinPoint.getTarget().getClass().getAnnotation(Loggable.class);
-        return Optional.ofNullable(Optional.ofNullable(methodAnnotation).orElse(classAnnotation));
-    }
+    private void logException(ProceedingJoinPoint joinPoint, Throwable e) {
 
-    private LogLevel determineLogLevel(ProceedingJoinPoint joinPoint) {
-        return getLoggableAnnotation(joinPoint)
-                .map(Loggable::value)
-                .orElse(LogLevel.DEBUG); // Default LogLevel if annotation is not present
-    }
+        if (env.acceptsProfiles(Profiles.of(AppConstants.PROFILE_NOT_PROD))) {
 
-    private boolean shouldLog(
-            ProceedingJoinPoint joinPoint, Function<Loggable, Boolean> loggableProperty) {
-        return getLoggableAnnotation(joinPoint)
-                .map(loggableProperty)
-                .orElse(false); // Default to false if annotation is not present
+            log.error(
+                    "Exception in {}.{}() with cause = '{}' and exception = '{}'",
+                    joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName(),
+                    e.getCause() == null ? "NULL" : e.getCause(),
+                    LogSanitizer.sanitizeException(e),
+                    e);
+
+        } else {
+
+            log.error(
+                    "Exception in {}.{}() with cause = {}",
+                    joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName(),
+                    e.getCause() == null ? "NULL" : e.getCause());
+        }
     }
 
     private void logExecutionDetails(
             ProceedingJoinPoint joinPoint, LogLevel logLevel, String message) {
-        LogWriter.write(joinPoint.getTarget().getClass(), logLevel, message);
-    }
 
-    private void logMethodParamsIfEnabled(
-            ProceedingJoinPoint joinPoint, LogLevel logLevel, String methodName) {
-        boolean printParams = shouldLog(joinPoint, Loggable::params);
+        Object target = joinPoint.getTarget();
 
-        if (printParams && !ObjectUtils.isEmpty(joinPoint.getArgs())) {
-            String[] parameterNames =
-                    ((MethodSignature) joinPoint.getSignature()).getParameterNames();
-            List<String> stringArrayList = new ArrayList<>();
-            Object[] args = joinPoint.getArgs();
-
-            for (int i = 0; i < args.length; i++) {
-                String paramName = parameterNames[i];
-                Object argValue = args[i];
-                // Check if the parameter name suggests it might contain sensitive data
-                if (paramName.matches("(?i).*(password|creditCard|ssn).*")) {
-                    argValue = "REDACTED"; // Anonymize sensitive data
-                }
-                stringArrayList.add(paramName + " : " + argValue);
-            }
-            String argsString = String.join(", ", stringArrayList);
-            logExecutionDetails(
-                    joinPoint,
-                    logLevel,
-                    methodName + "() args :: -> " + LogSanitizer.sanitizeForLog(argsString, 1024));
+        if (target == null) {
+            log.error(message);
+            return;
         }
-    }
 
-    private void logMethodResultIfEnabled(
-            ProceedingJoinPoint joinPoint, Object result, LogLevel logLevel, String methodName) {
-        if (result != null) {
-            boolean printResponse = shouldLog(joinPoint, Loggable::result);
-            if (printResponse) {
-                logExecutionDetails(
-                        joinPoint,
-                        logLevel,
-                        methodName
-                                + "() Returned : "
-                                + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
-            }
-        }
+        LogWriter.write(target.getClass(), logLevel, message);
     }
 }

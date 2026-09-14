@@ -14,17 +14,17 @@ import org.springframework.web.client.support.RestClientHttpServiceGroupConfigur
 import org.springframework.web.service.registry.ImportHttpServices;
 
 @Configuration(proxyBeanMethods = false)
-@ImportHttpServices(CatalogServiceProxy.class)
+@ImportHttpServices(group = "catalog", types = CatalogServiceProxy.class)
 class HttpClientConfig {
 
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
         return groups ->
-                groups.forEachClient(
-                        (group, builder) ->
-                                builder.baseUrl(applicationProperties.catalogServiceUrl())
-                                        .observationRegistry(observationRegistry)
-                                        .build());
+                groups.filterByName("catalog")
+                        .forEachClient(
+                                (group, builder) ->
+                                        builder.baseUrl(applicationProperties.catalogServiceUrl())
+                                                .observationRegistry(observationRegistry));
     }
 }

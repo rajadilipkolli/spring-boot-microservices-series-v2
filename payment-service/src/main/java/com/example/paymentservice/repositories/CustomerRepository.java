@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
 import com.example.paymentservice.entities.Customer;
@@ -25,4 +25,6 @@ public interface CustomerRepository {
     List<Customer> saveAll(List<Customer> customerList);
 
     void deleteAll();
+
+    int count();
 }

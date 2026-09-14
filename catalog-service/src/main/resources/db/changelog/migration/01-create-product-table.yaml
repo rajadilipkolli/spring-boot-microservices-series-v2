@@ -15,14 +15,8 @@ databaseChangeLog:
       preConditions:
         - onFail: MARK_RAN
           not:
-            - sequenceExists:
-                sequenceName: products_seq
             - tableExists:
                 tableName: products
-      createSequence:
-        sequenceName: products_seq
-        startValue: '1'
-        incrementBy: '1'
       createTable:
         columns:
           - column:
@@ -32,7 +26,6 @@ databaseChangeLog:
                 primaryKeyName: pk_products
               name: id
               type: BIGINT
-              defaultValueSequenceNext: 'products_seq'
           - column:
               constraints:
                 nullable: 'false'

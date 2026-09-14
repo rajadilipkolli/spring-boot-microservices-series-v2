@@ -17,6 +17,7 @@ To ensure consistency and follow project-specific standards, specialized playboo
 2.  **New Microservice**: [add_new_microservice.md](./.ai/skills/add_new_microservice.skill.md) – Step-by-step scaffolding of a new service.
 3.  **Architecture**: [solve_modulith_violations.md](./.ai/skills/solve_modulith_violations.skill.md) – Resolving Spring Modulith violations.
 4.  **Database**: [manage_database_migration.md](./.ai/skills/manage_database_migration.skill.md) – Using Liquibase across XML/YAML/JSON formats.
+5.  **Kubernetes Deployment**: [add_kubernetes_deployment.skill.md](./.ai/skills/add_kubernetes_deployment.skill.md) – Deploying and validating the stack on Kind with the CI overlay.
 
 ## 🛠️ Global Constraints
 - **Formatting**: Use Google Java Format (AOSP style) enforced by Spotless.

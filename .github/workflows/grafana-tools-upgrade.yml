@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'deployment/docker-compose-tools.yml'
+    branches: [main]
   pull_request:
     paths:
       - 'deployment/docker-compose-tools.yml'

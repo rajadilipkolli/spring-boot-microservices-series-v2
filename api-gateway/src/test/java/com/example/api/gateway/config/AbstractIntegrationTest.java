@@ -6,8 +6,7 @@
 
 package com.example.api.gateway.config;
 
-import com.example.api.gateway.filter.CorrelationIdFilterIntegrationTest;
-import com.example.api.gateway.filter.LoggingFilterIntegrationTest;
+import com.example.api.gateway.filter.ObservabilityWebFilterIntegrationTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
@@ -50,13 +49,13 @@ public abstract class AbstractIntegrationTest {
                                     + "/get-mapping.json")
                     .withMappingFromResource(
                             "logging-test",
-                            LoggingFilterIntegrationTest.class,
-                            LoggingFilterIntegrationTest.class.getSimpleName()
+                            ObservabilityWebFilterIntegrationTest.class,
+                            ObservabilityWebFilterIntegrationTest.class.getSimpleName()
                                     + "/logging-test.json")
                     .withMappingFromResource(
                             "correlation-test",
-                            CorrelationIdFilterIntegrationTest.class,
-                            CorrelationIdFilterIntegrationTest.class.getSimpleName()
+                            ObservabilityWebFilterIntegrationTest.class,
+                            ObservabilityWebFilterIntegrationTest.class.getSimpleName()
                                     + "/correlation-test.json")
                     .withMappingFromResource(
                             "catalog-service-cache",

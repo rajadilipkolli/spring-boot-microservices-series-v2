@@ -21,6 +21,12 @@
               "columns": [
                 {
                   "column": {
+                    "name": "id",
+                    "value": 1
+                  }
+                },
+                {
+                  "column": {
                     "name": "product_code",
                     "value": "P001"
                   }
@@ -44,6 +50,12 @@
             "insert": {
               "tableName": "inventory",
               "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "value": 2
+                  }
+                },
                 {
                   "column": {
                     "name": "product_code",
@@ -71,6 +83,12 @@
               "columns": [
                 {
                   "column": {
+                    "name": "id",
+                    "value": 3
+                  }
+                },
+                {
+                  "column": {
                     "name": "product_code",
                     "value": "P003"
                   }
@@ -96,6 +114,12 @@
               "columns": [
                 {
                   "column": {
+                    "name": "id",
+                    "value": 4
+                  }
+                },
+                {
+                  "column": {
                     "name": "product_code",
                     "value": "P004"
                   }
@@ -119,6 +143,12 @@
             "insert": {
               "tableName": "inventory",
               "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "value": 5
+                  }
+                },
                 {
                   "column": {
                     "name": "product_code",
