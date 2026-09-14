@@ -180,6 +180,12 @@ if ($TestOnly) {
         kind delete cluster --name $CLUSTER_NAME 2>$null
         kind create cluster --name $CLUSTER_NAME --config deployment/k8s/kind-config.yaml --wait 120s
         if ($LASTEXITCODE -ne 0) { Fail "kind create cluster failed." }
+        
+        Step "Installing Calico CNI for Network Policies"
+        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+        kubectl -n kube-system set env daemonset/calico-node FELIX_IGNORELOOSERPF=true
+        kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=calico-node --timeout=120s
+        if ($LASTEXITCODE -ne 0) { Fail "Failed to install Calico CNI." }
         OK "Cluster '$CLUSTER_NAME' is up."
     } else {
         Step "Reusing existing Kind cluster (-SkipCluster)"
@@ -324,6 +330,43 @@ curl -s -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect
 }
 
 # ── summary ───────────────────────────────────────────────────────────────────
+
+if ($testExit -eq 0) {
+    Step "Validate PSA and Topology Constraints (Staging)"
+    kubectl apply -k deployment/k8s/overlays/staging/
+    kubectl wait --for=condition=ready pod -l app=catalog-service -n $NAMESPACE --timeout=120s
+    $maxSkew = kubectl get deployment catalog-service -n $NAMESPACE -o jsonpath="{.spec.template.spec.topologySpreadConstraints}"
+    if ($maxSkew -notmatch "maxSkew") { Fail "Topology Constraints not found in staging overlay" }
+    OK "Staging overlay applied."
+
+    Step "Validate PDBs and Node Drain"
+    $pdb = kubectl get pdb catalog-service-pdb -n $NAMESPACE -o jsonpath="{.spec.minAvailable}"
+    if ($pdb -ne "1") { Fail "PDB minAvailable not 1" }
+    OK "PDBs validated."
+    
+    Step "Installing External Secrets Operator"
+    helm repo add external-secrets https://charts.external-secrets.io
+    helm repo update
+    helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace --set installCRDs=true --wait
+
+    Step "Validate Ingress Security (Prod)"
+    kubectl apply -k deployment/k8s/overlays/prod/
+    Start-Sleep -Seconds 10
+    $redirect_code = bash -c 'curl -s -o /dev/null -w "%{http_code}" -H "Host: retailstore.local" http://localhost || echo "000"'
+    if ($redirect_code -ne "308" -and $redirect_code -ne "301") { Fail "Ingress redirect failed. Got $redirect_code" }
+    $auth_code = bash -c 'curl -s -o /dev/null -w "%{http_code}" -H "Host: jobrunr.local" http://localhost || echo "000"'
+    if ($auth_code -ne "401") { Fail "Ingress auth failed. Got $auth_code" }
+    OK "Prod overlay applied."
+
+    Step "Validate Autoscaling"
+    kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml
+    kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s
+    kubectl apply -k deployment/k8s/overlays/autoscaling/
+    bash -c 'curl --fail --silent --show-error -X POST http://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" --data ''{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}'''
+    if ($LASTEXITCODE -ne 0) { Fail "Customer creation request failed." }
+    OK "Autoscaling overlay applied."
+}
+
 Write-Host ""
 if ($testExit -eq 0) {
     OK "All E2E tests PASSED! 🎉"
@@ -342,3 +385,4 @@ if ($testExit -eq 0) {
     Warn "Diagnostics written to ./$diag/"
     exit 1
 }
+

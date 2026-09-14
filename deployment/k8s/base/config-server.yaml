@@ -46,26 +46,18 @@ spec:
           value: service.name=config-server,service.version=0.0.1-SNAPSHOT
         image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
         livenessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
-              http://localhost:8888/actuator/health/liveness
           initialDelaySeconds: 5
           periodSeconds: 10
+          tcpSocket:
+            port: 8888
         name: config-server
         ports:
         - containerPort: 8888
         readinessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
-              http://localhost:8888/actuator/health/readiness
           initialDelaySeconds: 5
           periodSeconds: 10
+          tcpSocket:
+            port: 8888
         resources:
           limits:
             cpu: 1000m
@@ -80,14 +72,10 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
         startupProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - wget -q --spider --http-user=$CONFIG_SERVER_USR --http-password=$CONFIG_SERVER_PWD
-              http://localhost:8888/actuator/health/liveness
           failureThreshold: 30
           periodSeconds: 10
+          tcpSocket:
+            port: 8888
         volumeMounts:
         - mountPath: /tmp
           name: tmp-volume

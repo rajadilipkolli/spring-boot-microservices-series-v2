@@ -56,7 +56,7 @@ public class OrderManageService {
         if ("CONFIRMED".equals(orderDto.status())) {
             this.ordersCompletedCounter.increment();
         } else if ("REJECTED".equals(orderDto.status())
-                || com.example.orderservice.utils.AppConstants.ROLLBACK.equals(orderDto.status())) {
+                || AppConstants.ROLLBACK.equals(orderDto.status())) {
             this.ordersFailedCounter.increment();
         }
         return orderDto;
