@@ -78,7 +78,7 @@ spec:
           value: keycloak
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: service.name=keycloak,service.version=0.0.1-SNAPSHOT
-        image: quay.io/keycloak/keycloak:26.7.3
+        image: quay.io/keycloak/keycloak:26.7.4
         name: keycloak
         ports:
         - containerPort: 8080
