@@ -537,7 +537,7 @@ services:
         condition: service_started
 
   alertmanager:
-    image: prom/alertmanager:v0.34.0
+    image: prom/alertmanager:v0.34.1
     container_name: alertmanager
     ports:
     - "9093:9093"
