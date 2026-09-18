@@ -1,0 +1,50 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: keycloak-ca-bootstrap
+  namespace: retailstore
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-internal-ca
+  namespace: retailstore
+spec:
+  isCA: true
+  commonName: keycloak-internal-ca
+  secretName: keycloak-internal-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: keycloak-ca-bootstrap
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: keycloak-internal-ca
+  namespace: retailstore
+spec:
+  ca:
+    secretName: keycloak-internal-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: keycloak-internal-tls
+  namespace: retailstore
+spec:
+  secretName: keycloak-internal-tls
+  dnsNames:
+    - keycloak
+    - keycloak.retailstore
+    - keycloak.retailstore.svc
+    - keycloak.retailstore.svc.cluster.local
+  usages:
+    - server auth
+  issuerRef:
+    name: keycloak-internal-ca
+    kind: Issuer

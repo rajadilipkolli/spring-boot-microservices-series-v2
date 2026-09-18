@@ -99,7 +99,7 @@ spec:
       - command:
         - sh
         - -c
-        - 'until wget -q -O /dev/null http://dev-usr:dev-pass@config-server:8888/actuator/health/readiness
+        - 'until wget -q -O /dev/null http://config-server:8888/actuator/health/readiness
           2>/dev/null; do echo waiting for config-server; sleep 3; done;
 
           until nc -z service-registry 8761; do echo waiting for service-registry;

@@ -1,0 +1,188 @@
+# ---------------------------------------------------------------------------
+# ServiceAccount for the Terraform runner Job
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keycloak-terraform-runner
+  namespace: retailstore
+
+---
+# ---------------------------------------------------------------------------
+# Least-privilege Role
+#
+# Only grants get/create/update on the single Secret that the Terraform
+# `kubernetes` backend uses for state storage.
+# Secret name follows the backend convention: `tfstate-default-<suffix>`
+# where suffix = "keycloak-realm" (set in providers.tf).
+# ---------------------------------------------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keycloak-terraform-runner-role
+  namespace: retailstore
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keycloak-terraform-runner-binding
+  namespace: retailstore
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-terraform-runner
+    namespace: retailstore
+roleRef:
+  kind: Role
+  name: keycloak-terraform-runner-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ---------------------------------------------------------------------------
+# Terraform runner Job
+#
+# Applies the Keycloak realm Terraform module after Keycloak becomes healthy.
+# Runs once after the prod overlay is applied; state is persisted in the
+# `tfstate-default-keycloak-realm` Secret so subsequent runs are idempotent.
+# ---------------------------------------------------------------------------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-terraform-runner
+  namespace: retailstore
+  labels:
+    app: keycloak-terraform-runner
+spec:
+  # Automatically delete the Job 10 minutes after completion.
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: keycloak-terraform-runner
+    spec:
+      # -----------------------------------------------------------------------
+      # Pod-level security context — matches the hardened profile used across
+      # this repo (see deployment/k8s/overlays/hardening-base/).
+      # -----------------------------------------------------------------------
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: keycloak-terraform-runner
+      restartPolicy: OnFailure
+
+      # -----------------------------------------------------------------------
+      # Init container — waits for Keycloak readiness before Terraform runs.
+      # Mirrors the wait-for-keycloak pattern in patch-job.yaml.
+      # -----------------------------------------------------------------------
+      initContainers:
+        - name: wait-for-keycloak
+          image: curlimages/curl:8.10.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Waiting for Keycloak Admin API to be ready..."
+              until curl -sf http://keycloak:9000/health/ready | grep -q '"status".*"UP"'; do
+                echo "  Keycloak not ready yet, sleeping 5s..."
+                sleep 5
+              done
+              echo "Keycloak is ready."
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+      # -----------------------------------------------------------------------
+      # Main container — Terraform runner
+      # -----------------------------------------------------------------------
+      containers:
+        - name: terraform-runner
+          image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+
+          # -------------------------------------------------------------------
+          # Container-level security context — restricted standard.
+          # -------------------------------------------------------------------
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # -------------------------------------------------------------------
+          # Environment variables — all sourced from existing Secrets so no
+          # secrets are baked into the manifest.
+          # -------------------------------------------------------------------
+          env:
+            # Keycloak HTTP URL (in-cluster).
+            - name: TF_VAR_keycloak_url
+              value: "http://keycloak:8080"
+
+            # Admin credentials from keycloak-admin-credentials Secret.
+            - name: TF_VAR_keycloak_admin_username
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-credentials
+                  key: KEYCLOAK_ADMIN
+            - name: TF_VAR_keycloak_admin_password
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-credentials
+                  key: KEYCLOAK_ADMIN_PASSWORD
+
+            # OAuth2 client secret from webapp-oauth2-credentials Secret.
+            - name: TF_VAR_webapp_client_secret
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-oauth2-credentials
+                  key: OAUTH2_CLIENT_SECRET
+
+            # Write-only password inputs consumed after Terraform apply.
+            - name: KEYCLOAK_RAJA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-user-passwords
+                  key: RAJA_PASSWORD
+            - name: KEYCLOAK_RETAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-user-passwords
+                  key: RETAIL_PASSWORD
+
+            # Tell Terraform to use the in-cluster ServiceAccount token.
+            - name: TF_CLI_ARGS_init
+              value: "-backend-config=in_cluster_config=true"
+
+          # -------------------------------------------------------------------
+          # Writable volumes required by readOnlyRootFilesystem: true
+          #   /tmp        — plan output file
+          #   /terraform/.terraform — provider binaries downloaded by init
+          # -------------------------------------------------------------------
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: terraform-cache
+              mountPath: /terraform/.terraform
+
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: terraform-cache
+          emptyDir: {}

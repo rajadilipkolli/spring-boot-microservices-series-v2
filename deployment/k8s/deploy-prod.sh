@@ -35,6 +35,50 @@ wait_for_pod_creation() {
   done
 }
 
+print_job_diagnostics() {
+  local namespace="$1"
+  local job_name="$2"
+
+  echo "Job status:" >&2
+  kubectl describe job "$job_name" -n "$namespace" >&2 || true
+  echo "Job pods:" >&2
+  kubectl get pods -n "$namespace" -l "job-name=$job_name" -o wide >&2 || true
+  echo "Job logs:" >&2
+  kubectl logs -n "$namespace" "job/$job_name" --all-containers=true >&2 || true
+}
+
+wait_for_job_terminal_condition() {
+  local namespace="$1"
+  local job_name="$2"
+  local timeout_seconds="$3"
+  local deadline=$((SECONDS + timeout_seconds))
+  local complete_status
+  local failed_status
+
+  while ((SECONDS < deadline)); do
+    failed_status="$(kubectl get job "$job_name" -n "$namespace" \
+      -o 'jsonpath={.status.conditions[?(@.type=="Failed")].status}')"
+    complete_status="$(kubectl get job "$job_name" -n "$namespace" \
+      -o 'jsonpath={.status.conditions[?(@.type=="Complete")].status}')"
+
+    if [[ "$failed_status" == "True" ]]; then
+      echo "Keycloak Terraform runner failed." >&2
+      print_job_diagnostics "$namespace" "$job_name"
+      return 1
+    fi
+
+    if [[ "$complete_status" == "True" ]]; then
+      return 0
+    fi
+
+    sleep 2
+  done
+
+  echo "Timed out after ${timeout_seconds}s waiting for Keycloak Terraform runner." >&2
+  print_job_diagnostics "$namespace" "$job_name"
+  return 1
+}
+
 echo "Creating namespace first..."
 kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
 
@@ -71,6 +115,10 @@ echo "Waiting for Strimzi Kafka pod to be created..."
 wait_for_pod_creation 'strimzi.io/cluster=kafka' 'Kafka'
 kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
+
+echo "Waiting for Keycloak Terraform runner Job..."
+wait_for_job_terminal_condition retailstore keycloak-terraform-runner 600
+echo "Keycloak Terraform runner complete."
 
 echo "Waiting for infrastructure microservices..."
 kubectl rollout status deployment/config-server -n retailstore --timeout="$ROLLOUT_TIMEOUT"

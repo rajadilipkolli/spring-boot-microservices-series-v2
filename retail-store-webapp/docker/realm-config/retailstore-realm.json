@@ -606,7 +606,7 @@
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "secret" : "P1sibsIrELBhmvK18BOzw1bUl96DcP2z",
+    "secret" : "demo-throwaway-oauth-secret",
     "redirectUris" : [ "http://localhost:8080/login/oauth2/code/retailstore-webapp", "http://localhost:8765/webjars/swagger-ui/oauth2-redirect.html" ],
     "webOrigins" : [ "http://localhost:8080", "http://localhost:8765" ],
     "notBefore" : 0,

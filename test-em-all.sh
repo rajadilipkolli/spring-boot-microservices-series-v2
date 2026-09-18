@@ -904,6 +904,50 @@ function verifyAPIs() {
     log_success "All API verification tests completed successfully in $((API_VERIFY_END_TIME - API_VERIFY_START_TIME)) seconds."
 }
 
+function verifyKeycloakUsers() {
+    log_info "Verifying Keycloak users are loaded..."
+    local token_response
+    local max_attempts=12
+    local attempt=1
+    
+    # Load environment variables from deployment/.env if it exists, safely handling Windows \r
+    if [ -f "deployment/.env" ]; then
+        while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ ]] || [[ -z "$key" ]] && continue
+            # Remove trailing \r from value and export
+            export "$key=${value%$'\r'}"
+        done < deployment/.env
+    fi
+
+    local client_secret="${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}"
+    local raja_password="${RAJA_PASSWORD:-demo-throwaway-raja-pass}"
+    
+    while [ $attempt -le $max_attempts ]; do
+        # Attempt to fetch a token for the 'raja' user.
+        local kc_url="${KEYCLOAK_URL:-http://${HOST}:9191}"
+        token_response=$(curl -s -u "retailstore-webapp:${client_secret}" \
+            -X POST "${kc_url}/realms/retailstore/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=raja" \
+            --data-urlencode "password=${raja_password}" \
+            -d "grant_type=password" || true)
+
+        if [[ "$token_response" == *"access_token"* ]]; then
+            log_info "Keycloak users verified successfully on attempt $attempt!"
+            return 0
+        fi
+        
+        log_info "Users not loaded yet (attempt $attempt/$max_attempts). Waiting 5 seconds..."
+        sleep 5
+        ((attempt++))
+    done
+
+    echo -e "${RED}ERROR: Failed to verify Keycloak users! Terraform might not have finished or loaded the users.${NC}" >&2
+    echo -e "${RED}ERROR: Last Response: $token_response${NC}" >&2
+    return 1
+}
+
 # Function to display help message
 function display_help() {
     echo -e "${BLUE}Store Microservices Integration Tests${NC}"
@@ -964,10 +1008,10 @@ echo -e "SERVICE_WAIT_TIMEOUT=${SERVICE_WAIT_TIMEOUT}"
 # Handle docker compose operations based on command line arguments
 if [[ $@ == *"start"* ]]; then
     log_info "Restarting the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v
-    echo "$ docker compose up -d"
-    docker compose -f ${DOCKER_COMPOSE_FILE} up -d
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform up -d"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform up -d
 fi
 
 # If only running circuit breaker checks, skip setup and API tests
@@ -982,10 +1026,10 @@ fi
 
 if [[ $@ == *"setup"* ]]; then
     log_info "Restarting the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v
-    echo "$ docker compose up -d"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} up -d
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform up -d"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform up -d
 fi
 
 # Wait for gateway health check endpoint
@@ -1002,6 +1046,8 @@ waitForService curl -k ${BASE_URL}/CATALOG-SERVICE/catalog-service/actuator/heal
 waitForService curl -k ${BASE_URL}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
 waitForService curl -k ${BASE_URL}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
 waitForService curl -k ${BASE_URL}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+
+verifyKeycloakUsers || error_exit "Keycloak user verification failed"
 
 log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
 BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
@@ -1027,14 +1073,14 @@ echo -e "${GREEN}===============================================${NC}"
 # Clean up based on command line arguments
 if [[ $@ == *"stop"* ]]; then
     log_info "We are done, stopping the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v
 fi
 
 if [[ $@ == *"teardown"* ]]; then
     log_info "We are done, stopping the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v
 fi
 
 # Print final summary

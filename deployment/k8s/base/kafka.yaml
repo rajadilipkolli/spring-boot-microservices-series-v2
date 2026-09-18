@@ -4,6 +4,7 @@ metadata:
   name: kafka
   namespace: retailstore
 spec:
+  clusterIP: None
   ports:
   - port: 9092
     targetPort: 9092

@@ -8,7 +8,6 @@ resources:
 - redis.yaml
 - service-accounts.yaml
 - kafka.yaml
-- keycloak-realm-configmap.yaml
 - keycloak.yaml
 - config-server.yaml
 - service-registry.yaml
@@ -23,3 +22,4 @@ resources:
 - network-policies.yaml
 - pdb.yaml
 - internal-ingress.yaml
+- keycloak-terraform-job.yaml
