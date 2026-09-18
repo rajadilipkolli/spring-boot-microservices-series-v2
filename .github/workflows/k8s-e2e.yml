@@ -40,6 +40,10 @@ jobs:
       - name: Obtain and Load Images
         run: |
           set -Eeuo pipefail
+          
+          # Build the Terraform runner image locally since it's not published to Docker Hub
+          docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
+          
           images=(
             dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
             dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
@@ -49,9 +53,12 @@ jobs:
             dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
             dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
             dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+            dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
           )
           for image in "${images[@]}"; do
-            docker pull "$image"
+            if [[ "$image" != "dockertmt/mmv2-keycloak-terraform-runner"* ]]; then
+              docker pull "$image"
+            fi
             kind load docker-image "$image" --name kind
           done
 
@@ -160,6 +167,11 @@ jobs:
       - name: Run E2E Validations
         run: |
           set -Eeuo pipefail
+          
+          echo "Waiting for keycloak-terraform-runner Job to complete..."
+          kubectl wait --namespace retailstore --for=condition=complete job/keycloak-terraform-runner --timeout=120s
+          echo "Keycloak Terraform runner completed."
+
           # Map hostnames for test
           if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
             echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
@@ -226,6 +238,8 @@ jobs:
       - name: Validate Ingress Security
         run: |
           set -Eeuo pipefail
+          # Delete the old job from base/CI since prod patches it and Jobs are immutable
+          kubectl delete job keycloak-terraform-runner -n retailstore --ignore-not-found
           kubectl apply -k deployment/k8s/overlays/prod/
           sleep 10
           redirect_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: retailstore.local" http://localhost || echo "000")

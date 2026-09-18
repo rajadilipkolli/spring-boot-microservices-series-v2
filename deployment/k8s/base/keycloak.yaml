@@ -36,7 +36,6 @@ spec:
       containers:
       - args:
         - start
-        - --import-realm
         env:
         - name: KC_PROXY_HEADERS
           value: xforwarded
@@ -102,8 +101,6 @@ spec:
             drop:
             - ALL
         volumeMounts:
-        - mountPath: /opt/keycloak/data/import
-          name: realm-config
         - mountPath: /tmp
           name: tmp-volume
       securityContext:
@@ -115,8 +112,5 @@ spec:
           type: RuntimeDefault
       serviceAccountName: keycloak
       volumes:
-      - configMap:
-          name: keycloak-realm-config
-        name: realm-config
       - emptyDir: {}
         name: tmp-volume
