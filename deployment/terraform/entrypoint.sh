@@ -5,13 +5,12 @@
 # 1. Waits for Keycloak's /health/ready endpoint to return HTTP 200.
 # 2. Initialises Terraform (downloads provider into /tmp/.terraform).
 # 3. Plans and applies the keycloak module.
+# 4. Provisions seed-user passwords through the Keycloak Admin API.
 #
-# All Terraform variables are expected to be present as TF_VAR_* env vars
-# injected by the Kubernetes Job manifest.
+# Terraform and password inputs are injected by the Kubernetes Job manifest.
 # ---------------------------------------------------------------------------
 set -eu
 
-KEYCLOAK_URL="${TF_VAR_keycloak_url:-http://keycloak:8080}"
 # Keycloak exposes health checks on management port 9000
 HEALTH_URL="http://keycloak:9000/health/ready"
 MAX_WAIT=300   # seconds
@@ -30,8 +29,6 @@ until wget -qO- "${HEALTH_URL}" 2>/dev/null | grep -q '"status".*"UP"'; do
 done
 echo "[entrypoint] Keycloak is ready."
 
-# Terraform init: write provider cache + state files into the writable /tmp
-# volume so the read-only root filesystem constraint is satisfied.
 # Write provider cache + state files into /tmp so the read-only root filesystem
 # and non-root volume mount constraints are satisfied.
 export TF_DATA_DIR="/tmp/.terraform"
@@ -46,3 +43,7 @@ echo "[entrypoint] Running terraform apply ..."
 terraform apply -input=false /tmp/tfplan
 
 echo "[entrypoint] Terraform apply complete."
+
+echo "[entrypoint] Provisioning Keycloak user passwords outside Terraform ..."
+/provision-keycloak-users.sh
+echo "[entrypoint] Keycloak user password provisioning complete."

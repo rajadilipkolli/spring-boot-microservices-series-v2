@@ -57,12 +57,10 @@ Wait for infrastructure first: PostgreSQL, Redis, Kafka, and Keycloak. Then wait
 `keycloak-terraform-runner` Job to complete before proceeding to application
 rollouts:
 
-```bash
-kubectl wait --namespace retailstore \
-  --for=condition=complete \
-  job/keycloak-terraform-runner \
-  --timeout=600s
-```
+Poll both `Complete` and `Failed` conditions with an explicit timeout. Proceed
+only for `Complete=True`. For `Failed=True`, immediately print the Job
+description, matching pod status, and all container logs, then exit non-zero.
+Timeouts must print the same diagnostics and fail the deployment.
 
 This Job applies the `retailstore` realm declaratively via Terraform (see
 `deployment/terraform/keycloak/` and the

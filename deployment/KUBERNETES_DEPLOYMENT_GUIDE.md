@@ -289,19 +289,21 @@ import used in base/dev/CI.
    `mrparkers/keycloak` provider, creating the realm, client, roles, and users
    if they do not already exist — or updating them if they differ from the
    declared state.
-4. Terraform state is stored in the `tfstate-default-keycloak-realm` Secret in
+4. The runner then provisions seed-user passwords through Keycloak's Admin API;
+   password values are never Terraform variables, attributes, or state.
+5. Terraform state is stored in the `tfstate-default-keycloak-realm` Secret in
    the `retailstore` namespace. Subsequent runs are idempotent.
+
+The provider connects to `https://keycloak:8443` and verifies the certificate
+against the internal CA mounted from `keycloak-internal-ca`.
 
 ### Waiting for the Job
 
-```bash
-kubectl wait --namespace retailstore \
-  --for=condition=complete \
-  job/keycloak-terraform-runner \
-  --timeout=600s
-```
-
-This is done automatically by `deploy-prod.sh` and the E2E script.
+`deploy-prod.sh` and the E2E script poll both terminal Job conditions. They
+proceed only when `Complete=True`; when `Failed=True`, they immediately print
+the Job description, pod status, and all container logs before exiting
+non-zero. The same diagnostics are printed if neither condition is reached
+within 600 seconds.
 
 ### Terraform module location
 
@@ -313,7 +315,7 @@ deployment/terraform/keycloak/
 ├── realm.tf         # keycloak_realm resource
 ├── clients.tf       # keycloak_openid_client + protocol mappers
 ├── roles.tf         # Realm role 'user' + client role 'ADMIN'
-└── users.tf         # Users raja & retail with passwords and role assignments
+└── users.tf         # Users raja & retail with role assignments
 ```
 
 ### Secrets used by the Job
@@ -323,8 +325,14 @@ deployment/terraform/keycloak/
 | `keycloak-admin-credentials` | `KEYCLOAK_ADMIN` | `TF_VAR_keycloak_admin_username` |
 | `keycloak-admin-credentials` | `KEYCLOAK_ADMIN_PASSWORD` | `TF_VAR_keycloak_admin_password` |
 | `webapp-oauth2-credentials` | `OAUTH2_CLIENT_SECRET` | `TF_VAR_webapp_client_secret` |
-| `keycloak-user-passwords` | `RAJA_PASSWORD` | `TF_VAR_raja_password` |
-| `keycloak-user-passwords` | `RETAIL_PASSWORD` | `TF_VAR_retail_password` |
+| `keycloak-user-passwords` | `RAJA_PASSWORD` | `KEYCLOAK_RAJA_PASSWORD` |
+| `keycloak-user-passwords` | `RETAIL_PASSWORD` | `KEYCLOAK_RETAIL_PASSWORD` |
+
+Rotate both values in the external secret store before the first deployment of
+this version. A successful runner Job applies those values through the Admin
+API after Terraform has removed legacy `initial_password` data from remote
+state. Confirm with `terraform state pull` from a secured runner; do not print
+the state Secret in routine diagnostics.
 
 ### Troubleshooting the Terraform runner
 
@@ -336,8 +344,8 @@ kubectl get job keycloak-terraform-runner -n retailstore
 kubectl logs -n retailstore \
   -l app=keycloak-terraform-runner --all-containers
 
-# View Terraform state
-kubectl get secret tfstate-default-keycloak-realm -n retailstore -o yaml
+# Confirm the state Secret exists (do not print its contents)
+kubectl get secret tfstate-default-keycloak-realm -n retailstore
 ```
 
 ### Optional local Terraform service (Docker Compose)
@@ -352,6 +360,6 @@ docker compose up keycloak
 docker compose --profile terraform up terraform
 ```
 
-The `terraform` service uses `-backend=false` locally so no state Secret
-is required. The `TF_VAR_*` values default to local dev credentials and can
-be overridden via `.env`.
+The `terraform` service uses `-backend=false` locally so no state Secret is
+required. Terraform inputs and write-only password inputs default to local dev
+credentials and can be overridden via `.env`.

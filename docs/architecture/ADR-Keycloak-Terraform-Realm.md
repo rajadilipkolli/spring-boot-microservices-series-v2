@@ -48,11 +48,11 @@ Keycloak Deployment (start, no --import-realm)
         ▼
 keycloak-terraform-runner Job
   initContainer: wait-for-keycloak (curl /health/ready)
-  container:     terraform-runner  (init → plan → apply)
-        │ Admin REST API  port 8080
+  container:     terraform-runner  (init → plan → apply → reset passwords)
+        │ HTTPS Admin REST API  port 8443 (internal CA verified)
         ▼
 Keycloak Admin API
-        │ writes realm, client, roles, users
+        │ writes realm, client, roles, users, then write-only passwords
         ▼
 PostgreSQL (Keycloak's backing DB)
 ```
@@ -61,7 +61,7 @@ PostgreSQL (Keycloak's backing DB)
 
 | Source | Destination | Port | Protocol | Policy |
 |---|---|---|---|---|
-| `keycloak-terraform-runner` | `keycloak` (in-cluster) | 8080 | HTTP | `allow-apps-to-apps` NetworkPolicy |
+| `keycloak-terraform-runner` | `keycloak` (in-cluster) | 8443 | HTTPS | `allow-apps-to-apps` NetworkPolicy |
 | `keycloak-terraform-runner` | Terraform Registry | 443 | HTTPS | `default-deny-all` allows egress 443 |
 | `keycloak-terraform-runner` | Kubernetes API | 6443 | HTTPS | `default-deny-all` allows egress 6443 (state backend) |
 
@@ -71,11 +71,12 @@ PostgreSQL (Keycloak's backing DB)
 |---|---|
 | `retailstore` realm | `keycloak_realm` |
 | `retailstore-webapp` client | `keycloak_openid_client` |
-| Client ID / IP / Host mappers | `keycloak_openid_client_user_session_note_mapper` |
+| Client ID / IP / Host mappers | `keycloak_openid_user_session_note_protocol_mapper` |
+| Client-role token mapper | `keycloak_openid_user_client_role_protocol_mapper` |
 | Realm role `user` | `keycloak_role` |
 | Client role `ADMIN` | `keycloak_role` |
-| User `raja` + password + realm role | `keycloak_user`, `keycloak_user_password`, `keycloak_user_roles` |
-| User `retail` + password + roles | `keycloak_user`, `keycloak_user_password`, `keycloak_user_roles` |
+| User `raja` + realm role | `keycloak_user`, `keycloak_user_roles` |
+| User `retail` + roles | `keycloak_user`, `keycloak_user_roles` |
 
 ### Resources NOT managed by Terraform
 
@@ -107,8 +108,9 @@ ADR or ticket should:
 - **Idempotent**: `terraform apply` is a no-op if the realm matches the declared
   state. Incremental changes are applied safely.
 - **Auditable**: Every realm change is a Git commit with a Terraform plan diff.
-- **Secret hygiene**: Hashed credential blobs are no longer committed to Git.
-  User passwords are sourced from Kubernetes Secrets at runtime.
+- **Secret hygiene**: User passwords are sourced from Kubernetes Secrets and
+  applied through the Admin API after Terraform, so they never enter Terraform
+  attributes or state.
 - **Single source of truth**: The `.tf` files replace the JSON export and the
   YAML ConfigMap as authoritative realm definition.
 

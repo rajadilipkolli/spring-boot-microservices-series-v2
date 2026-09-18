@@ -7,11 +7,17 @@ variable "keycloak_url" {
   description = <<-EOT
     Base URL for the Keycloak server (no trailing slash).
     Typical values:
-      in-cluster  : http://keycloak:8080
+      prod runner : https://keycloak:8443
       local compose: http://localhost:9191  (or http://keycloak:9191 inside Docker)
       CI          : http://keycloak:8080
   EOT
-  default     = "http://keycloak:8080"
+  default     = "https://keycloak:8443"
+}
+
+variable "keycloak_root_ca_certificate" {
+  type        = string
+  description = "PEM-encoded CA certificate used to verify the production Keycloak HTTPS endpoint."
+  default     = ""
 }
 
 variable "keycloak_admin_username" {
@@ -46,27 +52,5 @@ variable "webapp_client_secret" {
     OAUTH2_CLIENT_SECRET, which is what the Spring Boot webapp reads at runtime.
     Changing this variable without updating that Secret will break authentication.
     Exposed to the runner container via TF_VAR_webapp_client_secret.
-  EOT
-}
-
-# ---------------------------------------------------------------------------
-# Seed user passwords
-# ---------------------------------------------------------------------------
-
-variable "raja_password" {
-  type        = string
-  sensitive   = true
-  description = <<-EOT
-    Password for the seed user `raja`.
-    Exposed to the runner container via TF_VAR_raja_password.
-  EOT
-}
-
-variable "retail_password" {
-  type        = string
-  sensitive   = true
-  description = <<-EOT
-    Password for the seed user `retail`.
-    Exposed to the runner container via TF_VAR_retail_password.
   EOT
 }

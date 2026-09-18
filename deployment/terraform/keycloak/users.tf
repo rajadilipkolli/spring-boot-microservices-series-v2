@@ -1,4 +1,4 @@
-﻿# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Seed users
 #
 # Reproduces the two seed users from retailstore-realm.json:
@@ -17,11 +17,6 @@ resource "keycloak_user" "raja" {
   first_name     = "Raja Dilip"
   last_name      = "Kolli"
   email_verified = true
-
-  initial_password {
-    value     = var.raja_password
-    temporary = false
-  }
 }
 
 # Assign default realm role. `default-roles-retailstore` is a Keycloak built-in
@@ -53,11 +48,6 @@ resource "keycloak_user" "retail" {
   first_name     = "Retail"
   last_name      = "Store"
   email_verified = true
-
-  initial_password {
-    value     = var.retail_password
-    temporary = false
-  }
 }
 
 resource "keycloak_user_roles" "retail_roles" {

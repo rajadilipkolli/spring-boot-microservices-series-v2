@@ -49,3 +49,7 @@ inventory-service/target/
 order-service/bin/
 order-service/target/
 .env
+
+### Terraform local state ###
+*.tfstate
+*.tfstate.*

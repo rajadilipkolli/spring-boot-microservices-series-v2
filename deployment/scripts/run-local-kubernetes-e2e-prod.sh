@@ -77,6 +77,50 @@ fail() {
   exit 1
 }
 
+print_job_diagnostics() {
+  local namespace="$1"
+  local job_name="$2"
+
+  printf '%s\n' 'Job status:' >&2
+  kubectl describe job "$job_name" -n "$namespace" >&2 || true
+  printf '%s\n' 'Job pods:' >&2
+  kubectl get pods -n "$namespace" -l "job-name=$job_name" -o wide >&2 || true
+  printf '%s\n' 'Job logs:' >&2
+  kubectl logs -n "$namespace" "job/$job_name" --all-containers=true >&2 || true
+}
+
+wait_for_job_terminal_condition() {
+  local namespace="$1"
+  local job_name="$2"
+  local timeout_seconds="$3"
+  local deadline=$((SECONDS + timeout_seconds))
+  local complete_status
+  local failed_status
+
+  while ((SECONDS < deadline)); do
+    failed_status="$(kubectl get job "$job_name" -n "$namespace" \
+      -o 'jsonpath={.status.conditions[?(@.type=="Failed")].status}')"
+    complete_status="$(kubectl get job "$job_name" -n "$namespace" \
+      -o 'jsonpath={.status.conditions[?(@.type=="Complete")].status}')"
+
+    if [[ "$failed_status" == "True" ]]; then
+      warn "Keycloak Terraform runner Job failed."
+      print_job_diagnostics "$namespace" "$job_name"
+      return 1
+    fi
+
+    if [[ "$complete_status" == "True" ]]; then
+      return 0
+    fi
+
+    sleep 2
+  done
+
+  warn "Timed out after ${timeout_seconds}s waiting for Keycloak Terraform runner Job."
+  print_job_diagnostics "$namespace" "$job_name"
+  return 1
+}
+
 ###############################################################################
 # Usage
 ###############################################################################
@@ -682,11 +726,7 @@ kubectl rollout status \
 
 step "Waiting for Keycloak Terraform runner Job"
 
-kubectl wait \
-  --namespace "$NAMESPACE" \
-  --for=condition=complete \
-  job/keycloak-terraform-runner \
-  --timeout=600s
+wait_for_job_terminal_condition "$NAMESPACE" keycloak-terraform-runner 600
 
 ok "Keycloak Terraform runner Job completed."
 
@@ -957,11 +997,21 @@ client_secret="$(
     true
 )"
 
-if [[ -z "$client_secret" ]]; then
+retail_password="$(
+  kubectl get secret keycloak-user-passwords \
+    -n "$NAMESPACE" \
+    -o jsonpath='{.data.RETAIL_PASSWORD}' \
+    2>/dev/null |
+    base64 -d \
+    2>/dev/null ||
+    true
+)"
+
+if [[ -z "$client_secret" || -z "$retail_password" ]]; then
 
   warn \
-    "Could not retrieve Keycloak client secret from Secret " \
-    "'webapp-oauth2-credentials' - skipping Keycloak smoke check."
+    "Could not retrieve Keycloak smoke-test credentials from Secrets - " \
+    "skipping Keycloak smoke check."
 
 elif curl \
   --silent \
@@ -974,7 +1024,7 @@ elif curl \
   -d "client_secret=$client_secret" \
   -d 'grant_type=password' \
   -d 'username=retail' \
-  -d 'password=retail1234' |
+  --data-urlencode "password=$retail_password" |
   grep -q access_token
 then
 

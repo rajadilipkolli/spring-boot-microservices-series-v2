@@ -176,7 +176,8 @@ services:
   # It waits for Keycloak to be healthy, then runs:
   #   terraform init && terraform plan && terraform apply
   #
-  # All TF_VAR_* values default to local dev credentials.  Override via .env.
+  # Terraform inputs and write-only password inputs default to local dev
+  # credentials. Override via .env.
   # ---------------------------------------------------------------------------
   terraform:
     build:
@@ -193,8 +194,8 @@ services:
       - TF_VAR_keycloak_admin_username=admin
       - TF_VAR_keycloak_admin_password=admin1234
       - TF_VAR_webapp_client_secret=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
-      - TF_VAR_raja_password=${RAJA_PASSWORD:-demo-throwaway-raja-pass}
-      - TF_VAR_retail_password=${RETAIL_PASSWORD:-demo-throwaway-retail-pass}
+      - KEYCLOAK_RAJA_PASSWORD=${RAJA_PASSWORD:-demo-throwaway-raja-pass}
+      - KEYCLOAK_RETAIL_PASSWORD=${RETAIL_PASSWORD:-demo-throwaway-retail-pass}
     volumes:
       - ./terraform/keycloak:/terraform
       - /dev/null:/terraform/backend.tf

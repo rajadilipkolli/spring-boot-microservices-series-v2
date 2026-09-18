@@ -351,9 +351,11 @@ Access all microservice APIs through a unified interface:
 ## 🔐 Keycloak Security Configuration
 
 > **Production note**: In the prod Kubernetes overlay the `retailstore` realm,
-> `retailstore-webapp` client, roles, and seed users are managed declaratively
-> by the **`keycloak-terraform-runner` Job** via Terraform. The manual steps
-> below only apply to fresh local Docker Compose environments that have not
+> `retailstore-webapp` client, roles, and seed-user identities are managed by
+> the **`keycloak-terraform-runner` Job** via Terraform. Seed passwords are
+> applied afterward through the Keycloak Admin API and never enter Terraform
+> state. The manual steps below only apply to fresh local Docker Compose
+> environments that have not
 > previously imported the realm via `--import-realm` (the default local path).
 > See [KUBERNETES_DEPLOYMENT_GUIDE.md](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#terraform-managed-keycloak-realm-prod)
 > and the [ADR](docs/architecture/ADR-Keycloak-Terraform-Realm.md) for details.

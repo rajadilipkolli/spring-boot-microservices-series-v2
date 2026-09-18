@@ -129,9 +129,16 @@ spec:
           # secrets are baked into the manifest.
           # -------------------------------------------------------------------
           env:
-            # Keycloak URL (in-cluster)
+            # Keycloak HTTPS URL and CA trust (in-cluster).
             - name: TF_VAR_keycloak_url
-              value: "http://keycloak:8080"
+              value: "https://keycloak:8443"
+            - name: TF_VAR_keycloak_root_ca_certificate
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-internal-ca
+                  key: tls.crt
+            - name: CURL_CA_BUNDLE
+              value: /etc/keycloak-ca/ca.crt
 
             # Admin credentials from keycloak-admin-credentials Secret.
             - name: TF_VAR_keycloak_admin_username
@@ -152,13 +159,13 @@ spec:
                   name: webapp-oauth2-credentials
                   key: OAUTH2_CLIENT_SECRET
 
-            # Seed user passwords from keycloak-user-passwords Secret.
-            - name: TF_VAR_raja_password
+            # Write-only password inputs consumed after Terraform apply.
+            - name: KEYCLOAK_RAJA_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-user-passwords
                   key: RAJA_PASSWORD
-            - name: TF_VAR_retail_password
+            - name: KEYCLOAK_RETAIL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-user-passwords
@@ -178,9 +185,18 @@ spec:
               mountPath: /tmp
             - name: terraform-cache
               mountPath: /terraform/.terraform
+            - name: keycloak-ca
+              mountPath: /etc/keycloak-ca
+              readOnly: true
 
       volumes:
         - name: tmp-volume
           emptyDir: {}
         - name: terraform-cache
           emptyDir: {}
+        - name: keycloak-ca
+          secret:
+            secretName: keycloak-internal-ca
+            items:
+              - key: tls.crt
+                path: ca.crt

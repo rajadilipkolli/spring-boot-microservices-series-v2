@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - ../hardening-base
 - cluster-issuer.yaml
+- keycloak-internal-tls.yaml
 - postgresql-ha.yaml
 - kafka-ha.yaml
 - apicurio-registry.yaml
@@ -18,7 +19,16 @@ patches:
     - op: replace
       path: /spec/replicas
       value: 1
-- path: keycloak-ha-patch.yaml
+- target:
+    kind: Service
+    name: keycloak
+  patch: |-
+    - op: add
+      path: /spec/ports/-
+      value:
+        name: https
+        port: 8443
+        targetPort: 8443
 - path: ingress-patch.yaml
   target:
     kind: Ingress
@@ -68,3 +78,6 @@ patches:
       path: /spec/template/spec/containers/0/volumeMounts/0
     - op: remove
       path: /spec/template/spec/volumes/0
+# Add prod Keycloak settings and TLS only after the index-based realm import
+# removal above, so the removal cannot target the TLS volume by mistake.
+- path: keycloak-ha-patch.yaml

@@ -10,16 +10,17 @@
 # ---------------------------------------------------------------------------
 FROM hashicorp/terraform:1.9
 
-# Install wget for the readiness healthcheck in entrypoint.sh.
+# Install tools for readiness checks and write-only password provisioning.
 # The hashicorp/terraform image is Alpine-based.
-RUN apk add --no-cache wget
+RUN apk add --no-cache curl jq wget
 
 # Copy the Terraform module.
 COPY keycloak/ /terraform/
 
 # Copy the entrypoint script.
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY provision-keycloak-users.sh /provision-keycloak-users.sh
+RUN chmod +x /entrypoint.sh /provision-keycloak-users.sh
 
 # Create a writable .terraform directory inside the module directory.
 # The Kubernetes Job mounts an emptyDir at /terraform/.terraform so Terraform

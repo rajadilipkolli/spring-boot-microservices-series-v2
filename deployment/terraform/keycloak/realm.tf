@@ -14,9 +14,9 @@ resource "keycloak_realm" "retailstore" {
   action_token_generated_by_admin_lifespan = "43200s"
   action_token_generated_by_user_lifespan  = "300s"
 
-  sso_session_idle_timeout       = "1800s"
-  sso_session_max_lifespan       = "36000s"
-  offline_session_idle_timeout   = "2592000s"
+  sso_session_idle_timeout             = "1800s"
+  sso_session_max_lifespan             = "36000s"
+  offline_session_idle_timeout         = "2592000s"
   offline_session_max_lifespan_enabled = false
 
   # Explicitly define ALL duration fields to avoid provider parsing bugs
@@ -28,13 +28,13 @@ resource "keycloak_realm" "retailstore" {
   oauth2_device_polling_interval       = 5
   offline_session_max_lifespan         = "5184000s"
 
-  ssl_required               = "external"
-  registration_allowed       = true
+  ssl_required                   = "external"
+  registration_allowed           = true
   registration_email_as_username = false
-  login_with_email_allowed   = true
-  duplicate_emails_allowed   = false
-  reset_password_allowed     = false
-  edit_username_allowed      = false
+  login_with_email_allowed       = true
+  duplicate_emails_allowed       = false
+  reset_password_allowed         = false
+  edit_username_allowed          = false
 
   default_signature_algorithm = "RS256"
 
