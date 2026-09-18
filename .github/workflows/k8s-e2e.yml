@@ -127,8 +127,6 @@ jobs:
             elapsed=$((elapsed + 5))
           done
 
-
-
       - name: Validate NetworkPolicy and PDBs
         run: |
           set -Eeuo pipefail
@@ -204,6 +202,10 @@ jobs:
       - name: Validate PSA and Topology Constraints (Staging)
         run: |
           set -Eeuo pipefail
+          # Install CRDs so that staging and prod overlays can apply custom resources without errors
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.crds.yaml
+          kubectl apply -f https://raw.githubusercontent.com/external-secrets/external-secrets/v0.9.4/deploy/crds/bundle.yaml
+          
           kubectl apply -k deployment/k8s/overlays/staging/
           kubectl wait --for=condition=ready pod -l app=catalog-service -n retailstore --timeout=120s
           kubectl get deployment catalog-service -n retailstore -o jsonpath="{.spec.template.spec.topologySpreadConstraints}" | grep "maxSkew"
