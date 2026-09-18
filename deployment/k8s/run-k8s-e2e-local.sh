@@ -130,12 +130,17 @@ else
   echo "::warning::Webapp smoke check via https://retailstore.local failed (non-fatal)."
 fi
 
+webapp_client_secret=$(kubectl get secret webapp-oauth2-credentials -n retailstore \
+  -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)
+retail_password=$(kubectl get secret keycloak-user-passwords -n retailstore \
+  -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)
+
 if curl -s -k -f -X POST https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d "client_id=retailstore-webapp" \
-  -d "client_secret=demo-throwaway-oauth-secret" \
+  --data-urlencode "client_secret=$webapp_client_secret" \
   -d "grant_type=password" \
   -d "username=retail" \
-  -d "password=retail1234" | grep -q access_token; then
+  --data-urlencode "password=$retail_password" | grep -q access_token; then
   echo "Keycloak token endpoint returned access_token."
 else
   echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
@@ -166,4 +171,3 @@ if [[ "${1:-}" == "--teardown" ]]; then
   echo "=> Tearing down Kind cluster as requested..."
   kind delete cluster --name kind
 fi
-
