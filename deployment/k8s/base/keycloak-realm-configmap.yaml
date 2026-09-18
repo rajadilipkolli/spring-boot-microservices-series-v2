@@ -327,7 +327,7 @@ data:
     http://localhost:8080\",\n    \"baseUrl\" : \"http://localhost:8080\",\n    \"\
     surrogateAuthRequired\" : false,\n    \"enabled\" : true,\n    \"alwaysDisplayInConsole\"\
     \ : false,\n    \"clientAuthenticatorType\" : \"client-secret\",\n    \"secret\"\
-    \ : \"P1sibsIrELBhmvK18BOzw1bUl96DcP2z\",\n    \"redirectUris\" : [ \"http://retailstore.local/login/oauth2/code/retailstore-webapp\"\
+    \ : \"demo-throwaway-oauth-secret\",\n    \"redirectUris\" : [ \"http://retailstore.local/login/oauth2/code/retailstore-webapp\"\
     , \"http://localhost:8080/login/oauth2/code/retailstore-webapp\", \"http://localhost:8765/webjars/swagger-ui/oauth2-redirect.html\"\
     \ ],\n    \"webOrigins\" : [ \"http://retailstore.local\", \"http://localhost:8080\"\
     , \"http://localhost:8765\" ],\n    \"notBefore\" : 0,\n    \"bearerOnly\" : false,\n\
