@@ -17,7 +17,12 @@ public class SecurityConfig {
         http
                 // Disable CRCF to allow POST to /encrypt and /decrypt endpoints
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+                .authorizeHttpRequests(
+                        requests ->
+                                requests.requestMatchers("/actuator/health/**")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .authenticated())
                 .httpBasic(withDefaults());
         return http.build();
     }
