@@ -87,6 +87,13 @@ jobs:
             kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
           done
 
+      - name: Wait for Keycloak Terraform Runner
+        run: |
+          set -Eeuo pipefail
+          echo "Waiting for keycloak-terraform-runner Job to complete..."
+          kubectl wait --namespace retailstore --for=condition=complete job/keycloak-terraform-runner --timeout=600s
+          echo "Keycloak Terraform runner completed."
+
       - name: Wait for Platform Core Rollouts
         run: |
           set -Eeuo pipefail
