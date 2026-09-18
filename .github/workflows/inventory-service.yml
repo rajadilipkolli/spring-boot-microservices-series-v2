@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "inventory-service/**"
+      - "!inventory-service/docker-compose.yml"
+      - "!inventory-service/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "inventory-service/**"
+      - "!inventory-service/docker-compose.yml"
+      - "!inventory-service/docker/**"
     types:
       - opened
       - synchronize

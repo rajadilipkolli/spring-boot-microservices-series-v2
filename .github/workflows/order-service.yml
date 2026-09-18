@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "order-service/**"
+      - "!order-service/docker-compose.yml"
+      - "!order-service/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "order-service/**"
+      - "!order-service/docker-compose.yml"
+      - "!order-service/docker/**"
     types:
       - opened
       - synchronize

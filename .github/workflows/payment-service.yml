@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "payment-service/**"
+      - "!payment-service/docker-compose.yml"
+      - "!payment-service/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "payment-service/**"
+      - "!payment-service/docker-compose.yml"
+      - "!payment-service/docker/**"
     types:
       - opened
       - synchronize

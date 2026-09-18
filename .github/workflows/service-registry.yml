@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "service-registry/**"
+      - "!service-registry/docker-compose.yml"
+      - "!service-registry/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "service-registry/**"
+      - "!service-registry/docker-compose.yml"
+      - "!service-registry/docker/**"
     types:
       - opened
       - synchronize

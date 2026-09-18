@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "config-server/**"
+      - "!config-server/docker-compose.yml"
+      - "!config-server/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "config-server/**"
+      - "!config-server/docker-compose.yml"
+      - "!config-server/docker/**"
     types:
       - opened
       - synchronize
