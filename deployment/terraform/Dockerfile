@@ -8,7 +8,7 @@
 # Build context: repo root (or deployment/)
 #   docker build -f deployment/terraform/Dockerfile deployment/terraform/
 # ---------------------------------------------------------------------------
-FROM hashicorp/terraform:1.9
+FROM hashicorp/terraform:1.16
 
 # Install tools for readiness checks and write-only password provisioning.
 # The hashicorp/terraform image is Alpine-based.
