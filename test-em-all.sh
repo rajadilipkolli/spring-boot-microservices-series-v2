@@ -925,8 +925,9 @@ function verifyKeycloakUsers() {
     
     while [ $attempt -le $max_attempts ]; do
         # Attempt to fetch a token for the 'raja' user.
+        local kc_url="${KEYCLOAK_URL:-http://${HOST}:9191}"
         token_response=$(curl -s -u "retailstore-webapp:${client_secret}" \
-            -X POST "http://${HOST}:9191/realms/retailstore/protocol/openid-connect/token" \
+            -X POST "${kc_url}/realms/retailstore/protocol/openid-connect/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "username=raja" \
             -d "password=${raja_password}" \

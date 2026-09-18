@@ -185,7 +185,7 @@ jobs:
           fi
           
           # E2E Script Validation
-          HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+          HOST=api.retailstore.local PORT=80 KEYCLOAK_URL=http://keycloak.local ./test-em-all.sh --no-cb-strict
 
           # Request webapp via Ingress (best-effort smoke check; does not fail the job)
           if curl -s -f http://retailstore.local > /dev/null; then
