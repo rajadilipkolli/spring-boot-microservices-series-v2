@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "retail-store-webapp/**"
+      - "!retail-store-webapp/docker-compose.yml"
+      - "!retail-store-webapp/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "retail-store-webapp/**"
+      - "!retail-store-webapp/docker-compose.yml"
+      - "!retail-store-webapp/docker/**"
     types:
       - opened
       - synchronize

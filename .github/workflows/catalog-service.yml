@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "catalog-service/**"
+      - "!catalog-service/docker-compose.yml"
+      - "!catalog-service/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "catalog-service/**"
+      - "!catalog-service/docker-compose.yml"
+      - "!catalog-service/docker/**"
     types:
       - opened
       - synchronize
