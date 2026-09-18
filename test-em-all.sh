@@ -930,7 +930,7 @@ function verifyKeycloakUsers() {
             -X POST "${kc_url}/realms/retailstore/protocol/openid-connect/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "username=raja" \
-            -d "password=${raja_password}" \
+            --data-urlencode "password=${raja_password}" \
             -d "grant_type=password" || true)
 
         if [[ "$token_response" == *"access_token"* ]]; then
