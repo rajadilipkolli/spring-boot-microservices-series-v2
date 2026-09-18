@@ -59,6 +59,9 @@ spec:
           - catalog-service
           - payment-service
           - api-gateway
+          # Allow the Terraform runner Job to call Keycloak's Admin REST API
+          # on port 8080 (in-cluster endpoint).
+          - keycloak-terraform-runner
   podSelector:
     matchExpressions:
     - key: app

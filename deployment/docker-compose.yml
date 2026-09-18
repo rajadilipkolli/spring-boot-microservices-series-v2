@@ -104,12 +104,13 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.3
-    command: [ 'start', '--import-realm', '--http-port=9191' ]
+    # command: [ 'start', '--import-realm', '--http-port=9191' ]
+    command: [ 'start', '--http-port=9191' ]
     container_name: keycloak
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
-    volumes:
-      - ./realm-config:/opt/keycloak/data/import
+    # volumes:
+    #   - ./realm-config:/opt/keycloak/data/import
     environment:
       # Admin credentials
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
@@ -157,6 +158,47 @@ services:
       timeout: 20s
       retries: 5
       start_period: 120s
+    networks:
+      - microservice-network
+
+  # ---------------------------------------------------------------------------
+  # Terraform realm manager (opt-in)
+  #
+  # By default, the keycloak service above uses `--import-realm` with the
+  # ./realm-config bind mount.  This is the standard path for local dev and
+  # CI and does not require the Terraform service.
+  #
+  # The `terraform` service is the recommended forward-looking path for local
+  # development, matching the prod flow.  To use it:
+  #
+  #   docker compose --profile terraform up terraform
+  #
+  # It waits for Keycloak to be healthy, then runs:
+  #   terraform init && terraform plan && terraform apply
+  #
+  # All TF_VAR_* values default to local dev credentials.  Override via .env.
+  # ---------------------------------------------------------------------------
+  terraform:
+    build:
+      context: ./terraform
+      dockerfile: Dockerfile
+    image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+    profiles:
+      - terraform
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      - TF_VAR_keycloak_url=http://keycloak:9191
+      - TF_VAR_keycloak_admin_username=admin
+      - TF_VAR_keycloak_admin_password=admin1234
+      - TF_VAR_webapp_client_secret=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
+      - TF_VAR_raja_password=${RAJA_PASSWORD:-demo-throwaway-raja-pass}
+      - TF_VAR_retail_password=${RETAIL_PASSWORD:-demo-throwaway-retail-pass}
+    volumes:
+      - ./terraform/keycloak:/terraform
+      - /dev/null:/terraform/backend.tf
+      - terraform_cache:/terraform/.terraform
     networks:
       - microservice-network
 
@@ -436,3 +478,5 @@ volumes:
   redis_data:
   postgres_data:
     driver: local
+  # Provider binary cache for the opt-in terraform service.
+  terraform_cache:

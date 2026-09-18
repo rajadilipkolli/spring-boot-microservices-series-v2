@@ -350,6 +350,14 @@ Access all microservice APIs through a unified interface:
 
 ## 🔐 Keycloak Security Configuration
 
+> **Production note**: In the prod Kubernetes overlay the `retailstore` realm,
+> `retailstore-webapp` client, roles, and seed users are managed declaratively
+> by the **`keycloak-terraform-runner` Job** via Terraform. The manual steps
+> below only apply to fresh local Docker Compose environments that have not
+> previously imported the realm via `--import-realm` (the default local path).
+> See [KUBERNETES_DEPLOYMENT_GUIDE.md](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#terraform-managed-keycloak-realm-prod)
+> and the [ADR](docs/architecture/ADR-Keycloak-Terraform-Realm.md) for details.
+
 To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
 
 ### 1. Create the ADMIN Client Role

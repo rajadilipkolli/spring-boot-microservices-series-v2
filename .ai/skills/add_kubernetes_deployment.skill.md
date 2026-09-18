@@ -53,6 +53,22 @@ Do not apply only individual services when validating the complete deployment.
 
 Wait for infrastructure first: PostgreSQL, Redis, Kafka, and Keycloak. Then wait for config-server and service-registry. Finally wait for catalog, inventory, order, payment, API gateway, and webapp. Use both `kubectl rollout status` and `kubectl wait --for=condition=ready pod` with explicit timeouts.
 
+**Prod overlay only**: After Keycloak rolls out, also wait for the
+`keycloak-terraform-runner` Job to complete before proceeding to application
+rollouts:
+
+```bash
+kubectl wait --namespace retailstore \
+  --for=condition=complete \
+  job/keycloak-terraform-runner \
+  --timeout=600s
+```
+
+This Job applies the `retailstore` realm declaratively via Terraform (see
+`deployment/terraform/keycloak/` and the
+`ADR-Keycloak-Terraform-Realm.md`). The CI overlay uses the `--import-realm`
+path and does not include this Job.
+
 ### 7. Run End-to-End Validation
 
 Map `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the ingress address. Run:

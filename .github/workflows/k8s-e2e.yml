@@ -232,6 +232,21 @@ jobs:
           if [ "$auth_code" != "401" ]; then exit 1; fi
           echo "Ingress validation passed."
 
+      - name: Wait for Keycloak Terraform Runner
+        run: |
+          set -Eeuo pipefail
+          # The prod overlay includes the keycloak-terraform-runner Job which
+          # applies the retailstore realm declaratively via Terraform.
+          # Wait for it to complete before the autoscaling step, mirroring the
+          # pattern used for job/patch-webapp-hostaliases above.
+          echo "Waiting for keycloak-terraform-runner Job to complete..."
+          kubectl wait \
+            --namespace retailstore \
+            --for=condition=complete \
+            job/keycloak-terraform-runner \
+            --timeout=600s
+          echo "Keycloak Terraform runner completed."
+
       - name: Load Test Autoscaling (KEDA/HPA)
         run: |
           set -Eeuo pipefail

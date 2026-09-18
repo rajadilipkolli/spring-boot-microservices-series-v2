@@ -14,6 +14,11 @@ spec:
     spec:
       containers:
       - name: keycloak
+        # Remove --import-realm: in prod the Terraform runner Job applies the
+        # realm after Keycloak is healthy. The realm-config volumeMount and
+        # volume are removed via JSON patches in kustomization.yaml.
+        args:
+        - start
         env:
         - name: KC_CACHE
           value: ispn

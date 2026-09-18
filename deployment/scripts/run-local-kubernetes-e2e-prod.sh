@@ -677,6 +677,20 @@ kubectl rollout status \
   --timeout=600s
 
 ###############################################################################
+# KEYCLOAK TERRAFORM RUNNER
+###############################################################################
+
+step "Waiting for Keycloak Terraform runner Job"
+
+kubectl wait \
+  --namespace "$NAMESPACE" \
+  --for=condition=complete \
+  job/keycloak-terraform-runner \
+  --timeout=600s
+
+ok "Keycloak Terraform runner Job completed."
+
+###############################################################################
 # WEBAPP HOST ALIASES
 ###############################################################################
 

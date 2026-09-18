@@ -9,6 +9,8 @@ resources:
 - strimzi-operator.yaml
 - keycloak-discovery.yaml
 - secrets/external-secrets.yaml
+# Terraform runner Job, RBAC, and ServiceAccount for declarative realm management.
+- keycloak-terraform-job.yaml
 patches:
 - target:
     kind: Deployment
@@ -41,3 +43,28 @@ patches:
       name: kafka
 - path: postgres-alias.yaml
 - path: kafka-alias.yaml
+# Delete the static realm ConfigMap from prod — the Terraform runner Job
+# manages the realm declaratively instead.
+- target:
+    kind: ConfigMap
+    name: keycloak-realm-config
+  patch: |
+    $patch: delete
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: keycloak-realm-config
+# Remove the realm-config volumeMount (index 0) from the Keycloak container.
+# The --import-realm arg is removed via keycloak-ha-patch.yaml.
+# JSON 6902 patches are required because strategic-merge cannot delete list
+# elements — it can only add or update them.
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: keycloak
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/containers/0/volumeMounts/0
+    - op: remove
+      path: /spec/template/spec/volumes/0

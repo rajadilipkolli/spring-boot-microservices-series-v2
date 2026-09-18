@@ -72,6 +72,14 @@ wait_for_pod_creation 'strimzi.io/cluster=kafka' 'Kafka'
 kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/keycloak -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 
+echo "Waiting for Keycloak Terraform runner Job..."
+kubectl wait \
+  --namespace retailstore \
+  --for=condition=complete \
+  job/keycloak-terraform-runner \
+  --timeout=600s
+echo "Keycloak Terraform runner complete."
+
 echo "Waiting for infrastructure microservices..."
 kubectl rollout status deployment/config-server -n retailstore --timeout="$ROLLOUT_TIMEOUT"
 kubectl rollout status deployment/service-registry -n retailstore --timeout="$ROLLOUT_TIMEOUT"
