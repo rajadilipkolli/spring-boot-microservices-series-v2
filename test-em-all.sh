@@ -904,6 +904,49 @@ function verifyAPIs() {
     log_success "All API verification tests completed successfully in $((API_VERIFY_END_TIME - API_VERIFY_START_TIME)) seconds."
 }
 
+function verifyKeycloakUsers() {
+    log_info "Verifying Keycloak users are loaded..."
+    local token_response
+    local max_attempts=12
+    local attempt=1
+    
+    # Load environment variables from deployment/.env if it exists, safely handling Windows \r
+    if [ -f "deployment/.env" ]; then
+        while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ ]] || [[ -z "$key" ]] && continue
+            # Remove trailing \r from value and export
+            export "$key=${value%$'\r'}"
+        done < deployment/.env
+    fi
+
+    local client_secret="${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}"
+    local raja_password="${RAJA_PASSWORD:-demo-throwaway-raja-pass}"
+    
+    while [ $attempt -le $max_attempts ]; do
+        # Attempt to fetch a token for the 'raja' user.
+        token_response=$(curl -s -u "retailstore-webapp:${client_secret}" \
+            -X POST "http://${HOST}:9191/realms/retailstore/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=raja" \
+            -d "password=${raja_password}" \
+            -d "grant_type=password" || true)
+
+        if [[ "$token_response" == *"access_token"* ]]; then
+            log_info "Keycloak users verified successfully on attempt $attempt!"
+            return 0
+        fi
+        
+        log_info "Users not loaded yet (attempt $attempt/$max_attempts). Waiting 5 seconds..."
+        sleep 5
+        ((attempt++))
+    done
+
+    echo -e "${RED}ERROR: Failed to verify Keycloak users! Terraform might not have finished or loaded the users.${NC}" >&2
+    echo -e "${RED}ERROR: Last Response: $token_response${NC}" >&2
+    return 1
+}
+
 # Function to display help message
 function display_help() {
     echo -e "${BLUE}Store Microservices Integration Tests${NC}"
@@ -1002,36 +1045,6 @@ waitForService curl -k ${BASE_URL}/CATALOG-SERVICE/catalog-service/actuator/heal
 waitForService curl -k ${BASE_URL}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
 waitForService curl -k ${BASE_URL}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
 waitForService curl -k ${BASE_URL}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
-function verifyKeycloakUsers() {
-    log_info "Verifying Keycloak users are loaded..."
-    local token_response
-    local max_attempts=12
-    local attempt=1
-    
-    while [ $attempt -le $max_attempts ]; do
-        # Attempt to fetch a token for the 'raja' user.
-        token_response=$(curl -s -X POST "http://${HOST}:9191/realms/retailstore/protocol/openid-connect/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "username=raja" \
-            -d "password=demo-throwaway-raja-pass" \
-            -d "grant_type=password" \
-            -d "client_id=retailstore-webapp" \
-            -d "client_secret=demo-throwaway-oauth-secret" || true)
-
-        if [[ "$token_response" == *"access_token"* ]]; then
-            log_info "Keycloak users verified successfully on attempt $attempt!"
-            return 0
-        fi
-        
-        log_info "Users not loaded yet (attempt $attempt/$max_attempts). Waiting 5 seconds..."
-        sleep 5
-        ((attempt++))
-    done
-
-    echo -e "${RED}ERROR: Failed to verify Keycloak users! Terraform might not have finished or loaded the users.${NC}" >&2
-    echo -e "${RED}ERROR: Last Response: $token_response${NC}" >&2
-    return 1
-}
 
 verifyKeycloakUsers || error_exit "Keycloak user verification failed"
 
