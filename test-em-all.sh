@@ -920,6 +920,14 @@ function verifyKeycloakUsers() {
         done < deployment/.env
     fi
 
+    case "${HOST,,}" in
+        localhost|127.0.0.1) ;;
+        *)
+            echo -e "${RED}ERROR: Refusing to send Keycloak credentials to non-loopback HOST '${HOST}'.${NC}" >&2
+            return 1
+            ;;
+    esac
+
     local client_secret="${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}"
     local raja_password="${RAJA_PASSWORD:-demo-throwaway-raja-pass}"
     
