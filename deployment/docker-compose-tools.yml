@@ -186,6 +186,7 @@ services:
       context: ./terraform
       dockerfile: Dockerfile
     image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+    user: "root"
     profiles:
     - terraform
     depends_on:
