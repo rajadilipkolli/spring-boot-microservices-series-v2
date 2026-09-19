@@ -1156,14 +1156,35 @@ kubectl apply -k deployment/k8s/overlays/autoscaling/ >/dev/null 2>&1
 
 # Send bursts of traffic to trigger lag/CPU load
 echo "Creating customer for load test..."
-CUSTOMER_ID=$(curl -s -k -X POST https://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
+if ! CUSTOMER_ID=$(curl --silent --show-error --fail --insecure --request POST https://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -er '.customerId | select(type == "number" and . > 0)'); then
+  fail "Could not create a valid customer for the load test."
+fi
 echo "Created customer with ID: $CUSTOMER_ID"
 
+send_order_request() {
+  local http_status
+
+  http_status=$(curl --silent --show-error --fail --insecure --output /dev/null --write-out '%{http_code}' --request POST https://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P001","quantity": 1,"productPrice": 0.1},{"productCode": "P002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}') || return 1
+  [[ "$http_status" =~ ^2[0-9]{2}$ ]]
+}
+
 echo "Sending load..."
+order_request_pids=()
 for i in {1..1500}; do
-  curl -s -k -X POST https://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P001","quantity": 1,"productPrice": 0.1},{"productCode": "P002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
+  send_order_request &
+  order_request_pids+=("$!")
 done
-wait
+
+failed_order_requests=0
+for order_request_pid in "${order_request_pids[@]}"; do
+  if ! wait "$order_request_pid"; then
+    ((++failed_order_requests))
+  fi
+done
+
+if ((failed_order_requests > 0)); then
+  fail "$failed_order_requests order request(s) failed during load generation."
+fi
 
 # Wait and check if inventory-service scaled beyond minReplicas (1)
 echo "Waiting for autoscaler to trigger..."
