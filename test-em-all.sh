@@ -453,7 +453,7 @@ function testCircuitBreaker() {
 
     # Health endpoint (gateway)
     HEALTH_URL="${BASE_URL}/${svc}/actuator/health"
-    health_payload=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    health_payload=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
 
     # function to extract CB state (tries multiple paths)
     get_state() {
@@ -630,7 +630,7 @@ function testCircuitBreaker() {
     # Wait up to 10s for HALF_OPEN (mimic attached sleep)
     echo "Will sleep for 10 sec waiting for the CB to go Half Open for ${svc}..."
     sleep 10
-    after_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    after_health=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
     half_state=$(get_state "$after_health" "$cb_key")
     if [[ "$half_state" == "HALF_OPEN" ]]; then
       track_test_result "Circuit breaker half-open: ${svc}" "PASS" "HALF_OPEN"
@@ -651,7 +651,7 @@ function testCircuitBreaker() {
     done
 
     # Final health check for CLOSED
-    final_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    final_health=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
     final_state=$(get_state "$final_health" "$cb_key")
     if [[ "$final_state" == "CLOSED" ]]; then
       track_test_result "Circuit breaker final state: ${svc}" "PASS" "CLOSED"
@@ -662,7 +662,7 @@ function testCircuitBreaker() {
     # Try to fetch circuit breaker events (best-effort)
     if [[ -n "$cb_key" ]]; then
       events_url="${BASE_URL}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
-      ev=$(curl -s "${events_url}" 2>/dev/null || true)
+      ev=$(curl -s -k "${events_url}" 2>/dev/null || true)
       if [[ -n "$ev" && "$ev" != "" ]]; then
         t1=$(echo "$ev" | jq -r '.circuitBreakerEvents[-3].stateTransition' 2>/dev/null || true)
         t2=$(echo "$ev" | jq -r '.circuitBreakerEvents[-2].stateTransition' 2>/dev/null || true)
@@ -926,7 +926,7 @@ function verifyKeycloakUsers() {
     while [ $attempt -le $max_attempts ]; do
         # Attempt to fetch a token for the 'raja' user.
         local kc_url="${KEYCLOAK_URL:-http://${HOST}:9191}"
-        token_response=$(curl -s -u "retailstore-webapp:${client_secret}" \
+        token_response=$(curl -s -k -u "retailstore-webapp:${client_secret}" \
             -X POST "${kc_url}/realms/retailstore/protocol/openid-connect/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "username=raja" \
