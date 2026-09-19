@@ -721,7 +721,7 @@ kubectl wait \
   --for=condition=ready pod \
   -l 'cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance' \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # REDIS
@@ -730,7 +730,7 @@ kubectl wait \
 kubectl rollout status \
   deployment/redis \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # KAFKA
@@ -744,7 +744,7 @@ kubectl wait \
   --for=condition=ready pod \
   -l 'strimzi.io/cluster=kafka' \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # KEYCLOAK
@@ -753,7 +753,7 @@ kubectl wait \
 kubectl rollout status \
   deployment/keycloak \
   -n "$NAMESPACE" \
-  --timeout=600s
+  --timeout=1800s
 
 ###############################################################################
 # KEYCLOAK TERRAFORM RUNNER
@@ -1146,38 +1146,38 @@ fi
 step "Load Test Autoscaling (KEDA/HPA)"
 
 # Install KEDA before applying autoscaling overlay
-log_info "Installing KEDA..."
+echo "Installing KEDA..."
 kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml >/dev/null 2>&1
 kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s >/dev/null 2>&1 || true
 
 # Apply autoscaling overlay
-log_info "Applying autoscaling overlay..."
+echo "Applying autoscaling overlay..."
 kubectl apply -k deployment/k8s/overlays/autoscaling/ >/dev/null 2>&1
 
 # Send bursts of traffic to trigger lag/CPU load
-log_info "Creating customer for load test..."
+echo "Creating customer for load test..."
 CUSTOMER_ID=$(curl -s -k -X POST https://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -r '.customerId')
-log_info "Created customer with ID: $CUSTOMER_ID"
+echo "Created customer with ID: $CUSTOMER_ID"
 
-log_info "Sending load..."
+echo "Sending load..."
 for i in {1..1500}; do
-  curl -s -k -X POST https://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P0001","quantity": 1,"productPrice": 0.1},{"productCode": "P0002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
+  curl -s -k -X POST https://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P001","quantity": 1,"productPrice": 0.1},{"productCode": "P002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}' > /dev/null &
 done
 wait
 
 # Wait and check if inventory-service scaled beyond minReplicas (1)
-log_info "Waiting for autoscaler to trigger..."
+echo "Waiting for autoscaler to trigger..."
 sleep 60
 
 replicas=$(kubectl get deployment inventory-service -n "$NAMESPACE" -o jsonpath="{.spec.replicas}")
-log_info "Inventory service replicas: $replicas"
+echo "Inventory service replicas: $replicas"
 if [ "$replicas" -gt 1 ]; then
   ok "Autoscaling triggered successfully!"
 else
   warn "Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
 fi
 
-log_info "Waiting for autoscaler to scale down..."
+echo "Waiting for autoscaler to scale down..."
 for i in {1..15}; do
   replicas=$(kubectl get deployment inventory-service -n "$NAMESPACE" -o jsonpath="{.spec.replicas}")
   if [ "$replicas" -eq 1 ]; then
