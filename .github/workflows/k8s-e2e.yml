@@ -229,7 +229,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           kubectl rollout restart deployment/catalog-service -n retailstore
-          kubectl rollout status deployment/catalog-service -n retailstore --timeout=120
+          kubectl rollout status deployment/catalog-service -n retailstore --timeout=120s
 
       - name: Collect Diagnostics
         if: failure()
