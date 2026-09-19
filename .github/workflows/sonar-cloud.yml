@@ -10,6 +10,8 @@ on:
       - config/**
       - gatling-tests/**
       - run.sh
+      - deployment/k8s/**
+      - deployment/terraform/**
   pull_request:
     types:
       - opened
