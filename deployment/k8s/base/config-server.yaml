@@ -40,6 +40,16 @@ spec:
             secretKeyRef:
               key: CONFIG_SERVER_PWD
               name: config-server-credentials
+        - name: SPRING_SECURITY_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: SPRING_SECURITY_USER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
         - name: OTEL_SERVICE_NAME
           value: config-server
         - name: OTEL_RESOURCE_ATTRIBUTES

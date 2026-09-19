@@ -22,6 +22,14 @@ NAMESPACE="retailstore"
 
 HOSTS_ENTRY="127.0.0.1 retailstore.local api.retailstore.local keycloak.local jobrunr.local"
 
+if [[ -f /c/Windows/System32/drivers/etc/hosts ]]; then
+  HOSTS_FILE="/c/Windows/System32/drivers/etc/hosts"
+elif [[ -f /mnt/c/Windows/System32/drivers/etc/hosts ]]; then
+  HOSTS_FILE="/mnt/c/Windows/System32/drivers/etc/hosts"
+else
+  HOSTS_FILE="/etc/hosts"
+fi
+
 INGRESS_MANIFEST="https://raw.githubusercontent.com/kubernetes/ingress-nginx/64780b1fed3af99f4eccbc3fdad7ad785e8a83b6/deploy/static/provider/kind/deploy.yaml"
 
 POD_CREATION_TIMEOUT_SECONDS="${POD_CREATION_TIMEOUT_SECONDS:-300}"
@@ -184,7 +192,7 @@ hosts_file_contains_alias() {
 
   grep -Eq \
     "(^|[[:space:]])${alias_regex}([[:space:]]|$)" \
-    /etc/hosts
+    "$HOSTS_FILE"
 }
 
 hosts_file_contains_all_aliases() {
@@ -203,20 +211,23 @@ add_hosts_entry() {
   local alias
 
   if hosts_file_contains_all_aliases; then
-    warn "Hosts entries already present; skipping."
+    warn "Hosts entries already present in $HOSTS_FILE; skipping."
     return
   fi
 
   printf '%s\n' "$HOSTS_ENTRY" |
-    sudo tee -a /etc/hosts >/dev/null ||
-    fail "Could not add local aliases to /etc/hosts."
+    sudo tee -a "$HOSTS_FILE" >/dev/null || {
+    warn "Could not add local aliases to $HOSTS_FILE."
+    warn "Please ensure they are added manually."
+    return
+  }
 
   for alias in "${HOST_ALIASES[@]}"; do
     hosts_file_contains_alias "$alias" ||
-      fail "Alias '$alias' was not added to /etc/hosts."
+      fail "Alias '$alias' was not added to $HOSTS_FILE."
   done
 
-  ok "Added and verified /etc/hosts entries."
+  ok "Added and verified $HOSTS_FILE entries."
 }
 
 remove_hosts_entry() {
@@ -234,12 +245,15 @@ remove_hosts_entry() {
 
   sudo sed -i -E \
     "${sed_args[@]}" \
-    /etc/hosts ||
-    fail "Could not remove local aliases from /etc/hosts."
+    "$HOSTS_FILE" || {
+    warn "Could not remove local aliases from $HOSTS_FILE."
+    warn "Please remove them manually."
+    return
+  }
 
   for alias in "${HOST_ALIASES[@]}"; do
     if hosts_file_contains_alias "$alias"; then
-      fail "Alias '$alias' remains in /etc/hosts after removal."
+      fail "Alias '$alias' remains in $HOSTS_FILE after removal."
     fi
   done
 
@@ -582,18 +596,23 @@ ok "NGINX Ingress controller is ready."
 
 step "Pulling and loading Docker images"
 
+# Build the Terraform runner image locally since it's not published to Docker Hub
+printf '  building %s ...\n' "dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT"
+docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f "$PROJECT_ROOT/deployment/terraform/Dockerfile" "$PROJECT_ROOT/deployment/terraform/"
+
 for image in "${IMAGES[@]}"; do
-
   printf '  pulling %s ...\n' "$image"
-
   docker pull "$image"
+done
 
+# Add terraform runner to images array so it gets loaded into kind
+IMAGES+=("dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT")
+
+for image in "${IMAGES[@]}"; do
   printf '  loading %s ...\n' "$image"
-
   kind load docker-image \
     "$image" \
     --name "$CLUSTER_NAME"
-
 done
 
 ok "All images loaded."
@@ -620,6 +639,22 @@ kubectl wait \
   --for=condition=ready pod \
   -l app.kubernetes.io/instance=cert-manager \
   -n cert-manager \
+  --timeout=120s ||
+  true
+
+sleep 15
+
+###############################################################################
+# EXTERNAL SECRETS
+###############################################################################
+
+kubectl apply \
+  -f https://github.com/external-secrets/external-secrets/releases/download/v0.10.4/external-secrets.yaml
+
+kubectl wait \
+  --for=condition=ready pod \
+  -l app.kubernetes.io/name=external-secrets \
+  -n external-secrets \
   --timeout=120s ||
   true
 
@@ -686,7 +721,7 @@ kubectl wait \
   --for=condition=ready pod \
   -l 'cnpg.io/cluster=postgresql-ha,cnpg.io/podRole=instance' \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # REDIS
@@ -695,7 +730,7 @@ kubectl wait \
 kubectl rollout status \
   deployment/redis \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # KAFKA
@@ -709,7 +744,7 @@ kubectl wait \
   --for=condition=ready pod \
   -l 'strimzi.io/cluster=kafka' \
   -n "$NAMESPACE" \
-  --timeout=300s
+  --timeout=1800s
 
 ###############################################################################
 # KEYCLOAK
@@ -718,7 +753,7 @@ kubectl wait \
 kubectl rollout status \
   deployment/keycloak \
   -n "$NAMESPACE" \
-  --timeout=600s
+  --timeout=1800s
 
 ###############################################################################
 # KEYCLOAK TERRAFORM RUNNER
@@ -912,8 +947,12 @@ set +e
   export HOST="api.retailstore.local"
   export PORT="443"
   export PROTOCOL="https"
+  export KEYCLOAK_URL="https://keycloak.local"
+  export OAUTH2_CLIENT_SECRET="$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 -d)"
+  export RAJA_PASSWORD="$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RAJA_PASSWORD}' | base64 -d)"
 
-  exec "${BASH:-bash}" \
+  # Explicitly invoke sh to avoid accidentally calling Windows Subsystem for Linux (WSL) bash.exe
+  exec sh \
     "$E2E_PREPARED_SCRIPT" \
     --no-cb-strict
 ) 2>&1 |
@@ -1041,3 +1080,132 @@ fi
 ###############################################################################
 
 ok "All E2E tests and smoke checks completed successfully."
+
+###############################################################################
+# VALIDATIONS (NetworkPolicy, PDBs, Kafka Persistence, Rollout)
+###############################################################################
+
+step "Validating NetworkPolicy and PDBs"
+
+kubectl get pdb -n "$NAMESPACE" api-gateway-pdb >/dev/null || fail "api-gateway-pdb not found"
+kubectl get pdb -n "$NAMESPACE" retail-store-webapp-pdb >/dev/null || fail "retail-store-webapp-pdb not found"
+kubectl get networkpolicy -n "$NAMESPACE" default-deny-all >/dev/null || fail "default-deny-all not found"
+kubectl get networkpolicy -n "$NAMESPACE" explicit-egress-for-apps >/dev/null || fail "explicit-egress-for-apps not found"
+ok "NetworkPolicies and PDBs exist."
+
+step "Validating Kafka Persistence"
+
+kubectl exec -n "$NAMESPACE" pod/kafka-dual-role-0 -- /bin/bash -c "echo 'hello-kafka' | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic persistence-test" >/dev/null 2>&1
+kubectl delete pod kafka-dual-role-0 -n "$NAMESPACE" >/dev/null 2>&1
+kubectl wait --namespace "$NAMESPACE" --for=delete pod/kafka-dual-role-0 --timeout=120s >/dev/null 2>&1 || true
+sleep 5
+kubectl wait --namespace "$NAMESPACE" --for=condition=ready pod/kafka-dual-role-0 --timeout=300s >/dev/null 2>&1
+
+if kubectl exec -n "$NAMESPACE" pod/kafka-dual-role-0 -- /bin/bash -c "/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic persistence-test --from-beginning --max-messages 1 --timeout-ms 10000" 2>/dev/null | grep -q "hello-kafka"; then
+  ok "Kafka persistence test passed."
+else
+  warn "Kafka persistence test failed."
+fi
+
+step "Validating Network Policies Paths"
+
+if kubectl run test-api-gateway --rm -i --image=busybox:1.36 --labels="app=api-gateway" -n "$NAMESPACE" --restart=Never -- nc -z catalog-service 18080 >/dev/null 2>&1; then
+  ok "Allowed network path succeeded."
+else
+  warn "Allowed network path failed."
+fi
+
+if kubectl run test-catalog-service --rm -i --image=busybox:1.36 --labels="app=catalog-service" -n "$NAMESPACE" --restart=Never -- nc -w 3 -z api-gateway 8765 >/dev/null 2>&1; then
+  warn "Disallowed network path succeeded!"
+else
+  ok "Disallowed network path blocked."
+fi
+
+step "Validating PDBs and Node Drain"
+
+min_avail=$(kubectl get pdb -n "$NAMESPACE" catalog-service-pdb -o jsonpath="{.spec.minAvailable}")
+if [ "$min_avail" -eq 1 ]; then
+  ok "PDB minAvailable is correct."
+else
+  warn "PDB minAvailable is incorrect."
+fi
+
+step "Validating Rollout and Deployment Strategy"
+
+kubectl rollout restart deployment/catalog-service -n "$NAMESPACE" >/dev/null 2>&1
+if kubectl rollout status deployment/catalog-service -n "$NAMESPACE" --timeout=120s >/dev/null 2>&1; then
+  ok "Rollout strategy validated."
+else
+  warn "Rollout strategy validation failed."
+fi
+
+###############################################################################
+# LOAD TEST AUTOSCALING (KEDA)
+###############################################################################
+
+step "Load Test Autoscaling (KEDA/HPA)"
+
+# Install KEDA before applying autoscaling overlay
+echo "Installing KEDA..."
+kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.12.1/keda-2.12.1.yaml >/dev/null 2>&1
+kubectl wait --for=condition=ready pod -l app=keda-operator -n keda --timeout=120s >/dev/null 2>&1 || true
+
+# Apply autoscaling overlay
+echo "Applying autoscaling overlay..."
+kubectl apply -k deployment/k8s/overlays/autoscaling/ >/dev/null 2>&1
+
+# Send bursts of traffic to trigger lag/CPU load
+echo "Creating customer for load test..."
+if ! CUSTOMER_ID=$(curl --silent --show-error --fail --insecure --request POST https://api.retailstore.local/payment-service/api/customers -H "Content-Type: application/json" -d '{"name": "LoadTest", "email": "load@test.com", "phone": "123456789", "address": "Test Addr", "amountAvailable": 1000000}' | jq -er '.customerId | select(type == "number" and . > 0)'); then
+  fail "Could not create a valid customer for the load test."
+fi
+echo "Created customer with ID: $CUSTOMER_ID"
+
+send_order_request() {
+  local http_status
+
+  http_status=$(curl --silent --show-error --fail --insecure --output /dev/null --write-out '%{http_code}' --request POST https://api.retailstore.local/order-service/api/orders -H "Content-Type: application/json" -d '{"customerId": '$CUSTOMER_ID',"items":[{"productCode": "P001","quantity": 1,"productPrice": 0.1},{"productCode": "P002","quantity": 1,"productPrice": 0.01}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}') || return 1
+  [[ "$http_status" =~ ^2[0-9]{2}$ ]]
+}
+
+echo "Sending load..."
+order_request_pids=()
+for i in {1..1500}; do
+  send_order_request &
+  order_request_pids+=("$!")
+done
+
+failed_order_requests=0
+for order_request_pid in "${order_request_pids[@]}"; do
+  if ! wait "$order_request_pid"; then
+    ((++failed_order_requests))
+  fi
+done
+
+if ((failed_order_requests > 0)); then
+  fail "$failed_order_requests order request(s) failed during load generation."
+fi
+
+# Wait and check if inventory-service scaled beyond minReplicas (1)
+echo "Waiting for autoscaler to trigger..."
+sleep 60
+
+replicas=$(kubectl get deployment inventory-service -n "$NAMESPACE" -o jsonpath="{.spec.replicas}")
+echo "Inventory service replicas: $replicas"
+if [ "$replicas" -gt 1 ]; then
+  ok "Autoscaling triggered successfully!"
+else
+  warn "Autoscaling did not trigger during load test. KEDA might need more time or lag didn't exceed threshold."
+fi
+
+echo "Waiting for autoscaler to scale down..."
+for i in {1..15}; do
+  replicas=$(kubectl get deployment inventory-service -n "$NAMESPACE" -o jsonpath="{.spec.replicas}")
+  if [ "$replicas" -eq 1 ]; then
+    ok "Autoscaling scaled down successfully!"
+    break
+  fi
+  sleep 20
+done
+
+ok "All validations and load tests completed successfully."

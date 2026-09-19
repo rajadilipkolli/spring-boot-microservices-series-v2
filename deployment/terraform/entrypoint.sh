@@ -18,7 +18,7 @@ INTERVAL=5
 
 echo "[entrypoint] Waiting for Keycloak to be ready at ${HEALTH_URL} ..."
 elapsed=0
-until wget -qO- "${HEALTH_URL}" 2>/dev/null | grep -q '"status".*"UP"'; do
+until curl -sf "${HEALTH_URL}" 2>/dev/null | grep -q '"status".*"UP"'; do
   if [ "$elapsed" -ge "$MAX_WAIT" ]; then
     echo "[entrypoint] ERROR: Keycloak not ready after ${MAX_WAIT}s." >&2
     exit 1

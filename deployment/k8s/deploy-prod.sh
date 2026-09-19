@@ -93,6 +93,11 @@ kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n cnpg-system --timeout="$ROLLOUT_TIMEOUT" || true
 sleep 15
 
+echo "Installing External Secrets Operator..."
+kubectl apply -f https://github.com/external-secrets/external-secrets/releases/download/v0.10.4/external-secrets.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=external-secrets -n external-secrets --timeout="$ROLLOUT_TIMEOUT" || true
+sleep 15
+
 
 echo "Applying Strimzi operator explicitly (Operator before Operand)..."
 # Operators manage CustomResourceDefinitions (CRDs). Applying them directly 
