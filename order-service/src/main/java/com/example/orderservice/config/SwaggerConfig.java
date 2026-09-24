@@ -13,14 +13,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.ForwardedHeaderFilter;
 
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @OpenAPIDefinition(
-        info =
-                @Info(
-                        title = "order-service",
-                        version = "v1",
-                        description = "APIs related to Orders"),
-        servers = @Server(url = "${server.servlet.contextPath}"))
+        info = @Info(
+                title = "Order Service API",
+                version = "v1",
+                description = "Swagger documentation for order Service"
+        )
+)
 class SwaggerConfig {
 
     @Bean
