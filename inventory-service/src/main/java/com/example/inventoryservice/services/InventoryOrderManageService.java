@@ -6,12 +6,15 @@
 
 package com.example.inventoryservice.services;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
-import com.example.inventoryservice.config.logging.Loggable;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import com.example.inventoryservice.utils.logging.Loggable;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,15 +34,29 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final Counter inventoryReservationsCounter;
+    private final Counter inventoryFailuresCounter;
 
     public InventoryOrderManageService(
             InventoryRepository inventoryRepository,
+            MeterRegistry meterRegistry,
+            InventoryJOOQRepository inventoryJOOQRepository,
             KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.inventoryReservationsCounter = meterRegistry.counter("inventory_reservations");
+        this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
     }
 
+    /**
+     * Reserves available inventory for a new order and publishes the reservation outcome.
+     *
+     * @param orderDto order whose items should be reserved
+     * @return the order with its inventory status and source
+     */
     @Transactional
     public OrderDto reserve(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
@@ -51,7 +68,10 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
-        // Using JPA repository instead of JOOQ
+        // Using JPA repository for reading unpaged list to keep entities managed.
+        // NOTE: Do not change this back to JOOQ for mutating operations.
+        // JOOQ returns detached entities which can lead to StaleObjectStateException
+        // when merged and saved if the version field mapping is not perfectly synchronized.
         List<Inventory> inventoryListFromDB =
                 inventoryRepository.findByProductCodeIn(productCodeList);
 
@@ -63,6 +83,7 @@ public class InventoryOrderManageService {
                     inventoryListFromDB.stream().map(Inventory::getProductCode).toList(),
                     productCodeList);
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
+            this.inventoryFailuresCounter.increment();
             kafkaTemplate.send(
                     AppConstants.STOCK_ORDERS_TOPIC,
                     String.valueOf(rejectedOrderDto.orderId()),
@@ -98,6 +119,7 @@ public class InventoryOrderManageService {
                     orderDto.orderId());
             // As per review, sending REJECT status to Kafka if quantity not available
             finalOrderDto = orderDto.withStatus("REJECT");
+            this.inventoryFailuresCounter.increment();
             // No inventory changes are saved as updatedInventoryList is empty and saveAll won't be
             // called.
         } else {
@@ -113,6 +135,7 @@ public class InventoryOrderManageService {
             // Persist changes
             inventoryRepository.saveAll(updatedInventoryList);
             finalOrderDto = orderDto.withStatus("ACCEPT");
+            this.inventoryReservationsCounter.increment();
             LOGGER.info(
                     "Setting status as ACCEPT for OrderId : {}, inventoryIds updated : {}",
                     orderDto.orderId(),
@@ -140,6 +163,8 @@ public class InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderItemDto::productId).toList();
 
+        // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
+        // detached entities
         Map<String, Inventory> inventoryMap =
                 inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

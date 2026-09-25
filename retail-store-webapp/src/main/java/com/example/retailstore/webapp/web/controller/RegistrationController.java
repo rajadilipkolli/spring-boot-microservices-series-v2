@@ -3,12 +3,13 @@ package com.example.retailstore.webapp.web.controller;
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
+import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
-import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -36,7 +37,7 @@ public class RegistrationController {
         return "registration"; // Returns the name of the Thymeleaf template (registration.html)
     }
 
-    @PostMapping("/api/register")
+    @PostMapping(value = "/api/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
         logger.info("Received registration request for user: {}", request.username());
         registrationService.registerUser(request);

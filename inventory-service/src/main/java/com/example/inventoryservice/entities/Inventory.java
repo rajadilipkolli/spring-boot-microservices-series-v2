@@ -1,15 +1,14 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.entities;
 
+import io.hypersistence.utils.hibernate.id.Tsid;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -19,7 +18,7 @@ import jakarta.persistence.Version;
 public class Inventory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Tsid(TsidSupplier.class)
     private Long id;
 
     @Column(name = "product_code", nullable = false, unique = true, updatable = false)

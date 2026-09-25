@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "config-server/**"
+      - "!config-server/docker-compose.yml"
+      - "!config-server/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "config-server/**"
+      - "!config-server/docker-compose.yml"
+      - "!config-server/docker/**"
     types:
       - opened
       - synchronize
@@ -17,6 +21,7 @@ jobs:
   build:
     name: Config Server with jdk  ${{ matrix.java }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: "config-server"
@@ -24,7 +29,7 @@ jobs:
       matrix:
         java: ["25"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -54,7 +59,7 @@ jobs:
       - if: ${{ github.ref == 'refs/heads/main' }}
         name: Build and Push Docker Image
         run: |
-          ./mvnw spring-boot:build-image \
+          ./mvnw -Pnative spring-boot:build-image \
             -DskipTests \
             -Dspring-boot.build-image.publish=true \
             -Dspring-boot.build-image.imageName=dockertmt/mmv2-config-server:latest

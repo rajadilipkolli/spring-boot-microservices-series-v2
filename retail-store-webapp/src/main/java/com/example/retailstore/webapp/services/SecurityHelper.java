@@ -1,19 +1,21 @@
 package com.example.retailstore.webapp.services;
 
+import java.util.Locale;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SecurityHelper {
-    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final OAuth2AuthorizedClientManager authorizedClientManager;
 
-    public SecurityHelper(OAuth2AuthorizedClientService authorizedClientService) {
-        this.authorizedClientService = authorizedClientService;
+    public SecurityHelper(OAuth2AuthorizedClientManager authorizedClientManager) {
+        this.authorizedClientManager = authorizedClientManager;
     }
 
     public String getUsername() {
@@ -32,12 +34,14 @@ public class SecurityHelper {
         if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
             return null;
         }
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
-                oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
+        OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId(
+                        oauthToken.getAuthorizedClientRegistrationId())
+                .principal(oauthToken)
+                .build();
 
-        if (client == null) {
-            // Log or handle the case where the client is not found
-            // For now, returning null or throwing a specific exception might be appropriate
+        OAuth2AuthorizedClient client = this.authorizedClientManager.authorize(authorizeRequest);
+
+        if (client == null || client.getAccessToken() == null) {
             return null;
         }
 
@@ -46,10 +50,14 @@ public class SecurityHelper {
 
     public String getLoggedInUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof OAuth2AuthenticationToken)) {
+        if (authentication == null) {
             return null;
         }
-        DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
-        return principal.getEmail();
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
+            String email = principal.getEmail();
+            return email != null ? email.toLowerCase(Locale.ROOT) : null;
+        }
+        return authentication.getName().toLowerCase(Locale.ROOT);
     }
 }

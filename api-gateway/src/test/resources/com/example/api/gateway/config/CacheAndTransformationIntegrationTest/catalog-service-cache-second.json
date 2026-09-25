@@ -1,0 +1,12 @@
+{
+  "scenarioName": "Cache Scenario",
+  "requiredScenarioState": "Hit",
+  "request": {
+    "method": "GET",
+    "url": "/catalog-service-cache/api/cacheable"
+  },
+  "response": {
+    "status": 500,
+    "body": "{\"message\": \"Backend called multiple times!\"}"
+  }
+}

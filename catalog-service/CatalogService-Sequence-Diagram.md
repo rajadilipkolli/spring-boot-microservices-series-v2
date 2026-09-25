@@ -47,7 +47,7 @@ sequenceDiagram
 
     rect rgba(34, 197, 94, 0.3)
         Note over Client, CatalogAPI: <span style="color: white">Single Product Retrieval</span>
-        Client->>Gateway: GET /catalog-service/api/catalog/productCode/{code}?fetchInStock=true
+        Client->>Gateway: GET /catalog-service/api/catalog/product-code/{code}?fetchInStock=true
         Gateway->>CatalogAPI: Forward request
         CatalogAPI->>CatalogAPI: @Observed("product.findByCode")
         
@@ -228,7 +228,7 @@ sequenceDiagram
     
     rect rgba(34, 197, 94, 0.3)
         Note over Client, CatalogAPI: <span style="color: white">Product Generation & Utilities</span>
-        Client->>Gateway: GET /catalog-service/api/catalog/generate
+        Client->>Gateway: POST /catalog-service/api/catalog/generate<br/>Header: Idempotency-Key (required)<br/>Retries must reuse the same key
         Gateway->>CatalogAPI: Trigger product generation
         CatalogAPI->>CatalogAPI: @Transactional + Flux.range(0, 101)<br/>(reactive stream generation)
         
@@ -306,13 +306,13 @@ sequenceDiagram
 |----------|--------|-------------|----------|
 | `/api/catalog` | GET | Get paginated products | Reactive pagination, inventory enrichment |
 | `/api/catalog/id/{id}` | GET | Get product by ID | Reactive lookup with stock info |
-| `/api/catalog/productCode/{code}` | GET | Get product by code | Case-insensitive search, optional stock |
+| `/api/catalog/product-code/{code}` | GET | Get product by code | Case-insensitive search, optional stock |
 | `/api/catalog/exists?productCodes=` | GET | Check product existence | Bulk existence validation |
 | `/api/catalog/search` | GET | Advanced product search | Multi-criteria filtering |
 | `/api/catalog` | POST | Create product | Idempotent creation, Kafka events |
 | `/api/catalog/{id}` | PUT | Update product | Reactive updates |
 | `/api/catalog/{id}` | DELETE | Delete product | Safe deletion |
-| `/api/catalog/generate` | GET | Generate test products | Reactive bulk creation |
+| `/api/catalog/generate` | POST | Generate test products | Reactive bulk creation, requires Idempotency-Key |
 
 ## Reactive Event Flow & Integration
 

@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "service-registry/**"
+      - "!service-registry/docker-compose.yml"
+      - "!service-registry/docker/**"
     branches: [main]
   pull_request:
     paths:
       - "service-registry/**"
+      - "!service-registry/docker-compose.yml"
+      - "!service-registry/docker/**"
     types:
       - opened
       - synchronize
@@ -24,7 +28,7 @@ jobs:
       matrix:
         java: ["25"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 

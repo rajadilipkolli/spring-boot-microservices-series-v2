@@ -1,9 +1,9 @@
 
 spring:
   datasource:
-    password: secret
+    password: ${DB_PASSWORD:secret}
     url: jdbc:postgresql://postgresql:5432/appdb
-    username: appuser
+    username: ${DB_USERNAME:appuser}
   kafka:
     bootstrap-servers:
       - kafka:29092
@@ -14,6 +14,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://naming-server:8761/eureka/
+  instance:
+    preferIpAddress: false
+    hostname: host.docker.internal
 
 # Metrics Export
 management:

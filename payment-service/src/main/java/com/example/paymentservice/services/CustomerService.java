@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.config.logging.Loggable;
@@ -69,6 +69,10 @@ public class CustomerService {
 
     public Optional<CustomerResponse> findCustomerByName(String name) {
         return customerRepository.findByName(name);
+    }
+
+    public Optional<CustomerResponse> findCustomerByEmail(String email) {
+        return customerRepository.findByEmail(email).map(customerMapper::toResponse);
     }
 
     @Transactional

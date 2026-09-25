@@ -22,7 +22,7 @@ public interface InventoryJOOQRepository {
 
     Optional<Inventory> findByProductCode(String productCode);
 
-    List<Inventory> findByProductCodeIn(List<String> productCodes);
+    Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable);
 
     boolean existsByProductCode(String productCode);
 

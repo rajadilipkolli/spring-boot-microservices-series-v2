@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -15,9 +15,13 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.client.loadbalancer.reactive.WebClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -39,8 +43,28 @@ public class WebClientConfiguration {
     }
 
     @Bean
-    WebClient webClient(WebClient.Builder webClientBuilder) {
-        return webClientBuilder.baseUrl(applicationProperties.inventoryServiceUrl()).build();
+    @Primary
+    WebClient.Builder defaultWebClientBuilder(
+            ObjectProvider<WebClientCustomizer> customizerProvider) {
+        WebClient.Builder builder = WebClient.builder();
+        customizerProvider.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        return builder;
+    }
+
+    @Bean
+    @LoadBalanced
+    @Qualifier("loadBalanced") WebClient.Builder loadBalancedWebClientBuilder(
+            ObjectProvider<WebClientCustomizer> customizerProvider) {
+        WebClient.Builder builder = WebClient.builder();
+        customizerProvider.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        return builder;
+    }
+
+    @Bean
+    WebClient webClient(@Qualifier("loadBalanced") WebClient.Builder loadBalancedWebClientBuilder) {
+        return loadBalancedWebClientBuilder
+                .baseUrl(applicationProperties.inventoryServiceUrl())
+                .build();
     }
 
     @Bean

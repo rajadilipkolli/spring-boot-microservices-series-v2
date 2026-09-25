@@ -20,3 +20,43 @@ groups:
         annotations:
           summary: "High CPU usage detected for {{ $labels.instance }} of job {{ $labels.job }} "
           description: "CPU usage of {{ $labels.instance }} of job {{ $labels.job }} has exceeded 80% for the past 5 minutes."
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, job)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Latency for {{ .job }}"
+          description: "99th percentile latency is above 500ms for {{ .job }}."
+          runbook_url: "https://github.com/org/repo/blob/main/docs/runbooks/SLO-Definitions.md#latency-slo"
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Error Rate for {{ .job }}"
+          description: "Error rate has exceeded 1% for {{ .job }} over the last 5 minutes."
+          runbook_url: "https://github.com/org/repo/blob/main/docs/runbooks/SLO-Definitions.md#error-rate-slo"
+
+      - alert: OrderFailureRate
+        expr: sum(rate(orders_failed_total[5m])) / sum(rate(orders_created_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Order Failure Rate"
+          description: "More than 5% of orders are failing."
+          runbook_url: "https://github.com/org/repo/blob/main/docs/runbooks/SLO-Definitions.md#order-success-rate-slo"
+
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumer_group_lag) by (group, topic) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Kafka Consumer Lag"
+          description: "Consumer group {{ .group }} on topic {{ .topic }} has lag greater than 1000."
+          runbook_url: "https://github.com/org/repo/blob/main/docs/runbooks/SLO-Definitions.md#kafka-lag-slo"
+

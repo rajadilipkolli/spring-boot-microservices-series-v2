@@ -10,8 +10,11 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
@@ -24,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.data.domain.Page;
@@ -359,7 +364,7 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -386,7 +391,7 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isNotFound();
@@ -406,7 +411,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("fetchInStock", true)
                                         .build(code))
                 .exchange()
@@ -430,7 +435,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("delay", 1)
                                         .build(code))
                 .exchange()
@@ -443,7 +448,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnTrueWhenProductsExist() {
-        var codes = java.util.List.of("code-1", "code-2");
+        var codes = List.of("code-1", "code-2");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(true));
 
         webTestClient
@@ -457,7 +462,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(true);
 
         verify(productService).productExistsByProductCodes(codes);
@@ -465,7 +471,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnFalseWhenProductsDoNotExist() {
-        var codes = java.util.List.of("missing");
+        var codes = List.of("missing");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(false));
 
         webTestClient
@@ -479,7 +485,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(false);
     }
 
@@ -498,29 +505,68 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts()).willReturn(Mono.just(true));
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(true));
 
         webTestClient
-                .get()
+                .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(true);
     }
 
     @Test
-    void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts()).willReturn(Mono.just(false));
+    void shouldGenerateRandomProductsWithBatchSize() {
+        given(productService.generateProducts(any(String.class), eq(25)))
+                .willReturn(Mono.just(true));
 
         webTestClient
-                .get()
-                .uri("/api/catalog/generate")
+                .post()
+                .uri("/api/catalog/generate?batchSize=25")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
+                .isEqualTo(true);
+
+        verify(productService).generateProducts("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) {
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate?batchSize=" + batchSize)
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+
+        verifyNoInteractions(productService);
+    }
+
+    @Test
+    void shouldHandleGenerateProductsFailure() {
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(false));
+
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(false);
     }
 

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -9,7 +9,8 @@ package com.example.api.gateway.model;
 /** Service identifiers for logging and error handling */
 public enum ServiceType {
     CATALOG("catalog"),
-    INVENTORY("inventory");
+    INVENTORY("inventory"),
+    ORDER("order");
 
     private final String id;
 

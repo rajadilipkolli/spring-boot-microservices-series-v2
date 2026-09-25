@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
@@ -6,6 +6,7 @@ import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.response.CustomerResponse;
+import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext dslContext;
+    private final TSID.Factory tsidFactory;
 
-    public CustomerRepositoryImpl(DSLContext dslContext) {
+    public CustomerRepositoryImpl(DSLContext dslContext, TSID.Factory tsidFactory) {
         this.dslContext = dslContext;
+        this.tsidFactory = tsidFactory;
     }
 
     @Override
@@ -72,15 +75,22 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     @Override
     public Optional<Customer> findByEmail(String customerEmail) {
+        String normalizedEmail =
+                customerEmail == null ? null : customerEmail.toLowerCase(Locale.ROOT);
         return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(customerEmail))
+                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(normalizedEmail))
                 .map(r -> r.into(Customer.class));
     }
 
     @Override
     @Transactional
     public Customer save(Customer customer) {
-        if (customer.getId() == null) {
+        if (customer.getEmail() != null) {
+            customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
+        }
+        boolean isNew = customer.getId() == null;
+        if (isNew) {
+            customer.setId(tsidFactory.generate().toLong());
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext
                     .insertInto(CUSTOMERS)
@@ -105,6 +115,11 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Override
     @Transactional
     public List<Customer> saveAll(List<Customer> customerList) {
+        for (var customer : customerList) {
+            if (customer.getId() == null) {
+                customer.setId(tsidFactory.generate().toLong());
+            }
+        }
         InsertSetMoreStep<CustomersRecord> insertStepN =
                 dslContext
                         .insertInto(CUSTOMERS)
@@ -119,6 +134,11 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Transactional
     public void deleteAll() {
         dslContext.deleteFrom(CUSTOMERS).execute();
+    }
+
+    @Override
+    public int count() {
+        return dslContext.fetchCount(CUSTOMERS);
     }
 
     @Override

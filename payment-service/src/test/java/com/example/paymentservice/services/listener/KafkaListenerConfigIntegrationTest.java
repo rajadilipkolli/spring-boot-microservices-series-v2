@@ -1,13 +1,13 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;

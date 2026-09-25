@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2024-2026 Raja Kolli.
 </p>
 ***/
 
@@ -9,10 +9,12 @@ package com.example.inventoryservice.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import com.example.common.dtos.OrderDto;
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.util.MockTestData;
+import com.example.inventoryservice.utils.AppConstants;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +48,21 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                                                         .isEqualTo(10);
                                             });
                             assertThat(stockOrderListener.getCountDownLatch().getCount()).isZero();
+                        });
+    }
+
+    @Test
+    void onSaveProductEvent() {
+        inventoryJOOQRepository.deleteByProductCode("P001");
+
+        // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
+        ProductDto productDto = new ProductDto("P001", "Product 1", "Description 1", 10.0);
+        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, "1001", productDto);
+
+        await().untilAsserted(
+                        () -> {
+                            assertThat(inventoryJOOQRepository.findByProductCode("P001"))
+                                    .isPresent();
                         });
     }
 }

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -10,6 +10,7 @@ import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.catalogservice.config.TestKafkaListenerConfig;
+import com.example.catalogservice.config.TestWebClientConfig;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.OutboxPublisher;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -26,8 +28,13 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false"},
-        classes = {SQLContainerConfig.class, TestKafkaListenerConfig.class, ContainersConfig.class})
+        properties = {"spring.cloud.config.enabled=false", "bootui.enabled=OFF"},
+        classes = {
+            SQLContainerConfig.class,
+            TestKafkaListenerConfig.class,
+            ContainersConfig.class,
+            TestWebClientConfig.class
+        })
 @AutoConfigureWebTestClient
 @AutoConfigureMetrics
 public abstract class AbstractIntegrationTest {
@@ -47,4 +54,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected OutboxPublisher outboxPublisher;
 
     @Autowired protected OutboxEventRepository outboxEventRepository;
+
+    @Autowired protected CacheManager cacheManager;
 }

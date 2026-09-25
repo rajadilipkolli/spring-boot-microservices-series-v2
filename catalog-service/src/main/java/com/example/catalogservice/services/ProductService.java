@@ -16,6 +16,7 @@ import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.security.SecureRandom;
 import java.util.Collections;
@@ -23,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,37 +45,44 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final SecureRandom RAND = new SecureRandom();
+    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
+    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
 
+    private final ProductService self;
+    private final TSID.Factory tsidFactory;
+
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
-            OutboxService outboxService) {
+            OutboxService outboxService,
+            @Lazy ProductService self,
+            TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
+        this.self = self;
+        this.tsidFactory = tsidFactory;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
+    @Cacheable(
+            cacheNames = "products",
+            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
-        Mono<Long> totalProductsCountMono = productRepository.count();
-        Flux<Product> pagedProductsFlux = productRepository.findAllBy(pageable);
-
-        return Mono.zip(totalProductsCountMono, pagedProductsFlux.collectList())
+        return productRepository
+                .count()
                 .flatMap(
-                        tuple -> {
-                            long count = tuple.getT1();
-                            List<Product> products = tuple.getT2();
-
+                        count -> {
                             if (count == 0) {
                                 return Mono.just(
                                         new PagedResult<>(
@@ -79,11 +90,20 @@ public class ProductService {
                                                         Collections.emptyList(), pageable, 0)));
                             }
 
-                            Flux<ProductResponse> productResponseFlux =
-                                    Flux.fromIterable(products)
-                                            .map(productMapper::toProductResponse);
+                            return productRepository
+                                    .findAllBy(pageable)
+                                    .collectList()
+                                    .flatMap(
+                                            products -> {
+                                                Flux<ProductResponse> productResponseFlux =
+                                                        Flux.fromIterable(products)
+                                                                .map(
+                                                                        productMapper
+                                                                                ::toProductResponse);
 
-                            return enrichWithAvailability(productResponseFlux, pageable, count);
+                                                return enrichWithAvailability(
+                                                        productResponseFlux, pageable, count);
+                                            });
                         });
     }
 
@@ -149,12 +169,13 @@ public class ProductService {
     // saves product to db and sends message that new product is available for inventory
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository
                 .findByProductCodeAllIgnoreCase(productRequest.productCode())
                 .map(productMapper::toProductResponse)
-                .switchIfEmpty(createAndSaveProduct(productRequest))
+                .switchIfEmpty(Mono.defer(() -> self.createAndSaveProduct(productRequest)))
                 // Catch DuplicateKeyException from unique constraint violation
                 .onErrorResume(
                         DuplicateKeyException.class,
@@ -176,8 +197,14 @@ public class ProductService {
     }
 
     @Transactional
-    protected Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
-        return Mono.just(productMapper.toEntity(productRequest))
+    public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
+        return Mono.fromSupplier(
+                        () -> {
+                            Product product = productMapper.toEntity(productRequest);
+                            product.setId(tsidFactory.generate().toLong());
+                            product.setNew(true);
+                            return product;
+                        })
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->
@@ -193,6 +220,7 @@ public class ProductService {
 
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Void> deleteProductById(Long id) {
         return productRepository
                 .findById(id)
@@ -223,6 +251,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
         // Update the post object with data from postRequest
         productMapper.mapProductWithRequest(productRequest, product);
@@ -247,21 +276,35 @@ public class ProductService {
     }
 
     @Transactional
-    public Mono<Boolean> generateProducts() {
-        return Flux.range(0, 101)
+    @CacheEvict(cacheNames = "products", allEntries = true)
+    public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
+        validateBatchSize(batchSize);
+        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
+
+        return Flux.range(0, resolvedBatchSize)
                 .flatMap(
                         i ->
                                 Mono.just(RAND.nextInt(100) + 1)
                                         .map(
                                                 randomPrice ->
                                                         new ProductRequest(
-                                                                "ProductCode" + i,
-                                                                "Gen Product" + i,
-                                                                "Gen Prod Description" + i,
+                                                                "ProductCode_"
+                                                                        + idempotencyKey
+                                                                        + "_"
+                                                                        + i,
+                                                                "Gen Product " + i,
+                                                                "Gen Prod Description " + i,
                                                                 null,
                                                                 (double) randomPrice)))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
+    }
+
+    private static void validateBatchSize(Integer batchSize) {
+        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
+            throw new IllegalArgumentException(
+                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
+        }
     }
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTerm(

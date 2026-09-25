@@ -8,7 +8,6 @@ package com.example.catalogservice.web.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.hamcrest.CoreMatchers.is;
 
 import com.example.catalogservice.common.AbstractCircuitBreakerTest;
 import com.example.catalogservice.entities.OutboxEvent;
@@ -19,10 +18,12 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.hypersistence.tsid.TSID;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -73,20 +75,32 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
+        if (cacheManager.getCache("products") != null) {
+            cacheManager.getCache("products").clear();
+        }
+        transitionToClosedState("default");
+        transitionToClosedState("getInventoryByProductCodes");
+        mockWebServer.setDispatcher(new mockwebserver3.QueueDispatcher());
         testKafkaListenerConfig.reset();
         List<Product> productList =
                 List.of(
                         new Product()
+                                .setId(TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
                                 .setPrice(9.0),
                         new Product()
+                                .setId(TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
                                 .setPrice(10.0),
                         new Product()
+                                .setId(TSID.fast().toLong())
+                                .setNew(true)
                                 .setProductCode("P003")
                                 .setProductName("name 3")
                                 .setDescription("description 3")
@@ -218,6 +232,46 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         // Then, As it is still failing state should not change
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
+    }
+
+    @Test
+    void shouldCacheFindAllProductsAndEvictOnSave() {
+        transitionToClosedState("getInventoryByProductCodes");
+        mockBackendEndpoint(
+                200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
+
+        // First call - should hit the endpoint and cache the result
+        webTestClient
+                .get()
+                .uri("/api/catalog?pageSize=2&pageNo=1")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(PagedResult.class);
+
+        // Verify cache is populated
+        Cache productsCache = cacheManager.getCache("products");
+        assertThat(productsCache).isNotNull();
+        // The key is "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()"
+        // pageNo=1, pageSize=2, sortBy=id (default), sortDir=asc (default)
+        assertThat(productsCache.get("1_2_id_asc")).isNotNull();
+
+        // Save a new product which should evict the cache
+        ProductRequest productRequest =
+                new ProductRequest("P004", "Product 4", "Description 4", "image-url", 10.0);
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(productRequest)
+                .exchange()
+                .expectStatus()
+                .isCreated();
+
+        // Verify cache is evicted
+        productsCache = cacheManager.getCache("products");
+        assertThat(productsCache.get("1_2_id_asc")).isNull();
     }
 
     @Test
@@ -442,7 +496,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", product.getProductCode())
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -475,7 +529,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("fetchInStock", true)
                                         .build(product.getProductCode()))
                 .exchange()
@@ -516,7 +570,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isOk()
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(Boolean.TRUE);
     }
 
@@ -537,7 +592,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isOk()
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(Boolean.FALSE);
     }
 
@@ -681,15 +737,15 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .value(is(product.getId().intValue()))
+                .isEqualTo(product.getId())
                 .jsonPath("$.productCode")
-                .value(is(product.getProductCode()))
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
-                .value(is(product.getProductName()))
+                .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
-                .value(is("Updated Catalog"))
+                .isEqualTo("Updated Catalog")
                 .jsonPath("$.price")
-                .value(is(100.00));
+                .isEqualTo(100.00);
     }
 
     @Test
@@ -820,10 +876,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            List.of(
-                                    new InventoryResponse("P001", 5),
-                                    new InventoryResponse("P002", 3),
-                                    new InventoryResponse("P003", 10))));
+                            new PagedResult<>(
+                                    List.of(
+                                            new InventoryResponse("P001", 5),
+                                            new InventoryResponse("P002", 3),
+                                            new InventoryResponse("P003", 0)),
+                                    3L,
+                                    1,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
 
             webTestClient
                     .get()
@@ -906,5 +970,32 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         .body(body)
                         .build();
         mockWebServer.enqueue(mockResponse);
+    }
+
+    @Test
+    void shouldSaveProductTwiceAndNotBeTreatedAsNew() {
+        Product product =
+                new Product()
+                        .setId(TSID.fast().toLong())
+                        .setNew(true)
+                        .setProductCode("P_DOUBLE_SAVE")
+                        .setProductName("Double Save Product")
+                        .setPrice(10.0);
+        // First save should succeed and set isNew to false
+        StepVerifier.create(productRepository.save(product))
+                .assertNext(
+                        saved -> {
+                            assertThat(saved.isNew()).isFalse();
+                        })
+                .verifyComplete();
+        // Update a field
+        product.setPrice(15.0);
+        // Second save should succeed (as an update, not a conflicting insert)
+        StepVerifier.create(productRepository.save(product))
+                .assertNext(
+                        saved -> {
+                            assertThat(saved.getPrice()).isEqualTo(15.0);
+                        })
+                .verifyComplete();
     }
 }

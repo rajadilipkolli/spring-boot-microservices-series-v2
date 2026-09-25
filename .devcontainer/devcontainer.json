@@ -11,10 +11,16 @@
 			"installMaven": "true",
 			"installGradle": "false"
 		},
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {
+		"ghcr.io/devcontainers/features/docker-in-docker:4": {
 			"version": "latest",
 			"enableNonRootDocker": "true",
 			"moby": "false"
+		},
+		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+			"version": "latest"
+		},
+		"ghcr.io/devcontainers-contrib/features/kind:1": {
+			"version": "latest"
 		}
 	},
 	"customizations": {

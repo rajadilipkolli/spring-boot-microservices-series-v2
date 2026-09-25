@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-registry
+  namespace: retailstore
+spec:
+  ports:
+  - port: 8761
+    targetPort: 8761
+  selector:
+    app: service-registry
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-registry
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-registry
+  template:
+    metadata:
+      labels:
+        app: service-registry
+    spec:
+      containers:
+      - env:
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        - name: SPRING_CONFIG_IMPORT
+          value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+        - name: OTEL_SERVICE_NAME
+          value: service-registry
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=service-registry,service.version=0.0.1-SNAPSHOT
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8761
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: service-registry
+        ports:
+        - containerPort: 8761
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8761
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1400Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8761
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - 'until wget -q -O /dev/null http://config-server:8888/actuator/health/readiness
+          2>/dev/null; do echo waiting for config-server; sleep 3; done;
+
+          '
+        image: busybox:1.36
+        name: wait-for-dependencies
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: service-registry
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume

@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public record CreateOrderRequest(
-        @NotEmpty(message = "Items cannot be empty.") List<OrderItemRequest> items,
+        @NotEmpty(message = "Items cannot be empty.") List<@Valid OrderItemRequest> items,
         @Valid CustomerRequest customer,
         @Valid Address deliveryAddress)
         implements Serializable {

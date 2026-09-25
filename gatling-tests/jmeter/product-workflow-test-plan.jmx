@@ -257,8 +257,8 @@ return &quot;Inventory prepared for update&quot;</stringProp>
         </HTTPSamplerProxy>
         <hashTree/>
         <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="Random Customer ID" enabled="true">
-          <stringProp name="maximumValue">100</stringProp>
-          <stringProp name="minimumValue">1</stringProp>
+          <stringProp name="maximumValue">1000</stringProp>
+          <stringProp name="minimumValue">101</stringProp>
           <stringProp name="outputFormat"></stringProp>
           <boolProp name="perThread">false</boolProp>
           <stringProp name="randomSeed"></stringProp>

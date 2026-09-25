@@ -6,9 +6,9 @@
 
 package com.example.orderservice.web.controllers;
 
-import com.example.common.dtos.OrderDto;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -22,6 +22,8 @@ import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,6 +40,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -104,7 +108,7 @@ class OrderController implements OrderApi {
                 .body(OrderResponse.emptyResponse(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
@@ -134,9 +138,14 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    @GetMapping("/generate")
-    GenericResponse createMockOrders() {
-        orderGeneratorService.generateOrders();
+    @PostMapping("/generate")
+    GenericResponse createMockOrders(
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
+            @RequestParam(required = false)
+                    @Min(1)
+                    @Max(OrderGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize) {
+        orderGeneratorService.generateOrders(idempotencyKey, batchSize);
         return new GenericResponse(true);
     }
 
@@ -159,7 +168,8 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping("/customer/{id}")
-    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }

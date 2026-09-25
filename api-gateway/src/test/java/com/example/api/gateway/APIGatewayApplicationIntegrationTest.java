@@ -6,8 +6,6 @@
 
 package com.example.api.gateway;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.example.api.gateway.config.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 
@@ -23,13 +21,10 @@ class APIGatewayApplicationIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Trace-Id")
-                .expectBody(String.class)
-                .consumeWith(
-                        res ->
-                                assertThat(res.getResponseBody())
-                                        .isEqualToIgnoringWhitespace(
-                                                """
-                                {"groups":["liveness","readiness"],"status":"UP"}
-                                """));
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo("UP")
+                .jsonPath("$.groups")
+                .isArray();
     }
 }

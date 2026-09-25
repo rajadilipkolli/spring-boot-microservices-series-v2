@@ -10,6 +10,7 @@ import static com.example.inventoryservice.jooq.tables.Inventory.INVENTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.inventoryservice.common.SQLContainersConfig;
+import com.example.inventoryservice.config.JooqConfig;
 import com.example.inventoryservice.entities.Inventory;
 import java.util.List;
 import org.jooq.DSLContext;
@@ -21,7 +22,7 @@ import org.springframework.boot.jooq.test.autoconfigure.JooqTest;
 import org.springframework.context.annotation.Import;
 
 @JooqTest(properties = {"spring.cloud.config.enabled=false"})
-@Import(SQLContainersConfig.class)
+@Import({SQLContainersConfig.class, JooqConfig.class})
 @AutoConfigureTestDatabase
 class JOOQInventoryRepositoryTest {
 
@@ -37,10 +38,12 @@ class JOOQInventoryRepositoryTest {
         List<Inventory> inventoryList =
                 List.of(
                         new Inventory()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
                                 .setProductCode("product1")
                                 .setAvailableQuantity(10)
                                 .setReservedItems(0),
                         new Inventory()
+                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
                                 .setProductCode("product2")
                                 .setAvailableQuantity(0)
                                 .setReservedItems(0));

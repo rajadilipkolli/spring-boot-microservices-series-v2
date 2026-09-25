@@ -1,15 +1,17 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.utils.LogSanitizer;
 import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -27,15 +29,31 @@ public class PaymentOrderManageService {
 
     private final CustomerRepository customerRepository;
     private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final Counter paymentsStartedCounter;
+    private final Counter paymentsSuccessfulCounter;
+    private final Counter paymentsFailedCounter;
 
     public PaymentOrderManageService(
-            CustomerRepository customerRepository, KafkaTemplate<String, OrderDto> kafkaTemplate) {
+            MeterRegistry meterRegistry,
+            CustomerRepository customerRepository,
+            KafkaTemplate<String, OrderDto> kafkaTemplate) {
         this.customerRepository = customerRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.paymentsStartedCounter = meterRegistry.counter("payments_started");
+        this.paymentsSuccessfulCounter = meterRegistry.counter("payments_successful");
+        this.paymentsFailedCounter = meterRegistry.counter("payments_failed");
     }
 
+    /**
+     * Reserves the customer's available balance and publishes the payment outcome.
+     *
+     * @param orderDto order whose payment should be reserved
+     * @return the order with its payment status and source
+     * @throws CustomerNotFoundException if the order's customer does not exist
+     */
     @Timed(percentiles = 1.0)
     public OrderDto reserve(OrderDto orderDto) {
+        this.paymentsStartedCounter.increment();
         log.debug(
                 "Reserving Order with Id :{} in payment service with payload {}",
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
@@ -54,10 +72,12 @@ public class PaymentOrderManageService {
 
             if (totalOrderPrice <= customer.getAmountAvailable()) {
                 orderDto = orderDto.withStatus("ACCEPT");
+                this.paymentsSuccessfulCounter.increment();
                 customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
                 customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
             } else {
                 orderDto = orderDto.withStatus("REJECT");
+                this.paymentsFailedCounter.increment();
             }
             log.info(
                     "Saving customer: {} after reserving",

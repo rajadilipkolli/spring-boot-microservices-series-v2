@@ -17,17 +17,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.model.payload.OrderDto;
+import com.example.inventoryservice.model.payload.OrderItemDto;
+import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -39,7 +42,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 class InventoryOrderManageServiceTest {
 
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private InventoryJOOQRepository inventoryJOOQRepository;
     @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private MeterRegistry meterRegistry;
 
     @Captor ArgumentCaptor<Collection<Inventory>> argumentCaptor;
 
@@ -111,7 +118,7 @@ class InventoryOrderManageServiceTest {
                         eq(String.valueOf(orderDto.orderId())),
                         any(OrderDto.class));
         verify(inventoryRepository, times(0)).saveAll(anyList());
-        verifyNoMoreInteractions(inventoryRepository);
+        verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository);
     }
 
     @Test
@@ -140,7 +147,7 @@ class InventoryOrderManageServiceTest {
                         orderDtoCaptor.capture());
         assertThat(orderDtoCaptor.getValue().status()).isEqualTo("REJECT");
         verify(inventoryRepository, times(0)).saveAll(anyList());
-        verifyNoMoreInteractions(inventoryRepository);
+        verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository);
     }
 
     @Test
@@ -156,7 +163,7 @@ class InventoryOrderManageServiceTest {
 
         // Assert
         assertThat(result.status()).isEqualTo("REJECT");
-        verifyNoInteractions(kafkaTemplate, inventoryRepository);
+        verifyNoInteractions(kafkaTemplate, inventoryRepository, inventoryJOOQRepository);
     }
 
     @Test
@@ -188,7 +195,7 @@ class InventoryOrderManageServiceTest {
         verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
         verify(inventoryRepository, times(1)).saveAll(anyCollection());
         assertThat(orderDto.status()).isEqualTo("CONFIRMED");
-        verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
+        verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository, kafkaTemplate);
     }
 
     @Test
@@ -235,6 +242,6 @@ class InventoryOrderManageServiceTest {
                             assertThat(list.get(1).getAvailableQuantity()).isIn(20, 40);
                             assertThat(list.get(1).getReservedItems()).isIn(0, -10, -20);
                         });
-        verifyNoMoreInteractions(inventoryRepository, kafkaTemplate);
+        verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository, kafkaTemplate);
     }
 }

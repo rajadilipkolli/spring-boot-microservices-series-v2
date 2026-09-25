@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -30,7 +30,10 @@ class ApiGatewayConfiguration {
                                                                 .addRequestHeader(
                                                                         "MyHeader", "MyURI")
                                                                 .addRequestParameter(
-                                                                        "Param", "MyValue"))
+                                                                        "Param", "MyValue")
+                                                                .addResponseHeader(
+                                                                        "X-Response-Header",
+                                                                        "Transformed"))
                                         .uri(httpbinUri))
                 .route(
                         p ->

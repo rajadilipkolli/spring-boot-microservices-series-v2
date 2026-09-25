@@ -158,6 +158,7 @@ Each documentation file includes detailed mappings between:
 - **Web Layer:** API design and validation
 
 ### Best Practices
+- **Event Contract:** Kafka type-info headers are disabled for DTO serialization. Consumers must explicitly type their payloads.
 - **Error Handling:** Comprehensive exception management
 - **Logging:** Structured logging with correlation IDs
 - **Testing:** Test pyramid with appropriate coverage

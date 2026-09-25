@@ -1,17 +1,17 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.orderservice.util;
 
-import com.example.common.dtos.OrderDto;
-import com.example.common.dtos.OrderItemDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
+import com.example.orderservice.model.dtos.OrderDto;
+import com.example.orderservice.model.dtos.OrderItemDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;

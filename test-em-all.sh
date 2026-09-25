@@ -39,15 +39,22 @@ function jq() {
 }
 
 # Default variables with fallback values using parameter expansion
+: ${PROTOCOL=http}
 : ${HOST=localhost}
 : ${PORT=8765}
+
+if [[ "$PROTOCOL" == "https" ]]; then
+  BASE_URL="${PROTOCOL}://${HOST}"
+else
+  BASE_URL="${PROTOCOL}://${HOST}:${PORT}"
+fi
 : ${PROD_CODE=P0001}
 : ${PROD_CODE_1=P0002}
 : ${CUSTOMER_NAME=dockerCustomer001}
 : ${SERVICE_WAIT_TIMEOUT=100}
 : ${INITIAL_SLEEP_TIME=45}
 : ${RETRY_SLEEP_TIME=5}
-: ${ORDER_PROCESSING_SLEEP_TIME=3}
+: ${ORDER_PROCESSING_SLEEP_TIME=8}
 : ${KAFKA_STARTUP_SLEEP_TIME=8}
 : ${DETAILED_LOGS=false}
 : ${PARALLEL_SETUP=false}
@@ -99,6 +106,10 @@ done
 # Deployment file locations
 DOCKER_COMPOSE_FILE="deployment/docker-compose.yml"
 DOCKER_COMPOSE_TOOLS_FILE="deployment/docker-compose-tools.yml"
+COMPOSE_FILE_TO_USE="${DOCKER_COMPOSE_FILE}"
+if [[ $@ == *"setup"* ]]; then
+  COMPOSE_FILE_TO_USE="${DOCKER_COMPOSE_TOOLS_FILE}"
+fi
 
 # Global tracking variables
 TEST_STATUS=0
@@ -118,12 +129,12 @@ API_VERIFY_END_TIME=0
 function error_exit() {
   local message="$1"
   local exit_code="${2:-1}" # Default exit code is 1
-  
+
   echo -e "\n${RED}❌ ERROR: ${message}${NC}" >&2
-  
+
   # Print test summary before exiting
   print_summary
-  
+
   exit "${exit_code}"
 }
 
@@ -150,10 +161,10 @@ function track_test_result() {
   local name="$1"
   local result="$2"
   local details="${3:-}"
-  
+
   TOTAL_TESTS=$((TOTAL_TESTS + 1))
   TEST_RESULTS+=("$name: $result")
-  
+
   if [[ "$result" == "PASS" ]]; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
   else
@@ -169,29 +180,29 @@ function track_test_result() {
 function print_summary() {
   local end_time=$(date +%s)
   local time_taken=$((end_time - START_TIME))
-  
+
   echo -e "\n${BLUE}=============================================="
   echo -e "TEST SUMMARY"
   echo -e "===============================================${NC}"
   echo -e "Total tests run: ${TOTAL_TESTS}"
   echo -e "Tests passed: ${GREEN}${PASSED_TESTS}${NC}"
-  
+
   if [[ ${#FAILED_TESTS[@]} -gt 0 ]]; then
     echo -e "Tests failed: ${RED}$((TOTAL_TESTS - PASSED_TESTS))${NC}"
     echo -e "${RED}Failed tests: ${FAILED_TESTS[*]}${NC}"
   else
     echo -e "All tests passed! 🎉"
   fi
-  
+
   # Print performance metrics if available
   if [[ $SETUP_START_TIME -gt 0 && $SETUP_END_TIME -gt 0 ]]; then
     echo -e "Setup time: $((SETUP_END_TIME - SETUP_START_TIME)) seconds"
   fi
-  
+
   if [[ $API_VERIFY_START_TIME -gt 0 && $API_VERIFY_END_TIME -gt 0 ]]; then
     echo -e "API verification time: $((API_VERIFY_END_TIME - API_VERIFY_START_TIME)) seconds"
   fi
-  
+
   echo -e "Total execution time: ${time_taken} seconds"
   echo -e "${BLUE}===============================================${NC}"
 }
@@ -201,7 +212,7 @@ function assertCurl() {
   local curlCmd="$2 -w \"%{http_code}\""
   local testName="${3:-API Call}"
   local result
-  
+
   # Use command substitution with error handling
   if ! result=$(eval ${curlCmd} 2>/dev/null); then
     echo -e "${RED}Curl command failed: $curlCmd${NC}"
@@ -209,7 +220,7 @@ function assertCurl() {
     TEST_STATUS=1
     return 1
   fi
-  
+
   local httpCode="${result:(-3)}"
   RESPONSE='' && (( ${#result} > 3 )) && RESPONSE="${result%???}"
   # Strip \r from RESPONSE for Windows compatibility
@@ -266,7 +277,7 @@ function testUrl() {
 function waitForService() {
     local url=$@
     local service_name=$(echo $url | grep -o -E '[^/]+/actuator/health' || echo "Service")
-    
+
     echo -e "${CYAN}Wait for: $service_name...${NC}"
     n=0
     until testUrl ${url}
@@ -299,8 +310,8 @@ function recreateComposite() {
     local methodType=$4
     local testName="API Request to $baseURL"
 
-    echo -e "${CYAN}Calling URL http://${HOST}:${PORT}/${baseURL} with body -${NC} $composite"
-    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k http://${HOST}:${PORT}/${baseURL} -H "Content-Type: application/json" \
+    echo -e "${CYAN}Calling URL ${BASE_URL}/${baseURL} with body -${NC} $composite"
+    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k ${BASE_URL}/${baseURL} -H "Content-Type: application/json" \
     --data "$composite")
 
     # Check if curl was successful
@@ -339,9 +350,9 @@ function setupTestData() {
     # Waiting for kafka to process the catalog creation request, as it is first time kafka initialization takes time
     log_info "Waiting for Kafka to process catalog creation (${RETRY_SLEEP_TIME}s)..."
     sleep ${RETRY_SLEEP_TIME}
-    
+
     # Verify that a normal request works, expect record exists with product code
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE" || return 1
+    assertCurl 200 "curl -k $BASE_URL/inventory-service/api/inventory/$PROD_CODE" || return 1
     assertEqual \"${PROD_CODE}\" $(echo ${RESPONSE} | jq .productCode) || return 1
 
     body="{\"productCode\":\"$PROD_CODE"
@@ -352,7 +363,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that a normal request works, expect record exists with product code_1
-    assertCurl 200 "curl -k http://$HOST:$PORT/inventory-service/api/inventory/$PROD_CODE_1" || return 1
+    assertCurl 200 "curl -k $BASE_URL/inventory-service/api/inventory/$PROD_CODE_1" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
 
     body="{\"productCode\":\"$PROD_CODE_1"
@@ -363,7 +374,7 @@ function setupTestData() {
     recreateComposite $(echo "$RESPONSE" | jq -r .id) "$body" "inventory-service/api/inventory/$(echo "$RESPONSE" | jq -r .id)" "PUT" || return 1
 
     # Verify that communication between catalog-service and inventory service is established
-    assertCurl 200 "curl -k http://$HOST:$PORT/catalog-service/api/catalog/productCode/$PROD_CODE_1?fetchInStock=true" || return 1
+    assertCurl 200 "curl -k $BASE_URL/catalog-service/api/catalog/product-code/$PROD_CODE_1?fetchInStock=true" || return 1
     assertEqual \"${PROD_CODE_1}\" $(echo ${RESPONSE} | jq .productCode) || return 1
     assertEqual true $(echo ${RESPONSE} | jq .inStock) || return 1
 
@@ -381,7 +392,7 @@ function setupTestData() {
         track_test_result "Customer creation" "FAIL" "Invalid customer ID returned"
         return 1
     fi
-    
+
     SETUP_END_TIME=$(date +%s)
     log_success "Test data setup completed successfully in $((SETUP_END_TIME - SETUP_START_TIME)) seconds."
 }
@@ -402,15 +413,15 @@ function testCircuitBreaker() {
     local SERVICES_TEST=("catalog-service" "inventory-service" "order-service")
     for s in "${SERVICES_TEST[@]}"; do
       if [[ "$s" == "catalog-service" ]]; then
-        url="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
+        url="${BASE_URL}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
       elif [[ "$s" == "order-service" ]]; then
         ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
         if [[ -z "${ORDER_ID_FROM_COMPOSITE}" ]]; then
           ORDER_ID_FROM_COMPOSITE=1
         fi
-        url="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+        url="${BASE_URL}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
       else
-        url="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+        url="${BASE_URL}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
       fi
 
       start_ts=$(date +%s)
@@ -441,8 +452,8 @@ function testCircuitBreaker() {
     echo "\nStart Circuit Breaker tests for ${svc}!"
 
     # Health endpoint (gateway)
-    HEALTH_URL="http://${HOST}:${PORT}/${svc}/actuator/health"
-    health_payload=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    HEALTH_URL="${BASE_URL}/${svc}/actuator/health"
+    health_payload=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
 
     # function to extract CB state (tries multiple paths)
     get_state() {
@@ -482,9 +493,9 @@ function testCircuitBreaker() {
 
     # endpoints (pick sensible endpoints per service). For order-service try to reuse last COMPOSITE_RESPONSE orderId
     if [[ "$svc" == "catalog-service" ]]; then
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/productCode/${PROD_CODE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/catalog-service/api/catalog/DOESNOTEXIST"
+      SLOW_ENDPOINT="${BASE_URL}/catalog-service/api/catalog/product-code/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="${BASE_URL}/catalog-service/api/catalog/product-code/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="${BASE_URL}/catalog-service/api/catalog/DOESNOTEXIST"
     elif [[ "$svc" == "order-service" ]]; then
       # Try to pick a numeric order id from the last COMPOSITE_RESPONSE created during verifyAPIs/setup
       ORDER_ID_FROM_COMPOSITE=$(echo "${COMPOSITE_RESPONSE:-}" | jq -r '.orderId // empty' 2>/dev/null || true)
@@ -492,13 +503,13 @@ function testCircuitBreaker() {
         # fall back to 1 (many test runs create id=1) — conservative best-effort
         ORDER_ID_FROM_COMPOSITE=1
       fi
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/order-service/api/orders/9999999"
+      SLOW_ENDPOINT="${BASE_URL}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="${BASE_URL}/order-service/api/orders/${ORDER_ID_FROM_COMPOSITE}"
+      NOT_FOUND_ENDPOINT="${BASE_URL}/order-service/api/orders/9999999"
     else
-      SLOW_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
-      NORMAL_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/${PROD_CODE}"
-      NOT_FOUND_ENDPOINT="http://${HOST}:${PORT}/inventory-service/api/inventory/DOESNOTEXIST"
+      SLOW_ENDPOINT="${BASE_URL}/inventory-service/api/inventory/${PROD_CODE}${DELAY_QUERY}"
+      NORMAL_ENDPOINT="${BASE_URL}/inventory-service/api/inventory/${PROD_CODE}"
+      NOT_FOUND_ENDPOINT="${BASE_URL}/inventory-service/api/inventory/DOESNOTEXIST"
     fi
 
     # Run 3 slow calls expecting failures (accept 500 or fallback 200)
@@ -533,9 +544,9 @@ function testCircuitBreaker() {
     if [[ "${CB_STRICT}" == "true" ]]; then
       log_info "CB_STRICT is enabled — attempting deterministic induction for ${svc}"
       # Try to stop the single service container using docker compose. If docker is not available, warn and continue.
-      if command -v docker > /dev/null 2>&1 && docker compose -f ${DOCKER_COMPOSE_FILE} ps > /dev/null 2>&1; then
+      if command -v docker > /dev/null 2>&1 && docker compose -f ${COMPOSE_FILE_TO_USE} ps > /dev/null 2>&1; then
         log_info "Stopping ${svc} container to induce failures..."
-        if docker compose -f ${DOCKER_COMPOSE_FILE} stop ${svc} 2>/dev/null; then
+        if docker compose -f ${COMPOSE_FILE_TO_USE} stop ${svc} 2>/dev/null; then
           sleep 2
           # Run a few fast requests which should fail quickly via gateway timeout/fallback
           strict_ok=false
@@ -561,7 +572,7 @@ function testCircuitBreaker() {
 
           # Start the service back up
           log_info "Starting ${svc} container back up..."
-          docker compose -f ${DOCKER_COMPOSE_FILE} start ${svc} 2>/dev/null || true
+          docker compose -f ${COMPOSE_FILE_TO_USE} start ${svc} 2>/dev/null || true
           # give some time for service to register
           sleep 5
         else
@@ -619,7 +630,7 @@ function testCircuitBreaker() {
     # Wait up to 10s for HALF_OPEN (mimic attached sleep)
     echo "Will sleep for 10 sec waiting for the CB to go Half Open for ${svc}..."
     sleep 10
-    after_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    after_health=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
     half_state=$(get_state "$after_health" "$cb_key")
     if [[ "$half_state" == "HALF_OPEN" ]]; then
       track_test_result "Circuit breaker half-open: ${svc}" "PASS" "HALF_OPEN"
@@ -640,7 +651,7 @@ function testCircuitBreaker() {
     done
 
     # Final health check for CLOSED
-    final_health=$(curl -s "${HEALTH_URL}" 2>/dev/null || true)
+    final_health=$(curl -s -k "${HEALTH_URL}" 2>/dev/null || true)
     final_state=$(get_state "$final_health" "$cb_key")
     if [[ "$final_state" == "CLOSED" ]]; then
       track_test_result "Circuit breaker final state: ${svc}" "PASS" "CLOSED"
@@ -650,8 +661,8 @@ function testCircuitBreaker() {
 
     # Try to fetch circuit breaker events (best-effort)
     if [[ -n "$cb_key" ]]; then
-      events_url="http://${HOST}:${PORT}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
-      ev=$(curl -s "${events_url}" 2>/dev/null || true)
+      events_url="${BASE_URL}/${svc}/actuator/circuitbreakerevents/${cb_key}/STATE_TRANSITION"
+      ev=$(curl -s -k "${events_url}" 2>/dev/null || true)
       if [[ -n "$ev" && "$ev" != "" ]]; then
         t1=$(echo "$ev" | jq -r '.circuitBreakerEvents[-3].stateTransition' 2>/dev/null || true)
         t2=$(echo "$ev" | jq -r '.circuitBreakerEvents[-2].stateTransition' 2>/dev/null || true)
@@ -695,14 +706,14 @@ function verifyAPIs() {
 
     log_info "Sleeping for ${KAFKA_STARTUP_SLEEP_TIME} sec as it is first order, letting kafka start in all services. Processing orderId - $ORDER_ID"
     sleep ${KAFKA_STARTUP_SLEEP_TIME}    # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" "Order status check for $ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" "Order status check for $ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) "Order ID check" || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) "Customer ID check" || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) "Order status check" || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) "Order source check" || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" "Customer payment check" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" "Customer payment check" || return 1
     assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) "Customer balance check" || return 1
 
     # Step2, Order Should be rejected
@@ -724,17 +735,17 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
-    # Step 3, Order Should be CONFIRMED 
+    # Step 3, Order Should be CONFIRMED
     echo "Step 3: Testing another order confirmation..."
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
@@ -753,17 +764,17 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
-    # Step 4, Order Should be ROLLBACK 
+    # Step 4, Order Should be ROLLBACK
     echo "Step 4: Testing order rollback due to payment issues..."
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
@@ -782,17 +793,17 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"ROLLBACK\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"PAYMENT\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
-    # Step 5, Order Should be REJECTED 
+    # Step 5, Order Should be REJECTED
     echo "Step 5: Testing order rejection..."
     body="{\"customerId\": $CUSTOMER_ID"
     body+=\
@@ -811,14 +822,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is ROLLBACK
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order cant be processed
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
@@ -845,14 +856,14 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is CONFIRMED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"CONFIRMED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual null $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
@@ -879,18 +890,62 @@ function verifyAPIs() {
     sleep ${ORDER_PROCESSING_SLEEP_TIME}
 
     # Verify that order processing is completed and status is REJECTED
-    assertCurl 200 "curl -k http://$HOST:$PORT/order-service/api/orders/$ORDER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/order-service/api/orders/$ORDER_ID" || return 1
     assertEqual $ORDER_ID $(echo ${RESPONSE} | jq .orderId) || return 1
     assertEqual $CUSTOMER_ID $(echo ${RESPONSE} | jq .customerId) || return 1
     assertEqual \"REJECTED\" $(echo ${RESPONSE} | jq .status) || return 1
     assertEqual \"INVENTORY\" $(echo ${RESPONSE} | jq .source) || return 1
 
     # Verify that amountAvailable is not deducted as per order
-    assertCurl 200 "curl -k http://$HOST:$PORT/payment-service/api/customers/$CUSTOMER_ID" || return 1
+    assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
     assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
-    
+
     API_VERIFY_END_TIME=$(date +%s)
     log_success "All API verification tests completed successfully in $((API_VERIFY_END_TIME - API_VERIFY_START_TIME)) seconds."
+}
+
+function verifyKeycloakUsers() {
+    log_info "Verifying Keycloak users are loaded..."
+    local token_response
+    local max_attempts=12
+    local attempt=1
+
+    # Load environment variables from deployment/.env if it exists, safely handling Windows \r
+    if [ -f "deployment/.env" ]; then
+        while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ ]] || [[ -z "$key" ]] && continue
+            # Remove trailing \r from value and export
+            export "$key=${value%$'\r'}"
+        done < deployment/.env
+    fi
+
+    local client_secret="${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}"
+    local raja_password="${RAJA_PASSWORD:-demo-throwaway-raja-pass}"
+
+    while [ $attempt -le $max_attempts ]; do
+        # Attempt to fetch a token for the 'raja' user.
+        local kc_url="${KEYCLOAK_URL:-http://${HOST}:9191}"
+        token_response=$(curl -s -k -u "retailstore-webapp:${client_secret}" \
+            -X POST "${kc_url}/realms/retailstore/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=raja" \
+            --data-urlencode "password=${raja_password}" \
+            -d "grant_type=password" || true)
+
+        if [[ "$token_response" == *"access_token"* ]]; then
+            log_info "Keycloak users verified successfully on attempt $attempt!"
+            return 0
+        fi
+
+        log_info "Users not loaded yet (attempt $attempt/$max_attempts). Waiting 5 seconds..."
+        sleep 5
+        ((attempt++))
+    done
+
+    echo -e "${RED}ERROR: Failed to verify Keycloak users! Terraform might not have finished or loaded the users.${NC}" >&2
+    echo -e "${RED}ERROR: Last Response: $token_response${NC}" >&2
+    return 1
 }
 
 # Function to display help message
@@ -930,8 +985,8 @@ for arg in "$@"; do
 done
 
 # Check if jq is installed
-command -v jq > /dev/null 2>&1 || { 
-  error_exit "jq is required but not installed. Please install jq first." 
+command -v jq > /dev/null 2>&1 || {
+  error_exit "jq is required but not installed. Please install jq first."
 }
 
 # Check for Windows environment and print helper message for PowerShell
@@ -953,17 +1008,17 @@ echo -e "SERVICE_WAIT_TIMEOUT=${SERVICE_WAIT_TIMEOUT}"
 # Handle docker compose operations based on command line arguments
 if [[ $@ == *"start"* ]]; then
     log_info "Restarting the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v
-    echo "$ docker compose up -d"
-    docker compose -f ${DOCKER_COMPOSE_FILE} up -d
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform up -d"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform up -d
 fi
 
 # If only running circuit breaker checks, skip setup and API tests
 if [[ $@ == *"circuit-test"* ]]; then
   log_info "Running only circuit breaker checks (skipping full setup)..."
   # Ensure gateway is reachable
-  waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
+  waitForService curl -k ${BASE_URL}/actuator/health || error_exit "Gateway service is not available"
   testCircuitBreaker || error_exit "Circuit breaker tests failed or encountered an error"
   print_summary
   exit ${TEST_STATUS}
@@ -971,26 +1026,34 @@ fi
 
 if [[ $@ == *"setup"* ]]; then
     log_info "Restarting the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v
-    echo "$ docker compose up -d"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} up -d
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform up -d"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform up -d
 fi
 
 # Wait for gateway health check endpoint
 log_info "Checking API Gateway availability..."
-waitForService curl -k http://${HOST}:${PORT}/actuator/health || error_exit "Gateway service is not available"
+waitForService curl -k ${BASE_URL}/actuator/health || error_exit "Gateway service is not available"
 
 # Waiting for services to come up
 log_info "Sleeping for ${INITIAL_SLEEP_TIME} sec for services to start"
 sleep ${INITIAL_SLEEP_TIME}
 
-# Check all required services 
+# Check all required services
 log_info "Checking service health..."
-waitForService curl -k http://${HOST}:${PORT}/CATALOG-SERVICE/catalog-service/actuator/health || error_exit "Catalog service is not available"
-waitForService curl -k http://${HOST}:${PORT}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
-waitForService curl -k http://${HOST}:${PORT}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
-waitForService curl -k http://${HOST}:${PORT}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+waitForService curl -k ${BASE_URL}/CATALOG-SERVICE/catalog-service/actuator/health || error_exit "Catalog service is not available"
+waitForService curl -k ${BASE_URL}/INVENTORY-SERVICE/inventory-service/actuator/health || error_exit "Inventory service is not available"
+waitForService curl -k ${BASE_URL}/ORDER-SERVICE/order-service/actuator/health || error_exit "Order service is not available"
+waitForService curl -k ${BASE_URL}/PAYMENT-SERVICE/payment-service/actuator/health || error_exit "Payment service is not available"
+
+verifyKeycloakUsers || error_exit "Keycloak user verification failed"
+
+log_info "Warming up services via API Gateway /api/v1/generate endpoint..."
+BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
+curl -X POST -s -k -H "Idempotency-Key: ${BATCH_ID}" "$BASE_URL/api/v1/generate?batchSize=1" > /dev/null 2>&1
+log_info "Sleeping for 10 sec for warmup processing to complete..."
+sleep 10
 
 log_info "Setting up test data..."
 setupTestData || error_exit "Test data setup failed!"
@@ -1010,14 +1073,14 @@ echo -e "${GREEN}===============================================${NC}"
 # Clean up based on command line arguments
 if [[ $@ == *"stop"* ]]; then
     log_info "We are done, stopping the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_FILE} down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_FILE} --profile terraform down --remove-orphans -v
 fi
 
 if [[ $@ == *"teardown"* ]]; then
     log_info "We are done, stopping the test environment..."
-    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v"
-    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} down --remove-orphans -v
+    echo "$ docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v"
+    docker compose -f ${DOCKER_COMPOSE_TOOLS_FILE} --profile terraform down --remove-orphans -v
 fi
 
 # Print final summary

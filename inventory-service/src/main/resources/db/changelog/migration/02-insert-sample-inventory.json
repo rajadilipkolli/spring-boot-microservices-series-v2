@@ -5,11 +5,26 @@
         "id": "insert-sample-inventory",
         "author": "system",
         "context": "sample-data",
+        "preConditions": [
+          {
+            "onFail": "MARK_RAN",
+            "sqlCheck": {
+              "expectedResult": "0",
+              "sql": "SELECT COUNT(*) FROM inventory WHERE product_code = 'P001'"
+            }
+          }
+        ],
         "changes": [
           {
             "insert": {
               "tableName": "inventory",
               "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "value": 1
+                  }
+                },
                 {
                   "column": {
                     "name": "product_code",
@@ -19,7 +34,7 @@
                 {
                   "column": {
                     "name": "quantity",
-                    "value": 50
+                    "value": 50000
                   }
                 },
                 {
@@ -35,6 +50,12 @@
             "insert": {
               "tableName": "inventory",
               "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "value": 2
+                  }
+                },
                 {
                   "column": {
                     "name": "product_code",
@@ -62,6 +83,12 @@
               "columns": [
                 {
                   "column": {
+                    "name": "id",
+                    "value": 3
+                  }
+                },
+                {
+                  "column": {
                     "name": "product_code",
                     "value": "P003"
                   }
@@ -85,6 +112,12 @@
             "insert": {
               "tableName": "inventory",
               "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "value": 4
+                  }
+                },
                 {
                   "column": {
                     "name": "product_code",
@@ -112,6 +145,12 @@
               "columns": [
                 {
                   "column": {
+                    "name": "id",
+                    "value": 5
+                  }
+                },
+                {
+                  "column": {
                     "name": "product_code",
                     "value": "P005"
                   }
@@ -119,7 +158,7 @@
                 {
                   "column": {
                     "name": "quantity",
-                    "value": 100
+                    "value": 50000
                   }
                 },
                 {

@@ -176,7 +176,7 @@ sequenceDiagram
         Note right of Spring: OAuth2LoginAuthenticationFilter<br/>Handles the callback
         
         Spring->>KC: Exchange code for tokens
-        Note right of KC: POST /realms/retailstore/protocol/openid-connect/token<br/>Parameters:<br/>- grant_type=authorization_code<br/>- code={authorization_code}<br/>- client_id=retailstore-webapp<br/>- client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+        Note right of KC: POST /realms/retailstore/protocol/openid-connect/token<br/>Parameters:<br/>- grant_type=authorization_code<br/>- code={authorization_code}<br/>- client_id=retailstore-webapp<br/>- client_secret=demo-throwaway-oauth-secret
         
         KC-->>Spring: Access Token + ID Token
         Note right of Spring: JWT tokens containing:<br/>- User info (preferred_username, email)<br/>- Roles and permissions<br/>- Token expiry (300 seconds)
@@ -216,7 +216,7 @@ SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 ```properties
 # OAuth2 Client Registration
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope=openid, profile
 spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={baseUrl}/login/oauth2/code/retailstore-webapp
@@ -444,7 +444,7 @@ public ResponseEntity<InventoryResponse> updateInventory(@RequestBody InventoryU
 ```json
 {
   "clientId": "retailstore-webapp",
-  "secret": "P1sibsIrELBhmvK18BOzw1bUl96DcP2z",
+  "secret": "demo-throwaway-oauth-secret",
   "redirectUris": [
     "http://localhost:8080/login/oauth2/code/retailstore-webapp"
   ],

@@ -13,4 +13,8 @@ spring:
             scope:
               - openid
               - profile
-              - email
+
+logging:
+  level:
+    org.springframework.web.client: DEBUG
+    com.github.tomakehurst.wiremock: DEBUG

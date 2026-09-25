@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-strategy-patch
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: spring-boot-app # Will target container by index using JSON patch if Kustomize Strategic Merge fails, but for Spring boot apps they all have different names. Wait, JSON Patch is better for this!
+

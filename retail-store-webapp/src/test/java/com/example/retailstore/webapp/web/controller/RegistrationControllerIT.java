@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
-import com.example.retailstore.webapp.web.model.request.RegistrationRequest;
+import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

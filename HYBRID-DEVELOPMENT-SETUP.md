@@ -207,12 +207,12 @@ curl http://localhost:8761/eureka/apps
 
 ## 🚦 Service Status Endpoints
 
-| Service | Health Check | Admin Interface |
-|---------|-------------|-----------------|
-| **Keycloak** | http://localhost:9191/health | http://localhost:9191/admin |
-| **API Gateway** | http://localhost:8765/actuator/health | - |
-| **Service Registry** | http://localhost:8761/actuator/health | http://localhost:8761 |
-| **Config Server** | http://localhost:8888/actuator/health | - |
+| Service              | Health Check                          | Admin Interface             |
+|----------------------|---------------------------------------|-----------------------------|
+| **Keycloak**         | http://localhost:9191/health          | http://localhost:9191/admin |
+| **API Gateway**      | http://localhost:8765/actuator/health | -                           |
+| **Service Registry** | http://localhost:8761/actuator/health | http://localhost:8761       |
+| **Config Server**    | http://localhost:8888/actuator/health | -                           |
 
 ## 📝 Development Workflow
 
