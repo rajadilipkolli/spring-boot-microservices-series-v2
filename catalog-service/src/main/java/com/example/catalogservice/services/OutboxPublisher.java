@@ -100,7 +100,15 @@ public class OutboxPublisher {
         event.setStatus(OutboxEventStatus.PUBLISHED).setProcessedAt(OffsetDateTime.now());
         return outboxEventRepository
                 .save(event)
-                .doOnSuccess(saved -> publishedEventCounter.increment());
+                .doOnSuccess(saved -> publishedEventCounter.increment())
+                .onErrorResume(
+                        org.springframework.dao.OptimisticLockingFailureException.class,
+                        ex -> {
+                            log.warn(
+                                    "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                    event.getId());
+                            return Mono.empty();
+                        });
     }
 
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
@@ -114,9 +122,26 @@ public class OutboxPublisher {
             event.setStatus(OutboxEventStatus.FAILED).setErrorMessage(error);
             return outboxEventRepository
                     .save(event)
-                    .doOnSuccess(saved -> failedEventCounter.increment());
+                    .doOnSuccess(saved -> failedEventCounter.increment())
+                    .onErrorResume(
+                            org.springframework.dao.OptimisticLockingFailureException.class,
+                            ex -> {
+                                log.warn(
+                                        "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                        event.getId());
+                                return Mono.empty();
+                            });
         }
-        return outboxEventRepository.save(event);
+        return outboxEventRepository
+                .save(event)
+                .onErrorResume(
+                        org.springframework.dao.OptimisticLockingFailureException.class,
+                        ex -> {
+                            log.warn(
+                                    "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                    event.getId());
+                            return Mono.empty();
+                        });
     }
 
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")

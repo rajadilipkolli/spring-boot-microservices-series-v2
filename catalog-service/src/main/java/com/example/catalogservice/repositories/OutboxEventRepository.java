@@ -21,7 +21,7 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
     @Query(
             """
             UPDATE outbox_events
-            SET status = 'PROCESSING', locked_at = NOW()
+            SET status = 'PROCESSING', locked_at = NOW(), version = version + 1
             WHERE id IN (
                 SELECT id FROM outbox_events
                 WHERE status = 'PENDING'
@@ -43,6 +43,7 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
             END,
             locked_at = NULL,
             retry_count = retry_count + 1,
+            version = version + 1,
             error_message = CASE
                 WHEN retry_count + 1 >= :maxRetries
                     THEN 'Exceeded max retries while reaping orphaned event'

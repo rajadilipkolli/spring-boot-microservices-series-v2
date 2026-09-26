@@ -91,6 +91,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         boolean isNew = customer.getId() == null;
         if (isNew) {
             customer.setId(tsidFactory.generate().toLong());
+            customer.setVersion(0);
             CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
             return dslContext
                     .insertInto(CUSTOMERS)
@@ -98,17 +99,26 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     .returningResult()
                     .fetchOneInto(Customer.class);
         } else {
-            return dslContext
-                    .update(CUSTOMERS)
-                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
-                    .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
-                    .set(CUSTOMERS.ADDRESS, customer.getAddress())
-                    .set(CUSTOMERS.NAME, customer.getName())
-                    .set(CUSTOMERS.EMAIL, customer.getEmail())
-                    .set(CUSTOMERS.PHONE, customer.getPhone())
-                    .where(CUSTOMERS.ID.eq(customer.getId()))
-                    .returningResult()
-                    .fetchOneInto(Customer.class);
+            Integer currentVersion = customer.getVersion() == null ? 0 : customer.getVersion();
+            Customer updatedCustomer =
+                    dslContext
+                            .update(CUSTOMERS)
+                            .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
+                            .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
+                            .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                            .set(CUSTOMERS.NAME, customer.getName())
+                            .set(CUSTOMERS.EMAIL, customer.getEmail())
+                            .set(CUSTOMERS.PHONE, customer.getPhone())
+                            .set(CUSTOMERS.VERSION, currentVersion + 1)
+                            .where(CUSTOMERS.ID.eq(customer.getId()))
+                            .and(CUSTOMERS.VERSION.eq(currentVersion))
+                            .returningResult()
+                            .fetchOneInto(Customer.class);
+            if (updatedCustomer == null) {
+                throw new org.springframework.dao.OptimisticLockingFailureException(
+                        "Customer was updated or deleted by another transaction");
+            }
+            return updatedCustomer;
         }
     }
 
@@ -118,6 +128,9 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         for (var customer : customerList) {
             if (customer.getId() == null) {
                 customer.setId(tsidFactory.generate().toLong());
+            }
+            if (customer.getVersion() == null) {
+                customer.setVersion(0);
             }
         }
         InsertSetMoreStep<CustomersRecord> insertStepN =

@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -39,6 +40,8 @@ public class OutboxEvent implements Persistable<UUID> {
     private String errorMessage;
 
     private OffsetDateTime lockedAt;
+
+    @Version private Integer version;
 
     public OutboxEvent() {}
 
@@ -138,6 +141,15 @@ public class OutboxEvent implements Persistable<UUID> {
 
     public OutboxEvent setLockedAt(OffsetDateTime lockedAt) {
         this.lockedAt = lockedAt;
+        return this;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public OutboxEvent setVersion(Integer version) {
+        this.version = version;
         return this;
     }
 

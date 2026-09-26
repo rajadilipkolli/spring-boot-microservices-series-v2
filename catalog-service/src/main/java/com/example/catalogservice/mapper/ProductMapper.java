@@ -18,15 +18,16 @@ import org.mapstruct.MappingTarget;
 public interface ProductMapper {
 
     @Mapping(target = "inStock", ignore = true)
-    @Mapping(target = "withInStock", ignore = true)
     ProductResponse toProductResponse(Product product);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     @Mapping(target = "code", source = "productCode")
     ProductDto toProductDto(Product product);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);
 }

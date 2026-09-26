@@ -628,11 +628,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.price")
                 .isEqualTo(productRequest.price());
 
-        // Verify product was created in the database instead of relying on Kafka
-        // message
-        // Use StepVerifier instead of blocking
-        StepVerifier.create(productRepository.existsByProductCodeAllIgnoreCase("code 4"))
-                .expectNext(Boolean.TRUE)
+        // Verify product was created in the database and version is 0
+        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase("code 4"))
+                .assertNext(
+                        p -> {
+                            assertThat(p).isNotNull();
+                            assertThat(p.getVersion()).isZero();
+                        })
                 .verifyComplete();
 
         // Verify OutboxEvent was created in the database
@@ -667,6 +669,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                             assertThat(productDto.productName()).isEqualTo("name 4");
                             assertThat(productDto.price()).isEqualTo(19.0);
                         });
+
+        // Verify the outbox event was updated successfully (status and version)
+        OutboxEvent publishedEvent =
+                outboxEventRepository.findAll().collectList().block().getFirst();
+        assertThat(publishedEvent.getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
+        assertThat(publishedEvent.getVersion()).isGreaterThan(0);
     }
 
     @Test
@@ -687,6 +695,33 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody();
+
+        StepVerifier.create(productRepository.findById(product.getId()))
+                .assertNext(
+                        p -> {
+                            assertThat(p.getVersion()).isEqualTo(1);
+                        })
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldThrowOptimisticLockingFailureExceptionWhenSavingStaleProduct() {
+        Product product = savedProductList.getFirst();
+
+        // Load the product
+        Product loadedProduct = productRepository.findById(product.getId()).block();
+
+        // Update the product in the DB to increment the version
+        Product anotherInstance = productRepository.findById(product.getId()).block();
+        anotherInstance.setDescription("Updated description");
+        productRepository.save(anotherInstance).block();
+
+        // Attempt to save the stale loadedProduct
+        loadedProduct.setDescription("Stale update");
+
+        StepVerifier.create(productRepository.save(loadedProduct))
+                .expectError(org.springframework.dao.OptimisticLockingFailureException.class)
+                .verify();
     }
 
     @Test

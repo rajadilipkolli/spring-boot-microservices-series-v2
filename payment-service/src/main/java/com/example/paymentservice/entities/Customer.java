@@ -17,6 +17,8 @@ public class Customer {
 
     private double amountReserved;
 
+    private Integer version;
+
     public Customer() {}
 
     public Long getId() {
@@ -79,6 +81,15 @@ public class Customer {
 
     public Customer setAmountReserved(final double amountReserved) {
         this.amountReserved = amountReserved;
+        return this;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public Customer setVersion(Integer version) {
+        this.version = version;
         return this;
     }
 
