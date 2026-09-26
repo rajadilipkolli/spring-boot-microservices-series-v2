@@ -10,6 +10,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -19,6 +20,8 @@ public class Product implements Serializable, Persistable<Long> {
     @Serial private static final long serialVersionUID = 1L;
 
     @Id private Long id;
+
+    @Version private Long version = null;
 
     @Transient private boolean isNew = false;
 
@@ -40,6 +43,15 @@ public class Product implements Serializable, Persistable<Long> {
 
     public Product setId(Long id) {
         this.id = id;
+        return this;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public Product setVersion(Long version) {
+        this.version = version;
         return this;
     }
 
