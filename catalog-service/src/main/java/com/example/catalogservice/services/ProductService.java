@@ -250,6 +250,16 @@ public class ProductService {
         return findById(id).map(productMapper::toProductResponse);
     }
 
+    /**
+     * Updates an existing product.
+     *
+     * @param productRequest the updated product details
+     * @param product the existing product entity
+     * @return a Mono emitting the updated ProductResponse
+     * @throws org.springframework.dao.OptimisticLockingFailureException if the product was updated
+     *     concurrently. This exception propagates to the controller to return an HTTP 409 Conflict
+     *     response.
+     */
     @Transactional
     @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {

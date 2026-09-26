@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -92,6 +93,27 @@ public class GlobalExceptionHandler {
                                                 violation.getMessage()))
                         .toList();
         problemDetail.setProperty("violations", violations);
+        return Mono.just(problemDetail);
+    }
+
+    /**
+     * Converts an optimistic locking failure to an HTTP 409 problem with refresh-and-retry
+     * guidance.
+     *
+     * @return a Mono emitting the problem details with a database error category and timestamp
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    Mono<ProblemDetail> handleOptimisticLockingFailureException(
+            OptimisticLockingFailureException ex) {
+        log.warn("Optimistic locking failure: {}", LogSanitizer.sanitizeException(ex));
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("Optimistic Locking Failure");
+        problemDetail.setDetail(
+                "The data has been modified concurrently. Please refresh and try again.");
+        problemDetail.setType(
+                URI.create("https://api.microservices.com/errors/optimistic-locking-failure"));
+        problemDetail.setProperty("errorCategory", "Database");
+        problemDetail.setProperty("timestamp", Instant.now());
         return Mono.just(problemDetail);
     }
 }
