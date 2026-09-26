@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,7 +103,7 @@ public class OutboxPublisher {
                 .save(event)
                 .doOnSuccess(saved -> publishedEventCounter.increment())
                 .onErrorResume(
-                        org.springframework.dao.OptimisticLockingFailureException.class,
+                        OptimisticLockingFailureException.class,
                         ex -> {
                             log.warn(
                                     "Optimistic locking conflict on OutboxEvent {}: skipping",
@@ -124,7 +125,7 @@ public class OutboxPublisher {
                     .save(event)
                     .doOnSuccess(saved -> failedEventCounter.increment())
                     .onErrorResume(
-                            org.springframework.dao.OptimisticLockingFailureException.class,
+                            OptimisticLockingFailureException.class,
                             ex -> {
                                 log.warn(
                                         "Optimistic locking conflict on OutboxEvent {}: skipping",
@@ -135,7 +136,7 @@ public class OutboxPublisher {
         return outboxEventRepository
                 .save(event)
                 .onErrorResume(
-                        org.springframework.dao.OptimisticLockingFailureException.class,
+                        OptimisticLockingFailureException.class,
                         ex -> {
                             log.warn(
                                     "Optimistic locking conflict on OutboxEvent {}: skipping",
