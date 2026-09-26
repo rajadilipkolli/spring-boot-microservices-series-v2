@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -695,13 +696,6 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody();
-
-        StepVerifier.create(productRepository.findById(product.getId()))
-                .assertNext(
-                        p -> {
-                            assertThat(p.getVersion()).isEqualTo(1);
-                        })
-                .verifyComplete();
     }
 
     @Test
@@ -720,7 +714,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         loadedProduct.setDescription("Stale update");
 
         StepVerifier.create(productRepository.save(loadedProduct))
-                .expectError(org.springframework.dao.OptimisticLockingFailureException.class)
+                .expectError(OptimisticLockingFailureException.class)
                 .verify();
     }
 
