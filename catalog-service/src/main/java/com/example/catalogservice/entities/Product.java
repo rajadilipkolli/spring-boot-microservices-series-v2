@@ -46,10 +46,17 @@ public class Product implements Serializable, Persistable<Long> {
         return this;
     }
 
+    /** Returns the optimistic locking version, or null if it has not been assigned. */
     public Long getVersion() {
         return version;
     }
 
+    /**
+     * Sets the optimistic locking version held by this instance.
+     *
+     * @param version the version to retain, or null to clear it
+     * @return this instance
+     */
     public Product setVersion(Long version) {
         this.version = version;
         return this;

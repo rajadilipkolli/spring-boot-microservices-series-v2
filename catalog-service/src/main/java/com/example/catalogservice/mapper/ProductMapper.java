@@ -17,9 +17,11 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
+    /** Maps product details to a response, leaving inventory availability at its default false. */
     @Mapping(target = "inStock", ignore = true)
     ProductResponse toProductResponse(Product product);
 
+    /** Creates a product from request details, leaving its ID and version unset. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
     Product toEntity(ProductRequest productRequest);
@@ -27,6 +29,7 @@ public interface ProductMapper {
     @Mapping(target = "code", source = "productCode")
     ProductDto toProductDto(Product product);
 
+    /** Copies request details into the supplied product, preserving its ID and version. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);

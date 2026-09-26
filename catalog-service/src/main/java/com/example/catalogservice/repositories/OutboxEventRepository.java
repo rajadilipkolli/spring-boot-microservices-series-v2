@@ -18,6 +18,13 @@ import reactor.core.publisher.Mono;
 
 public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEvent, UUID> {
 
+    /**
+     * Claims the oldest pending events, skipping rows locked by other transactions. Marks them as
+     * processing, records the lock time, and increments their versions.
+     *
+     * @param limit the maximum number of events to claim; zero claims none
+     * @return the claimed events with updated state; database failures are emitted as errors
+     */
     @Query(
             """
             UPDATE outbox_events
@@ -33,6 +40,15 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
             """)
     Flux<OutboxEvent> claimPendingEvents(int limit);
 
+    /**
+     * Releases expired processing locks and increments retry counts and versions. Events whose new
+     * retry count reaches or exceeds the limit are marked failed with an error message; the rest
+     * become pending again.
+     *
+     * @param threshold the exclusive cutoff for the lock timestamp
+     * @param maxRetries the retry count at which an event is marked failed
+     * @return the number of updated events; database failures are emitted as errors
+     */
     @Modifying
     @Query(
             """

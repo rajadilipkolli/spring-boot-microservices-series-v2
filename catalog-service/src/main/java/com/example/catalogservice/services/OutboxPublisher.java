@@ -97,6 +97,12 @@ public class OutboxPublisher {
                 .onErrorResume(ex -> handleFailure(event, ex.getMessage()));
     }
 
+    /**
+     * Marks the supplied event as published with the current processing time and saves it.
+     *
+     * @return the saved event, or an empty Mono on an optimistic locking conflict; other persistence
+     *     errors propagate to the caller
+     */
     private Mono<OutboxEvent> handleSuccess(OutboxEvent event) {
         event.setStatus(OutboxEventStatus.PUBLISHED).setProcessedAt(OffsetDateTime.now());
         return outboxEventRepository
@@ -112,6 +118,14 @@ public class OutboxPublisher {
                         });
     }
 
+    /**
+     * Records a publishing failure and saves the event. Below the configured retry limit, marks it
+     * pending and increments its retry count; otherwise marks it failed.
+     *
+     * @param error the message stored on the event
+     * @return the saved event, or an empty Mono on an optimistic locking conflict; other persistence
+     *     errors propagate to the caller
+     */
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
         if (event.getRetryCount() < properties.outbox().getMaxRetries()) {
             log.warn("Retrying event {}: {}", event.getId(), error);

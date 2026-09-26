@@ -96,6 +96,11 @@ public class GlobalExceptionHandler {
         return Mono.just(problemDetail);
     }
 
+    /**
+     * Converts an optimistic locking failure to an HTTP 409 problem with refresh-and-retry guidance.
+     *
+     * @return a Mono emitting the problem details with a database error category and timestamp
+     */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     Mono<ProblemDetail> handleOptimisticLockingFailureException(
             OptimisticLockingFailureException ex) {

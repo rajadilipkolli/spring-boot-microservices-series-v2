@@ -84,10 +84,17 @@ public class Customer {
         return this;
     }
 
+    /** Returns the optimistic locking version, or null if it has not been assigned. */
     public Integer getVersion() {
         return version;
     }
 
+    /**
+     * Sets the optimistic locking version held by this instance.
+     *
+     * @param version the version to retain, or null to clear it
+     * @return this instance
+     */
     public Customer setVersion(Integer version) {
         this.version = version;
         return this;
