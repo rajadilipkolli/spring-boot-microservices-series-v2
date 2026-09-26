@@ -72,8 +72,7 @@ databaseChangeLog:
               name: locked_at
               type: TIMESTAMP WITH TIME ZONE
           - column:
-            name: version
-            type: int
-            defaultValueNumeric: 0
-
+              name: version
+              type: int
+              defaultValueNumeric: '0'
         tableName: outbox_events
