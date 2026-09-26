@@ -84,9 +84,9 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     /**
      * Inserts a customer without an ID or updates one whose ID and version match the stored row.
-     * Lowercases a non-null email on the supplied customer. Inserts also assign it an ID and version
-     * zero. Updates treat a null version as zero and increment the stored version, leaving the
-     * supplied instance's version unchanged. Database failures propagate to the caller.
+     * Lowercases a non-null email on the supplied customer. Inserts also assign it an ID and
+     * version zero. Updates treat a null version as zero and increment the stored version, leaving
+     * the supplied instance's version unchanged. Database failures propagate to the caller.
      *
      * @return the customer returned by the database, including its persisted version
      * @throws org.springframework.dao.OptimisticLockingFailureException if an update finds no row
@@ -134,8 +134,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     /**
      * Inserts all supplied customers, assigning missing IDs and setting null versions to zero on
-     * the input instances. Existing IDs and versions are retained for insertion, and email addresses
-     * are stored as supplied. Database failures propagate to the caller.
+     * the input instances. Existing IDs and versions are retained for insertion, and email
+     * addresses are stored as supplied. Database failures propagate to the caller.
      *
      * @param customerList the nonempty list of customers to insert
      * @return the inserted customers returned by the database

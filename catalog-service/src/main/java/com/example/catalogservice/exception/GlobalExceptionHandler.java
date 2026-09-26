@@ -97,7 +97,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Converts an optimistic locking failure to an HTTP 409 problem with refresh-and-retry guidance.
+     * Converts an optimistic locking failure to an HTTP 409 problem with refresh-and-retry
+     * guidance.
      *
      * @return a Mono emitting the problem details with a database error category and timestamp
      */
