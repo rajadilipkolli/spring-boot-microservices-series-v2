@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -96,13 +97,35 @@ public class OutboxPublisher {
                 .onErrorResume(ex -> handleFailure(event, ex.getMessage()));
     }
 
+    /**
+     * Marks the supplied event as published with the current processing time and saves it.
+     *
+     * @return the saved event, or an empty Mono on an optimistic locking conflict; other
+     *     persistence errors propagate to the caller
+     */
     private Mono<OutboxEvent> handleSuccess(OutboxEvent event) {
         event.setStatus(OutboxEventStatus.PUBLISHED).setProcessedAt(OffsetDateTime.now());
         return outboxEventRepository
                 .save(event)
-                .doOnSuccess(saved -> publishedEventCounter.increment());
+                .doOnSuccess(saved -> publishedEventCounter.increment())
+                .onErrorResume(
+                        OptimisticLockingFailureException.class,
+                        ex -> {
+                            log.warn(
+                                    "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                    event.getId());
+                            return Mono.empty();
+                        });
     }
 
+    /**
+     * Records a publishing failure and saves the event. Below the configured retry limit, marks it
+     * pending and increments its retry count; otherwise marks it failed.
+     *
+     * @param error the message stored on the event
+     * @return the saved event, or an empty Mono on an optimistic locking conflict; other
+     *     persistence errors propagate to the caller
+     */
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
         if (event.getRetryCount() < properties.outbox().getMaxRetries()) {
             log.warn("Retrying event {}: {}", event.getId(), error);
@@ -114,9 +137,26 @@ public class OutboxPublisher {
             event.setStatus(OutboxEventStatus.FAILED).setErrorMessage(error);
             return outboxEventRepository
                     .save(event)
-                    .doOnSuccess(saved -> failedEventCounter.increment());
+                    .doOnSuccess(saved -> failedEventCounter.increment())
+                    .onErrorResume(
+                            OptimisticLockingFailureException.class,
+                            ex -> {
+                                log.warn(
+                                        "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                        event.getId());
+                                return Mono.empty();
+                            });
         }
-        return outboxEventRepository.save(event);
+        return outboxEventRepository
+                .save(event)
+                .onErrorResume(
+                        OptimisticLockingFailureException.class,
+                        ex -> {
+                            log.warn(
+                                    "Optimistic locking conflict on OutboxEvent {}: skipping",
+                                    event.getId());
+                            return Mono.empty();
+                        });
     }
 
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")

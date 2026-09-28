@@ -32,6 +32,9 @@
             <column name="address" type="${string.type}"/>
             <column name="amount_available" type="double"/>
             <column name="amount_reserved" type="double"/>
+            <column name="version" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <!-- Add unique constraint -->
         <addUniqueConstraint tableName="customers" columnNames="name, email"
