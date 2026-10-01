@@ -305,7 +305,7 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
-                            <THC_PATH>/actuator/health</THC_PATH>
+                            <THC_PATH>/catalog-service/actuator/health</THC_PATH>
                             <THC_PORT>18080</THC_PORT>
                         </env>
                     </image>
