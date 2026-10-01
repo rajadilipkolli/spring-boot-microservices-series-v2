@@ -55,6 +55,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
             OrderStatus status, LocalDateTime lastModifiedDate);
 
+    /**
+     * Finds matching order IDs with a stable sort, defaulting to ascending ID order when unsorted.
+     *
+     * @param term pattern fragment matched using SQL LIKE; wildcard characters retain their meaning
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param pageable pagination options, optionally sorted by ID
+     * @return a page of distinct matching order IDs
+     * @throws IllegalArgumentException if sorting uses a property other than ID or ignores case
+     */
     default Page<Long> searchOrdersByKeyword(
             String term, Long customerId, OrderStatus status, Pageable pageable) {
         if (pageable.getSort().stream()

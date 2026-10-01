@@ -540,6 +540,12 @@ class OrderControllerTest {
     @DisplayName("search methods")
     class Search {
 
+        /**
+         * Verifies that blank search terms return HTTP 400 without invoking the service.
+         *
+         * @param term empty or whitespace-only search text
+         * @throws Exception if the mock HTTP request fails
+         */
         @ParameterizedTest
         @ValueSource(strings = {"", " ", "\t\n"})
         void shouldRejectBlankSearchTerms(String term) throws Exception {
@@ -548,6 +554,13 @@ class OrderControllerTest {
             verifyNoInteractions(orderService);
         }
 
+        /**
+         * Verifies that out-of-range similarity thresholds return HTTP 400 without invoking the
+         * service.
+         *
+         * @param threshold similarity cutoff outside the allowed range
+         * @throws Exception if the mock HTTP request fails
+         */
         @ParameterizedTest
         @ValueSource(strings = {"-0.1", "1.1"})
         void shouldRejectInvalidSimilarityThresholds(String threshold) throws Exception {
@@ -560,6 +573,11 @@ class OrderControllerTest {
             verifyNoInteractions(orderService);
         }
 
+        /**
+         * Verifies keyword search parameter binding and serialization of the service result.
+         *
+         * @throws Exception if the mock HTTP request fails
+         */
         @Test
         void shouldSearchOrders() throws Exception {
             OrderResponse orderResponse =

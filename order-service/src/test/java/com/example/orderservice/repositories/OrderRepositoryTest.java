@@ -188,6 +188,10 @@ class OrderRepositoryTest {
             assertThat(results.getContent()).isEmpty();
         }
 
+        /**
+         * Verifies default ID ordering for paged and unpaged searches and explicit descending
+         * sorting.
+         */
         @Test
         void keywordPagesUseIdOrderAndRespectDescendingSort() {
             List<Long> ids =
@@ -224,6 +228,10 @@ class OrderRepositoryTest {
                     .containsExactlyElementsOf(ids);
         }
 
+        /**
+         * Verifies that keyword searches reject unsupported sort properties and case-insensitive
+         * sorting.
+         */
         @Test
         void keywordSearchRejectsNonIdAndCaseInsensitiveSorts() {
             for (Sort sort :
@@ -239,6 +247,9 @@ class OrderRepositoryTest {
             }
         }
 
+        /**
+         * Verifies similarity result counts, out-of-range pages, and the strict threshold boundary.
+         */
         @Test
         void similarityThresholdAppliesToContentAndCount() {
             orderRepository.saveAll(

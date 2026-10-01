@@ -265,6 +265,12 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
+    /**
+     * Loads orders with their items and maps them to responses in the order of the supplied IDs.
+     *
+     * @param page ordered IDs and pagination metadata from the repository
+     * @return order responses with the original pagination metadata and a one-based page number
+     */
     private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());

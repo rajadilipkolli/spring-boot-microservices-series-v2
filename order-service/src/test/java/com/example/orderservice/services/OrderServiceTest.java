@@ -32,6 +32,12 @@ class OrderServiceTest {
     @Mock private OrderMapper orderMapper;
     @InjectMocks private OrderService orderService;
 
+    /**
+     * Verifies that search responses preserve ID page order and metadata when orders load in a
+     * different order.
+     *
+     * @param mode search strategy to exercise
+     */
     @ParameterizedTest
     @ValueSource(strings = {"keyword", "similarity"})
     void searchPreservesIdPageOrderAndMetadata(String mode) {
