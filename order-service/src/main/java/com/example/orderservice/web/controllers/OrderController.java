@@ -24,6 +24,7 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -190,7 +191,7 @@ class OrderController implements OrderApi {
     @GetMapping("/search")
     @Override
     public ResponseEntity<PagedResult<OrderResponse>> searchOrders(
-            @RequestParam String term,
+            @RequestParam @NotBlank String term,
             @RequestParam(defaultValue = "keyword", required = false) String mode,
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) com.example.orderservice.entities.OrderStatus status,

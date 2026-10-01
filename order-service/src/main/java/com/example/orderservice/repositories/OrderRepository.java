@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -53,6 +55,22 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
             OrderStatus status, LocalDateTime lastModifiedDate);
 
+    default Page<Long> searchOrdersByKeyword(
+            String term, Long customerId, OrderStatus status, Pageable pageable) {
+        if (pageable.getSort().stream()
+                .anyMatch(order -> !"id".equals(order.getProperty()) || order.isIgnoreCase())) {
+            throw new IllegalArgumentException("Keyword search only supports sorting by id");
+        }
+        if (pageable.getSort().isUnsorted()) {
+            Sort sort = Sort.by("id");
+            pageable =
+                    pageable.isPaged()
+                            ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort)
+                            : Pageable.unpaged(sort);
+        }
+        return findOrderIdsByKeyword(term, customerId, status, pageable);
+    }
+
     /**
      * Finds distinct order IDs by case-insensitive keyword matching across source, delivery
      * address, and item product codes.
@@ -90,7 +108,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                             lower(o.deliveryAddress.zipCode) LIKE lower(concat('%', :term, '%')) OR \
                             lower(o.deliveryAddress.country) LIKE lower(concat('%', :term, '%')) OR \
                             lower(oi.productCode) LIKE lower(concat('%', :term, '%')))""")
-    Page<Long> searchOrdersByKeyword(
+    Page<Long> findOrderIdsByKeyword(
             @Param("term") String term,
             @Param("customerId") Long customerId,
             @Param("status") OrderStatus status,

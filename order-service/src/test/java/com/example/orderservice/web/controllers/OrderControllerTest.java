@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -538,11 +539,27 @@ class OrderControllerTest {
     @Nested
     @DisplayName("search methods")
     class Search {
-        /**
-         * Verifies keyword search parameter binding and serialization of the service result.
-         *
-         * @throws Exception if the mock HTTP request fails
-         */
+
+        @ParameterizedTest
+        @ValueSource(strings = {"", " ", "\t\n"})
+        void shouldRejectBlankSearchTerms(String term) throws Exception {
+            mockMvc.perform(get("/api/orders/search").param("term", term))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(orderService);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"-0.1", "1.1"})
+        void shouldRejectInvalidSimilarityThresholds(String threshold) throws Exception {
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "web")
+                                    .param("mode", "similarity")
+                                    .param("threshold", threshold))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(orderService);
+        }
+
         @Test
         void shouldSearchOrders() throws Exception {
             OrderResponse orderResponse =

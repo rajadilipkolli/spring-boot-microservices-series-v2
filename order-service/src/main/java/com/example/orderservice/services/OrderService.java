@@ -20,7 +20,10 @@ import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
@@ -265,9 +268,14 @@ public class OrderService {
     private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        Map<Long, Integer> positions = new HashMap<>();
+        for (int i = 0; i < page.getContent().size(); i++) {
+            positions.put(page.getContent().get(i), i);
+        }
         // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderResponse>> completableFutureList =
                 ordersWithOrderItems.stream()
+                        .sorted(Comparator.comparingInt(order -> positions.get(order.getId())))
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(

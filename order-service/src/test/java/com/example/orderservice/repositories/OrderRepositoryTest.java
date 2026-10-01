@@ -8,6 +8,7 @@ package com.example.orderservice.repositories;
 
 import static com.example.orderservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.orderservice.common.OrderServicePostGreSQLContainer;
 import com.example.orderservice.entities.Order;
@@ -185,6 +186,84 @@ class OrderRepositoryTest {
                     orderRepository.searchOrdersByKeyword(
                             "nomatch", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
+        }
+
+        @Test
+        void keywordPagesUseIdOrderAndRespectDescendingSort() {
+            List<Long> ids =
+                    orderRepository
+                            .saveAll(
+                                    List.of(
+                                            TestData.getOrder(),
+                                            TestData.getOrder(),
+                                            TestData.getOrder()))
+                            .stream()
+                            .map(Order::getId)
+                            .sorted()
+                            .toList();
+
+            for (int page = 0; page < ids.size(); page++) {
+                Page<Long> results =
+                        orderRepository.searchOrdersByKeyword(
+                                "Product", null, null, PageRequest.of(page, 1));
+                assertThat(results.getContent()).containsExactly(ids.get(page));
+                assertThat(results.getTotalElements()).isEqualTo(ids.size());
+                Page<Long> descending =
+                        orderRepository.searchOrdersByKeyword(
+                                "Product",
+                                null,
+                                null,
+                                PageRequest.of(page, 1, Sort.by("id").descending()));
+                assertThat(descending.getContent()).containsExactly(ids.get(ids.size() - page - 1));
+            }
+            assertThat(
+                            orderRepository
+                                    .searchOrdersByKeyword(
+                                            "Product", null, null, Pageable.unpaged())
+                                    .getContent())
+                    .containsExactlyElementsOf(ids);
+        }
+
+        @Test
+        void keywordSearchRejectsNonIdAndCaseInsensitiveSorts() {
+            for (Sort sort :
+                    List.of(
+                            Sort.by("source"),
+                            Sort.by("id", "source"),
+                            Sort.by(Sort.Order.asc("id").ignoreCase()))) {
+                assertThatThrownBy(
+                                () ->
+                                        orderRepository.searchOrdersByKeyword(
+                                                "Product", null, null, PageRequest.of(0, 10, sort)))
+                        .hasMessageContaining("Keyword search only supports sorting by id");
+            }
+        }
+
+        @Test
+        void similarityThresholdAppliesToContentAndCount() {
+            orderRepository.saveAll(
+                    List.of(
+                            TestData.getOrder().setSource("SomeWeb"),
+                            TestData.getOrder().setSource("SomeWeb"),
+                            TestData.getOrder().setSource("SomeWebSource")));
+
+            Page<Long> results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 0.8, null, null, PageRequest.of(0, 1));
+            assertThat(results.getContent()).hasSize(1);
+            assertThat(results.getTotalElements()).isEqualTo(2);
+            assertThat(
+                            orderRepository
+                                    .searchOrdersBySimilarity(
+                                            "SomeWeb", 0.8, null, null, PageRequest.of(2, 1))
+                                    .getContent())
+                    .isEmpty();
+
+            Page<Long> strict =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 1.0, null, null, PageRequest.of(0, 1));
+            assertThat(strict.getContent()).isEmpty();
+            assertThat(strict.getTotalElements()).isZero();
         }
 
         /** Verifies trigram source matching and an empty result for an unrelated term. */

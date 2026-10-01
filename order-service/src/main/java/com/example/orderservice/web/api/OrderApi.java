@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -122,7 +123,7 @@ public interface OrderApi {
                         })
             })
     ResponseEntity<PagedResult<OrderResponse>> searchOrders(
-            @Parameter(name = "term", in = ParameterIn.QUERY) String term,
+            @Parameter(name = "term", in = ParameterIn.QUERY) @NotBlank String term,
             @Parameter(name = "mode", in = ParameterIn.QUERY) String mode,
             @Parameter(name = "customerId", in = ParameterIn.QUERY) Long customerId,
             @Parameter(name = "status", in = ParameterIn.QUERY)
