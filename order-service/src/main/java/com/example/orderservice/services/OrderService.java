@@ -312,6 +312,19 @@ public class OrderService {
                 });
     }
 
+    /**
+     * Searches order IDs and loads the matching orders as a page of responses.
+     *
+     * @param term text to search for in source, delivery address, and item product codes
+     * @param mode selects trigram matching when equal to "similarity", ignoring case; otherwise
+     *     uses keyword matching
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when null; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return matching order responses and pagination metadata with a one-based page number
+     */
     public PagedResult<OrderResponse> searchOrders(
             String term,
             String mode,

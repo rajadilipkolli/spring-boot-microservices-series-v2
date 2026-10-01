@@ -538,6 +538,11 @@ class OrderControllerTest {
     @Nested
     @DisplayName("search methods")
     class Search {
+        /**
+         * Verifies keyword search parameter binding and serialization of the service result.
+         *
+         * @throws Exception if the mock HTTP request fails
+         */
         @Test
         void shouldSearchOrders() throws Exception {
             OrderResponse orderResponse =
@@ -578,6 +583,12 @@ class OrderControllerTest {
                     .andExpect(jsonPath("$.totalElements", is(1)));
         }
 
+        /**
+         * Verifies similarity search parameter binding, including the threshold, and result
+         * serialization.
+         *
+         * @throws Exception if the mock HTTP request fails
+         */
         @Test
         void shouldSearchOrdersBySimilarity() throws Exception {
             OrderResponse orderResponse =

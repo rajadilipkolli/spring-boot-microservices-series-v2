@@ -142,6 +142,10 @@ class OrderRepositoryTest {
 
     @Nested
     class Search {
+        /**
+         * Verifies keyword matches in city and source fields and an empty result for an unmatched
+         * term.
+         */
         @Test
         void searchOrdersByKeyword() {
             Order order1 = TestData.getOrder();
@@ -183,6 +187,7 @@ class OrderRepositoryTest {
             assertThat(results.getContent()).isEmpty();
         }
 
+        /** Verifies trigram source matching and an empty result for an unrelated term. */
         @Test
         void searchOrdersBySimilarity() {
             Order order1 = TestData.getOrder();

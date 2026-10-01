@@ -686,6 +686,11 @@ class OrderControllerIT extends AbstractIntegrationTest {
         assertThat(foundSecondProduct).isTrue();
     }
 
+    /**
+     * Verifies that keyword search returns an order with a matching delivery address.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
     @Test
     void shouldSearchOrdersByKeyword() throws Exception {
         mockMvc.perform(
@@ -702,6 +707,12 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 org.hamcrest.Matchers.containsString("Junit Address")));
     }
 
+    /**
+     * Verifies that similarity search accepts a misspelled term and returns a successful array
+     * response.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
     @Test
     void shouldSearchOrdersBySimilarity() throws Exception {
         mockMvc.perform(

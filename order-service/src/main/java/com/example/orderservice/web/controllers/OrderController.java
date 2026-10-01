@@ -174,6 +174,19 @@ class OrderController implements OrderApi {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
 
+    /**
+     * Validates the similarity threshold and delegates the order search to the service.
+     *
+     * @param term required search text
+     * @param mode search mode, defaulting to "keyword" when omitted
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when omitted; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return an HTTP 200 response containing matching orders and pagination metadata
+     * @throws IllegalArgumentException if a supplied similarity threshold is outside 0.0 to 1.0
+     */
     @GetMapping("/search")
     @Override
     public ResponseEntity<PagedResult<OrderResponse>> searchOrders(

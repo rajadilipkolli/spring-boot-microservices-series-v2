@@ -86,6 +86,20 @@ public interface OrderApi {
             @Parameter(name = "id", in = ParameterIn.PATH) Long id,
             @Parameter(hidden = true) Pageable pageable);
 
+    /**
+     * Searches orders by source, delivery address, or item product code with optional filters.
+     *
+     * @param term required search text
+     * @param mode search mode; "similarity" selects trigram matching, ignoring case, and other
+     *     values select keyword matching; defaults to "keyword" when omitted
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff from 0.0 to 1.0, defaulting to 0.3 when
+     *     omitted; ignored in keyword mode
+     * @param pageable pagination options
+     * @return an HTTP 200 response containing matching orders and pagination metadata
+     * @throws IllegalArgumentException if a supplied similarity threshold is outside 0.0 to 1.0
+     */
     @Operation(
             summary = "searches orders based on a term and filters",
             tags = {"order-controller"},

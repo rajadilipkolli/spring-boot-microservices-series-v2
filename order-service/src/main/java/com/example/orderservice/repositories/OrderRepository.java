@@ -53,6 +53,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
             OrderStatus status, LocalDateTime lastModifiedDate);
 
+    /**
+     * Finds distinct order IDs by case-insensitive keyword matching across source, delivery
+     * address, and item product codes.
+     *
+     * @param term pattern fragment matched using SQL LIKE; wildcard characters retain their meaning
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param pageable pagination and sorting options
+     * @return a page of matching order IDs
+     */
     @Query(
             value =
                     """
@@ -86,6 +96,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("status") OrderStatus status,
             Pageable pageable);
 
+    /**
+     * Finds distinct order IDs using PostgreSQL trigram matching across source, delivery address,
+     * and item product codes, ordered by descending maximum similarity.
+     *
+     * @param term text to compare with searchable fields
+     * @param threshold explicit similarity cutoff, applied in addition to the database's trigram
+     *     operator; a match from either condition is included
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status name to filter by, or null for all statuses
+     * @param pageable pagination options
+     * @return a page of matching order IDs ranked by similarity
+     */
     @NativeQuery(
             value =
                     """
