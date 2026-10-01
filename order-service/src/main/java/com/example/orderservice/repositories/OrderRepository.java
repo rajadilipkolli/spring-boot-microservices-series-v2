@@ -143,7 +143,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                             ORDER BY MAX(greatest(similarity(COALESCE(o.source, ''), :term), similarity(COALESCE(o.delivery_address_line1, ''), :term), \
                             similarity(COALESCE(o.delivery_address_line2, ''), :term), similarity(COALESCE(o.delivery_address_city, ''), :term), \
                             similarity(COALESCE(o.delivery_address_state, ''), :term), similarity(COALESCE(o.delivery_address_zip_code, ''), :term), \
-                            similarity(COALESCE(o.delivery_address_country, ''), :term), similarity(COALESCE(oi.product_code, ''), :term))) DESC""",
+                            similarity(COALESCE(o.delivery_address_country, ''), :term), similarity(COALESCE(oi.product_code, ''), :term))) DESC, o.id""",
             countQuery =
                     """
                             SELECT count(DISTINCT o.id) FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id WHERE \
