@@ -20,7 +20,10 @@ import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
@@ -262,12 +265,23 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
+    /**
+     * Loads orders with their items and maps them to responses in the order of the supplied IDs.
+     *
+     * @param page ordered IDs and pagination metadata from the repository
+     * @return order responses with the original pagination metadata and a one-based page number
+     */
     private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        Map<Long, Integer> positions = new HashMap<>();
+        for (int i = 0; i < page.getContent().size(); i++) {
+            positions.put(page.getContent().get(i), i);
+        }
         // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderResponse>> completableFutureList =
                 ordersWithOrderItems.stream()
+                        .sorted(Comparator.comparingInt(order -> positions.get(order.getId())))
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(
@@ -310,5 +324,55 @@ public class OrderService {
                         log.error("Failed to retry publishing order :{}", order.getId(), e);
                     }
                 });
+    }
+
+    /**
+     * Searches order IDs and loads the matching orders as a page of responses.
+     *
+     * @param term text to search for in source, delivery address, and item product codes
+     * @param mode selects trigram matching when equal to "similarity", ignoring case; otherwise
+     *     uses keyword matching
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when null; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return matching order responses and pagination metadata with a one-based page number
+     */
+    public PagedResult<OrderResponse> searchOrders(
+            String term,
+            String mode,
+            Long customerId,
+            OrderStatus status,
+            Double threshold,
+            Pageable pageable) {
+
+        Page<Long> page;
+        if ("similarity".equalsIgnoreCase(mode)) {
+            double actualThreshold = threshold != null ? threshold : 0.3;
+            page =
+                    orderRepository.searchOrdersBySimilarity(
+                            term,
+                            actualThreshold,
+                            customerId,
+                            status != null ? status.name() : null,
+                            pageable);
+        } else {
+            page = orderRepository.searchOrdersByKeyword(term, customerId, status, pageable);
+        }
+
+        if (page.isEmpty()) {
+            return new PagedResult<>(
+                    List.of(),
+                    page.getTotalElements(),
+                    page.getNumber() + 1,
+                    page.getTotalPages(),
+                    page.isFirst(),
+                    page.isLast(),
+                    page.hasNext(),
+                    page.hasPrevious());
+        }
+
+        return getOrderResponsePagedResult(page);
     }
 }

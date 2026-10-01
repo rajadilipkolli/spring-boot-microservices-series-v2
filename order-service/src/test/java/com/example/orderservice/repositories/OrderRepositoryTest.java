@@ -8,6 +8,7 @@ package com.example.orderservice.repositories;
 
 import static com.example.orderservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.orderservice.common.OrderServicePostGreSQLContainer;
 import com.example.orderservice.entities.Order;
@@ -15,6 +16,7 @@ import com.example.orderservice.util.TestData;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -137,5 +139,164 @@ class OrderRepositoryTest {
         // Verify total order count
         long totalOrders = this.orderRepository.count();
         assertThat(totalOrders).isEqualTo(5);
+    }
+
+    @Nested
+    class Search {
+        /**
+         * Verifies keyword matches in city and source fields and an empty result for an unmatched
+         * term.
+         */
+        @Test
+        void searchOrdersByKeyword() {
+            Order order1 = TestData.getOrder();
+            order1.setSource("WEB");
+            order1.setDeliveryAddress(
+                    new com.example.orderservice.model.Address(
+                            order1.getDeliveryAddress().addressLine1(),
+                            order1.getDeliveryAddress().addressLine2(),
+                            "New York",
+                            order1.getDeliveryAddress().state(),
+                            order1.getDeliveryAddress().zipCode(),
+                            order1.getDeliveryAddress().country()));
+            orderRepository.save(order1);
+
+            Order order2 = TestData.getOrder();
+            order2.setSource("MOBILE");
+            order2.setDeliveryAddress(
+                    new com.example.orderservice.model.Address(
+                            order2.getDeliveryAddress().addressLine1(),
+                            order2.getDeliveryAddress().addressLine2(),
+                            "Los Angeles",
+                            order2.getDeliveryAddress().state(),
+                            order2.getDeliveryAddress().zipCode(),
+                            order2.getDeliveryAddress().country()));
+            orderRepository.save(order2);
+
+            Page<Long> results =
+                    orderRepository.searchOrdersByKeyword(
+                            "York", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order1.getId());
+
+            results =
+                    orderRepository.searchOrdersByKeyword("mob", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order2.getId());
+
+            results =
+                    orderRepository.searchOrdersByKeyword(
+                            "nomatch", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).isEmpty();
+        }
+
+        /**
+         * Verifies default ID ordering for paged and unpaged searches and explicit descending
+         * sorting.
+         */
+        @Test
+        void keywordPagesUseIdOrderAndRespectDescendingSort() {
+            List<Long> ids =
+                    orderRepository
+                            .saveAll(
+                                    List.of(
+                                            TestData.getOrder(),
+                                            TestData.getOrder(),
+                                            TestData.getOrder()))
+                            .stream()
+                            .map(Order::getId)
+                            .sorted()
+                            .toList();
+
+            for (int page = 0; page < ids.size(); page++) {
+                Page<Long> results =
+                        orderRepository.searchOrdersByKeyword(
+                                "Product", null, null, PageRequest.of(page, 1));
+                assertThat(results.getContent()).containsExactly(ids.get(page));
+                assertThat(results.getTotalElements()).isEqualTo(ids.size());
+                Page<Long> descending =
+                        orderRepository.searchOrdersByKeyword(
+                                "Product",
+                                null,
+                                null,
+                                PageRequest.of(page, 1, Sort.by("id").descending()));
+                assertThat(descending.getContent()).containsExactly(ids.get(ids.size() - page - 1));
+            }
+            assertThat(
+                            orderRepository
+                                    .searchOrdersByKeyword(
+                                            "Product", null, null, Pageable.unpaged())
+                                    .getContent())
+                    .containsExactlyElementsOf(ids);
+        }
+
+        /**
+         * Verifies that keyword searches reject unsupported sort properties and case-insensitive
+         * sorting.
+         */
+        @Test
+        void keywordSearchRejectsNonIdAndCaseInsensitiveSorts() {
+            for (Sort sort :
+                    List.of(
+                            Sort.by("source"),
+                            Sort.by("id", "source"),
+                            Sort.by(Sort.Order.asc("id").ignoreCase()))) {
+                assertThatThrownBy(
+                                () ->
+                                        orderRepository.searchOrdersByKeyword(
+                                                "Product", null, null, PageRequest.of(0, 10, sort)))
+                        .hasMessageContaining("Keyword search only supports sorting by id");
+            }
+        }
+
+        /**
+         * Verifies similarity result counts, out-of-range pages, and the strict threshold boundary.
+         */
+        @Test
+        void similarityThresholdAppliesToContentAndCount() {
+            orderRepository.saveAll(
+                    List.of(
+                            TestData.getOrder().setSource("SomeWeb"),
+                            TestData.getOrder().setSource("SomeWeb"),
+                            TestData.getOrder().setSource("SomeWebSource")));
+
+            Page<Long> results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 0.8, null, null, PageRequest.of(0, 1));
+            assertThat(results.getContent()).hasSize(1);
+            assertThat(results.getTotalElements()).isEqualTo(2);
+            assertThat(
+                            orderRepository
+                                    .searchOrdersBySimilarity(
+                                            "SomeWeb", 0.8, null, null, PageRequest.of(2, 1))
+                                    .getContent())
+                    .isEmpty();
+
+            Page<Long> strict =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 1.0, null, null, PageRequest.of(0, 1));
+            assertThat(strict.getContent()).isEmpty();
+            assertThat(strict.getTotalElements()).isZero();
+        }
+
+        /** Verifies trigram source matching and an empty result for an unrelated term. */
+        @Test
+        void searchOrdersBySimilarity() {
+            Order order1 = TestData.getOrder();
+            order1.setSource("SomeWebSource");
+            orderRepository.save(order1);
+
+            Order order2 = TestData.getOrder();
+            order2.setSource("OtherSource");
+            orderRepository.save(order2);
+
+            Page<Long> results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 0.3, null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order1.getId());
+
+            results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "NoMatchHere", 0.3, null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).isEmpty();
+        }
     }
 }

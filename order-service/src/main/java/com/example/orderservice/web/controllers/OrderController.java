@@ -24,6 +24,7 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -172,6 +173,37 @@ class OrderController implements OrderApi {
     public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
+    }
+
+    /**
+     * Validates the similarity threshold and delegates the order search to the service.
+     *
+     * @param term required search text
+     * @param mode search mode, defaulting to "keyword" when omitted
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when omitted; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return an HTTP 200 response containing matching orders and pagination metadata
+     * @throws IllegalArgumentException if a supplied similarity threshold is outside 0.0 to 1.0
+     */
+    @GetMapping("/search")
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> searchOrders(
+            @RequestParam @NotBlank String term,
+            @RequestParam(defaultValue = "keyword", required = false) String mode,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) com.example.orderservice.entities.OrderStatus status,
+            @RequestParam(required = false) Double threshold,
+            Pageable pageable) {
+        if ("similarity".equalsIgnoreCase(mode)
+                && threshold != null
+                && (threshold < 0.0 || threshold > 1.0)) {
+            throw new IllegalArgumentException("Threshold must be between 0.0 and 1.0");
+        }
+        return ResponseEntity.ok(
+                orderService.searchOrders(term, mode, customerId, status, threshold, pageable));
     }
 
     private record GenericResponse(boolean success) {}

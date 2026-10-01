@@ -14,6 +14,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -684,5 +685,44 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
+    }
+
+    /**
+     * Verifies that keyword search returns an order with a matching delivery address.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersByKeyword() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Address")
+                                .param("mode", "keyword")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].deliveryAddress.addressLine1",
+                                containsString("Junit Address")));
+    }
+
+    /**
+     * Verifies that similarity search accepts a misspelled term and returns a successful array
+     * response.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersBySimilarity() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Adress")
+                                .param("mode", "similarity")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
     }
 }
