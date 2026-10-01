@@ -685,4 +685,32 @@ class OrderControllerIT extends AbstractIntegrationTest {
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
     }
+
+    @Test
+    void shouldSearchOrdersByKeyword() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Address")
+                                .param("mode", "keyword")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].deliveryAddress.addressLine1",
+                                org.hamcrest.Matchers.containsString("Junit Address")));
+    }
+
+    @Test
+    void shouldSearchOrdersBySimilarity() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Adress")
+                                .param("mode", "similarity")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
+    }
 }

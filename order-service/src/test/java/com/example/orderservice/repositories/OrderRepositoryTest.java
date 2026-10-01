@@ -15,6 +15,7 @@ import com.example.orderservice.util.TestData;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -137,5 +138,70 @@ class OrderRepositoryTest {
         // Verify total order count
         long totalOrders = this.orderRepository.count();
         assertThat(totalOrders).isEqualTo(5);
+    }
+
+    @Nested
+    class Search {
+        @Test
+        void searchOrdersByKeyword() {
+            Order order1 = TestData.getOrder();
+            order1.setSource("WEB");
+            order1.setDeliveryAddress(
+                    new com.example.orderservice.model.Address(
+                            order1.getDeliveryAddress().addressLine1(),
+                            order1.getDeliveryAddress().addressLine2(),
+                            "New York",
+                            order1.getDeliveryAddress().state(),
+                            order1.getDeliveryAddress().zipCode(),
+                            order1.getDeliveryAddress().country()));
+            orderRepository.save(order1);
+
+            Order order2 = TestData.getOrder();
+            order2.setSource("MOBILE");
+            order2.setDeliveryAddress(
+                    new com.example.orderservice.model.Address(
+                            order2.getDeliveryAddress().addressLine1(),
+                            order2.getDeliveryAddress().addressLine2(),
+                            "Los Angeles",
+                            order2.getDeliveryAddress().state(),
+                            order2.getDeliveryAddress().zipCode(),
+                            order2.getDeliveryAddress().country()));
+            orderRepository.save(order2);
+
+            Page<Long> results =
+                    orderRepository.searchOrdersByKeyword(
+                            "York", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order1.getId());
+
+            results =
+                    orderRepository.searchOrdersByKeyword("mob", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order2.getId());
+
+            results =
+                    orderRepository.searchOrdersByKeyword(
+                            "nomatch", null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).isEmpty();
+        }
+
+        @Test
+        void searchOrdersBySimilarity() {
+            Order order1 = TestData.getOrder();
+            order1.setSource("SomeWebSource");
+            orderRepository.save(order1);
+
+            Order order2 = TestData.getOrder();
+            order2.setSource("OtherSource");
+            orderRepository.save(order2);
+
+            Page<Long> results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", 0.3, null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).containsExactly(order1.getId());
+
+            results =
+                    orderRepository.searchOrdersBySimilarity(
+                            "NoMatchHere", 0.3, null, null, PageRequest.of(0, 10));
+            assertThat(results.getContent()).isEmpty();
+        }
     }
 }

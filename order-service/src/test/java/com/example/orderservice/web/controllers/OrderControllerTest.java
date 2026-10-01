@@ -12,6 +12,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -50,6 +51,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -530,6 +532,91 @@ class OrderControllerTest {
                     .andExpect(
                             jsonPath("$.detail")
                                     .value("Order with Id %d not found".formatted(orderId)));
+        }
+    }
+
+    @Nested
+    @DisplayName("search methods")
+    class Search {
+        @Test
+        void shouldSearchOrders() throws Exception {
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "WEB",
+                            new Address(
+                                    "Address1", "Address2", "city", "state", "zipCode", "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            List.of());
+
+            PagedResult<OrderResponse> pagedResult =
+                    new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+            given(
+                            orderService.searchOrders(
+                                    eq("term"),
+                                    eq("keyword"),
+                                    isNull(),
+                                    isNull(),
+                                    isNull(),
+                                    any(Pageable.class)))
+                    .willReturn(pagedResult);
+
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "term")
+                                    .param("mode", "keyword")
+                                    .param("page", "0")
+                                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is(1)))
+                    .andExpect(jsonPath("$.data[0].source", is("WEB")))
+                    .andExpect(jsonPath("$.totalElements", is(1)));
+        }
+
+        @Test
+        void shouldSearchOrdersBySimilarity() throws Exception {
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "WEB",
+                            new Address(
+                                    "Address1", "Address2", "city", "state", "zipCode", "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            List.of());
+
+            PagedResult<OrderResponse> pagedResult =
+                    new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+            given(
+                            orderService.searchOrders(
+                                    eq("term"),
+                                    eq("similarity"),
+                                    isNull(),
+                                    isNull(),
+                                    eq(0.3),
+                                    any(Pageable.class)))
+                    .willReturn(pagedResult);
+
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "term")
+                                    .param("mode", "similarity")
+                                    .param("threshold", "0.3")
+                                    .param("page", "0")
+                                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is(1)))
+                    .andExpect(jsonPath("$.data[0].source", is("WEB")))
+                    .andExpect(jsonPath("$.totalElements", is(1)));
         }
     }
 }

@@ -85,4 +85,34 @@ public interface OrderApi {
     ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @Parameter(name = "id", in = ParameterIn.PATH) Long id,
             @Parameter(hidden = true) Pageable pageable);
+
+    @Operation(
+            summary = "searches orders based on a term and filters",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Success",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PagedResult.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        })
+            })
+    ResponseEntity<PagedResult<OrderResponse>> searchOrders(
+            @Parameter(name = "term", in = ParameterIn.QUERY) String term,
+            @Parameter(name = "mode", in = ParameterIn.QUERY) String mode,
+            @Parameter(name = "customerId", in = ParameterIn.QUERY) Long customerId,
+            @Parameter(name = "status", in = ParameterIn.QUERY)
+                    com.example.orderservice.entities.OrderStatus status,
+            @Parameter(name = "threshold", in = ParameterIn.QUERY) Double threshold,
+            @Parameter(hidden = true) Pageable pageable);
 }

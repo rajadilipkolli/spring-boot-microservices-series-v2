@@ -311,4 +311,41 @@ public class OrderService {
                     }
                 });
     }
+
+    public PagedResult<OrderResponse> searchOrders(
+            String term,
+            String mode,
+            Long customerId,
+            OrderStatus status,
+            Double threshold,
+            Pageable pageable) {
+
+        Page<Long> page;
+        if ("similarity".equalsIgnoreCase(mode)) {
+            double actualThreshold = threshold != null ? threshold : 0.3;
+            page =
+                    orderRepository.searchOrdersBySimilarity(
+                            term,
+                            actualThreshold,
+                            customerId,
+                            status != null ? status.name() : null,
+                            pageable);
+        } else {
+            page = orderRepository.searchOrdersByKeyword(term, customerId, status, pageable);
+        }
+
+        if (page.isEmpty()) {
+            return new PagedResult<>(
+                    List.of(),
+                    page.getTotalElements(),
+                    page.getNumber() + 1,
+                    page.getTotalPages(),
+                    page.isFirst(),
+                    page.isLast(),
+                    page.hasNext(),
+                    page.hasPrevious());
+        }
+
+        return getOrderResponsePagedResult(page);
+    }
 }

@@ -174,5 +174,23 @@ class OrderController implements OrderApi {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
     }
 
+    @GetMapping("/search")
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> searchOrders(
+            @RequestParam String term,
+            @RequestParam(defaultValue = "keyword", required = false) String mode,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) com.example.orderservice.entities.OrderStatus status,
+            @RequestParam(required = false) Double threshold,
+            Pageable pageable) {
+        if ("similarity".equalsIgnoreCase(mode)
+                && threshold != null
+                && (threshold < 0.0 || threshold > 1.0)) {
+            throw new IllegalArgumentException("Threshold must be between 0.0 and 1.0");
+        }
+        return ResponseEntity.ok(
+                orderService.searchOrders(term, mode, customerId, status, threshold, pageable));
+    }
+
     private record GenericResponse(boolean success) {}
 }
