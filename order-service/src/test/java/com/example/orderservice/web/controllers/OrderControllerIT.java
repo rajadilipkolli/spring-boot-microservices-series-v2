@@ -14,6 +14,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -704,7 +705,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath(
                                 "$.data[0].deliveryAddress.addressLine1",
-                                org.hamcrest.Matchers.containsString("Junit Address")));
+                                containsString("Junit Address")));
     }
 
     /**
