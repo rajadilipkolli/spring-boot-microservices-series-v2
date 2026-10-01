@@ -208,6 +208,11 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+                        <env>
+                            <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
+                            <THC_PATH>/actuator/health</THC_PATH>
+                            <THC_PORT>8765</THC_PORT>
+                        </env>
                         <publish>true</publish>
                     </image>
                 </configuration>
