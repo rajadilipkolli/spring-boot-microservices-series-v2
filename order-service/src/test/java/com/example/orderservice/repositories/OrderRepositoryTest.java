@@ -18,6 +18,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -25,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({PROFILE_TEST})
@@ -34,6 +37,7 @@ class OrderRepositoryTest {
 
     @Autowired private OrderRepository orderRepository;
     @Autowired private OrderItemRepository orderItemRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
@@ -239,31 +243,44 @@ class OrderRepositoryTest {
             }
         }
 
-        @Test
-        void similarityThresholdAppliesToContentAndCount() {
-            orderRepository.saveAll(
-                    List.of(
-                            TestData.getOrder().setSource("SomeWeb"),
-                            TestData.getOrder().setSource("SomeWeb"),
-                            TestData.getOrder().setSource("SomeWebSource")));
+        @ParameterizedTest
+        @CsvSource({"0.3, 0.8, 3", "0.3, 1.0, 3", "0.9, 0.3, 3", "0.9, 0.8, 2"})
+        void similarityMatchesEitherConditionInContentAndCount(
+                double operatorThreshold, double threshold, int expectedCount) {
+            // Keep the operator cutoff deterministic and scoped to this test's transaction.
+            jdbcTemplate.queryForObject(
+                    "SELECT set_config('pg_trgm.similarity_threshold', ?, true)",
+                    String.class,
+                    Double.toString(operatorThreshold));
+            List<Order> orders =
+                    orderRepository.saveAll(
+                            List.of(
+                                    TestData.getOrder().setSource("SomeWeb"),
+                                    TestData.getOrder().setSource("SomeWeb"),
+                                    TestData.getOrder().setSource("SomeWebSource")));
 
-            Page<Long> results =
+            // A full page forces the count query; exact matches may appear in either order.
+            Page<Long> firstPage =
                     orderRepository.searchOrdersBySimilarity(
-                            "SomeWeb", 0.8, null, null, PageRequest.of(0, 1));
-            assertThat(results.getContent()).hasSize(1);
-            assertThat(results.getTotalElements()).isEqualTo(2);
-            assertThat(
-                            orderRepository
-                                    .searchOrdersBySimilarity(
-                                            "SomeWeb", 0.8, null, null, PageRequest.of(2, 1))
-                                    .getContent())
-                    .isEmpty();
+                            "SomeWeb", threshold, null, null, PageRequest.of(0, 2));
+            assertThat(firstPage.getContent())
+                    .containsExactlyInAnyOrder(orders.get(0).getId(), orders.get(1).getId());
+            assertThat(firstPage.getTotalElements()).isEqualTo(expectedCount);
 
-            Page<Long> strict =
+            // The partial match qualifies through either cutoff, but not when both exclude it.
+            Page<Long> nextPage =
                     orderRepository.searchOrdersBySimilarity(
-                            "SomeWeb", 1.0, null, null, PageRequest.of(0, 1));
-            assertThat(strict.getContent()).isEmpty();
-            assertThat(strict.getTotalElements()).isZero();
+                            "SomeWeb", threshold, null, null, PageRequest.of(1, 2));
+            List<Long> expectedRemainingIds =
+                    expectedCount == 3 ? List.of(orders.get(2).getId()) : List.of();
+            assertThat(nextPage.getContent()).containsExactlyElementsOf(expectedRemainingIds);
+            assertThat(nextPage.getTotalElements()).isEqualTo(expectedCount);
+
+            Page<Long> beyondLastPage =
+                    orderRepository.searchOrdersBySimilarity(
+                            "SomeWeb", threshold, null, null, PageRequest.of(2, 2));
+            assertThat(beyondLastPage.getContent()).isEmpty();
+            assertThat(beyondLastPage.getTotalElements()).isEqualTo(expectedCount);
         }
 
         /** Verifies trigram source matching and an empty result for an unrelated term. */
