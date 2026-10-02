@@ -47,6 +47,8 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.streams.RecoveringDeserializationExceptionHandler;
+import org.springframework.util.Assert;
+import tools.jackson.databind.json.JsonMapper;
 import org.springframework.kafka.support.serializer.JacksonJsonSerde;
 import org.springframework.util.Assert;
 
@@ -73,16 +75,15 @@ class KafkaStreamsConfig {
                                     "Kafka Streams state transition from {} to {}",
                                     oldState,
                                     newState));
-
             Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
-            Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
+            Assert.notNull(streamsConfiguration, () -> "streamsConfiguration must not be null");
 
-            // Enhanced error handling
+            // Deserialization Exception Handler configuration
             streamsConfiguration.put(
                     StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
                     RecoveringDeserializationExceptionHandler.class);
             streamsConfiguration.put(
-                    RecoveringDeserializationExceptionHandler.RECOVERER,
+                    RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
                     deadLetterPublishingRecoverer);
 
             // Performance and reliability optimizations
