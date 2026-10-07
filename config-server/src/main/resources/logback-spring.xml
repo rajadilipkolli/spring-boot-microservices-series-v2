@@ -6,7 +6,7 @@
     <springProperty scope="context" name="appName" source="spring.application.name"/>
 
     <appender name="OpenTelemetry" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-        <captureMdcAttributes>true</captureMdcAttributes>
+        <mdcAttributesIncluded>traceId,spanId</mdcAttributesIncluded>
     </appender>
 
     <root level="INFO">

@@ -26,7 +26,12 @@ public class ConfigServerRuntimeHints implements RuntimeHintsRegistrar {
                                         .withMethod(
                                                 "setCaptureMdcAttributes",
                                                 Collections.singletonList(
-                                                        TypeReference.of(boolean.class)),
+                                                        TypeReference.of(String.class)),
+                                                ExecutableMode.INVOKE)
+                                        .withMethod(
+                                                "setMdcAttributesIncluded",
+                                                Collections.singletonList(
+                                                        TypeReference.of(String.class)),
                                                 ExecutableMode.INVOKE));
         hints.reflection()
                 .registerType(
