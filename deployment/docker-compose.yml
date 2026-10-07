@@ -228,8 +228,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=config-server
       - OTEL_RESOURCE_ATTRIBUTES=service.name=config-server,service.version=0.0.1-SNAPSHOT
-      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=64M
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
 
   naming-server:
     container_name: naming-server
