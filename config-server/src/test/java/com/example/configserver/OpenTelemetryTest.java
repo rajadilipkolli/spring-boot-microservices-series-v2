@@ -18,6 +18,7 @@ class OpenTelemetryTest {
 
     @Autowired private OpenTelemetry openTelemetry;
 
+    /** Verifies that OpenTelemetry is injected and its appender is attached to the root logger. */
     @Test
     void testOpenTelemetryAndAppender() {
         assertThat(openTelemetry).isNotNull();
