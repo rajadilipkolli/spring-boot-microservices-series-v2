@@ -84,7 +84,8 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
         given(responseSpec.toBodilessEntity()).willReturn(ResponseEntity.ok().build());
 
-        var r = new RegistrationRequest("u1", "e@example.com", "First", "Last", "p", 1L, "addr");
+        var r = new RegistrationRequest(
+                "u1", "e@example.com", "First", "Last", "p", 1L, "addr", null, null, null, null, null);
 
         // act / assert
         assertDoesNotThrow(() -> svc.registerUser(r));
@@ -121,7 +122,7 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willReturn(Map.of("error", "nope"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
 
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
@@ -140,7 +141,7 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willReturn(null);
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
@@ -158,7 +159,7 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willThrow(new RuntimeException("boom"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
 
         assertThatThrownBy(() -> svc.registerUser(r))
                 .isInstanceOf(KeyCloakException.class)
@@ -187,7 +188,7 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
         given(responseSpec.toBodilessEntity()).willThrow(new RuntimeException("create-fail"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
         verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
     }

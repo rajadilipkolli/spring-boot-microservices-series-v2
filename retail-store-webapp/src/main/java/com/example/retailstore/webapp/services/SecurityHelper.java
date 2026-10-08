@@ -3,6 +3,7 @@ package com.example.retailstore.webapp.services;
 import java.util.Locale;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
@@ -39,13 +40,17 @@ public class SecurityHelper {
                 .principal(oauthToken)
                 .build();
 
-        OAuth2AuthorizedClient client = this.authorizedClientManager.authorize(authorizeRequest);
+        try {
+            OAuth2AuthorizedClient client = this.authorizedClientManager.authorize(authorizeRequest);
 
-        if (client == null || client.getAccessToken() == null) {
+            if (client == null || client.getAccessToken() == null) {
+                return null;
+            }
+
+            return client.getAccessToken().getTokenValue();
+        } catch (ClientAuthorizationRequiredException e) {
             return null;
         }
-
-        return client.getAccessToken().getTokenValue();
     }
 
     public String getLoggedInUserEmail() {

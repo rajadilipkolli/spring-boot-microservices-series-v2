@@ -28,8 +28,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Test
     void testCreateOrder() {
-        CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 0);
+        CustomerRequest customerRequest = new CustomerRequest(
+                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 0);
         Address address = new Address("Line1", "Line2", "City", "State", "Zip", "Country");
         OrderItemRequest orderItemRequest = new OrderItemRequest("PROD001", 1, BigDecimal.TEN);
         CreateOrderRequest createOrderRequest =

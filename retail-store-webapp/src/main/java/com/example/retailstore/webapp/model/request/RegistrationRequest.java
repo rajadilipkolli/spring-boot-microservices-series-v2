@@ -25,4 +25,9 @@ public record RegistrationRequest(
         String password,
 
         Long phone,
-        String address) {}
+        String addressLine1,
+        String addressLine2,
+        String city,
+        String state,
+        String zipCode,
+        String country) {}

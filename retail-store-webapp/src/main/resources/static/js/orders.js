@@ -3,7 +3,6 @@ document.addEventListener('alpine:init', () => {
         orders: [],
         init() {
             this.loadOrders();
-            updateCartItemCount();
         },
         loadOrders() {
             $.getJSON("/api/orders", (data) => {

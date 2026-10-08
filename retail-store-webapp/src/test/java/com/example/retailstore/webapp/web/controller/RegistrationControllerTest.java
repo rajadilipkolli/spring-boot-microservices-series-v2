@@ -53,7 +53,18 @@ class RegistrationControllerTest {
     @WithAnonymousUser
     void shouldRegisterUserSuccessfully() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
-                TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
+                TEST_USERNAME,
+                TEST_EMAIL,
+                "Test",
+                "User",
+                TEST_PASSWORD,
+                9848022334L,
+                "junitAddress",
+                null,
+                null,
+                null,
+                null,
+                null);
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
@@ -71,7 +82,18 @@ class RegistrationControllerTest {
     @WithAnonymousUser
     void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
-                TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
+                TEST_USERNAME,
+                TEST_EMAIL,
+                "Test",
+                "User",
+                TEST_PASSWORD,
+                9848022334L,
+                "junitAddress",
+                null,
+                null,
+                null,
+                null,
+                null);
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
@@ -94,7 +116,12 @@ class RegistrationControllerTest {
                 "", // invalid lastName
                 "pwd", // valid password
                 9848022334L,
-                "junitAddress");
+                "junitAddress",
+                null,
+                null,
+                null,
+                null,
+                null);
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
@@ -107,7 +134,18 @@ class RegistrationControllerTest {
     @WithAnonymousUser
     void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
-                TEST_USERNAME, TEST_EMAIL, "Test", "User", TEST_PASSWORD, 9848022334L, "junitAddress");
+                TEST_USERNAME,
+                TEST_EMAIL,
+                "Test",
+                "User",
+                TEST_PASSWORD,
+                9848022334L,
+                "junitAddress",
+                null,
+                null,
+                null,
+                null,
+                null);
 
         doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
                 .when(registrationService)

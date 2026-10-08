@@ -49,9 +49,35 @@
                 <label for="phone" class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="phone" name="phone">
             </div>
-            <div class="mb-3">
-                <label for="address" class="form-label">Address</label>
-                <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="addressLine1" class="form-label">Delivery Address Line 1</label>
+                    <input type="text" class="form-control" id="addressLine1" name="addressLine1" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="addressLine2" class="form-label">Delivery Address Line 2</label>
+                    <input type="text" class="form-control" id="addressLine2" name="addressLine2">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="city" class="form-label">Delivery Address City</label>
+                    <input type="text" class="form-control" id="city" name="city" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="state" class="form-label">Delivery Address State</label>
+                    <input type="text" class="form-control" id="state" name="state" required>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="zipCode" class="form-label">Delivery Address ZipCode</label>
+                    <input type="text" class="form-control" id="zipCode" name="zipCode" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="country" class="form-label">Delivery Address Country</label>
+                    <input type="text" class="form-control" id="country" name="country" required>
+                </div>
             </div>
             <div id="registrationError" class="alert alert-danger d-none"></div>
             <div class="d-grid gap-2">

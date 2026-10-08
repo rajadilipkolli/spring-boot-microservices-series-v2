@@ -103,6 +103,9 @@ class OrderController {
 
     private Map<String, ?> getHeaders() {
         String accessToken = securityHelper.getAccessToken();
+        if (accessToken == null) {
+            return Map.of();
+        }
         return Map.of("Authorization", "Bearer " + accessToken);
     }
 

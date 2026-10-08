@@ -138,6 +138,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "firstnew@customerRequest.email",
                         "1234567890",
                         "First Address",
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
                         10_000);
         this.mockMvc
                 .perform(
@@ -150,7 +155,9 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email().toLowerCase())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(
+                        jsonPath(
+                                "$.address", is("First Address,,Hyderabad,Telangana,500081,India")))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
@@ -193,6 +200,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         customer.getEmail(),
                         customer.getPhone(),
                         customer.getAddress(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
                         customer.getAmountAvailable());
         this.mockMvc
                 .perform(
@@ -205,13 +217,14 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.address", is(customer.getAddress())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-        CustomerRequest customer = new CustomerRequest(null, null, null, null, 0);
+        CustomerRequest customer =
+                new CustomerRequest(null, null, null, null, null, null, null, null, null, 0);
 
         this.mockMvc
                 .perform(
@@ -248,7 +261,16 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         Long customerId = customerList.getFirst().getId();
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "Updated text", "first@customer.email", "1234567890", "First Address", 500);
+                        "Updated text",
+                        "first@customer.email",
+                        "1234567890",
+                        "First Address",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        500);
 
         this.mockMvc
                 .perform(
@@ -259,7 +281,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.address", is(customerRequest.addressLine1() + ",,,,,")))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
@@ -273,6 +295,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "first@customer.email",
                         "1234567890",
                         "First Address",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
                         10_000);
 
         this.mockMvc

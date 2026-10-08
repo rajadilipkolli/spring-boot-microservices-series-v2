@@ -42,7 +42,16 @@ public class RegistrationController {
         logger.info("Received registration request for user: {}", request.username());
         registrationService.registerUser(request);
         CustomerRequest customerRequest = new CustomerRequest(
-                request.username(), request.email(), String.valueOf(request.phone()), request.address(), 10_000);
+                request.username(),
+                request.email(),
+                String.valueOf(request.phone()),
+                request.addressLine1(),
+                request.addressLine2(),
+                request.city(),
+                request.state(),
+                request.zipCode(),
+                request.country(),
+                10_000);
         CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
         logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());

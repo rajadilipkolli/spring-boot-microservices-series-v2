@@ -13,7 +13,6 @@ document.addEventListener('alpine:init', () => {
         },
         init() {
             this.loadProducts();
-            updateCartItemCount();
         },
         loadProducts() {
             fetch(`/api/products?page=${this.pageNo}`)

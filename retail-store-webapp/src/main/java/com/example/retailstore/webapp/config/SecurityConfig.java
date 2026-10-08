@@ -47,7 +47,11 @@ class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))
                 .logout(logout -> logout.clearAuthentication(true)
                         .invalidateHttpSession(true)
-                        .logoutSuccessHandler(oidcLogoutSuccessHandler()));
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler()))
+                .headers(
+                        headers -> headers.contentSecurityPolicy(
+                                csp -> csp.policyDirectives(
+                                        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
 
         return http.build();
     }

@@ -54,12 +54,12 @@ class Initializer implements CommandLineRunner {
         this.customerRepository.saveAll(customerList);
 
         // Save retail customer separately with conflict handling
-        if (this.customerRepository.findByEmail("retail@gmail.com").isEmpty()) {
+        if (this.customerRepository.findByEmail("retailstore@gmail.com").isEmpty()) {
             try {
                 Customer retailCustomer =
                         new Customer()
                                 .setName("retail")
-                                .setEmail("retail@gmail.com")
+                                .setEmail("retailstore@gmail.com")
                                 .setAddress(faker.address().fullAddress())
                                 .setPhone(faker.phoneNumber().phoneNumber())
                                 .setAmountAvailable(secureRandom.nextInt(100_000))

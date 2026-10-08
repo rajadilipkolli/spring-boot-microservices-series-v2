@@ -38,11 +38,25 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_LAST_NAME,
                 "Test@1234",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                null,
+                null,
+                null,
+                null);
 
         // Arrange: Expected CustomerRequest and CustomerResponse for mocking CustomerServiceClient
         CustomerRequest expectedCustomerRequest = new CustomerRequest(
-                TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
+                TEST_USERNAME,
+                TEST_EMAIL,
+                String.valueOf(TEST_PHONE_NUMBER),
+                TEST_ADDRESS_LINE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                10_000);
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
                 1L, TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
 
@@ -101,7 +115,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void shouldReturnBadRequestForInvalidUsername() throws Exception {
+    void shouldReturnBadRequestForInvalidUsername() {
         RegistrationRequest request = new RegistrationRequest(
                 "u", // invalid username (too short)
                 "test@example.com",
@@ -109,7 +123,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123!",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                null,
+                null,
+                null,
+                null);
 
         mockMvcTester
                 .post()
@@ -134,7 +153,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "password",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE); // invalid password (no uppercase, numbers, or special chars)
+                TEST_ADDRESS_LINE,
+                null,
+                null,
+                null,
+                null,
+                null); // invalid password (no uppercase, numbers, or special chars)
 
         mockMvcTester
                 .post()
@@ -159,7 +183,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123!",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                null,
+                null,
+                null,
+                null);
 
         mockMvcTester
                 .post()
