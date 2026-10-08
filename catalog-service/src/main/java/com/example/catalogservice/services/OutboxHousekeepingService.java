@@ -42,7 +42,6 @@ public class OutboxHousekeepingService {
      * new values, and remaining gauges keep their previous values.
      */
     @Scheduled(fixedDelayString = "${application.outbox.housekeeping-delay:10000}")
-    @SchedulerLock(name = "updateMetricsLock")
     public void updateMetrics() {
         outboxEventRepository
                 .countByStatus(OutboxEventStatus.PENDING)
