@@ -24,14 +24,13 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +51,7 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
+    private final ReactiveRedisOperations<String, Object> redisOps;
 
     private final ProductService self;
     private final TSID.Factory tsidFactory;
@@ -61,21 +61,40 @@ public class ProductService {
             ProductMapper productMapper,
             InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
+            ReactiveRedisOperations<String, Object> redisOps,
             @Lazy ProductService self,
             TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
+        this.redisOps = redisOps;
         this.self = self;
         this.tsidFactory = tsidFactory;
     }
 
     @Observed(name = "product.findAll", contextualName = "find-all-products")
-    @Cacheable(
-            cacheNames = "products",
-            key = "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
+            int pageNo, int pageSize, String sortBy, String sortDir) {
+        String cacheKey =
+                "products:" + pageNo + "_" + pageSize + "_" + sortBy + "_" + sortDir.toLowerCase();
+
+        return redisOps.opsForValue()
+                .get(cacheKey)
+                .map(cached -> (PagedResult<ProductResponse>) cached)
+                .switchIfEmpty(
+                        Mono.defer(() -> fetchAllProductsFromDb(pageNo, pageSize, sortBy, sortDir))
+                                .flatMap(
+                                        result ->
+                                                redisOps.opsForValue()
+                                                        .set(
+                                                                cacheKey,
+                                                                result,
+                                                                java.time.Duration.ofMinutes(5))
+                                                        .thenReturn(result)));
+    }
+
+    private Mono<PagedResult<ProductResponse>> fetchAllProductsFromDb(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
@@ -124,18 +143,37 @@ public class ProductService {
 
     @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<ProductResponse> findProductById(Long id) {
-        return productRepository
-                .findById(id)
-                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
-                .map(productMapper::toProductResponse)
-                .flatMap(
-                        productResponse ->
-                                getInventoryByProductCode(productResponse.productCode())
-                                        .map(
-                                                inventoryDto ->
-                                                        productResponse.withInStock(
-                                                                inventoryDto.availableQuantity()
-                                                                        > 0)));
+        String cacheKey = "product:" + id;
+        return redisOps.opsForValue()
+                .get(cacheKey)
+                .map(cached -> (ProductResponse) cached)
+                .switchIfEmpty(
+                        Mono.defer(
+                                        () ->
+                                                productRepository
+                                                        .findById(id)
+                                                        .switchIfEmpty(
+                                                                Mono.error(
+                                                                        new ProductNotFoundException(
+                                                                                id)))
+                                                        .map(productMapper::toProductResponse)
+                                                        .flatMap(
+                                                                productResponse ->
+                                                                        getInventoryByProductCode(
+                                                                                        productResponse
+                                                                                                .productCode())
+                                                                                .map(
+                                                                                        inventoryDto ->
+                                                                                                productResponse
+                                                                                                        .withInStock(
+                                                                                                                inventoryDto
+                                                                                                                                .availableQuantity()
+                                                                                                                        > 0))))
+                                .flatMap(
+                                        result ->
+                                                redisOps.opsForValue()
+                                                        .set(cacheKey, result)
+                                                        .thenReturn(result)));
     }
 
     private Mono<InventoryResponse> getInventoryByProductCode(String code) {
@@ -145,11 +183,30 @@ public class ProductService {
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<ProductResponse> findProductByProductCode(
             String productCode, boolean fetchInStock) {
+        String cacheKey = "productCode:" + productCode;
+
         Mono<ProductResponse> productResponseMono =
-                productRepository
-                        .findByProductCodeAllIgnoreCase(productCode)
-                        .map(productMapper::toProductResponse)
-                        .switchIfEmpty(Mono.error(new ProductNotFoundException(productCode)));
+                redisOps.opsForValue()
+                        .get(cacheKey)
+                        .map(cached -> (ProductResponse) cached)
+                        .switchIfEmpty(
+                                Mono.defer(
+                                                () ->
+                                                        productRepository
+                                                                .findByProductCodeAllIgnoreCase(
+                                                                        productCode)
+                                                                .map(
+                                                                        productMapper
+                                                                                ::toProductResponse)
+                                                                .switchIfEmpty(
+                                                                        Mono.error(
+                                                                                new ProductNotFoundException(
+                                                                                        productCode))))
+                                        .flatMap(
+                                                result ->
+                                                        redisOps.opsForValue()
+                                                                .set(cacheKey, result)
+                                                                .thenReturn(result)));
 
         if (fetchInStock) {
             return productResponseMono.flatMap(this::fetchInventoryAndUpdateProductResponse);
@@ -169,7 +226,6 @@ public class ProductService {
     // saves product to db and sends message that new product is available for inventory
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
-    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository
@@ -193,7 +249,8 @@ public class ProductService {
                                             Mono.error(
                                                     new ProductAlreadyExistsException(
                                                             productRequest.productCode())));
-                        });
+                        })
+                .delayUntil(p -> evictProductCache(p.id(), p.productCode()));
     }
 
     @Transactional
@@ -220,7 +277,6 @@ public class ProductService {
 
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
-    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Void> deleteProductById(Long id) {
         return productRepository
                 .findById(id)
@@ -234,8 +290,8 @@ public class ProductService {
                                                         "PRODUCT",
                                                         product.getProductCode(),
                                                         "PRODUCT_DELETED",
-                                                        product)))
-                .then();
+                                                        product))
+                                        .then(evictProductCache(id, product.getProductCode())));
     }
 
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
@@ -261,7 +317,6 @@ public class ProductService {
      *     response.
      */
     @Transactional
-    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
         // Update the post object with data from postRequest
         productMapper.mapProductWithRequest(productRequest, product);
@@ -278,7 +333,8 @@ public class ProductService {
                                                 "PRODUCT_UPDATED",
                                                 savedProduct)
                                         .thenReturn(savedProduct))
-                .map(productMapper::toProductResponse);
+                .map(productMapper::toProductResponse)
+                .delayUntil(p -> evictProductCache(p.id(), p.productCode()));
     }
 
     public Mono<Product> findById(Long id) {
@@ -286,7 +342,6 @@ public class ProductService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "products", allEntries = true)
     public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
         validateBatchSize(batchSize);
         int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
@@ -446,5 +501,9 @@ public class ProductService {
                                                                                                                             : productResponseList
                                                                                                                                     .size())))));
                         });
+    }
+
+    private Mono<Void> evictProductCache(Long id, String productCode) {
+        return redisOps.delete("product:" + id, "productCode:" + productCode).then();
     }
 }

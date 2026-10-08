@@ -8,6 +8,7 @@ package com.example.catalogservice.model.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.io.Serializable;
 
 public record ProductResponse(
         Long id,
@@ -16,7 +17,8 @@ public record ProductResponse(
         String description,
         String imageUrl,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") double price,
-        boolean inStock) {
+        boolean inStock)
+        implements Serializable {
 
     @JsonIgnore
     public ProductResponse withInStock(final boolean inStock) {

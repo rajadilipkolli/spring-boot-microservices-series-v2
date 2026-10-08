@@ -31,7 +31,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -48,6 +47,9 @@ class ProductServiceTest {
 
     @Mock private InventoryServiceProxy inventoryServiceProxy;
 
+    @Mock
+    private org.springframework.data.redis.core.ReactiveRedisOperations<String, Object> redisOps;
+
     private ProductService productService;
 
     @Captor private ArgumentCaptor<ProductRequest> productCaptor;
@@ -62,12 +64,23 @@ class ProductServiceTest {
                                 productMapper,
                                 inventoryServiceProxy,
                                 outboxService,
+                                redisOps,
                                 null,
                                 TSID.Factory.builder().build()));
         ProxyFactory proxyFactory = new ProxyFactory(spy);
         ProductService proxy = (ProductService) proxyFactory.getProxy();
         ReflectionTestUtils.setField(spy, "self", proxy);
         productService = spy;
+
+        org.mockito.Mockito.lenient()
+                .when(redisOps.keys(any(String.class)))
+                .thenReturn(reactor.core.publisher.Flux.empty());
+        org.mockito.Mockito.lenient()
+                .when(redisOps.delete(any(org.reactivestreams.Publisher.class)))
+                .thenReturn(reactor.core.publisher.Mono.just(0L));
+        org.mockito.Mockito.lenient()
+                .when(redisOps.delete(any(String[].class)))
+                .thenReturn(reactor.core.publisher.Mono.just(0L));
     }
 
     @Test
@@ -203,15 +216,9 @@ class ProductServiceTest {
         assertThat(capturedProduct.getId()).isNotNull();
         assertThat(capturedProduct.isNew()).isTrue();
 
-        // Verify annotations for Transactional and CacheEvict are present to confirm cache
-        // invalidation logic
+        // Verify createAndSaveProduct is transactional
         Method method = ProductService.class.getMethod("saveProduct", ProductRequest.class);
         assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
-
-        CacheEvict cacheEvict = method.getAnnotation(CacheEvict.class);
-        assertThat(cacheEvict).isNotNull();
-        assertThat(cacheEvict.cacheNames()).contains("products");
-        assertThat(cacheEvict.allEntries()).isTrue();
 
         // Verify createAndSaveProduct is transactional
         Method createMethod =

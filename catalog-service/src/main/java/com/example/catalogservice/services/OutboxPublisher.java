@@ -15,6 +15,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -62,6 +63,7 @@ public class OutboxPublisher {
     }
 
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
+    @SchedulerLock(name = "scheduledPublishLock")
     public void scheduledPublish() {
         if (isPublishing.compareAndSet(false, true)) {
             this.publishEvents()
@@ -160,6 +162,7 @@ public class OutboxPublisher {
     }
 
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
+    @SchedulerLock(name = "scheduledReapLock")
     public void scheduledReap() {
         log.debug("Running outbox reaper");
         OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());

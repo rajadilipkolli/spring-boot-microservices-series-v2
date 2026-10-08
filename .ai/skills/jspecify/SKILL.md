@@ -1,5 +1,5 @@
 ---
-name: jspecify-skill
+name: jspecify
 description: >
   Use this skill when asked to perform any of the following actions in a Java project:
     - To add jspecify support

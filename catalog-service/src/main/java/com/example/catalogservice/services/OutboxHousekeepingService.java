@@ -11,6 +11,7 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicLong;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,6 +38,7 @@ public class OutboxHousekeepingService {
     }
 
     @Scheduled(fixedDelayString = "${application.outbox.housekeeping-delay:10000}")
+    @SchedulerLock(name = "updateMetricsLock")
     public void updateMetrics() {
         outboxEventRepository
                 .countByStatus(OutboxEventStatus.PENDING)
@@ -50,6 +52,7 @@ public class OutboxHousekeepingService {
     }
 
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
+    @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {
         OffsetDateTime threshold = OffsetDateTime.now().minusDays(7);
         log.info("Starting cleanup of published events older than {}", threshold);
