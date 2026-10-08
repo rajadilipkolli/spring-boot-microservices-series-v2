@@ -6,5 +6,10 @@
 
 package com.example.inventoryservice.model.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 public record InventoryResponse(
-        Long id, String productCode, Integer availableQuantity, Integer reservedItems) {}
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
+        String productCode,
+        Integer availableQuantity,
+        Integer reservedItems) {}

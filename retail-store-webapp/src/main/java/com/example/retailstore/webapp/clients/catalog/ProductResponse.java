@@ -8,7 +8,7 @@ package com.example.retailstore.webapp.clients.catalog;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 public record ProductResponse(
-        Long id,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
         String productCode,
         String productName,
         String description,

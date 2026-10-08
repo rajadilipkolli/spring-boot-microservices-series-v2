@@ -85,6 +85,7 @@ class OrderControllerTest {
         verifyNoMoreInteractions(orderGeneratorService);
     }
 
+    /** Verifies that listing orders returns paginated order details with string customer IDs. */
     @Test
     void shouldFetchAllOrders() throws Exception {
 
@@ -155,7 +156,7 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.hasNext", is(false)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)))
                 // Enhanced assertions for data structure verification
-                .andExpect(jsonPath("$.data[0].customerId", is(1)))
+                .andExpect(jsonPath("$.data[0].customerId", is("1")))
                 .andExpect(jsonPath("$.data[0].status", is("NEW")))
                 .andExpect(jsonPath("$.data[0].source", is("")))
                 .andExpect(jsonPath("$.data[0].deliveryAddress", notNullValue()))
@@ -169,6 +170,10 @@ class OrderControllerTest {
     @DisplayName("find methods")
     class Find {
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
@@ -188,8 +193,8 @@ class OrderControllerTest {
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(orderResponse.orderId()), Long.class))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is(orderResponse.orderId().toString())))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is(orderResponse.status())))
                     .andExpect(jsonPath("$.source", is(orderResponse.source())))
                     .andExpect(jsonPath("$.deliveryAddress", notNullValue()))
@@ -210,6 +215,7 @@ class OrderControllerTest {
                     "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country");
         }
 
+        /** Verifies that delayed order lookup waits before returning an order with a string ID. */
         @Test
         void shouldRespectDelayParameter() throws Exception {
             Long orderId = 1L;
@@ -230,7 +236,7 @@ class OrderControllerTest {
             long startTime = System.nanoTime();
             mockMvc.perform(get("/api/orders/{id}", orderId).param("delay", "1"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(1)));
+                    .andExpect(jsonPath("$.orderId", is("1")));
             long duration = (System.nanoTime() - startTime) / 1_000_000; // Convert to milliseconds
 
             assertThat(duration).isGreaterThanOrEqualTo(900);
@@ -262,6 +268,9 @@ class OrderControllerTest {
     @Nested
     @DisplayName("save methods")
     class Save {
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
 
@@ -302,13 +311,13 @@ class OrderControllerTest {
                                     .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId", notNullValue()))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is("NEW")))
                     .andExpect(jsonPath("$.source", is("")))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
                     .andExpect(jsonPath("$.totalPrice").value(is(10)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
-                    .andExpect(jsonPath("$.items[0].itemId", is(2)))
+                    .andExpect(jsonPath("$.items[0].itemId", is("2")))
                     .andExpect(jsonPath("$.items[0].productId", is("Product1")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
                     .andExpect(jsonPath("$.items[0].price").value(is(100)))
@@ -404,6 +413,7 @@ class OrderControllerTest {
     @Nested
     @DisplayName("update methods")
     class Update {
+        /** Verifies that updating an order returns its string ID and updated delivery address. */
         @Test
         void shouldUpdateOrder() throws Exception {
 
@@ -446,8 +456,8 @@ class OrderControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(1)))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is("1")))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is("NEW")))
                     .andExpect(jsonPath("$.source", is("")))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
@@ -613,7 +623,7 @@ class OrderControllerTest {
                                     .param("size", "10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data", hasSize(1)))
-                    .andExpect(jsonPath("$.data[0].orderId", is(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is("1")))
                     .andExpect(jsonPath("$.data[0].source", is("WEB")))
                     .andExpect(jsonPath("$.totalElements", is(1)));
         }
@@ -660,7 +670,7 @@ class OrderControllerTest {
                                     .param("size", "10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data", hasSize(1)))
-                    .andExpect(jsonPath("$.data[0].orderId", is(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is("1")))
                     .andExpect(jsonPath("$.data[0].source", is("WEB")))
                     .andExpect(jsonPath("$.totalElements", is(1)));
         }

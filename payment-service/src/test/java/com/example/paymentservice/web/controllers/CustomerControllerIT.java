@@ -4,7 +4,6 @@ package com.example.paymentservice.web.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,6 +74,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /** Verifies that customer lookup by ID returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerById() throws Exception {
         Customer customer = customerList.getFirst();
@@ -83,7 +83,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/customers/{id}", customerId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
+                .andExpect(jsonPath("$.customerId", is(customer.getId().toString())))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
@@ -109,6 +109,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /** Verifies that customer lookup by name returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerByName() throws Exception {
         Customer customer = customerList.getFirst();
@@ -117,7 +118,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(get("/api/customers/name/{name}", customerName))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
+                .andExpect(jsonPath("$.customerId", is(customer.getId().toString())))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
@@ -125,6 +126,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
+    /**
+     * Verifies that customer creation returns a location header, string ID, and the submitted
+     * details.
+     */
     @Test
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
@@ -141,7 +146,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
+                .andExpect(jsonPath("$.customerId").isString())
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email().toLowerCase())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
@@ -175,6 +180,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         });
     }
 
+    /**
+     * Verifies that creating an existing customer succeeds and returns its details with a string
+     * ID.
+     */
     @Test
     void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
         Customer customer = customerList.getFirst();
@@ -192,7 +201,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
+                .andExpect(jsonPath("$.customerId").isString())
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
@@ -233,6 +242,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andReturn();
     }
 
+    /** Verifies that updating a customer returns the customer ID as a JSON string. */
     @Test
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.getFirst().getId();
@@ -246,7 +256,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId").value(customerId))
+                .andExpect(jsonPath("$.customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.address", is(customerRequest.address())))
@@ -283,6 +293,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /** Verifies that deleting a customer returns the deleted details with a string customer ID. */
     @Test
     void shouldDeleteCustomer() throws Exception {
         Customer customer = customerList.getFirst();
@@ -290,7 +301,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customer.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId").value(customer.getId()))
+                .andExpect(jsonPath("$.customerId").value(customer.getId().toString()))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.address", is(customer.getAddress())))

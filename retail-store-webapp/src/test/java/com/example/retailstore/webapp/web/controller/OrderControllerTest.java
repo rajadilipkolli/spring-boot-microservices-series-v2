@@ -149,6 +149,10 @@ class OrderControllerTest {
                 .andExpect(model().attribute("orderNumber", orderNumber));
     }
 
+    /**
+     * Verifies that order lookup exposes string order and customer IDs alongside item and customer
+     * details.
+     */
     @Test
     @WithMockUser
     void getOrder_shouldReturnOrderDetails() throws Exception {
@@ -161,8 +165,8 @@ class OrderControllerTest {
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId", is(1)))
-                .andExpect(jsonPath("$.customerId", is(1)))
+                .andExpect(jsonPath("$.orderId", is("1")))
+                .andExpect(jsonPath("$.customerId", is("1")))
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.items", hasSize(2)))
                 .andExpect(jsonPath("$.items[0].productId", is("PROD-1")))
@@ -190,6 +194,10 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders").with(csrf())).andExpect(status().isOk()).andExpect(view().name("orders"));
     }
 
+    /**
+     * Verifies that the customer order page contains string IDs, order details, and pagination
+     * metadata.
+     */
     @Test
     @WithMockUser
     void getOrders_shouldReturnPagedOrders() throws Exception {
@@ -198,15 +206,16 @@ class OrderControllerTest {
         mockMvc.perform(get("/api/orders").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].orderId", is(1)))
-                .andExpect(jsonPath("$.data[0].customerId", is(1)))
+                .andExpect(jsonPath("$.data[0].orderId", is("1")))
+                .andExpect(jsonPath("$.data[0].customerId", is("1")))
                 .andExpect(jsonPath("$.data[0].status", is("NEW")))
                 .andExpect(jsonPath("$.data[0].items", hasSize(2)))
-                .andExpect(jsonPath("$.data[1].orderId", is(2)))
+                .andExpect(jsonPath("$.data[1].orderId", is("2")))
                 .andExpect(jsonPath("$.data[1].status", is("DELIVERED")))
                 .andExpect(jsonPath("$.totalElements", is(2)));
     }
 
+    /** Verifies that order creation returns a confirmation with string order and customer IDs. */
     @Test
     @WithMockUser
     void createOrder_shouldCreateAndReturnOrderConfirmation() throws Exception {
@@ -233,8 +242,8 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(createOrderRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId", is(123)))
-                .andExpect(jsonPath("$.customerId", is(1)))
+                .andExpect(jsonPath("$.orderId", is("123")))
+                .andExpect(jsonPath("$.customerId", is("1")))
                 .andExpect(jsonPath("$.status", is("NEW")));
     }
 

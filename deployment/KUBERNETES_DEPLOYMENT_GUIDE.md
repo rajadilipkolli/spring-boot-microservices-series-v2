@@ -320,13 +320,13 @@ deployment/terraform/keycloak/
 
 ### Secrets used by the Job
 
-| Secret | Key | Variable |
-|---|---|---|
-| `keycloak-admin-credentials` | `KEYCLOAK_ADMIN` | `TF_VAR_keycloak_admin_username` |
+| Secret                       | Key                       | Variable                         |
+|------------------------------|---------------------------|----------------------------------|
+| `keycloak-admin-credentials` | `KEYCLOAK_ADMIN`          | `TF_VAR_keycloak_admin_username` |
 | `keycloak-admin-credentials` | `KEYCLOAK_ADMIN_PASSWORD` | `TF_VAR_keycloak_admin_password` |
-| `webapp-oauth2-credentials` | `OAUTH2_CLIENT_SECRET` | `TF_VAR_webapp_client_secret` |
-| `keycloak-user-passwords` | `RAJA_PASSWORD` | `KEYCLOAK_RAJA_PASSWORD` |
-| `keycloak-user-passwords` | `RETAIL_PASSWORD` | `KEYCLOAK_RETAIL_PASSWORD` |
+| `webapp-oauth2-credentials`  | `OAUTH2_CLIENT_SECRET`    | `TF_VAR_webapp_client_secret`    |
+| `keycloak-user-passwords`    | `RAJA_PASSWORD`           | `KEYCLOAK_RAJA_PASSWORD`         |
+| `keycloak-user-passwords`    | `RETAIL_PASSWORD`         | `KEYCLOAK_RETAIL_PASSWORD`       |
 
 Rotate both values in the external secret store before the first deployment of
 this version. A successful runner Job applies those values through the Admin

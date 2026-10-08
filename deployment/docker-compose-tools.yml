@@ -187,8 +187,6 @@ services:
       dockerfile: Dockerfile
     image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
     user: "root"
-    profiles:
-    - terraform
     depends_on:
       keycloak:
         condition: service_healthy
@@ -315,9 +313,12 @@ services:
         condition: service_started
       api-gateway:
         condition: service_started
+      redis:
+        condition: service_healthy
     environment:
     - SPRING_PROFILES_ACTIVE=docker
     - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - SPRING_DATA_REDIS_HOST=redis
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     - OTEL_SERVICE_NAME=catalog-service
     - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
@@ -438,6 +439,7 @@ services:
     - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
     - KEYCLOAK_ADMIN_USERNAME=admin
     - KEYCLOAK_ADMIN_PASSWORD=admin1234
+    - OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
     - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
       -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:

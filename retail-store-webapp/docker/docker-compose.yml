@@ -1,18 +1,432 @@
-name: 'spring-boot-microservices-series-v2'
+name: retail-store-webapp
 services:
+  postgresql:
+    container_name: postgresql
+    image: postgres:18-alpine
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: "pg_isready -U appuser -d appdb"
+      interval: 2s
+      timeout: 20s
+      retries: 10
+    networks:
+      - retail-store-network
+
+  redis:
+    container_name: redis
+    image: 'redis:8.10.2-alpine'
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/data:rw'
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    networks:
+      - retail-store-network
+
+  grafana-lgtm:
+    image: grafana/otel-lgtm:0.35.0
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    container_name: grafana-lgtm
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=500
+      - ENABLE_LOGS_ALL=true # Enable logs for all components
+    ports:
+      - "3000:3000" # Grafana UI
+      - "3200:3200" # OTLP HTTP receiver for logs
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "9090:9090" # Prometheus metrics endpoint
+    networks:
+      - retail-store-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ../../deployment/config/otel-collector-config.yml:/etc/otel-collector-config.yml
+    networks:
+      - retail-store-network
+
+  kafka:
+    container_name: kafka
+    image: apache/kafka-native:4.3.1
+    hostname: broker
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CONTROLLER_QUORUM_MODE: 'kraft'
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 32
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      # Additional configurations to ensure state cleanup
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: 'true'
+    networks:
+      - retail-store-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.0
-    command: [ 'start-dev', '--import-realm', '--http-port=9191' ]
+    # command: [ 'start', '--import-realm', '--http-port=9191' ]
+    command: [ 'start', '--http-port=9191' ]
     container_name: keycloak
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
-    volumes:
-      - ./realm-config:/opt/keycloak/data/import
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin1234
+      # Admin credentials
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
+      # ✅ THESE FIX THE REDIRECT ISSUE
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_URL=http://localhost:9191
+      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
+      - KC_PROXY=edge
+      # Database configuration for PostgreSQL
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
+      - KC_DB_USERNAME=appuser
+      - KC_DB_PASSWORD=secret
+      - KC_DB_SCHEMA=public
+      # Hostname and HTTP configuration
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      # Additional production settings
+      - KC_FEATURES=token-exchange
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_TRACING_ENABLED=true
+      - KC_TELEMETRY_ENDPOINT=http://otel-collector:4318
+      - KC_TELEMETRY_PROTOCOL=http/protobuf
+      - KC_TELEMETRY_SERVICE_NAME=keycloak
     ports:
       - "9191:9191"
+      - "9000:9000"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      grafana-lgtm:
+        condition: service_started
+      otel-collector:
+        condition: service_started
     deploy:
       resources:
         limits:
           memory: 2gb
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep \"HTTP/1.1 200 OK\" <&3" ]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 120s
+    networks:
+      - retail-store-network
+
+  # ---------------------------------------------------------------------------
+  # Terraform realm manager (opt-in)
+  #
+  # By default, the keycloak service above uses `--import-realm` with the
+  # ./realm-config bind mount.  This is the standard path for local dev and
+  # CI and does not require the Terraform service.
+  #
+  # The `terraform` service is the recommended forward-looking path for local
+  # development, matching the prod flow.  To use it:
+  #
+  #   docker compose --profile terraform up terraform
+  #
+  # It waits for Keycloak to be healthy, then runs:
+  #   terraform init && terraform plan && terraform apply
+  #
+  # Terraform inputs and write-only password inputs default to local dev
+  # credentials. Override via .env.
+  # ---------------------------------------------------------------------------
+  terraform:
+    build:
+      context: ../../deployment/terraform
+      dockerfile: Dockerfile
+    image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+    user: "root"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      - TF_VAR_keycloak_url=http://keycloak:9191
+      - TF_VAR_keycloak_admin_username=admin
+      - TF_VAR_keycloak_admin_password=admin1234
+      - TF_VAR_webapp_client_secret=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
+      - KEYCLOAK_RAJA_PASSWORD=${RAJA_PASSWORD:-demo-throwaway-raja-pass}
+      - KEYCLOAK_RETAIL_PASSWORD=${RETAIL_PASSWORD:-demo-throwaway-retail-pass}
+    volumes:
+      - ../../deployment/terraform/keycloak:/terraform
+      - /dev/null:/terraform/backend.tf
+      - terraform_cache:/terraform/.terraform
+    networks:
+      - retail-store-network
+
+  config-server:
+    container_name: config-server
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "8888:8888"
+    depends_on:
+      grafana-lgtm:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    networks:
+      - retail-store-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_SECURITY_USER_NAME=docker-dev
+      - SPRING_SECURITY_USER_PASSWORD=docker-pass
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=config-server
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=config-server,service.version=0.0.1-SNAPSHOT
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
+
+  naming-server:
+    container_name: naming-server
+    image: dockertmt/mmv2-service-registry-25:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "8761:8761"
+    networks:
+      - retail-store-network
+    depends_on:
+      config-server:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=naming-server
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=naming-server,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
+    restart: unless-stopped
+
+  api-gateway:
+    container_name: api-gateway
+    image: dockertmt/mmv2-api-gateway:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "8765:8765"
+    networks:
+      - retail-store-network
+    depends_on:
+      config-server:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      grafana-lgtm:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - SPRING_DATA_REDIS_HOST=redis
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=api-gateway,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    restart: unless-stopped
+
+  catalog-service:
+    container_name: catalog-service
+    image: dockertmt/mmv2-catalog-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "18080:18080"
+    networks:
+      - retail-store-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - SPRING_DATA_REDIS_HOST=redis
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=catalog-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=catalog-service,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    restart: unless-stopped
+
+  inventory-service:
+    container_name: inventory-service
+    image: dockertmt/mmv2-inventory-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "18181:18181"
+    networks:
+      - retail-store-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=inventory-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=inventory-service,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+    restart: unless-stopped
+
+  order-service:
+    container_name: order-service
+    image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "18282:18282"
+    networks:
+      - retail-store-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=order-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=order-service,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    #      - SPRING_LIQUIBASE_CONTEXTS=sample-data
+    restart: unless-stopped
+
+  payment-service:
+    container_name: payment-service
+    image: dockertmt/mmv2-payment-service:0.0.1-SNAPSHOT
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    deploy:
+      resources:
+        limits:
+          memory: 1400m
+    ports:
+      - "18085:18085"
+    networks:
+      - retail-store-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      naming-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      postgresql:
+        condition: service_healthy
+    environment:
+      # Note: Enabling Tomcat MBean Registry has a minor impact on memory and startup time (~1-2MB overhead), but is required in Spring Boot 3 to expose Tomcat metrics (tomcat_threads_*, etc) to Micrometer.
+      - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=payment-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=payment-service,service.version=0.0.1-SNAPSHOT
+      - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar -XX:MaxDirectMemorySize=256m -Xmx400m
+    restart: unless-stopped
+
+networks:
+  retail-store-network:
+
+
+volumes:
+  redis_data:
+  postgres_data:
+    driver: local
+  # Provider binary cache for the opt-in terraform service.
+  terraform_cache:

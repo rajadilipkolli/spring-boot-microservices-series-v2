@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
 
 public record ProductResponse(
-        Long id,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
         String productCode,
         String productName,
         String description,

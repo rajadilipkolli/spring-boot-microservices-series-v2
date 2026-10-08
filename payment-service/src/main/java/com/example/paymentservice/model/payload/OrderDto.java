@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.model.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -12,8 +13,10 @@ import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record OrderDto(
-        Long orderId,
-        @Positive(message = "CustomerId should be positive") Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+                @Positive(message = "CustomerId should be positive")
+                Long customerId,
         String status,
         String source,
         @NotEmpty(message = "Order without items not valid") List<@Valid OrderItemDto> items)

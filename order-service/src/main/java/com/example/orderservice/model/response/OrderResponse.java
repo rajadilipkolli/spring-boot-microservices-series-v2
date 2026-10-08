@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderResponse(
-        Long orderId,
-        Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
         String status,
         String source,
         Address deliveryAddress,

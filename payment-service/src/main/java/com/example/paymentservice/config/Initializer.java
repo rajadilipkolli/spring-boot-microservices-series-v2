@@ -10,6 +10,7 @@ import net.datafaker.Faker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,6 +24,13 @@ class Initializer implements CommandLineRunner {
         this.customerRepository = customerRepository;
     }
 
+    /**
+     * Seeds random sample customers and creates the retail and Raja customers when absent. A
+     * duplicate-key failure for Raja is ignored only if a second lookup confirms concurrent
+     * creation.
+     *
+     * @param args unused command-line arguments
+     */
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
@@ -61,6 +69,27 @@ class Initializer implements CommandLineRunner {
                 // Handle race condition - another instance may have created the retail customer
                 log.debug(
                         "Retail customer already exists (concurrent creation): {}", e.getMessage());
+            }
+        }
+
+        // Save raja customer separately with conflict handling
+        if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {
+            try {
+                Customer rajaCustomer =
+                        new Customer()
+                                .setName("raja")
+                                .setEmail("rajakolli@gmail.com")
+                                .setAddress(faker.address().fullAddress())
+                                .setPhone(faker.phoneNumber().phoneNumber())
+                                .setAmountAvailable(secureRandom.nextInt(100_000))
+                                .setAmountReserved(0);
+                this.customerRepository.save(rajaCustomer);
+            } catch (DuplicateKeyException e) {
+                if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {
+                    throw e;
+                }
+                // Another instance created the customer after the initial lookup.
+                log.debug("Raja customer already exists (concurrent creation): {}", e.getMessage());
             }
         }
     }
