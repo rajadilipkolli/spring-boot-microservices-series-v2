@@ -99,8 +99,9 @@ class OutboxScheduledJobsTest {
 
     private void assertWaits(Runnable job, CountDownLatch subscribed, Runnable complete)
             throws Exception {
-        try (var executor = Executors.newSingleThreadExecutor()) {
-            var future = executor.submit(job);
+        var executor = Executors.newSingleThreadExecutor();
+        var future = executor.submit(job);
+        try {
             try {
                 assertThat(subscribed.await(5, TimeUnit.SECONDS)).isTrue();
                 assertThatThrownBy(() -> future.get(100, TimeUnit.MILLISECONDS))
@@ -109,6 +110,9 @@ class OutboxScheduledJobsTest {
                 complete.run();
             }
             future.get(5, TimeUnit.SECONDS);
+        } finally {
+            future.cancel(true);
+            executor.shutdownNow();
         }
     }
 }
