@@ -22,9 +22,9 @@ resource "keycloak_openid_client" "retailstore_webapp" {
   display_on_consent_screen                  = false
 
   valid_redirect_uris = [
-    "http://localhost:8080/login/oauth2/code/keycloak",
-    "https://api.retailstore.local/login/oauth2/code/keycloak",
-    "https://retailstore.local/login/oauth2/code/keycloak"
+    "http://localhost:8080/login/oauth2/code/retailstore-webapp",
+    "https://api.retailstore.local/login/oauth2/code/retailstore-webapp",
+    "https://retailstore.local/login/oauth2/code/retailstore-webapp"
   ]
 
   valid_post_logout_redirect_uris = [

@@ -1,6 +1,12 @@
 package com.example.retailstore.webapp.clients.inventory;
 
-public record InventoryResponse(Long id, String productCode, Integer availableQuantity, Integer reservedItems) {
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+public record InventoryResponse(
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
+        String productCode,
+        Integer availableQuantity,
+        Integer reservedItems) {
     public InventoryUpdateRequest createInventoryUpdateRequest() {
         return InventoryUpdateRequest.fromInventoryResponse(this);
     }

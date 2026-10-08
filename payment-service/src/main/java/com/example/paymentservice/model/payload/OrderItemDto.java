@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.model.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record OrderItemDto(
-        Long itemId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
         String productId,
         @Positive(message = "Quantity should be positive") Integer quantity,
         BigDecimal productPrice)

@@ -7,6 +7,7 @@
 package com.example.orderservice.model.dtos;
 
 import com.example.orderservice.utils.AppConstants;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -19,8 +20,10 @@ import org.springframework.modulith.events.Externalized;
 
 @Externalized(AppConstants.ORDERS_TOPIC + "::#{orderId()}")
 public record OrderDto(
-        Long orderId,
-        @Positive(message = "CustomerId should be positive") Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+                @Positive(message = "CustomerId should be positive")
+                Long customerId,
         String status,
         String source,
         @NotEmpty(message = "Order without items not valid")
