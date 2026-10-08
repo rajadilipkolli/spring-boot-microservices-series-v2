@@ -35,6 +35,24 @@ services:
     networks:
       - catalog-network
 
+  redis:
+    image: 'redis:8.10.2-alpine'
+    ports:
+      - '127.0.0.1:6379:6379/tcp'
+    volumes:
+      - 'redis_data:/data:rw'
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    networks:
+      - catalog-network
+
   kafka:
     container_name: kafka
     image: apache/kafka-native:4.3.1

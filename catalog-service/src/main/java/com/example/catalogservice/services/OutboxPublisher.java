@@ -15,6 +15,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 public class OutboxPublisher {
@@ -61,15 +61,28 @@ public class OutboxPublisher {
                         .register(meterRegistry);
     }
 
+    /**
+     * Claims and publishes up to 100 pending events, blocking until the publisher terminates. Skips
+     * the run if this instance is already publishing. Publisher errors are suppressed, and the
+     * local publishing guard is released even when the run fails.
+     */
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
+    @SchedulerLock(name = "scheduledPublishLock")
     public void scheduledPublish() {
         if (isPublishing.compareAndSet(false, true)) {
-            this.publishEvents()
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .doFinally(signalType -> isPublishing.set(false))
-                    .subscribe(
-                            event -> log.debug("Published outbox event: {}", event.getId()),
-                            ex -> log.error("Error occurred while publishing outbox events", ex));
+            try {
+                this.publishEvents()
+                        .doOnNext(event -> log.debug("Published outbox event: {}", event.getId()))
+                        .doOnError(
+                                ex ->
+                                        log.error(
+                                                "Error occurred while publishing outbox events",
+                                                ex))
+                        .onErrorComplete()
+                        .blockLast();
+            } finally {
+                isPublishing.set(false);
+            }
         }
     }
 
@@ -159,19 +172,26 @@ public class OutboxPublisher {
                         });
     }
 
+    /**
+     * Reclaims processing events locked longer than the configured lock timeout and waits for
+     * completion. Increments retry counts, marking events failed when the new count reaches the
+     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
+     */
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
+    @SchedulerLock(name = "scheduledReapLock")
     public void scheduledReap() {
         log.debug("Running outbox reaper");
         OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
         outboxEventRepository
                 .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(
+                .doOnNext(
                         count -> {
                             if (count > 0) {
                                 log.info("Reaped {} orphaned outbox events", count);
                             }
-                        },
-                        ex -> log.error("Error occurred while reaping outbox events", ex));
+                        })
+                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
+                .onErrorComplete()
+                .block();
     }
 }

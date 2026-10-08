@@ -20,7 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
-import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -28,7 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles({PROFILE_TEST})
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
-        properties = {"spring.cloud.config.enabled=false", "bootui.enabled=OFF"},
+        properties = {"spring.cloud.config.enabled=false"},
         classes = {
             SQLContainerConfig.class,
             TestKafkaListenerConfig.class,
@@ -55,5 +56,7 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected OutboxEventRepository outboxEventRepository;
 
-    @Autowired protected CacheManager cacheManager;
+    @Autowired protected ReactiveRedisOperations<String, Object> redisOps;
+
+    @Autowired protected ReactiveRedisConnectionFactory redisConnectionFactory;
 }

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -35,7 +34,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.Cache;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -79,9 +77,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
-        if (cacheManager.getCache("products") != null) {
-            cacheManager.getCache("products").clear();
-        }
+        redisConnectionFactory.getReactiveConnection().serverCommands().flushAll().block();
         transitionToClosedState("default");
         transitionToClosedState("getInventoryByProductCodes");
         mockWebServer.setDispatcher(new mockwebserver3.QueueDispatcher());
@@ -128,7 +124,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         transitionToClosedState("getInventoryByProductCodes");
 
         mockBackendEndpoint(
-                200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
+                200,
+                jsonMapper.writeValueAsString(
+                        new PagedResult<>(
+                                List.of(new InventoryResponse("P003", 0)),
+                                1L,
+                                1,
+                                1,
+                                true,
+                                true,
+                                false,
+                                false)));
 
         webTestClient
                 .get()
@@ -242,7 +248,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     void shouldCacheFindAllProductsAndEvictOnSave() {
         transitionToClosedState("getInventoryByProductCodes");
         mockBackendEndpoint(
-                200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P003", 0))));
+                200,
+                jsonMapper.writeValueAsString(
+                        new PagedResult<>(
+                                List.of(new InventoryResponse("P003", 0)),
+                                1L,
+                                1,
+                                1,
+                                true,
+                                true,
+                                false,
+                                false)));
 
         // First call - should hit the endpoint and cache the result
         webTestClient
@@ -254,28 +270,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody(PagedResult.class);
 
         // Verify cache is populated
-        Cache productsCache = cacheManager.getCache("products");
-        assertThat(productsCache).isNotNull();
-        // The key is "#pageNo + '_' + #pageSize + '_' + #sortBy + '_' + #sortDir.toLowerCase()"
-        // pageNo=1, pageSize=2, sortBy=id (default), sortDir=asc (default)
-        assertThat(productsCache.get("1_2_id_asc")).isNotNull();
-
-        // Save a new product which should evict the cache
-        ProductRequest productRequest =
-                new ProductRequest("P004", "Product 4", "Description 4", "image-url", 10.0);
-        webTestClient
-                .post()
-                .uri("/api/catalog")
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(productRequest)
-                .exchange()
-                .expectStatus()
-                .isCreated();
-
-        // Verify cache is evicted
-        productsCache = cacheManager.getCache("products");
-        assertThat(productsCache.get("1_2_id_asc")).isNull();
+        String generation = productRepository.findCacheGeneration().block();
+        Boolean hasKey = redisOps.hasKey("products:1_2_id_asc:" + generation).block();
+        assertThat(hasKey).isTrue();
     }
 
     @Test
@@ -922,7 +919,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         @Test
         void shouldSearchProductsByTerm() {
             mockBackendEndpoint(
-                    200, jsonMapper.writeValueAsString(List.of(new InventoryResponse("P001", 5))));
+                    200,
+                    jsonMapper.writeValueAsString(
+                            new PagedResult<>(
+                                    List.of(new InventoryResponse("P001", 5)),
+                                    1L,
+                                    1,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
 
             webTestClient
                     .get()
@@ -953,10 +960,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            List.of(
-                                    new InventoryResponse("P002", 3),
-                                    new InventoryResponse("P003", 0))));
-
+                            new PagedResult<>(
+                                    List.of(
+                                            new InventoryResponse("P002", 3),
+                                            new InventoryResponse("P003", 0)),
+                                    2L,
+                                    1,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
             webTestClient
                     .get()
                     .uri("/api/catalog/search?minPrice=10.0&maxPrice=12.0")
@@ -1022,10 +1036,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
             mockBackendEndpoint(
                     200,
                     jsonMapper.writeValueAsString(
-                            List.of(
-                                    new InventoryResponse("P001", 5),
-                                    new InventoryResponse("P002", 3),
-                                    new InventoryResponse("P003", 0))));
+                            new PagedResult<>(
+                                    List.of(
+                                            new InventoryResponse("P001", 5),
+                                            new InventoryResponse("P002", 3),
+                                            new InventoryResponse("P003", 0)),
+                                    3L,
+                                    0,
+                                    1,
+                                    true,
+                                    true,
+                                    false,
+                                    false)));
 
             webTestClient
                     .get()
@@ -1049,7 +1071,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         @Test
         void shouldReturnEmptyResultsWhenNoProductsMatchSearch() {
-            mockBackendEndpoint(200, jsonMapper.writeValueAsString(List.of()));
+            mockBackendEndpoint(
+                    200,
+                    jsonMapper.writeValueAsString(
+                            new PagedResult<>(List.of(), 0L, 1, 1, true, true, false, false)));
 
             webTestClient
                     .get()

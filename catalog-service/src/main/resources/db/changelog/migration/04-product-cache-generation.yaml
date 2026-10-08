@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: product-cache-generation
+      author: coderabbit
+      changes:
+        - createTable:
+            tableName: product_cache_generation
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: generation
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+        - insert:
+            tableName: product_cache_generation
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+              - column:
+                  name: generation
+                  value: "initial"
