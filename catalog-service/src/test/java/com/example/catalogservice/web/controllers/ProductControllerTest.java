@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,7 +8,6 @@ package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -278,15 +277,15 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .value(is(1))
+                .isEqualTo("1")
                 .jsonPath("$.productCode")
-                .value(is(product.getProductCode()))
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
-                .value(is(product.getProductName()))
+                .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
-                .value(is(product.getDescription()))
+                .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .value(is(product.getPrice()));
+                .isEqualTo(product.getPrice());
     }
 
     @Test
