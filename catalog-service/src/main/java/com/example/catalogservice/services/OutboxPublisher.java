@@ -62,9 +62,9 @@ public class OutboxPublisher {
     }
 
     /**
-     * Claims and publishes up to 100 pending events, blocking until the publisher terminates.
-     * Skips the run if this instance is already publishing. Publisher errors are suppressed, and
-     * the local publishing guard is released even when the run fails.
+     * Claims and publishes up to 100 pending events, blocking until the publisher terminates. Skips
+     * the run if this instance is already publishing. Publisher errors are suppressed, and the
+     * local publishing guard is released even when the run fails.
      */
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
     @SchedulerLock(name = "scheduledPublishLock")
