@@ -20,6 +20,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableCaching
 class ReactiveRedisConfig {
 
+    /** Creates Redis operations with string keys and Java-serialized values. */
     @Bean
     ReactiveRedisOperations<String, Object> reactiveRedisOperations(
             ReactiveRedisConnectionFactory factory) {

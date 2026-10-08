@@ -61,6 +61,11 @@ public class OutboxPublisher {
                         .register(meterRegistry);
     }
 
+    /**
+     * Claims and publishes up to 100 pending events, blocking until the publisher terminates.
+     * Skips the run if this instance is already publishing. Publisher errors are suppressed, and
+     * the local publishing guard is released even when the run fails.
+     */
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:5000}")
     @SchedulerLock(name = "scheduledPublishLock")
     public void scheduledPublish() {
@@ -167,6 +172,11 @@ public class OutboxPublisher {
                         });
     }
 
+    /**
+     * Reclaims processing events locked longer than the configured lock timeout and waits for
+     * completion. Increments retry counts, marking events failed when the new count reaches the
+     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
+     */
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
     @SchedulerLock(name = "scheduledReapLock")
     public void scheduledReap() {

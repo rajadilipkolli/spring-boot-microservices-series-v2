@@ -19,9 +19,20 @@ import reactor.core.publisher.Mono;
 public interface ProductRepository
         extends ReactiveCrudRepository<Product, Long>, ReactiveSortingRepository<Product, Long> {
 
+    /**
+     * Reads the shared generation used to select product cache entries.
+     *
+     * @return the generation, or an empty Mono if row 1 is missing; database errors propagate
+     */
     @Query("SELECT generation FROM product_cache_generation WHERE id = 1")
     Mono<String> findCacheGeneration();
 
+    /**
+     * Replaces the shared product cache generation without inserting a missing row.
+     *
+     * @param generation the token to use for subsequent cache lookups
+     * @return the number of updated rows, zero if row 1 is missing; database errors propagate
+     */
     @Modifying
     @Query("UPDATE product_cache_generation SET generation = :generation WHERE id = 1")
     Mono<Integer> updateCacheGeneration(String generation);

@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableSchedulerLock(defaultLockAtMostFor = "10m")
 class ShedLockConfig {
 
+    /** Creates a Redis lock provider using the shared catalog-service namespace. */
     @Bean
     LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
         return new RedisLockProvider(connectionFactory, "catalog-service");

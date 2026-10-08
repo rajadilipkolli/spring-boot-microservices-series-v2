@@ -36,6 +36,11 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.failed", failedCount);
     }
 
+    /**
+     * Refreshes the local pending, published, and failed event gauges, blocking until completion.
+     * Query errors emitted by the publisher are suppressed; gauges already refreshed retain their
+     * new values, and remaining gauges keep their previous values.
+     */
     @Scheduled(fixedDelayString = "${application.outbox.housekeeping-delay:10000}")
     @SchedulerLock(name = "updateMetricsLock")
     public void updateMetrics() {
@@ -51,6 +56,10 @@ public class OutboxHousekeepingService {
                 .block();
     }
 
+    /**
+     * Deletes published events created strictly more than seven days ago and waits for completion.
+     * Deletion errors emitted by the publisher are suppressed.
+     */
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
     @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {

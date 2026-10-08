@@ -62,6 +62,11 @@ public class ProductService {
     private final ProductService self;
     private final TSID.Factory tsidFactory;
 
+    /**
+     * Creates the product service with shared caching and transactional product creation.
+     *
+     * @param self the Spring proxy used to apply transactions when creating a product
+     */
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
@@ -79,6 +84,18 @@ public class ProductService {
         this.tsidFactory = tsidFactory;
     }
 
+    /**
+     * Returns a product page with availability, caching the entire result for five minutes.
+     * Redis failures are tolerated; database, missing-generation, and unhandled inventory errors
+     * are emitted by the returned Mono.
+     *
+     * @param pageNo the zero-based page index, at least zero
+     * @param pageSize the maximum number of products per page, greater than zero
+     * @param sortBy the product property to sort by
+     * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
+     * @return the cached or loaded page; invalid pagination emits IllegalArgumentException on a
+     *     cache miss
+     */
     @Observed(name = "product.findAll", contextualName = "find-all-products")
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
@@ -95,6 +112,16 @@ public class ProductService {
         return cached(cacheKey, () -> fetchAllProductsFromDb(pageNo, pageSize, sortBy, sortDir));
     }
 
+    /**
+     * Loads a page and enriches it with inventory availability without consulting Redis.
+     * Missing inventory entries are treated as out of stock. Database and unhandled inventory
+     * errors propagate through the returned Mono.
+     *
+     * @param pageNo the zero-based page index
+     * @return the enriched page, or an empty page when no products are returned
+     * @throws IllegalArgumentException if the page index is negative, the page size is not positive,
+     *     or the sort property is empty
+     */
     private Mono<PagedResult<ProductResponse>> fetchAllProductsFromDb(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
@@ -142,6 +169,13 @@ public class ProductService {
         return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
     }
 
+    /**
+     * Finds a product by ID, caching its details and inventory availability for five minutes.
+     * Redis failures are tolerated; database and unhandled inventory errors propagate.
+     *
+     * @return the product, or an error with ProductNotFoundException if absent on a cache miss or
+     *     IllegalStateException if the shared cache generation is missing
+     */
     @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<ProductResponse> findProductById(Long id) {
         String cacheKey = "product:" + id;
@@ -159,6 +193,15 @@ public class ProductService {
         return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
+    /**
+     * Finds a product by case-insensitive code, caching its details for five minutes.
+     * Redis failures are tolerated; database and unhandled inventory errors propagate.
+     *
+     * @param fetchInStock whether to refresh availability from inventory, including on cache hits;
+     *     otherwise availability remains false
+     * @return the product, or an error with ProductNotFoundException if absent on a cache miss or
+     *     IllegalStateException if the shared cache generation is missing
+     */
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<ProductResponse> findProductByProductCode(
             String productCode, boolean fetchInStock) {
@@ -191,6 +234,15 @@ public class ProductService {
                                         inventoryResponse.availableQuantity() > 0));
     }
 
+    /**
+     * Returns an existing product with the same case-insensitive code, or creates it with a product
+     * creation outbox event. Invalidates product caches before emitting either result.
+     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
+     * errors propagate.
+     *
+     * @return the existing or created product; a duplicate-key race is recovered by looking up the
+     *     existing product, or emits ProductAlreadyExistsException if that lookup is empty
+     */
     // saves product to db and sends message that new product is available for inventory
     @Transactional
     @Observed(name = "product.save", contextualName = "saving-product")
@@ -243,6 +295,14 @@ public class ProductService {
                 .map(productMapper::toProductResponse);
     }
 
+    /**
+     * Deletes a product, records its deletion in the outbox, and invalidates product caches.
+     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
+     * errors propagate.
+     *
+     * @return completion after deletion and invalidation, or ProductNotFoundException as an error
+     *     if the product does not exist
+     */
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
@@ -275,7 +335,10 @@ public class ProductService {
     }
 
     /**
-     * Updates an existing product.
+     * Updates the supplied product in place, saves it, records an update outbox event, and
+     * invalidates product caches, including entries for both the previous and current codes.
+     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
+     * errors propagate through the returned Mono.
      *
      * @param productRequest the updated product details
      * @param product the existing product entity
@@ -472,10 +535,17 @@ public class ProductService {
                         });
     }
 
+    /** Builds a generation-free cache key using locale-independent lowercase product codes. */
     private static String productCodeCacheKey(String productCode) {
         return "productCode:" + productCode.toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * Reads the shared product cache generation.
+     *
+     * @return the generation, or IllegalStateException as an error if it is missing; database
+     *     errors propagate
+     */
     private Mono<String> cacheGeneration() {
         return productRepository
                 .findCacheGeneration()
@@ -483,6 +553,15 @@ public class ProductService {
                         Mono.error(new IllegalStateException("Missing product cache generation")));
     }
 
+    /**
+     * Reads the current generation on each subscription and loads from the source on a cache miss.
+     * Redis read failures count as misses, and write failures do not discard source results.
+     * Generation lookup and source errors propagate; empty results and errors are not cached.
+     *
+     * @param key the cache key without its generation suffix
+     * @param source supplies the value on a miss; emitted values are cached for five minutes
+     * @return the cached value or the source result
+     */
     private <T> Mono<T> cached(String key, Supplier<Mono<T>> source) {
         return Mono.defer(
                 () ->
@@ -503,6 +582,11 @@ public class ProductService {
                                         }));
     }
 
+    /**
+     * Reads a value using a key that includes its generation suffix.
+     *
+     * @return the cached value, or an empty Mono for a missing entry or Redis read failure
+     */
     @SuppressWarnings("unchecked")
     private <T> Mono<T> readCache(String cacheKey) {
         return Mono.defer(() -> redisOps.opsForValue().get(cacheKey))
@@ -514,6 +598,10 @@ public class ProductService {
                         });
     }
 
+    /**
+     * Attempts to cache a value for five minutes using a key that includes its generation suffix.
+     * Completes without a value and suppresses Redis write errors.
+     */
     private Mono<Void> writeCache(String cacheKey, Object result) {
         return Mono.defer(() -> redisOps.opsForValue().set(cacheKey, result, CACHE_EXPIRY))
                 .onErrorResume(
@@ -524,6 +612,15 @@ public class ProductService {
                 .then();
     }
 
+    /**
+     * Rotates the shared database generation in the caller's transaction to invalidate all product
+     * caches, then attempts to delete this product's entries in the previous generation.
+     * Redis deletion errors are suppressed; database errors propagate.
+     *
+     * @param productCodes the current and any previous product codes whose entries should be deleted
+     * @return completion after invalidation, or IllegalStateException as an error if the generation
+     *     is missing or its update does not affect exactly one row
+     */
     private Mono<Void> evictProductCache(Long id, String... productCodes) {
         // Rotate in the product transaction so every node stops using the old entries even
         // when Redis deletion fails. UUIDs also prevent reuse of a rolled-back generation.
@@ -547,6 +644,13 @@ public class ProductService {
                                                                         generation))));
     }
 
+    /**
+     * Attempts to delete the ID and code cache entries for a product, suppressing Redis errors.
+     * Page entries remain until expiration.
+     *
+     * @param generation the generation whose entries should be deleted
+     * @return completion without a value, even if Redis deletion fails
+     */
     private Mono<Void> deleteCacheEntries(Long id, String[] productCodes, String generation) {
         String[] keys =
                 Stream.concat(
