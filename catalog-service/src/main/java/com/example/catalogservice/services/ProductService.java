@@ -19,6 +19,7 @@ import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class ProductService {
                                                         .set(
                                                                 cacheKey,
                                                                 result,
-                                                                java.time.Duration.ofMinutes(5))
+                                                                Duration.ofMinutes(5))
                                                         .thenReturn(result)));
     }
 

@@ -31,6 +31,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -47,8 +48,7 @@ class ProductServiceTest {
 
     @Mock private InventoryServiceProxy inventoryServiceProxy;
 
-    @Mock
-    private org.springframework.data.redis.core.ReactiveRedisOperations<String, Object> redisOps;
+    @Mock private ReactiveRedisOperations<String, Object> redisOps;
 
     private ProductService productService;
 
