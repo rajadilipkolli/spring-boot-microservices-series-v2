@@ -29,6 +29,10 @@ class InitializerTest {
 
     private Initializer initializer;
 
+    /**
+     * Creates the initializer with a mock repository and treats the retail customer as already
+     * present.
+     */
     @BeforeEach
     void setUp() {
         initializer = new Initializer(customerRepository);
@@ -36,6 +40,9 @@ class InitializerTest {
                 .thenReturn(Optional.of(new Customer()));
     }
 
+    /**
+     * Verifies that startup does not insert the Raja customer when that customer already exists.
+     */
     @Test
     void skipsExistingRajaCustomer() {
         when(customerRepository.findByEmail("rajakolli@gmail.com"))
@@ -46,6 +53,7 @@ class InitializerTest {
         verify(customerRepository, never()).save(any(Customer.class));
     }
 
+    /** Verifies that startup inserts the Raja customer when the email lookup finds no match. */
     @Test
     void createsMissingRajaCustomer() {
         when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
@@ -56,6 +64,9 @@ class InitializerTest {
                 .save(argThat(customer -> "rajakolli@gmail.com".equals(customer.getEmail())));
     }
 
+    /**
+     * Verifies that a duplicate-key race is tolerated when a second lookup finds the Raja customer.
+     */
     @Test
     void acceptsDuplicateKeyOnlyWhenRajaCustomerNowExists() {
         when(customerRepository.findByEmail("rajakolli@gmail.com"))
@@ -67,6 +78,7 @@ class InitializerTest {
         verify(customerRepository, times(2)).findByEmail("rajakolli@gmail.com");
     }
 
+    /** Verifies that a duplicate-key failure propagates when the Raja customer remains absent. */
     @Test
     void propagatesDuplicateKeyWhenRajaCustomerIsStillMissing() {
         when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
@@ -76,16 +88,24 @@ class InitializerTest {
         assertThatThrownBy(() -> initializer.run()).isSameAs(failure);
     }
 
+    /** Verifies that customer data-integrity failures other than duplicate keys propagate. */
     @Test
     void propagatesOtherIntegrityFailures() {
         assertSaveFailurePropagates(new DataIntegrityViolationException("invalid customer"));
     }
 
+    /** Verifies that database access failures during customer creation propagate. */
     @Test
     void propagatesDatabaseFailures() {
         assertSaveFailurePropagates(new DataAccessResourceFailureException("database unavailable"));
     }
 
+    /**
+     * Asserts that a failed Raja customer insert propagates the original exception without another
+     * lookup.
+     *
+     * @param failure the repository save failure to simulate
+     */
     private void assertSaveFailurePropagates(RuntimeException failure) {
         when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
         when(customerRepository.save(any(Customer.class))).thenThrow(failure);

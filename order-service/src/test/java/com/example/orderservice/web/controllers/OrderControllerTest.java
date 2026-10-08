@@ -85,6 +85,7 @@ class OrderControllerTest {
         verifyNoMoreInteractions(orderGeneratorService);
     }
 
+    /** Verifies that listing orders returns paginated order details with string customer IDs. */
     @Test
     void shouldFetchAllOrders() throws Exception {
 
@@ -169,6 +170,10 @@ class OrderControllerTest {
     @DisplayName("find methods")
     class Find {
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
@@ -210,6 +215,7 @@ class OrderControllerTest {
                     "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country");
         }
 
+        /** Verifies that delayed order lookup waits before returning an order with a string ID. */
         @Test
         void shouldRespectDelayParameter() throws Exception {
             Long orderId = 1L;
@@ -262,6 +268,9 @@ class OrderControllerTest {
     @Nested
     @DisplayName("save methods")
     class Save {
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
 
@@ -404,6 +413,7 @@ class OrderControllerTest {
     @Nested
     @DisplayName("update methods")
     class Update {
+        /** Verifies that updating an order returns its string ID and updated delivery address. */
         @Test
         void shouldUpdateOrder() throws Exception {
 

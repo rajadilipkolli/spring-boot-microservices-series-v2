@@ -19,6 +19,10 @@ import org.springframework.http.MediaType;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 
+    /**
+     * Verifies that a numeric catalog ID is exposed as a string while product and page details are
+     * preserved.
+     */
     @Test
     void testProducts() {
         // Example stub for catalog service

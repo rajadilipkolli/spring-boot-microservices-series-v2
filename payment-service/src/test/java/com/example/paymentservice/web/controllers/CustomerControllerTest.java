@@ -286,6 +286,7 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("update methods")
     class Update {
+        /** Verifies that updating a customer returns the customer ID as a JSON string. */
         @Test
         void shouldUpdateCustomer() throws Exception {
 

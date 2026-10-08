@@ -74,6 +74,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /** Verifies that customer lookup by ID returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerById() throws Exception {
         Customer customer = customerList.getFirst();
@@ -108,6 +109,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /** Verifies that customer lookup by name returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerByName() throws Exception {
         Customer customer = customerList.getFirst();
@@ -124,6 +126,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
+    /**
+     * Verifies that customer creation returns a location header, string ID, and the submitted
+     * details.
+     */
     @Test
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
@@ -174,6 +180,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         });
     }
 
+    /**
+     * Verifies that creating an existing customer succeeds and returns its details with a string
+     * ID.
+     */
     @Test
     void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
         Customer customer = customerList.getFirst();
@@ -232,6 +242,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andReturn();
     }
 
+    /** Verifies that updating a customer returns the customer ID as a JSON string. */
     @Test
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.getFirst().getId();
@@ -282,6 +293,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /** Verifies that deleting a customer returns the deleted details with a string customer ID. */
     @Test
     void shouldDeleteCustomer() throws Exception {
         Customer customer = customerList.getFirst();

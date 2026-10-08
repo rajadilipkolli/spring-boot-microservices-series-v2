@@ -275,6 +275,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         assertThat(hasKey).isTrue();
     }
 
+    /**
+     * Verifies that product lookup by ID returns its details with the ID encoded as a JSON string.
+     */
     @Test
     void shouldFindProductById() {
 
@@ -309,6 +312,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
     }
 
+    /**
+     * Verifies that inventory retries recover stock information and return a product with a string
+     * ID.
+     */
     @Test
     void shouldRetryOnErrorAndFetchSuccessResponse() {
 
@@ -398,6 +405,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .untilAsserted(() -> checkHealthStatus("default", CircuitBreaker.State.HALF_OPEN));
     }
 
+    /**
+     * Verifies that a request can succeed after exhausted inventory retries while the circuit
+     * remains closed.
+     */
     @Test
     void shouldRetryAndFailAndBreakCloseTheCircuitTest() {
 
@@ -491,6 +502,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
     }
 
+    /** Verifies that lookup by product code returns product details with a string ID. */
     @Test
     void shouldFindProductByProductCode() {
         Product product = savedProductList.getFirst();
@@ -518,6 +530,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(false);
     }
 
+    /** Verifies that requesting stock information returns an in-stock product with a string ID. */
     @Test
     void shouldFindProductByProductCodeWithStock() {
         Product product = savedProductList.getFirst();
@@ -742,6 +755,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo("/api/catalog");
     }
 
+    /**
+     * Verifies that updating a product returns the updated details with its ID encoded as a string.
+     */
     @Test
     void shouldUpdateProduct() {
         Product product = savedProductList.getFirst();
@@ -888,6 +904,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exists();
     }
 
+    /** Verifies that deleting a product returns its details with a string ID. */
     @Test
     void shouldDeleteProduct() {
         Product product = savedProductList.getFirst();

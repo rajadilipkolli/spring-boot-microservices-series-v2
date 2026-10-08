@@ -149,6 +149,10 @@ class OrderControllerTest {
                 .andExpect(model().attribute("orderNumber", orderNumber));
     }
 
+    /**
+     * Verifies that order lookup exposes string order and customer IDs alongside item and customer
+     * details.
+     */
     @Test
     @WithMockUser
     void getOrder_shouldReturnOrderDetails() throws Exception {
@@ -190,6 +194,10 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders").with(csrf())).andExpect(status().isOk()).andExpect(view().name("orders"));
     }
 
+    /**
+     * Verifies that the customer order page contains string IDs, order details, and pagination
+     * metadata.
+     */
     @Test
     @WithMockUser
     void getOrders_shouldReturnPagedOrders() throws Exception {
@@ -207,6 +215,7 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.totalElements", is(2)));
     }
 
+    /** Verifies that order creation returns a confirmation with string order and customer IDs. */
     @Test
     @WithMockUser
     void createOrder_shouldCreateAndReturnOrderConfirmation() throws Exception {

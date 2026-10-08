@@ -97,6 +97,7 @@ class ProductControllerTest {
                 .andExpect(model().attribute("pageNo", pageNumber));
     }
 
+    /** Verifies that the product page returns string product IDs and pagination metadata. */
     @Test
     @WithMockUser
     void products_shouldReturnPagedResult() throws Exception {
@@ -130,6 +131,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data", hasSize(3)));
     }
 
+    /**
+     * Verifies that an administrator can create a product and receive its details with a string
+     * ID.
+     */
     @Test
     @WithMockUser(roles = "ADMIN") // Ensure the user has ADMIN role
     void createProduct_shouldReturnCreatedProduct() throws Exception {

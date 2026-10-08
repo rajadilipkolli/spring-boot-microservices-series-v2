@@ -119,6 +119,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     is(orderList.getFirst().getItems().size())));
         }
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Order order = orderList.getFirst();
@@ -182,6 +186,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @DisplayName("save methods")
     class SaveOrder {
 
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
             OrderRequest orderRequest =
@@ -610,6 +617,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 BigDecimal.class));
     }
 
+    /**
+     * Verifies that updating an order preserves its response structure, string IDs, and persisted
+     * item details.
+     */
     @Test
     void shouldPreserveOrderStructureAfterUpdate() throws Exception {
         // Get an order from the existing list

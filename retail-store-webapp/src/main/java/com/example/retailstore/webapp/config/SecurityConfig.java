@@ -52,6 +52,12 @@ class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Creates an OIDC logout handler that redirects to the application base URL with a trailing
+     * slash.
+     *
+     * @return the configured logout success handler
+     */
     private LogoutSuccessHandler oidcLogoutSuccessHandler() {
         OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
                 new OidcClientInitiatedLogoutSuccessHandler(this.clientRegistrationRepository);

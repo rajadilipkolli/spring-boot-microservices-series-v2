@@ -45,6 +45,12 @@ class OrderDtoTest {
         assertThat(violations.iterator().next().getMessage()).isEqualTo("must not be null");
     }
 
+    /**
+     * Verifies that Kafka deserialization preserves numeric and string JSON IDs above JavaScript's
+     * safe integer limit.
+     *
+     * @param stringIds whether the payload encodes IDs as strings instead of numbers
+     */
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void acceptsNumericAndStringIdsWithoutPrecisionLoss(boolean stringIds) {

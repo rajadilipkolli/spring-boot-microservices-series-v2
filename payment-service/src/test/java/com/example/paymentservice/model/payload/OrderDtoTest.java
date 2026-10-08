@@ -14,6 +14,10 @@ class OrderDtoTest {
 
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
+    /**
+     * Verifies that order and item IDs serialize as JSON strings while status and source are
+     * preserved.
+     */
     @Test
     void testSerialization() throws Exception {
         OrderItemDto item = new OrderItemDto(1L, "Product A", 2, BigDecimal.TEN);
@@ -28,6 +32,10 @@ class OrderDtoTest {
         assertThat(json.contains("\"source\":\"TEST_SOURCE\"")).isTrue();
     }
 
+    /**
+     * Verifies that an order payload with numeric IDs deserializes with its metadata and items
+     * intact.
+     */
     @Test
     void testDeserialization() throws Exception {
         String json =
@@ -44,6 +52,12 @@ class OrderDtoTest {
         assertThat(order.items().size()).isEqualTo(2);
     }
 
+    /**
+     * Verifies that numeric and string JSON IDs above JavaScript's safe integer limit retain their
+     * exact long values.
+     *
+     * @param stringIds whether the payload encodes IDs as strings instead of numbers
+     */
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void acceptsNumericAndStringIdsWithoutPrecisionLoss(boolean stringIds) {

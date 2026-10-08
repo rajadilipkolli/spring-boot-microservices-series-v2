@@ -302,6 +302,9 @@ class InventoryControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Verifies that inventory updates return the new product code and quantity with a string ID.
+     */
     @Test
     void shouldUpdateInventorySuccessfully() throws Exception {
         Long inventoryId = 5L;

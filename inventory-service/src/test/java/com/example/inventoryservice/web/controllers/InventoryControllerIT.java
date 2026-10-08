@@ -106,6 +106,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .value(inventoryList.get(1).getReservedItems()));
     }
 
+    /** Verifies that inventory creation returns a string ID and the initial stock quantities. */
     @Test
     void shouldCreateNewInventory() throws Exception {
         InventoryRequest inventoryRequest = new InventoryRequest("New Inventory", 10);

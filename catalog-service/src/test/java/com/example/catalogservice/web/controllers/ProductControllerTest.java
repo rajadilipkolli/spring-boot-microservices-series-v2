@@ -91,6 +91,9 @@ class ProductControllerTest {
                                                 }));
     }
 
+    /**
+     * Verifies that product lookup by ID returns its details with the ID encoded as a JSON string.
+     */
     @Test
     void shouldFindProductById() {
         Long productId = 1L;
@@ -193,6 +196,7 @@ class ProductControllerTest {
                 .isEqualTo("/api/catalog");
     }
 
+    /** Verifies that repeated creation requests return the same product code and string ID. */
     @Test
     void shouldHandleIdempotentProductCreation() {
         ProductResponse existingProductResponse =
@@ -248,6 +252,9 @@ class ProductControllerTest {
                 .isEqualTo(existingProductResponse.productCode());
     }
 
+    /**
+     * Verifies that updating a product returns the updated details with its ID encoded as a string.
+     */
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
@@ -305,6 +312,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that deleting a product returns its details with a string ID. */
     @Test
     void shouldDeleteProduct() {
         Long productId = 1L;
@@ -352,6 +360,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that lookup by product code returns product details with a string ID. */
     @Test
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
@@ -420,6 +429,7 @@ class ProductControllerTest {
         verify(productService).findProductByProductCode(code, true);
     }
 
+    /** Verifies that product lookup accepts the delay parameter and returns a string product ID. */
     @Test
     void shouldRespectDelayParameter() {
         String code = "code-xyz";

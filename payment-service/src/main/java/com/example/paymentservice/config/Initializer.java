@@ -24,6 +24,13 @@ class Initializer implements CommandLineRunner {
         this.customerRepository = customerRepository;
     }
 
+    /**
+     * Seeds random sample customers and creates the retail and Raja customers when absent. A
+     * duplicate-key failure for Raja is ignored only if a second lookup confirms concurrent
+     * creation.
+     *
+     * @param args unused command-line arguments
+     */
     @Override
     public void run(String... args) {
         log.info("Running Initializer.....");
