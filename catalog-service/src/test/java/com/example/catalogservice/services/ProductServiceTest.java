@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 
@@ -72,15 +73,11 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(spy, "self", proxy);
         productService = spy;
 
-        org.mockito.Mockito.lenient()
-                .when(redisOps.keys(any(String.class)))
-                .thenReturn(reactor.core.publisher.Flux.empty());
-        org.mockito.Mockito.lenient()
-                .when(redisOps.delete(any(org.reactivestreams.Publisher.class)))
-                .thenReturn(reactor.core.publisher.Mono.just(0L));
-        org.mockito.Mockito.lenient()
-                .when(redisOps.delete(any(String[].class)))
-                .thenReturn(reactor.core.publisher.Mono.just(0L));
+        lenient().when(productRepository.findCacheGeneration()).thenReturn(Mono.just("initial"));
+        lenient()
+                .when(productRepository.updateCacheGeneration(any(String.class)))
+                .thenReturn(Mono.just(1));
+        lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }
 
     @Test
@@ -122,7 +119,8 @@ class ProductServiceTest {
                 .willReturn(Mono.empty());
 
         // Stubbing productRepository.save()
-        given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
+        given(productRepository.save(any(Product.class)))
+                .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
 
         // Use StepVerifier to test the method
         StepVerifier.create(productService.generateProducts("test-batch-123", null))
@@ -165,7 +163,8 @@ class ProductServiceTest {
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
         given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
                 .willReturn(Mono.empty());
-        given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
+        given(productRepository.save(any(Product.class)))
+                .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
 
         StepVerifier.create(productService.generateProducts("test-batch-456", 5))
                 .expectSubscription()

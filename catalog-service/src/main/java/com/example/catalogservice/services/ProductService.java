@@ -22,7 +22,11 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -44,6 +48,7 @@ import reactor.core.publisher.Mono;
 public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+    private static final Duration CACHE_EXPIRY = Duration.ofMinutes(5);
     private static final SecureRandom RAND = new SecureRandom();
     public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
     private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
@@ -78,21 +83,16 @@ public class ProductService {
     public Mono<PagedResult<ProductResponse>> findAllProducts(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         String cacheKey =
-                "products:" + pageNo + "_" + pageSize + "_" + sortBy + "_" + sortDir.toLowerCase();
+                "products:"
+                        + pageNo
+                        + "_"
+                        + pageSize
+                        + "_"
+                        + sortBy
+                        + "_"
+                        + sortDir.toLowerCase(Locale.ROOT);
 
-        return redisOps.opsForValue()
-                .get(cacheKey)
-                .map(cached -> (PagedResult<ProductResponse>) cached)
-                .switchIfEmpty(
-                        Mono.defer(() -> fetchAllProductsFromDb(pageNo, pageSize, sortBy, sortDir))
-                                .flatMap(
-                                        result ->
-                                                redisOps.opsForValue()
-                                                        .set(
-                                                                cacheKey,
-                                                                result,
-                                                                Duration.ofMinutes(5))
-                                                        .thenReturn(result)));
+        return cached(cacheKey, () -> fetchAllProductsFromDb(pageNo, pageSize, sortBy, sortDir));
     }
 
     private Mono<PagedResult<ProductResponse>> fetchAllProductsFromDb(
@@ -145,36 +145,14 @@ public class ProductService {
     @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<ProductResponse> findProductById(Long id) {
         String cacheKey = "product:" + id;
-        return redisOps.opsForValue()
-                .get(cacheKey)
-                .map(cached -> (ProductResponse) cached)
-                .switchIfEmpty(
-                        Mono.defer(
-                                        () ->
-                                                productRepository
-                                                        .findById(id)
-                                                        .switchIfEmpty(
-                                                                Mono.error(
-                                                                        new ProductNotFoundException(
-                                                                                id)))
-                                                        .map(productMapper::toProductResponse)
-                                                        .flatMap(
-                                                                productResponse ->
-                                                                        getInventoryByProductCode(
-                                                                                        productResponse
-                                                                                                .productCode())
-                                                                                .map(
-                                                                                        inventoryDto ->
-                                                                                                productResponse
-                                                                                                        .withInStock(
-                                                                                                                inventoryDto
-                                                                                                                                .availableQuantity()
-                                                                                                                        > 0))))
-                                .flatMap(
-                                        result ->
-                                                redisOps.opsForValue()
-                                                        .set(cacheKey, result)
-                                                        .thenReturn(result)));
+        return cached(
+                cacheKey,
+                () ->
+                        productRepository
+                                .findById(id)
+                                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
+                                .map(productMapper::toProductResponse)
+                                .flatMap(this::fetchInventoryAndUpdateProductResponse));
     }
 
     private Mono<InventoryResponse> getInventoryByProductCode(String code) {
@@ -184,30 +162,19 @@ public class ProductService {
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<ProductResponse> findProductByProductCode(
             String productCode, boolean fetchInStock) {
-        String cacheKey = "productCode:" + productCode;
+        String cacheKey = productCodeCacheKey(productCode);
 
         Mono<ProductResponse> productResponseMono =
-                redisOps.opsForValue()
-                        .get(cacheKey)
-                        .map(cached -> (ProductResponse) cached)
-                        .switchIfEmpty(
-                                Mono.defer(
-                                                () ->
-                                                        productRepository
-                                                                .findByProductCodeAllIgnoreCase(
-                                                                        productCode)
-                                                                .map(
-                                                                        productMapper
-                                                                                ::toProductResponse)
-                                                                .switchIfEmpty(
-                                                                        Mono.error(
-                                                                                new ProductNotFoundException(
-                                                                                        productCode))))
-                                        .flatMap(
-                                                result ->
-                                                        redisOps.opsForValue()
-                                                                .set(cacheKey, result)
-                                                                .thenReturn(result)));
+                cached(
+                        cacheKey,
+                        () ->
+                                productRepository
+                                        .findByProductCodeAllIgnoreCase(productCode)
+                                        .map(productMapper::toProductResponse)
+                                        .switchIfEmpty(
+                                                Mono.error(
+                                                        new ProductNotFoundException(
+                                                                productCode))));
 
         if (fetchInStock) {
             return productResponseMono.flatMap(this::fetchInventoryAndUpdateProductResponse);
@@ -319,6 +286,7 @@ public class ProductService {
      */
     @Transactional
     public Mono<ProductResponse> updateProduct(ProductRequest productRequest, Product product) {
+        String previousProductCode = product.getProductCode();
         // Update the post object with data from postRequest
         productMapper.mapProductWithRequest(productRequest, product);
 
@@ -335,7 +303,7 @@ public class ProductService {
                                                 savedProduct)
                                         .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse)
-                .delayUntil(p -> evictProductCache(p.id(), p.productCode()));
+                .delayUntil(p -> evictProductCache(p.id(), previousProductCode, p.productCode()));
     }
 
     public Mono<Product> findById(Long id) {
@@ -504,7 +472,97 @@ public class ProductService {
                         });
     }
 
-    private Mono<Void> evictProductCache(Long id, String productCode) {
-        return redisOps.delete("product:" + id, "productCode:" + productCode).then();
+    private static String productCodeCacheKey(String productCode) {
+        return "productCode:" + productCode.toLowerCase(Locale.ROOT);
+    }
+
+    private Mono<String> cacheGeneration() {
+        return productRepository
+                .findCacheGeneration()
+                .switchIfEmpty(
+                        Mono.error(new IllegalStateException("Missing product cache generation")));
+    }
+
+    private <T> Mono<T> cached(String key, Supplier<Mono<T>> source) {
+        return Mono.defer(
+                () ->
+                        cacheGeneration()
+                                .flatMap(
+                                        generation -> {
+                                            String cacheKey = key + ":" + generation;
+                                            return this.<T>readCache(cacheKey)
+                                                    .switchIfEmpty(
+                                                            Mono.defer(source)
+                                                                    .flatMap(
+                                                                            result ->
+                                                                                    writeCache(
+                                                                                                    cacheKey,
+                                                                                                    result)
+                                                                                            .thenReturn(
+                                                                                                    result)));
+                                        }));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Mono<T> readCache(String cacheKey) {
+        return Mono.defer(() -> redisOps.opsForValue().get(cacheKey))
+                .map(value -> (T) value)
+                .onErrorResume(
+                        ex -> {
+                            log.warn("Product cache read failed for {}", cacheKey, ex);
+                            return Mono.empty();
+                        });
+    }
+
+    private Mono<Void> writeCache(String cacheKey, Object result) {
+        return Mono.defer(() -> redisOps.opsForValue().set(cacheKey, result, CACHE_EXPIRY))
+                .onErrorResume(
+                        ex -> {
+                            log.warn("Product cache write failed for {}", cacheKey, ex);
+                            return Mono.empty();
+                        })
+                .then();
+    }
+
+    private Mono<Void> evictProductCache(Long id, String... productCodes) {
+        // Rotate in the product transaction so every node stops using the old entries even
+        // when Redis deletion fails. UUIDs also prevent reuse of a rolled-back generation.
+        return Mono.defer(
+                () ->
+                        cacheGeneration()
+                                .flatMap(
+                                        generation ->
+                                                productRepository
+                                                        .updateCacheGeneration(
+                                                                UUID.randomUUID().toString())
+                                                        .filter(updated -> updated == 1)
+                                                        .switchIfEmpty(
+                                                                Mono.error(
+                                                                        new IllegalStateException(
+                                                                                "Missing product cache generation")))
+                                                        .then(
+                                                                deleteCacheEntries(
+                                                                        id,
+                                                                        productCodes,
+                                                                        generation))));
+    }
+
+    private Mono<Void> deleteCacheEntries(Long id, String[] productCodes, String generation) {
+        String[] keys =
+                Stream.concat(
+                                Stream.of(productCodes).map(ProductService::productCodeCacheKey),
+                                Stream.of("product:" + id))
+                        .map(key -> key + ":" + generation)
+                        .distinct()
+                        .toArray(String[]::new);
+        return Mono.defer(() -> redisOps.delete(keys))
+                .onErrorResume(
+                        ex -> {
+                            log.warn(
+                                    "Product cache eviction failed; old generation is no longer used",
+                                    ex);
+                            return Mono.empty();
+                        })
+                .then();
     }
 }

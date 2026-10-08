@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 public class OutboxHousekeepingService {
@@ -47,8 +46,9 @@ public class OutboxHousekeepingService {
                 .doOnNext(publishedCount::set)
                 .then(outboxEventRepository.countByStatus(OutboxEventStatus.FAILED))
                 .doOnNext(failedCount::set)
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(v -> {}, ex -> log.warn("Failed to refresh outbox metrics", ex));
+                .doOnError(ex -> log.warn("Failed to refresh outbox metrics", ex))
+                .onErrorComplete()
+                .block();
     }
 
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
@@ -60,7 +60,7 @@ public class OutboxHousekeepingService {
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe();
+                .onErrorComplete()
+                .block();
     }
 }

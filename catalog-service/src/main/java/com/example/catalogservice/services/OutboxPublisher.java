@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 public class OutboxPublisher {
@@ -66,12 +65,19 @@ public class OutboxPublisher {
     @SchedulerLock(name = "scheduledPublishLock")
     public void scheduledPublish() {
         if (isPublishing.compareAndSet(false, true)) {
-            this.publishEvents()
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .doFinally(signalType -> isPublishing.set(false))
-                    .subscribe(
-                            event -> log.debug("Published outbox event: {}", event.getId()),
-                            ex -> log.error("Error occurred while publishing outbox events", ex));
+            try {
+                this.publishEvents()
+                        .doOnNext(event -> log.debug("Published outbox event: {}", event.getId()))
+                        .doOnError(
+                                ex ->
+                                        log.error(
+                                                "Error occurred while publishing outbox events",
+                                                ex))
+                        .onErrorComplete()
+                        .blockLast();
+            } finally {
+                isPublishing.set(false);
+            }
         }
     }
 
@@ -168,13 +174,14 @@ public class OutboxPublisher {
         OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
         outboxEventRepository
                 .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(
+                .doOnNext(
                         count -> {
                             if (count > 0) {
                                 log.info("Reaped {} orphaned outbox events", count);
                             }
-                        },
-                        ex -> log.error("Error occurred while reaping outbox events", ex));
+                        })
+                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
+                .onErrorComplete()
+                .block();
     }
 }

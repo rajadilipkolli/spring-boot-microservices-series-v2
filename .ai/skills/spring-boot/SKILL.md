@@ -65,4 +65,4 @@ Use [references/taskfile.md](references/taskfile.md) for easier commands executi
 
 ## Code Style
 
-* Always prefer using imports over Fully Qualified Domain Names (FQDN) in code.
+* Prefer imports over fully qualified class names (FQCNs) in Java code.

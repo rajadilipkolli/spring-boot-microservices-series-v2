@@ -26,4 +26,4 @@ To ensure consistency and follow project-specific standards, specialized playboo
 - **Modularity**: Respect package-private visibility where required by Spring Modulith.
 
 Please use these resources to provide accurate and idiomatic assistance.
-- **Imports**: Always prefer using imports over Fully Qualified Domain Names (FQDN) in Java code.
+- **Imports**: Prefer imports over fully qualified class names (FQCNs) in Java code.
