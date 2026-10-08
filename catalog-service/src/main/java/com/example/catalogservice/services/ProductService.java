@@ -85,9 +85,9 @@ public class ProductService {
     }
 
     /**
-     * Returns a product page with availability, caching the entire result for five minutes.
-     * Redis failures are tolerated; database, missing-generation, and unhandled inventory errors
-     * are emitted by the returned Mono.
+     * Returns a product page with availability, caching the entire result for five minutes. Redis
+     * failures are tolerated; database, missing-generation, and unhandled inventory errors are
+     * emitted by the returned Mono.
      *
      * @param pageNo the zero-based page index, at least zero
      * @param pageSize the maximum number of products per page, greater than zero
@@ -113,14 +113,14 @@ public class ProductService {
     }
 
     /**
-     * Loads a page and enriches it with inventory availability without consulting Redis.
-     * Missing inventory entries are treated as out of stock. Database and unhandled inventory
-     * errors propagate through the returned Mono.
+     * Loads a page and enriches it with inventory availability without consulting Redis. Missing
+     * inventory entries are treated as out of stock. Database and unhandled inventory errors
+     * propagate through the returned Mono.
      *
      * @param pageNo the zero-based page index
      * @return the enriched page, or an empty page when no products are returned
-     * @throws IllegalArgumentException if the page index is negative, the page size is not positive,
-     *     or the sort property is empty
+     * @throws IllegalArgumentException if the page index is negative, the page size is not
+     *     positive, or the sort property is empty
      */
     private Mono<PagedResult<ProductResponse>> fetchAllProductsFromDb(
             int pageNo, int pageSize, String sortBy, String sortDir) {
@@ -170,8 +170,8 @@ public class ProductService {
     }
 
     /**
-     * Finds a product by ID, caching its details and inventory availability for five minutes.
-     * Redis failures are tolerated; database and unhandled inventory errors propagate.
+     * Finds a product by ID, caching its details and inventory availability for five minutes. Redis
+     * failures are tolerated; database and unhandled inventory errors propagate.
      *
      * @return the product, or an error with ProductNotFoundException if absent on a cache miss or
      *     IllegalStateException if the shared cache generation is missing
@@ -194,8 +194,8 @@ public class ProductService {
     }
 
     /**
-     * Finds a product by case-insensitive code, caching its details for five minutes.
-     * Redis failures are tolerated; database and unhandled inventory errors propagate.
+     * Finds a product by case-insensitive code, caching its details for five minutes. Redis
+     * failures are tolerated; database and unhandled inventory errors propagate.
      *
      * @param fetchInStock whether to refresh availability from inventory, including on cache hits;
      *     otherwise availability remains false
@@ -236,9 +236,9 @@ public class ProductService {
 
     /**
      * Returns an existing product with the same case-insensitive code, or creates it with a product
-     * creation outbox event. Invalidates product caches before emitting either result.
-     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
-     * errors propagate.
+     * creation outbox event. Invalidates product caches before emitting either result. Redis
+     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
+     * propagate.
      *
      * @return the existing or created product; a duplicate-key race is recovered by looking up the
      *     existing product, or emits ProductAlreadyExistsException if that lookup is empty
@@ -296,9 +296,9 @@ public class ProductService {
     }
 
     /**
-     * Deletes a product, records its deletion in the outbox, and invalidates product caches.
-     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
-     * errors propagate.
+     * Deletes a product, records its deletion in the outbox, and invalidates product caches. Redis
+     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
+     * propagate.
      *
      * @return completion after deletion and invalidation, or ProductNotFoundException as an error
      *     if the product does not exist
@@ -336,9 +336,9 @@ public class ProductService {
 
     /**
      * Updates the supplied product in place, saves it, records an update outbox event, and
-     * invalidates product caches, including entries for both the previous and current codes.
-     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
-     * errors propagate through the returned Mono.
+     * invalidates product caches, including entries for both the previous and current codes. Redis
+     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
+     * propagate through the returned Mono.
      *
      * @param productRequest the updated product details
      * @param product the existing product entity
@@ -614,10 +614,11 @@ public class ProductService {
 
     /**
      * Rotates the shared database generation in the caller's transaction to invalidate all product
-     * caches, then attempts to delete this product's entries in the previous generation.
-     * Redis deletion errors are suppressed; database errors propagate.
+     * caches, then attempts to delete this product's entries in the previous generation. Redis
+     * deletion errors are suppressed; database errors propagate.
      *
-     * @param productCodes the current and any previous product codes whose entries should be deleted
+     * @param productCodes the current and any previous product codes whose entries should be
+     *     deleted
      * @return completion after invalidation, or IllegalStateException as an error if the generation
      *     is missing or its update does not affect exactly one row
      */
