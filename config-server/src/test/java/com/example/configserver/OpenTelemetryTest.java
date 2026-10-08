@@ -26,6 +26,10 @@ class OpenTelemetryTest {
         Logger rootLogger = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         Appender<ILoggingEvent> appender = rootLogger.getAppender("OpenTelemetry");
 
-        assertThat(appender).isNotNull().isInstanceOf(OpenTelemetryAppender.class);
+        assertThat(appender)
+                .isNotNull()
+                .isInstanceOf(OpenTelemetryAppender.class)
+                .extracting("openTelemetry")
+                .isSameAs(openTelemetry);
     }
 }
