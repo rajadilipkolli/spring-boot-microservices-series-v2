@@ -77,7 +77,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     @SuppressWarnings("unchecked") // Safe cast after isInstanceOf check
                     Map<String, Object> productMap = (Map<String, Object>) rawProductData;
 
-                    assertThat(productMap.get("id")).isEqualTo(1); // JSON '1' becomes Integer 1
+                    assertThat(productMap.get("id")).isEqualTo("1");
                     assertThat(productMap.get("productCode")).isEqualTo("TESTPROD001");
                     assertThat(productMap.get("productName")).isEqualTo("Test Product");
                     assertThat(productMap.get("description")).isEqualTo("A beautiful product");

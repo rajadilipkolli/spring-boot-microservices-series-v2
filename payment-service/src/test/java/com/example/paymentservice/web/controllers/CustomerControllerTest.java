@@ -312,7 +312,7 @@ class CustomerControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.customerId", is(1L), Long.class));
+                    .andExpect(jsonPath("$.customerId", is("1")));
         }
 
         @Test

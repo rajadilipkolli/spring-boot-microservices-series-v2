@@ -107,7 +107,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -226,7 +226,7 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
 
@@ -243,7 +243,7 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
     }
@@ -328,7 +328,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(product.getId())
+                .isEqualTo(product.getId().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
@@ -369,7 +369,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -442,7 +442,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id());
+                .isEqualTo(productResponse.id().toString());
     }
 
     @Test

@@ -10,6 +10,7 @@ import net.datafaker.Faker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -76,8 +77,11 @@ class Initializer implements CommandLineRunner {
                                 .setAmountAvailable(secureRandom.nextInt(100_000))
                                 .setAmountReserved(0);
                 this.customerRepository.save(rajaCustomer);
-            } catch (Exception e) {
-                // Handle race condition - another instance may have created the raja customer
+            } catch (DuplicateKeyException e) {
+                if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {
+                    throw e;
+                }
+                // Another instance created the customer after the initial lookup.
                 log.debug("Raja customer already exists (concurrent creation): {}", e.getMessage());
             }
         }

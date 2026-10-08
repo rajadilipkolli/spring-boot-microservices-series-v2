@@ -322,7 +322,7 @@ class InventoryControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(inventoryId.intValue())))
+                .andExpect(jsonPath("$.id", is(inventoryId.toString())))
                 .andExpect(jsonPath("$.productCode", is("updated")))
                 .andExpect(jsonPath("$.availableQuantity", is(22)));
     }
