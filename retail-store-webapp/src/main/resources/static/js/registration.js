@@ -1,3 +1,7 @@
+/**
+ * Validates the registration form and submits its fields to the registration API.
+ * Displays validation or request errors, or redirects to login on success.
+ */
 function registerUser() {
     const form = document.getElementById('registrationForm');
     const formData = new FormData(form);
@@ -47,12 +51,22 @@ function registerUser() {
     });
 }
 
+/**
+ * Displays a message as text in the registration error panel and makes it visible.
+ * @param {string} message - The error message to display.
+ */
 function showError(message) {
     const errorDiv = document.getElementById('registrationError');
     errorDiv.textContent = message;
     errorDiv.classList.remove('d-none');
 }
 
+/**
+ * Checks for uppercase and lowercase letters, a digit, and a supported special character.
+ * Password length is checked separately when submitting the form.
+ * @param {string} password - The password to check.
+ * @returns {boolean} Whether all four character requirements are satisfied.
+ */
 function validatePasswordComplexity(password) {
     const hasUpper = /[A-Z]/.test(password);
     const hasLower = /[a-z]/.test(password);
@@ -61,6 +75,11 @@ function validatePasswordComplexity(password) {
     return hasUpper && hasLower && hasNumber && hasSpecial;
 }
 
+/**
+ * Checks for non-whitespace text around an at sign and a dot in the domain.
+ * @param {string} email - The email address to check.
+ * @returns {boolean} Whether the address matches the basic email format.
+ */
 function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
