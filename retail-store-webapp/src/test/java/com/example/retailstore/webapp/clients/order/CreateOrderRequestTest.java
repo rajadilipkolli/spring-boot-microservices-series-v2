@@ -18,6 +18,7 @@ class CreateOrderRequestTest {
     @Autowired
     private JacksonTester<CreateOrderRequest> json;
 
+    /** Verifies that order JSON without customer address fields deserializes with null components. */
     @Test
     void testDeserialize() throws Exception {
         // Setup
@@ -49,7 +50,8 @@ class CreateOrderRequestTest {
 
         CreateOrderRequest expected = new CreateOrderRequest(
                 List.of(new OrderItemRequest("P001", 1, new BigDecimal("999.99"))),
-                new CustomerRequest("retail", "retail@gmail.com", "(274) 748-2938", null, null),
+                new CustomerRequest(
+                        "retail", "retail@gmail.com", "(274) 748-2938", null, null, null, null, null, null, null),
                 new Address("280 Rick Lakes", "Arnoldland", "FL 86710", "TS", "500072", "India"));
         assertThat(this.json.parse(jsonContent)).isEqualTo(expected);
     }

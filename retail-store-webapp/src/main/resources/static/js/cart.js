@@ -1,19 +1,25 @@
+const customerDetails = document.getElementById('customer-details').dataset;
+const getAddressPart = (index, defaultValue) => {
+    const part = customerDetails.address?.split(',')[index]?.trim();
+    return part || defaultValue;
+};
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('initData', () => ({
         cart: { items: [], totalAmount: 0 },
         orderForm: {
             customer: {
-                name: window.customerName || "Siva",
-                email: window.customerEmail || "siva@gmail.com",
-                phone: window.customerPhone || "999999999999"
+                name: customerDetails.name || "Siva",
+                email: customerDetails.email || "siva@gmail.com",
+                phone: customerDetails.phone || "999999999999"
             },
             deliveryAddress: {
-                addressLine1: window.customerAddressLine1 || "KPHB",
-                addressLine2: window.customerAddressLine2 || "Kukatpally",
-                city: window.customerCity || "Hyderabad",
-                state: window.customerState || "TS",
-                zipCode: window.customerZipCode || "500072",
-                country: window.customerCountry || "India"
+                addressLine1: getAddressPart(0, null) || "KPHB",
+                addressLine2: getAddressPart(1, '') || "Kukatpally",
+                city: getAddressPart(2, '') || "Hyderabad",
+                state: getAddressPart(3, '') || "TS",
+                zipCode: getAddressPart(4, '') || "500072",
+                country: getAddressPart(5, '') || "India"
             }
         },
 

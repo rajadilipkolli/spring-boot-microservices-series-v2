@@ -36,7 +36,7 @@ class InitializerTest {
     @BeforeEach
     void setUp() {
         initializer = new Initializer(customerRepository);
-        when(customerRepository.findByEmail("retail@gmail.com"))
+        when(customerRepository.findByEmail("retailstore@gmail.com"))
                 .thenReturn(Optional.of(new Customer()));
     }
 

@@ -10,5 +10,10 @@ public record CustomerRequest(
         @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid")
                 String email,
         @NotBlank(message = "Customer Phone number is required") String phone,
-        String address,
+        String addressLine1,
+        String addressLine2,
+        String city,
+        String state,
+        String zipCode,
+        String country,
         @Positive(message = "AmountAvailable must be greater than 0") double amountAvailable) {}

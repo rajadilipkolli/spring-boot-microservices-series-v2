@@ -61,6 +61,7 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.retrieve()).willReturn(responseSpec);
     }
 
+    /** Verifies that registration obtains an admin token and uses it to submit the user details. */
     @Test
     void registerSuccessPathPostsTokenAndUser() {
         // arrange
@@ -84,7 +85,8 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
         given(responseSpec.toBodilessEntity()).willReturn(ResponseEntity.ok().build());
 
-        var r = new RegistrationRequest("u1", "e@example.com", "First", "Last", "p", 1L, "addr");
+        var r = new RegistrationRequest(
+                "u1", "e@example.com", "First", "Last", "p", 1L, "addr", null, null, null, null, null);
 
         // act / assert
         assertDoesNotThrow(() -> svc.registerUser(r));
@@ -107,6 +109,7 @@ class KeycloakRegistrationServiceTest {
         ord.verify(responseSpec).toBodilessEntity();
     }
 
+    /** Verifies that a token response containing an error causes a KeyCloakException. */
     @Test
     void registerFailsWhenTokenReturnsErrorMap() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -121,11 +124,12 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willReturn(Map.of("error", "nope"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
 
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
+    /** Verifies that a null token response body causes a KeyCloakException. */
     @Test
     void registerFailsWhenTokenBodyIsNull() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -140,10 +144,11 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willReturn(null);
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
+    /** Verifies that a token request failure is wrapped in a KeyCloakException. */
     @Test
     void registerWrapsExceptionsFromTokenCall() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -158,13 +163,14 @@ class KeycloakRegistrationServiceTest {
         given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
                 .willThrow(new RuntimeException("boom"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
 
         assertThatThrownBy(() -> svc.registerUser(r))
                 .isInstanceOf(KeyCloakException.class)
                 .hasCauseInstanceOf(RuntimeException.class);
     }
 
+    /** Verifies that user creation failures are wrapped after sending the bearer token. */
     @Test
     void registerWrapsExceptionsFromUserCreation() {
         // token ok
@@ -187,7 +193,7 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
         given(responseSpec.toBodilessEntity()).willThrow(new RuntimeException("create-fail"));
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr");
+        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
         verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
     }

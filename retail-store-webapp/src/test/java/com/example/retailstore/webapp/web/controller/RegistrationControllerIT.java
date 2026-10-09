@@ -28,6 +28,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final String TEST_ADDRESS_LINE = "Test Address";
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
 
+    /** Verifies that registration creates a Keycloak user and forwards customer details to payment. */
     @Test
     void testRegister() throws JacksonException {
 
@@ -38,11 +39,25 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_LAST_NAME,
                 "Test@1234",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         // Arrange: Expected CustomerRequest and CustomerResponse for mocking CustomerServiceClient
         CustomerRequest expectedCustomerRequest = new CustomerRequest(
-                TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
+                TEST_USERNAME,
+                TEST_EMAIL,
+                String.valueOf(TEST_PHONE_NUMBER),
+                TEST_ADDRESS_LINE,
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                10_000);
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
                 1L, TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
 
@@ -100,8 +115,9 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         }
     }
 
+    /** Verifies that a username shorter than the allowed minimum produces HTTP 400. */
     @Test
-    void shouldReturnBadRequestForInvalidUsername() throws Exception {
+    void shouldReturnBadRequestForInvalidUsername() {
         RegistrationRequest request = new RegistrationRequest(
                 "u", // invalid username (too short)
                 "test@example.com",
@@ -109,7 +125,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123!",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         mockMvcTester
                 .post()
@@ -125,6 +146,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .isEqualTo("Invalid request content.");
     }
 
+    /** Verifies that a password lacking required character types produces HTTP 400. */
     @Test
     void shouldReturnBadRequestForInvalidPassword() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
@@ -134,7 +156,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "password",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE); // invalid password (no uppercase, numbers, or special chars)
+                TEST_ADDRESS_LINE,
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country"); // invalid password (no uppercase, numbers, or special chars)
 
         mockMvcTester
                 .post()
@@ -150,6 +177,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .isEqualTo("Invalid request content.");
     }
 
+    /** Verifies that a malformed email address produces HTTP 400. */
     @Test
     void shouldReturnBadRequestForInvalidEmail() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
@@ -159,7 +187,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123!",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE);
+                TEST_ADDRESS_LINE,
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         mockMvcTester
                 .post()

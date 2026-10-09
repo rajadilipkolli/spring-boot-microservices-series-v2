@@ -1,4 +1,4 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
@@ -236,12 +236,22 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("save methods")
     class Save {
+        /** Verifies that a valid customer request returns HTTP 201 and the customer name. */
         @Test
         void shouldCreateNewCustomer() throws Exception {
 
             CustomerRequest customerRequest =
                     new CustomerRequest(
-                            "junitName", "email@junit.com", "1234567890", "junitAddress", 10);
+                            "junitName",
+                            "email@junit.com",
+                            "1234567890",
+                            "junitAddress",
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            10);
             CustomerResponse customerResponse =
                     new CustomerResponse(
                             1L, "junitName", "email@junit.com", "9876543210", "junitAddress", 10);
@@ -255,9 +265,11 @@ class CustomerControllerTest {
                     .andExpect(jsonPath("$.name", is(customerRequest.name())));
         }
 
+        /** Verifies that missing required customer details produce HTTP 400 validation errors. */
         @Test
         void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-            CustomerRequest customerRequest = new CustomerRequest(null, null, null, null, 1);
+            CustomerRequest customerRequest =
+                    new CustomerRequest(null, null, null, null, null, null, null, null, null, 1);
 
             mockMvc.perform(
                             post("/api/customers")
@@ -296,6 +308,11 @@ class CustomerControllerTest {
                             "junitEmail@email.com",
                             "1234567890",
                             "junitAddress",
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
                             100);
 
             given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
@@ -316,6 +333,7 @@ class CustomerControllerTest {
                     .andExpect(jsonPath("$.customerId", is("1")));
         }
 
+        /** Verifies that updating an unknown customer returns HTTP 404. */
         @Test
         void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
             Long customerId = 1L;
@@ -325,6 +343,11 @@ class CustomerControllerTest {
                             "junitEmail@email.com",
                             "1234567890",
                             "junitAddress",
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
                             100);
             given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
                     .willThrow(new CustomerNotFoundException(customerId));

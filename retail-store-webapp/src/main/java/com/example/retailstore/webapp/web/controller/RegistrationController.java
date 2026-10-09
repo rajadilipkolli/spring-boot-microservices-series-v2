@@ -37,12 +37,28 @@ public class RegistrationController {
         return "registration"; // Returns the name of the Thymeleaf template (registration.html)
     }
 
+    /**
+     * Registers a Keycloak user, then gets or creates the payment customer using the supplied
+     * address components and an initial available balance of 10,000.
+     *
+     * @param request validated user and customer registration details
+     * @return a success message after both service calls complete
+     */
     @PostMapping(value = "/api/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
         logger.info("Received registration request for user: {}", request.username());
         registrationService.registerUser(request);
         CustomerRequest customerRequest = new CustomerRequest(
-                request.username(), request.email(), String.valueOf(request.phone()), request.address(), 10_000);
+                request.username(),
+                request.email(),
+                String.valueOf(request.phone()),
+                request.addressLine1(),
+                request.addressLine2(),
+                request.city(),
+                request.state(),
+                request.zipCode(),
+                request.country(),
+                10_000);
         CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
         logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());

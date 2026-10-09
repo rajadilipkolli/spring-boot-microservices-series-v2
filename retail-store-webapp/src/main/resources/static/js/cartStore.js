@@ -150,3 +150,7 @@ const getCart = function() {
 const getCartTotal = function() {
     return calculateTotal(localCachedCart);
 }
+
+document.getElementById('logoutForm')?.addEventListener('submit', () => {
+    deleteCart();
+});

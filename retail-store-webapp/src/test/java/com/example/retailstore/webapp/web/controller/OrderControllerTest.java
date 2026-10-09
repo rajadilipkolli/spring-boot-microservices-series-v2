@@ -220,8 +220,8 @@ class OrderControllerTest {
     @WithMockUser
     void createOrder_shouldCreateAndReturnOrderConfirmation() throws Exception {
         // Create test request objects
-        CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 5000);
+        CustomerRequest customerRequest = new CustomerRequest(
+                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
 
         List<OrderItemRequest> items = List.of(
                 new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")),
@@ -267,11 +267,12 @@ class OrderControllerTest {
         mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
     }
 
+    /** Verifies that a failed customer lookup during order creation returns HTTP 400. */
     @Test
     @WithMockUser
     void createOrder_shouldHandleErrorWhenCustomerServiceFails() throws Exception {
-        CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "fail@example.com", "1234567890", "Test Address", 5000);
+        CustomerRequest customerRequest = new CustomerRequest(
+                "Test User", "fail@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
         List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, new BigDecimal("99.99")));
         Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
@@ -286,11 +287,12 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Verifies that blank product codes and negative quantities or prices produce HTTP 400. */
     @Test
     @WithMockUser(username = "test-username")
     void createOrder_shouldRejectInvalidOrderItemRequest() throws Exception {
-        CustomerRequest customerRequest =
-                new CustomerRequest("Test User", "test@example.com", "1234567890", "Test Address", 5000);
+        CustomerRequest customerRequest = new CustomerRequest(
+                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
         // Invalid order item: blank product code, negative quantity, negative price
         List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, new BigDecimal("-10.00")));
         Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
