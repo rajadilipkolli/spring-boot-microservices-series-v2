@@ -56,10 +56,12 @@ class SecurityConfig {
                 .logout(logout -> logout.clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .logoutSuccessHandler(oidcLogoutSuccessHandler()))
+                // Alpine's standard build evaluates template expressions with AsyncFunction.
+                // Keep unsafe-eval until the templates can use Alpine's CSP build.
                 .headers(
                         headers -> headers.contentSecurityPolicy(
                                 csp -> csp.policyDirectives(
-                                        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
+                                        "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
 
         return http.build();
     }

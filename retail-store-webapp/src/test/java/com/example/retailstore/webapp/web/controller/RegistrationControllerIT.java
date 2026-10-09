@@ -41,10 +41,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         // Arrange: Expected CustomerRequest and CustomerResponse for mocking CustomerServiceClient
         CustomerRequest expectedCustomerRequest = new CustomerRequest(
@@ -53,10 +53,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 String.valueOf(TEST_PHONE_NUMBER),
                 TEST_ADDRESS_LINE,
                 null,
-                null,
-                null,
-                null,
-                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
                 10_000);
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
                 1L, TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
@@ -127,10 +127,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         mockMvcTester
                 .post()
@@ -158,10 +158,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
-                null,
-                null,
-                null,
-                null); // invalid password (no uppercase, numbers, or special chars)
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country"); // invalid password (no uppercase, numbers, or special chars)
 
         mockMvcTester
                 .post()
@@ -189,10 +189,10 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         mockMvcTester
                 .post()

@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,7 +19,13 @@ import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -62,10 +69,10 @@ class RegistrationControllerTest {
                 9848022334L,
                 "junitAddress",
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
@@ -92,10 +99,10 @@ class RegistrationControllerTest {
                 9848022334L,
                 "junitAddress",
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
@@ -121,16 +128,49 @@ class RegistrationControllerTest {
                 9848022334L,
                 "junitAddress",
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @ParameterizedTest(name = "{0}: {1}")
+    @MethodSource("invalidAddressComponents")
+    void shouldRejectMissingOrBlankAddressComponent(String field, String value) throws Exception {
+        Map<String, Object> request = new HashMap<>(Map.of(
+                "username", TEST_USERNAME,
+                "email", TEST_EMAIL,
+                "firstName", "Test",
+                "lastName", "User",
+                "password", TEST_PASSWORD,
+                "addressLine1", "123 Main Street",
+                "city", "Test City",
+                "state", "Test State",
+                "zipCode", "12345",
+                "country", "Test Country"));
+        if ("missing".equals(value)) {
+            request.remove(field);
+        } else {
+            request.put(field, value);
+        }
+
+        mockMvc.perform(post(REGISTER_ENDPOINT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(registrationService, customerServiceClient);
+    }
+
+    private static Stream<Arguments> invalidAddressComponents() {
+        return Stream.of("addressLine1", "city", "state", "zipCode", "country")
+                .flatMap(field -> Stream.of("missing", null, "", " \t\n").map(value -> Arguments.of(field, value)));
     }
 
     /** Verifies that a Keycloak registration failure produces HTTP 500. */
@@ -146,10 +186,10 @@ class RegistrationControllerTest {
                 9848022334L,
                 "junitAddress",
                 null,
-                null,
-                null,
-                null,
-                null);
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
 
         doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
                 .when(registrationService)
