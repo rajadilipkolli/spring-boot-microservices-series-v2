@@ -10,6 +10,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class CustomerMapper {
 
+    /**
+     * Creates a customer with the request's contact details, balance, and combined address.
+     *
+     * @param customerRequest customer details to copy
+     * @return a new customer entity
+     */
     public Customer toEntity(CustomerRequest customerRequest) {
         Customer customer = new Customer();
         customer.setName(customerRequest.name());
@@ -30,6 +36,12 @@ public class CustomerMapper {
                 customer.getAmountAvailable());
     }
 
+    /**
+     * Updates a customer's contact details, available balance, and combined address.
+     *
+     * @param customer the entity to update
+     * @param customerRequest replacement customer details
+     */
     public void mapCustomerWithRequest(Customer customer, CustomerRequest customerRequest) {
         customer.setAmountAvailable(customerRequest.amountAvailable());
         customer.setName(customerRequest.name());
@@ -38,6 +50,13 @@ public class CustomerMapper {
         customer.setPhone(customerRequest.phone());
     }
 
+    /**
+     * Joins address lines, city, state, ZIP code, and country with commas, preserving empty
+     * components for null values.
+     *
+     * @param request the request containing the address components
+     * @return the six address components separated by commas
+     */
     private String getCombinedAddress(CustomerRequest request) {
         return String.join(
                 ",",

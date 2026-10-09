@@ -11,6 +11,7 @@ document.addEventListener('alpine:init', () => {
             hasNext: false,
             hasPrevious: false
         },
+        /** Loads the initial product page when Alpine initializes this component. */
         init() {
             this.loadProducts();
         },

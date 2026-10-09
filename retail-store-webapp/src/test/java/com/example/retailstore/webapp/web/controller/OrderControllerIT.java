@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 
 class OrderControllerIT extends AbstractIntegrationTest {
 
+    /** Verifies that an authenticated order request returns the confirmation from the order service. */
     @Test
     void testCreateOrder() {
         CustomerRequest customerRequest = new CustomerRequest(

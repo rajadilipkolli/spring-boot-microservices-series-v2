@@ -30,6 +30,14 @@ class SecurityConfig {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
+    /**
+     * Configures public routes, authenticated access, OAuth2 login, logout, and response headers.
+     * Registration bypasses CSRF checks; other requests use cookie-based CSRF protection.
+     *
+     * @param http the security configuration builder
+     * @param userAuthoritiesMapper mapper for authorities supplied by the identity provider
+     * @return the configured security filter chain
+     */
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
         http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)

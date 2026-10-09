@@ -267,6 +267,7 @@ class OrderControllerTest {
         mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
     }
 
+    /** Verifies that a failed customer lookup during order creation returns HTTP 400. */
     @Test
     @WithMockUser
     void createOrder_shouldHandleErrorWhenCustomerServiceFails() throws Exception {
@@ -286,6 +287,7 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Verifies that blank product codes and negative quantities or prices produce HTTP 400. */
     @Test
     @WithMockUser(username = "test-username")
     void createOrder_shouldRejectInvalidOrderItemRequest() throws Exception {

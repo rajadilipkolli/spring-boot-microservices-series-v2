@@ -28,6 +28,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final String TEST_ADDRESS_LINE = "Test Address";
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
 
+    /** Verifies that registration creates a Keycloak user and forwards customer details to payment. */
     @Test
     void testRegister() throws JacksonException {
 
@@ -114,6 +115,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         }
     }
 
+    /** Verifies that a username shorter than the allowed minimum produces HTTP 400. */
     @Test
     void shouldReturnBadRequestForInvalidUsername() {
         RegistrationRequest request = new RegistrationRequest(
@@ -144,6 +146,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .isEqualTo("Invalid request content.");
     }
 
+    /** Verifies that a password lacking required character types produces HTTP 400. */
     @Test
     void shouldReturnBadRequestForInvalidPassword() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
@@ -174,6 +177,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .isEqualTo("Invalid request content.");
     }
 
+    /** Verifies that a malformed email address produces HTTP 400. */
     @Test
     void shouldReturnBadRequestForInvalidEmail() throws Exception {
         RegistrationRequest request = new RegistrationRequest(

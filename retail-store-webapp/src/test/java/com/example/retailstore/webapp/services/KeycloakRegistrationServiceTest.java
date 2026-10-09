@@ -61,6 +61,7 @@ class KeycloakRegistrationServiceTest {
         given(requestBodySpec.retrieve()).willReturn(responseSpec);
     }
 
+    /** Verifies that registration obtains an admin token and uses it to submit the user details. */
     @Test
     void registerSuccessPathPostsTokenAndUser() {
         // arrange
@@ -108,6 +109,7 @@ class KeycloakRegistrationServiceTest {
         ord.verify(responseSpec).toBodilessEntity();
     }
 
+    /** Verifies that a token response containing an error causes a KeyCloakException. */
     @Test
     void registerFailsWhenTokenReturnsErrorMap() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -127,6 +129,7 @@ class KeycloakRegistrationServiceTest {
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
+    /** Verifies that a null token response body causes a KeyCloakException. */
     @Test
     void registerFailsWhenTokenBodyIsNull() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -145,6 +148,7 @@ class KeycloakRegistrationServiceTest {
         assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
     }
 
+    /** Verifies that a token request failure is wrapped in a KeyCloakException. */
     @Test
     void registerWrapsExceptionsFromTokenCall() {
         given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
@@ -166,6 +170,7 @@ class KeycloakRegistrationServiceTest {
                 .hasCauseInstanceOf(RuntimeException.class);
     }
 
+    /** Verifies that user creation failures are wrapped after sending the bearer token. */
     @Test
     void registerWrapsExceptionsFromUserCreation() {
         // token ok

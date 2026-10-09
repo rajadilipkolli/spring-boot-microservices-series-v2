@@ -221,6 +221,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
+    /** Verifies that missing required customer details produce HTTP 400 validation errors. */
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
         CustomerRequest customer =
@@ -286,6 +287,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
+    /** Verifies that updating an unknown customer returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;

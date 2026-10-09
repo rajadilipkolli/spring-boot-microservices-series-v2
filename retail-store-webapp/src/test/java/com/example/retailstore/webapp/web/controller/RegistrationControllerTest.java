@@ -49,6 +49,7 @@ class RegistrationControllerTest {
     @MockitoBean
     private CustomerServiceClient customerServiceClient;
 
+    /** Verifies that anonymous registration returns a success message when both service calls succeed. */
     @Test
     @WithAnonymousUser
     void shouldRegisterUserSuccessfully() throws Exception {
@@ -78,6 +79,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
+    /** Verifies that anonymous registration succeeds without a CSRF token. */
     @Test
     @WithAnonymousUser
     void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
@@ -106,6 +108,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
     }
 
+    /** Verifies that invalid registration fields produce HTTP 400. */
     @Test
     @WithAnonymousUser
     void shouldReturn400WhenRegistrationDataIsInvalid() throws Exception {
@@ -130,6 +133,7 @@ class RegistrationControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Verifies that a Keycloak registration failure produces HTTP 500. */
     @Test
     @WithAnonymousUser
     void shouldReturn500WhenKeycloakRegistrationFails() throws Exception {

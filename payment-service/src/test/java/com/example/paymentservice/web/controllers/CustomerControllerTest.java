@@ -236,6 +236,7 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("save methods")
     class Save {
+        /** Verifies that a valid customer request returns HTTP 201 and the customer name. */
         @Test
         void shouldCreateNewCustomer() throws Exception {
 
@@ -264,6 +265,7 @@ class CustomerControllerTest {
                     .andExpect(jsonPath("$.name", is(customerRequest.name())));
         }
 
+        /** Verifies that missing required customer details produce HTTP 400 validation errors. */
         @Test
         void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
             CustomerRequest customerRequest =
@@ -331,6 +333,7 @@ class CustomerControllerTest {
                     .andExpect(jsonPath("$.customerId", is("1")));
         }
 
+        /** Verifies that updating an unknown customer returns HTTP 404. */
         @Test
         void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
             Long customerId = 1L;

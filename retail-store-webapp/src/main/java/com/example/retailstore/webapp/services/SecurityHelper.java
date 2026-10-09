@@ -30,6 +30,12 @@ public class SecurityHelper {
         return username;
     }
 
+    /**
+     * Obtains an access token for the current OAuth2 authentication.
+     *
+     * @return the token value, or null when authentication is not OAuth2, no token is available,
+     *     or client authorization is required
+     */
     public String getAccessToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {

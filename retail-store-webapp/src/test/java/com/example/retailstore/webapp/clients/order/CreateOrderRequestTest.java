@@ -18,6 +18,7 @@ class CreateOrderRequestTest {
     @Autowired
     private JacksonTester<CreateOrderRequest> json;
 
+    /** Verifies that order JSON without customer address fields deserializes with null components. */
     @Test
     void testDeserialize() throws Exception {
         // Setup

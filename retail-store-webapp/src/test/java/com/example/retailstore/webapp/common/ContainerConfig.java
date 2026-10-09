@@ -23,6 +23,11 @@ public class ContainerConfig {
                 .withRealmImportFile(REALM_IMPORT_FILE);
     }
 
+    /**
+     * Provides the Redis container used by integration tests through a Spring service connection.
+     *
+     * @return a Redis 8.10.2 Alpine container
+     */
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
