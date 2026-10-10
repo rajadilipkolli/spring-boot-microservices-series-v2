@@ -1,0 +1,98 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "02-create-processed-kafka-messages",
+        "author": "yashdotdev13",
+        "preConditions": [
+          {
+            "onFail": "MARK_RAN",
+            "not": [
+              {
+                "tableExists": {
+                  "tableName": "processed_kafka_messages"
+                }
+              }
+            ]
+          }
+        ],
+        "changes": [
+          {
+            "createTable": {
+              "tableName": "processed_kafka_messages",
+              "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "type": "UUID",
+                    "constraints": {
+                      "primaryKey": true,
+                      "nullable": false,
+                      "primaryKeyName": "processed_kafka_messages_pkey"
+                    }
+                  }
+                },
+                {
+                  "column": {
+                    "name": "message_key",
+                    "type": "TEXT",
+                    "constraints": {
+                      "nullable": false
+                    }
+                  }
+                },
+                {
+                  "column": {
+                    "name": "topic",
+                    "type": "TEXT",
+                    "constraints": {
+                      "nullable": false
+                    }
+                  }
+                },
+                {
+                  "column": {
+                    "name": "consumer_group",
+                    "type": "TEXT",
+                    "constraints": {
+                      "nullable": false
+                    }
+                  }
+                },
+                {
+                  "column": {
+                    "name": "processed_at",
+                    "type": "TIMESTAMP WITH TIME ZONE",
+                    "constraints": {
+                      "nullable": false
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "addUniqueConstraint": {
+              "tableName": "processed_kafka_messages",
+              "columnNames": "message_key, topic, consumer_group",
+              "constraintName": "uk_processed_kafka_messages"
+            }
+          },
+          {
+            "createIndex": {
+              "indexName": "idx_processed_kafka_messages_processed_at",
+              "tableName": "processed_kafka_messages",
+              "columns": [
+                {
+                  "column": {
+                    "name": "processed_at"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
