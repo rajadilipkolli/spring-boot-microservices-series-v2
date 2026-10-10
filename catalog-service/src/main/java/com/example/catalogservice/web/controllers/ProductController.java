@@ -145,8 +145,8 @@ public class ProductController implements ProductApi {
     @Override
     public Mono<PagedResult<ProductResponse>> searchProducts(
             @RequestParam(required = false) String term,
-            @RequestParam(required = false) Double minPrice,
-            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)

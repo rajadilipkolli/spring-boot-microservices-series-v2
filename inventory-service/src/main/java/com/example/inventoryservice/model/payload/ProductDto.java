@@ -6,11 +6,13 @@
 
 package com.example.inventoryservice.model.payload;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 
 public record ProductDto(
         @NotBlank(message = "Product code can't be blank") String code,
         String productName,
         String description,
-        @Positive Double price) {}
+        @Positive @Digits(integer = 17, fraction = 2) BigDecimal price) {}

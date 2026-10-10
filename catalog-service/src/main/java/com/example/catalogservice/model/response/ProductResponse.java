@@ -9,6 +9,7 @@ package com.example.catalogservice.model.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public record ProductResponse(
         @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
@@ -16,7 +17,7 @@ public record ProductResponse(
         String productName,
         String description,
         String imageUrl,
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") double price,
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") BigDecimal price,
         boolean inStock)
         implements Serializable {
 

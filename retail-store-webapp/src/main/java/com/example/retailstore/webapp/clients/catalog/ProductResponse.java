@@ -15,6 +15,6 @@ public record ProductResponse(
         String imageUrl,
 
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
-        Double price,
+        java.math.BigDecimal price,
 
         boolean inStock) {}

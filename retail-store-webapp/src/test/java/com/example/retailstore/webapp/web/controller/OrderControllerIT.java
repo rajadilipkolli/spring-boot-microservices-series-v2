@@ -30,7 +30,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void testCreateOrder() {
         CustomerRequest customerRequest = new CustomerRequest(
-                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 0);
+                "Test User",
+                "test@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                null,
+                null,
+                null,
+                null,
+                java.math.BigDecimal.ZERO);
         Address address = new Address("Line1", "Line2", "City", "State", "Zip", "Country");
         OrderItemRequest orderItemRequest = new OrderItemRequest("PROD001", 1, BigDecimal.TEN);
         CreateOrderRequest createOrderRequest =
@@ -47,7 +56,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
         OrderConfirmationDTO orderConfirmationDTO = new OrderConfirmationDTO(1L, 1L, "CONFIRMED");
 
         // Mock Customer Service
@@ -99,7 +108,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
         orderResponse.setCustomer(customerResponse); // Set the customer in the expected response
         gatewayServiceMock.stubFor(
                 get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
@@ -147,7 +156,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     "country": "India"
                   },
                   "createdDate": "2026-08-09T11:01:00.157888",
-                  "totalPrice": 3299.97,
+                  "totalPrice": 2199.98,
                   "items": [
                     {
                       "itemId": 202,
@@ -178,7 +187,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
 
         gatewayServiceMock.stubFor(
                 get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
@@ -205,7 +214,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .satisfies(res -> {
                     assertThat(res.getOrderId()).isEqualTo(102L);
                     assertThat(res.getCustomerId()).isEqualTo(405L);
-                    assertThat(res.getTotalPrice()).isEqualByComparingTo(new BigDecimal("3299.97"));
+                    assertThat(res.getTotalPrice()).isEqualByComparingTo(new BigDecimal("2199.98"));
                     assertThat(res.getStatus()).isEqualTo("CONFIRMED");
                     assertThat(res.getCreatedDate())
                             .isEqualTo(java.time.LocalDateTime.parse("2026-08-09T11:01:00.157888"));
@@ -242,7 +251,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=empty%40gmail.com"))
                 .willReturn(aResponse()
@@ -294,7 +303,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
         orderResponse.setCustomer(orderCustomer);
 
         CustomerResponse loggedInCustomer = new CustomerResponse(
@@ -308,7 +317,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                0);
+                java.math.BigDecimal.ZERO);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=other%40gmail.com"))
                 .willReturn(aResponse()

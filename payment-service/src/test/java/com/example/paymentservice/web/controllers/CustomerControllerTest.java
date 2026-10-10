@@ -27,6 +27,7 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderProxyService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,8 +80,8 @@ class CustomerControllerTest {
                                 .setState("State")
                                 .setZipCode("12345")
                                 .setCountry("Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO),
                         new Customer()
                                 .setId(2L)
                                 .setName("Second Customer")
@@ -91,8 +92,8 @@ class CustomerControllerTest {
                                 .setState("State")
                                 .setZipCode("12345")
                                 .setCountry("Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO),
                         new Customer()
                                 .setId(3L)
                                 .setName("Third Customer")
@@ -103,8 +104,8 @@ class CustomerControllerTest {
                                 .setState("State")
                                 .setZipCode("12345")
                                 .setCountry("Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0));
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO));
     }
 
     @Test
@@ -205,7 +206,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            100);
+                            BigDecimal.valueOf(100));
             given(customerService.findCustomerById(customerId))
                     .willReturn(Optional.of(customerResponse));
 
@@ -274,7 +275,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            100);
+                            BigDecimal.valueOf(100));
             given(customerService.findCustomerByEmail(email))
                     .willReturn(Optional.of(customerResponse));
 
@@ -338,7 +339,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            10);
+                            BigDecimal.TEN);
             CustomerResponse customerResponse =
                     new CustomerResponse(
                             1L,
@@ -351,7 +352,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            10);
+                            BigDecimal.TEN);
             given(customerService.saveCustomer(any(CustomerRequest.class)))
                     .willReturn(customerResponse);
             mockMvc.perform(
@@ -366,7 +367,8 @@ class CustomerControllerTest {
         @Test
         void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
             CustomerRequest customerRequest =
-                    new CustomerRequest(null, null, null, null, null, null, null, null, null, 1);
+                    new CustomerRequest(
+                            null, null, null, null, null, null, null, null, null, BigDecimal.ONE);
 
             mockMvc.perform(
                             post("/api/customers")
@@ -419,7 +421,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            100);
+                            BigDecimal.valueOf(100));
 
             given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
                     .willReturn(
@@ -434,7 +436,7 @@ class CustomerControllerTest {
                                     "State",
                                     "12345",
                                     "Country",
-                                    100));
+                                    BigDecimal.valueOf(100)));
 
             mockMvc.perform(
                             put("/api/customers/{id}", 1L)
@@ -459,7 +461,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            100);
+                            BigDecimal.valueOf(100));
             given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
                     .willThrow(new CustomerNotFoundException(customerId));
 
@@ -500,7 +502,7 @@ class CustomerControllerTest {
                             "State",
                             "12345",
                             "Country",
-                            0);
+                            BigDecimal.ZERO);
             given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
             doNothing().when(customerService).deleteCustomerById(customerId);
 

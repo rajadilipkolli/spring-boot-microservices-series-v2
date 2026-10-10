@@ -736,4 +736,34 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray());
     }
+
+    @Test
+    void shouldReturn400WhenOrderItemPriceIsInvalid() throws Exception {
+        OrderRequest invalidScaleRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, new BigDecimal("10.123"))),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockProductsExistsRequest(true, "PRODUCT1");
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(invalidScaleRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
+
+        OrderRequest nullPriceRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, null)),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(nullPriceRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
+    }
 }

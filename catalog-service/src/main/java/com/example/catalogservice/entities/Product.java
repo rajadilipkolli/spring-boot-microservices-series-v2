@@ -31,7 +31,7 @@ public class Product implements Serializable, Persistable<Long> {
 
     private String description;
 
-    private double price;
+    private java.math.BigDecimal price;
 
     private String imageUrl;
 
@@ -89,11 +89,11 @@ public class Product implements Serializable, Persistable<Long> {
         return this;
     }
 
-    public double getPrice() {
+    public java.math.BigDecimal getPrice() {
         return price;
     }
 
-    public Product setPrice(double price) {
+    public Product setPrice(java.math.BigDecimal price) {
         this.price = price;
         return this;
     }

@@ -12,6 +12,7 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -108,8 +109,8 @@ class ProductControllerIT extends AbstractIntegrationTest {
                             }
                         """)));
 
-        ProductRequest productRequest =
-                new ProductRequest("NEWPROD001", "New Product", "A newly created product", null, 19.99);
+        ProductRequest productRequest = new ProductRequest(
+                "NEWPROD001", "New Product", "A newly created product", null, BigDecimal.valueOf(19.99));
 
         mockMvcTester
                 .post()
@@ -129,7 +130,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     assertThat(response.productCode()).isEqualTo("NEWPROD001");
                     assertThat(response.productName()).isEqualTo("New Product");
                     assertThat(response.description()).isEqualTo("A newly created product");
-                    assertThat(response.price()).isEqualTo(19.99);
+                    assertThat(response.price()).isEqualByComparingTo(BigDecimal.valueOf(19.99));
                     assertThat(response.inStock()).isTrue();
                 });
     }

@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.model.CartItem;
 import com.example.retailstore.webapp.model.CartState;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -20,8 +21,9 @@ class CartControllerIT extends AbstractIntegrationTest {
     void cartDataShouldBeStoredInSession() {
         MockHttpSession session = new MockHttpSession();
 
-        CartItem item = new CartItem("PROD-1", "Product 1", 10.0, 1);
-        CartState cart = new CartState(List.of(item), 10.0, UUID.randomUUID().toString());
+        CartItem item = new CartItem("PROD-1", "Product 1", BigDecimal.TEN, 1);
+        CartState cart =
+                new CartState(List.of(item), BigDecimal.TEN, UUID.randomUUID().toString());
         String requestJson = jsonMapper.writeValueAsString(cart);
 
         // 1. Add item to cart

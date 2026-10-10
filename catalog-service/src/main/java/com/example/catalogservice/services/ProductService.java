@@ -18,6 +18,7 @@ import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
@@ -392,7 +393,9 @@ public class ProductService {
                                                                 "Gen Product " + i,
                                                                 "Gen Prod Description " + i,
                                                                 null,
-                                                                (double) randomPrice)))
+                                                                java.math.BigDecimal.valueOf(
+                                                                                randomPrice)
+                                                                        .setScale(2))))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
     }
@@ -417,8 +420,8 @@ public class ProductService {
     }
 
     public Mono<PagedResult<ProductResponse>> searchProductsByPriceRange(
-            double minPrice,
-            double maxPrice,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             int pageNo,
             int pageSize,
             String sortBy,
@@ -440,8 +443,8 @@ public class ProductService {
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTermAndPriceRange(
             String term,
-            double minPrice,
-            double maxPrice,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             int pageNo,
             int pageSize,
             String sortBy,

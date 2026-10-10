@@ -90,21 +90,21 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
-                                .setPrice(9.0),
+                                .setPrice(new java.math.BigDecimal("9.0")),
                         new Product()
                                 .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
-                                .setPrice(10.0),
+                                .setPrice(new java.math.BigDecimal("10.0")),
                         new Product()
                                 .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P003")
                                 .setProductName("name 3")
                                 .setDescription("description 3")
-                                .setPrice(11.0));
+                                .setPrice(new java.math.BigDecimal("11.0")));
         // Initialize the product list in a non-blocking way
         // Use StepVerifier to ensure products are saved before proceeding with tests
         StepVerifier.create(
@@ -306,7 +306,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice())
+                .isEqualTo(product.getPrice().doubleValue())
                 .jsonPath("$.inStock")
                 .isEqualTo(false);
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
@@ -355,7 +355,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice())
+                .isEqualTo(product.getPrice().doubleValue())
                 .jsonPath("$.inStock")
                 .isEqualTo(true);
         assertThat(mockWebServer.getRequestCount() - requestCount).isEqualTo(3);
@@ -464,7 +464,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice())
+                .isEqualTo(product.getPrice().doubleValue())
                 .jsonPath("$.inStock")
                 .isEqualTo(true);
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
@@ -525,7 +525,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice())
+                .isEqualTo(product.getPrice().doubleValue())
                 .jsonPath("$.inStock")
                 .isEqualTo(false);
     }
@@ -561,7 +561,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice())
+                .isEqualTo(product.getPrice().doubleValue())
                 .jsonPath("$.inStock")
                 .isEqualTo(true);
     }
@@ -614,7 +614,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldCreateNewProduct() throws JacksonException {
         ProductRequest productRequest =
-                new ProductRequest("code 4", "name 4", "description 4", null, 19.0);
+                new ProductRequest(
+                        "code 4", "name 4", "description 4", null, new java.math.BigDecimal(19.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -637,7 +638,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(productRequest.description())
                 .jsonPath("$.price")
-                .isEqualTo(productRequest.price());
+                .isEqualTo(productRequest.price().doubleValue());
 
         // Verify product was created in the database and version is 0
         StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase("code 4"))
@@ -678,7 +679,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                             ProductDto productDto = jsonMapper.readValue(message, ProductDto.class);
                             assertThat(productDto.code()).isEqualTo("code 4");
                             assertThat(productDto.productName()).isEqualTo("name 4");
-                            assertThat(productDto.price()).isEqualTo(19.0);
+                            assertThat(productDto.price())
+                                    .isEqualByComparingTo(new java.math.BigDecimal(19.00));
                         });
 
         // Verify the outbox event was updated successfully (status and version)
@@ -691,7 +693,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldNotThrowConflictForCreateNewProduct() {
         ProductRequest productRequest =
-                new ProductRequest("P001", "name 4", "description 4", null, 19.0);
+                new ProductRequest(
+                        "P001", "name 4", "description 4", null, new java.math.BigDecimal(19.00));
 
         webTestClient
                 .post()
@@ -768,7 +771,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         product.getProductName(),
                         "Updated Catalog",
                         null,
-                        100D);
+                        new java.math.BigDecimal(100.00));
 
         webTestClient
                 .put()
@@ -803,11 +806,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         product.getProductName(),
                         "Concurrent Update",
                         null,
-                        100D);
+                        new java.math.BigDecimal(100.00));
 
         // Fetch the product, modify it directly in the DB to increment version
         Product fetchedProduct = productRepository.findById(product.getId()).block();
-        fetchedProduct.setPrice(200D);
+        fetchedProduct.setPrice(new java.math.BigDecimal(200.00));
         productRepository.save(fetchedProduct).block();
 
         // The only way to trigger OptimisticLockingFailureException purely from the DB without
@@ -825,7 +828,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                                 .findById(product.getId())
                                                 .flatMap(
                                                         p -> {
-                                                            p.setPrice(500D);
+                                                            p.setPrice(
+                                                                    new java.math.BigDecimal(
+                                                                            "500"));
                                                             return productRepository.save(p);
                                                         }))
                         .then();
@@ -927,7 +932,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.description")
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(product.getPrice().doubleValue());
     }
 
     @Nested
@@ -1130,7 +1135,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         .setNew(true)
                         .setProductCode("P_DOUBLE_SAVE")
                         .setProductName("Double Save Product")
-                        .setPrice(10.0);
+                        .setPrice(new java.math.BigDecimal("10.0"));
         // First save should succeed and set isNew to false
         StepVerifier.create(productRepository.save(product))
                 .assertNext(
@@ -1139,12 +1144,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         })
                 .verifyComplete();
         // Update a field
-        product.setPrice(15.0);
+        product.setPrice(new java.math.BigDecimal(15.00));
         // Second save should succeed (as an update, not a conflicting insert)
         StepVerifier.create(productRepository.save(product))
                 .assertNext(
                         saved -> {
-                            assertThat(saved.getPrice()).isEqualTo(15.0);
+                            assertThat(saved.getPrice())
+                                    .isEqualByComparingTo(new java.math.BigDecimal(15.00));
                         })
                 .verifyComplete();
     }

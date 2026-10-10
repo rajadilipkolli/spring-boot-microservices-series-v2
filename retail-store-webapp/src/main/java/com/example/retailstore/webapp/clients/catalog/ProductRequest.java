@@ -13,4 +13,6 @@ public record ProductRequest(
         @NotBlank(message = "Product name can't be blank") String productName,
         String description,
         String imageUrl,
-        @Positive Double price) {}
+
+        @Positive @jakarta.validation.constraints.Digits(integer = 17, fraction = 2)
+        java.math.BigDecimal price) {}

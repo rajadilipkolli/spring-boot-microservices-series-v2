@@ -93,7 +93,7 @@ class ProductServiceTest {
                                     .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
-                                    .setPrice(randomPrice);
+                                    .setPrice(new java.math.BigDecimal(randomPrice));
                         });
 
         // Stubbing productMapper.toProductResponse()
@@ -135,7 +135,12 @@ class ProductServiceTest {
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
         assertThat(capturedProducts)
                 .isNotEmpty()
-                .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
+                .allSatisfy(
+                        product ->
+                                assertThat(product.price())
+                                        .isBetween(
+                                                new java.math.BigDecimal(1.0),
+                                                new java.math.BigDecimal(100.0)));
 
         then(productRepository).should(atLeastOnce()).save(productEntityCaptor.capture());
         assertThat(productEntityCaptor.getAllValues())
@@ -156,10 +161,18 @@ class ProductServiceTest {
                                     .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
-                                    .setPrice(request.price().intValue());
+                                    .setPrice(request.price());
                         });
         given(productMapper.toProductResponse(any(Product.class)))
-                .willReturn(new ProductResponse(1L, "code", "name", "description", null, 1, true));
+                .willReturn(
+                        new ProductResponse(
+                                1L,
+                                "code",
+                                "name",
+                                "description",
+                                null,
+                                new java.math.BigDecimal(6.00),
+                                true));
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
         given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
                 .willReturn(Mono.empty());
@@ -192,10 +205,12 @@ class ProductServiceTest {
 
     @Test
     void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
-        ProductRequest request = new ProductRequest("P001", "name", "desc", null, 10.0);
+        ProductRequest request =
+                new ProductRequest("P001", "name", "desc", null, new java.math.BigDecimal(5.00));
         Product product = new Product().setId(1L).setProductCode("P001");
         ProductResponse response =
-                new ProductResponse(1L, "P001", "name", "desc", null, 10.0, true);
+                new ProductResponse(
+                        1L, "P001", "name", "desc", null, new java.math.BigDecimal(6.00), true);
 
         given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
         given(productMapper.toEntity(request)).willReturn(product);

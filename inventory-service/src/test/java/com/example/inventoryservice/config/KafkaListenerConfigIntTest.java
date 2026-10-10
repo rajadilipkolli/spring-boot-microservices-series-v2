@@ -15,6 +15,7 @@ import com.example.inventoryservice.model.payload.OrderDto;
 import com.example.inventoryservice.model.payload.ProductDto;
 import com.example.inventoryservice.util.MockTestData;
 import com.example.inventoryservice.utils.AppConstants;
+import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +57,8 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         inventoryJOOQRepository.deleteByProductCode("P001");
 
         // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
-        ProductDto productDto = new ProductDto("P001", "Product 1", "Description 1", 10.0);
+        ProductDto productDto =
+                new ProductDto("P001", "Product 1", "Description 1", BigDecimal.TEN);
         kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, "1001", productDto);
 
         await().untilAsserted(

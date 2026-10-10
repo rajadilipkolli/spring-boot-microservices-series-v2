@@ -7,7 +7,6 @@ import static org.awaitility.Awaitility.await;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -46,8 +45,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                                 .setState("State")
                                 .setZipCode("12345")
                                 .setCountry("Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(10));
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.TEN));
         // Ensure the customer is saved before running tests
         assertThat(customer).isNotNull();
         assertThat(this.customerRepository.findById(customer.getId()))
@@ -65,8 +64,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
     void onEventReserveOrder() {
         OrderDto orderDto = getOrderDto("NEW");
 
-        double amountReserved = customer.getAmountReserved();
-        double amountAvailable = customer.getAmountAvailable();
+        BigDecimal amountReserved = customer.getAmountReserved();
+        BigDecimal amountAvailable = customer.getAmountAvailable();
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
@@ -81,9 +80,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualTo(amountReserved + 10);
+                                    .isEqualByComparingTo(amountReserved.add(BigDecimal.TEN));
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable - 10);
+                                    .isEqualByComparingTo(amountAvailable.subtract(BigDecimal.TEN));
                         });
     }
 
@@ -114,8 +113,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
-        double amountReserved = customer.getAmountReserved();
-        double amountAvailable = customer.getAmountAvailable();
+        BigDecimal amountReserved = customer.getAmountReserved();
+        BigDecimal amountAvailable = customer.getAmountAvailable();
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
@@ -130,9 +129,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualTo(amountReserved - 10);
+                                    .isEqualByComparingTo(amountReserved.subtract(BigDecimal.TEN));
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable + 10);
+                                    .isEqualByComparingTo(amountAvailable.add(BigDecimal.TEN));
                         });
     }
 
@@ -153,16 +152,18 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         () -> {
                             Customer persistedCustomer =
                                     customerRepository.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved()).isEqualTo(10);
-                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(100);
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualByComparingTo(BigDecimal.TEN);
+                            assertThat(persistedCustomer.getAmountAvailable())
+                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
                         });
     }
 
     private OrderDto getOrderDto(String status) {
 
         Faker faker = new Faker();
-        OrderItemDto orderItemDto =
-                new OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
+        OrderDto.OrderItemDto orderItemDto =
+                new OrderDto.OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
         return new OrderDto(
                 faker.number().randomNumber() + 10_000,
                 this.customer.getId(),

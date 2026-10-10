@@ -70,7 +70,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_STATE,
                 TEST_ZIP_CODE,
                 TEST_COUNTRY,
-                10_000);
+                java.math.BigDecimal.valueOf(10_000));
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
                 1L,
                 TEST_USERNAME,
@@ -82,7 +82,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_STATE,
                 TEST_ZIP_CODE,
                 TEST_COUNTRY,
-                10_000);
+                java.math.BigDecimal.valueOf(10_000));
 
         // Arrange: Stub for CustomerServiceClient call via gatewayServiceMock
         gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
@@ -254,7 +254,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                10_000);
+                java.math.BigDecimal.valueOf(10_000));
 
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
                 1L,
@@ -267,7 +267,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "Test State",
                 "12345",
                 "Test Country",
-                10_000);
+                java.math.BigDecimal.valueOf(10_000));
 
         gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
                 .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest)))

@@ -123,7 +123,16 @@ async function deleteCart() {
 
 function calculateTotal(cart) {
     if (!cart || !cart.items) return 0;
-    return parseFloat(cart.items.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2));
+    const totalCents = cart.items.reduce((total, item) => total + (Math.round(item.price * 100) * item.quantity), 0);
+    return totalCents / 100;
+}
+
+function formatMoney(amount) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+function getLineSubtotal(price, quantity) {
+    return (Math.round(price * 100) * quantity) / 100;
 }
 
 function updateCartItemCountUI(count) {

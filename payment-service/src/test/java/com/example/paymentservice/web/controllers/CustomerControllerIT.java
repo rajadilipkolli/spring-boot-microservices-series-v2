@@ -57,8 +57,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .setState("First State")
                                 .setZipCode("12345")
                                 .setCountry("First Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO),
                         new Customer()
                                 .setName("Second Customer")
                                 .setEmail("second@customer.email")
@@ -69,8 +69,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .setState("Second State")
                                 .setZipCode("12345")
                                 .setCountry("Second Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO),
                         new Customer()
                                 .setName("Third Customer")
                                 .setEmail("third@customer.email")
@@ -81,8 +81,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .setState("Third State")
                                 .setZipCode("12345")
                                 .setCountry("Third Country")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0));
+                                .setAmountAvailable(BigDecimal.valueOf(100))
+                                .setAmountReserved(BigDecimal.ZERO));
         customerList = customerRepository.saveAll(customerList);
     }
 
@@ -121,7 +121,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.state", is(customer.getState())))
                 .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
                 .andExpect(jsonPath("$.country", is(customer.getCountry())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
     /** Verifies that lookup of an unknown customer ID returns HTTP 404 with problem details. */
@@ -162,7 +165,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.state", is(customer.getState())))
                 .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
                 .andExpect(jsonPath("$.country", is(customer.getCountry())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
     /**
@@ -182,7 +188,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        10_000);
+                        new BigDecimal("10000"));
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -200,7 +206,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.state", is("Telangana")))
                 .andExpect(jsonPath("$.zipCode", is("500081")))
                 .andExpect(jsonPath("$.country", is("India")))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(jsonPath("$.amountAvailable", is(10000.0)));
     }
 
     /**
@@ -271,14 +277,18 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.state", is(customer.getState())))
                 .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
                 .andExpect(jsonPath("$.country", is(customer.getCountry())))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customerRequest.amountAvailable().doubleValue())));
     }
 
     /** Verifies that missing required customer details produce HTTP 400 validation errors. */
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
         CustomerRequest customer =
-                new CustomerRequest(null, null, null, null, null, null, null, null, null, 0);
+                new CustomerRequest(
+                        null, null, null, null, null, null, null, null, null, BigDecimal.ZERO);
 
         this.mockMvc
                 .perform(
@@ -339,7 +349,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        500);
+                        new BigDecimal("500"));
 
         this.mockMvc
                 .perform(
@@ -357,7 +367,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.zipCode", is(customerRequest.zipCode())))
                 .andExpect(jsonPath("$.country", is(customerRequest.country())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(jsonPath("$.amountAvailable", is(500.0)));
     }
 
     /** Verifies that updating an unknown customer returns HTTP 404. */
@@ -375,7 +385,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        10_000);
+                        new BigDecimal("10000"));
 
         this.mockMvc
                 .perform(
@@ -393,6 +403,40 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath("$.detail")
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
+    }
+
+    @Test
+    void shouldReturn400WhenAmountHasTooManyDecimalPlaces() throws Exception {
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        "New Customer",
+                        "firstnew@customerRequest.email",
+                        "1234567890",
+                        "First Address",
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
+                        new BigDecimal("10.005"));
+
+        this.mockMvc
+                .perform(
+                        post("/api/customers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
+                .andExpect(
+                        jsonPath(
+                                "$.violations[0].message",
+                                is("AmountAvailable can have at most 2 decimal places")));
     }
 
     /** Verifies that deleting a customer returns the deleted details with a string customer ID. */
@@ -413,7 +457,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
                 .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
     @Test

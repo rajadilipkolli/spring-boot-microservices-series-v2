@@ -1,6 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
 package com.example.paymentservice.entities;
 
+import java.math.BigDecimal;
+
 public class Customer {
 
     private Long id;
@@ -23,9 +25,9 @@ public class Customer {
 
     private String phone;
 
-    private double amountAvailable;
+    private BigDecimal amountAvailable = BigDecimal.ZERO;
 
-    private double amountReserved;
+    private BigDecimal amountReserved = BigDecimal.ZERO;
 
     private Integer version;
 
@@ -73,11 +75,11 @@ public class Customer {
         return this.country;
     }
 
-    public double getAmountAvailable() {
+    public java.math.BigDecimal getAmountAvailable() {
         return this.amountAvailable;
     }
 
-    public double getAmountReserved() {
+    public java.math.BigDecimal getAmountReserved() {
         return this.amountReserved;
     }
 
@@ -171,12 +173,12 @@ public class Customer {
         return this;
     }
 
-    public Customer setAmountAvailable(final double amountAvailable) {
+    public Customer setAmountAvailable(final BigDecimal amountAvailable) {
         this.amountAvailable = amountAvailable;
         return this;
     }
 
-    public Customer setAmountReserved(final double amountReserved) {
+    public Customer setAmountReserved(final BigDecimal amountReserved) {
         this.amountReserved = amountReserved;
         return this;
     }

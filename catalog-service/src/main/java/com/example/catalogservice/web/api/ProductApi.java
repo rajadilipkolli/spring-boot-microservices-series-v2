@@ -55,12 +55,12 @@ public interface ProductApi {
                             name = "minPrice",
                             description = "Minimum price range for filtering products")
                     @RequestParam(required = false)
-                    Double minPrice,
+                    java.math.BigDecimal minPrice,
             @Parameter(
                             name = "maxPrice",
                             description = "Maximum price range for filtering products")
                     @RequestParam(required = false)
-                    Double maxPrice,
+                    java.math.BigDecimal maxPrice,
             @Parameter(
                             name = "pageNo",
                             description = "Page number (1-based)",

@@ -122,7 +122,7 @@ class OrderControllerTest {
                 "TS",
                 "12345",
                 "US",
-                5000);
+                java.math.BigDecimal.valueOf(5000));
 
         // Set up order confirmation
         orderConfirmation = new OrderConfirmationDTO(123L, 1L, "NEW");
@@ -234,7 +234,16 @@ class OrderControllerTest {
     void createOrder_shouldCreateAndReturnOrderConfirmation() throws Exception {
         // Create test request objects
         CustomerRequest customerRequest = new CustomerRequest(
-                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
+                "Test User",
+                "test@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                null,
+                null,
+                null,
+                null,
+                java.math.BigDecimal.valueOf(5000));
 
         List<OrderItemRequest> items = List.of(
                 new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")),
@@ -285,7 +294,16 @@ class OrderControllerTest {
     @WithMockUser
     void createOrder_shouldHandleErrorWhenCustomerServiceFails() throws Exception {
         CustomerRequest customerRequest = new CustomerRequest(
-                "Test User", "fail@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
+                "Test User",
+                "fail@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                null,
+                null,
+                null,
+                null,
+                java.math.BigDecimal.valueOf(5000));
         List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, new BigDecimal("99.99")));
         Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
@@ -305,7 +323,16 @@ class OrderControllerTest {
     @WithMockUser(username = "test-username")
     void createOrder_shouldRejectInvalidOrderItemRequest() throws Exception {
         CustomerRequest customerRequest = new CustomerRequest(
-                "Test User", "test@example.com", "1234567890", "Test Address", null, null, null, null, null, 5000);
+                "Test User",
+                "test@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                null,
+                null,
+                null,
+                null,
+                java.math.BigDecimal.valueOf(5000));
         // Invalid order item: blank product code, negative quantity, negative price
         List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, new BigDecimal("-10.00")));
         Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");

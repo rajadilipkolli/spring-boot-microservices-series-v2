@@ -5,7 +5,6 @@ import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.utils.LogSanitizer;
@@ -13,6 +12,7 @@ import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +44,13 @@ public class PaymentOrderManageService {
         this.paymentsFailedCounter = meterRegistry.counter("payments_failed");
     }
 
+    private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
+        return orderDto.items().stream()
+                .map(OrderDto.OrderItemDto::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
     /**
      * Reserves the customer's available balance and publishes the payment outcome.
      *
@@ -64,17 +71,14 @@ public class PaymentOrderManageService {
             log.info(
                     "Found Customer: {}",
                     LogSanitizer.sanitizeForLog(String.valueOf(customer.getId())));
-            var totalOrderPrice =
-                    orderDto.items().stream()
-                            .map(OrderItemDto::getPrice)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add)
-                            .doubleValue();
+            var totalOrderPrice = calculateTotalOrderPrice(orderDto);
 
-            if (totalOrderPrice <= customer.getAmountAvailable()) {
+            if (totalOrderPrice.compareTo(customer.getAmountAvailable()) <= 0) {
                 orderDto = orderDto.withStatus("ACCEPT");
                 this.paymentsSuccessfulCounter.increment();
-                customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
-                customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
+                customer.setAmountReserved(customer.getAmountReserved().add(totalOrderPrice));
+                customer.setAmountAvailable(
+                        customer.getAmountAvailable().subtract(totalOrderPrice));
             } else {
                 orderDto = orderDto.withStatus("REJECT");
                 this.paymentsFailedCounter.increment();
@@ -110,17 +114,13 @@ public class PaymentOrderManageService {
                         .findById(orderDto.customerId())
                         .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
         log.info("Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customer)));
-        var orderPrice =
-                orderDto.items().stream()
-                        .map(OrderItemDto::getPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .intValue();
+        var orderPrice = calculateTotalOrderPrice(orderDto);
         if (orderDto.status().equals("CONFIRMED")) {
-            customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
+            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
         } else if (orderDto.status().equals(AppConstants.ROLLBACK)
                 && !AppConstants.SOURCE.equals(orderDto.source())) {
-            customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-            customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
+            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
+            customer.setAmountAvailable(customer.getAmountAvailable().add(orderPrice));
         }
         log.info(
                 "Saving customer :{} After Confirmation",

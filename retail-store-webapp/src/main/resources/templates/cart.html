@@ -34,12 +34,12 @@
                         <tr>
                             <td th:if="${false}" x-text="item.productCode">code</td>
                             <td x-text="item.productName">name</td>
-                            <td x-text="item.price">price</td>
+                            <td x-text="formatMoney(item.price)">price</td>
                             <td>
                                 <input type="number" min="0" x-model="item.quantity"
                                        @change="updateItemQuantity(item.productCode, $event.target.value)"/>
                             </td>
-                            <td x-text="item.quantity * item.price">subTotal</td>
+                            <td x-text="formatMoney(getLineSubtotal(item.price, item.quantity))">subTotal</td>
                             <td>
                                 <button class="btn btn-danger btn-sm" @click="removeItemFromCart(item.productCode)">
                                     Remove
@@ -52,7 +52,7 @@
                     <tr>
                         <th colspan="4"></th>
                         <th colspan="1" style="text-align: left">
-                            Total Amount: <span x-text="cart.totalAmount">cartTotal</span>
+                            Total Amount: <span x-text="formatMoney(cart.totalAmount)">cartTotal</span>
                         </th>
                     </tr>
                     </tfoot>

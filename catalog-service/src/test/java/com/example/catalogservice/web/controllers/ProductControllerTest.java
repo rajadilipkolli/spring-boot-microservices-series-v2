@@ -22,6 +22,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,11 +53,32 @@ class ProductControllerTest {
     void setUp() {
         this.productResponseList = new ArrayList<>();
         this.productResponseList.add(
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true));
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(2L, "code 2", "name 2", "description 2", null, 10.0, true));
+                new ProductResponse(
+                        2L,
+                        "code 2",
+                        "name 2",
+                        "description 2",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(3L, "code 3", "name 3", "description 3", null, 11.0, true));
+                new ProductResponse(
+                        3L,
+                        "code 3",
+                        "name 3",
+                        "description 3",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true));
     }
 
     @Test
@@ -99,7 +121,13 @@ class ProductControllerTest {
         Long productId = 1L;
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "name 1", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
         given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -138,12 +166,20 @@ class ProductControllerTest {
     @Test
     void shouldCreateProduct() {
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         ProductRequest productRequest =
-                new ProductRequest("code 1", "name 1", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "name 1", "description 1", null, new java.math.BigDecimal(1.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -171,7 +207,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
-        ProductDto productDto = new ProductDto(null, null, null, 9.0);
+        ProductDto productDto = new ProductDto(null, null, null, new java.math.BigDecimal(1.00));
 
         webTestClient
                 .post()
@@ -206,11 +242,15 @@ class ProductControllerTest {
                         "Existing Product",
                         "This product already exists",
                         null,
-                        19.99,
+                        new java.math.BigDecimal("19.99"),
                         true);
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code-123", "Existing Product", "This product already exists", null, 19.99);
+                        "code-123",
+                        "Existing Product",
+                        "This product already exists",
+                        null,
+                        new java.math.BigDecimal("19.99"));
 
         // Mock the service to return the existing product when trying to save with the same product
         // code
@@ -264,12 +304,23 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(new java.math.BigDecimal(1.00));
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00));
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "Updated name", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
         given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
                 .willReturn(Mono.just(productResponse));
@@ -300,7 +351,12 @@ class ProductControllerTest {
         Long productId = 1L;
         given(productService.findById(productId)).willReturn(Mono.empty());
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00));
 
         webTestClient
                 .put()
@@ -322,9 +378,16 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(new java.math.BigDecimal(1.00));
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "Updated name", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
@@ -365,7 +428,14 @@ class ProductControllerTest {
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(42L, code, "Product XYZ", "desc", null, 99.0, true);
+                new ProductResponse(
+                        42L,
+                        code,
+                        "Product XYZ",
+                        "desc",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -409,7 +479,14 @@ class ProductControllerTest {
     void shouldFetchInStockWhenRequested() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(43L, code, "Product XYZ", "desc", null, 49.0, true);
+                new ProductResponse(
+                        43L,
+                        code,
+                        "Product XYZ",
+                        "desc",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
 
         given(productService.findProductByProductCode(code, true))
                 .willReturn(Mono.just(productResponse));
@@ -434,7 +511,14 @@ class ProductControllerTest {
     void shouldRespectDelayParameter() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(44L, code, "Product XYZ", "desc", null, 59.0, true);
+                new ProductResponse(
+                        44L,
+                        code,
+                        "Product XYZ",
+                        "desc",
+                        null,
+                        new java.math.BigDecimal(1.00),
+                        true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -610,7 +694,14 @@ class ProductControllerTest {
                 new org.springframework.data.domain.PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
-        given(productService.searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc"))
+        given(
+                        productService.searchProductsByPriceRange(
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -627,7 +718,9 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        verify(productService).searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc");
+        verify(productService)
+                .searchProductsByPriceRange(
+                        BigDecimal.valueOf(50.0), BigDecimal.valueOf(150.0), 0, 10, "id", "asc");
     }
 
     @Test
@@ -638,7 +731,13 @@ class ProductControllerTest {
 
         given(
                         productService.searchProductsByTermAndPriceRange(
-                                "laptop", 50.0, 150.0, 0, 10, "id", "asc"))
+                                "laptop",
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -657,7 +756,14 @@ class ProductControllerTest {
                 .expectBody(PagedResult.class);
 
         verify(productService)
-                .searchProductsByTermAndPriceRange("laptop", 50.0, 150.0, 0, 10, "id", "asc");
+                .searchProductsByTermAndPriceRange(
+                        "laptop",
+                        BigDecimal.valueOf(50.0),
+                        BigDecimal.valueOf(150.0),
+                        0,
+                        10,
+                        "id",
+                        "asc");
     }
 
     @Test

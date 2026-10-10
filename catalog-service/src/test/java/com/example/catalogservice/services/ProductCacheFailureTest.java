@@ -82,7 +82,7 @@ class ProductCacheFailureTest {
                                         product.getProductName(),
                                         "Description",
                                         null,
-                                        10,
+                                        new java.math.BigDecimal("10"),
                                         false));
     }
 
@@ -120,7 +120,12 @@ class ProductCacheFailureTest {
         // Saving an existing product takes the idempotent path and invalidates its caches.
         StepVerifier.create(
                         service.saveProduct(
-                                new ProductRequest("P001", "Updated", "Description", null, 10.0)))
+                                new ProductRequest(
+                                        "P001",
+                                        "Updated",
+                                        "Description",
+                                        null,
+                                        new java.math.BigDecimal(5))))
                 .assertNext(response -> assertThat(response.productName()).isEqualTo("Updated"))
                 .verifyComplete();
 

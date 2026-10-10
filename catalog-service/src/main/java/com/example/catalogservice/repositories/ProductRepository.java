@@ -7,6 +7,7 @@
 package com.example.catalogservice.repositories;
 
 import com.example.catalogservice.entities.Product;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.r2dbc.repository.Modifying;
@@ -45,8 +46,6 @@ public interface ProductRepository
 
     Mono<Void> deleteByProductCodeAllIgnoreCase(String productCode);
 
-    Mono<Boolean> existsByProductCodeAllIgnoreCase(String productCode);
-
     Flux<Product> findAllBy(Pageable pageable);
 
     // Search by term (in product name or description)
@@ -54,14 +53,14 @@ public interface ProductRepository
             String productName, String description, Pageable pageable);
 
     // Search by price range
-    Flux<Product> findByPriceBetween(double minPrice, double maxPrice, Pageable pageable);
+    Flux<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     // Search by both term and price range
     Flux<Product>
             findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
                     String productName,
                     String description,
-                    double minPrice,
-                    double maxPrice,
+                    BigDecimal minPrice,
+                    BigDecimal maxPrice,
                     Pageable pageable);
 }

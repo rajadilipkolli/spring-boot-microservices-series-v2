@@ -67,7 +67,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                                         .setProductCode(TEST_PRODUCT_CODE)
                                         .setProductName("Test Product")
                                         .setDescription("Description")
-                                        .setPrice(10.0)))
+                                        .setPrice(new java.math.BigDecimal(1))))
                 .expectNextCount(1)
                 .verifyComplete();
 
@@ -79,7 +79,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                         "Test Product Updated", // Try with a different name
                         "Updated Description",
                         null,
-                        15.0); // Different price
+                        new java.math.BigDecimal("15.0")); // Different price
 
         // When: Using the service to save a product with the same code
         StepVerifier.create(productService.saveProduct(duplicateRequest))
@@ -115,7 +115,12 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
     void whenSavingExistingProduct_shouldReturnExistingOne() {
         // Given: An existing product
         ProductRequest productRequest =
-                new ProductRequest(TEST_PRODUCT_CODE, "Test Product", "Description", null, 10.0);
+                new ProductRequest(
+                        TEST_PRODUCT_CODE,
+                        "Test Product",
+                        "Description",
+                        null,
+                        new java.math.BigDecimal(5));
 
         // First, save the product directly to the database
         Product product =
@@ -125,7 +130,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                         .setProductCode(TEST_PRODUCT_CODE)
                         .setProductName("Test Product")
                         .setDescription("Description")
-                        .setPrice(10.0);
+                        .setPrice(new java.math.BigDecimal(1));
 
         // Use StepVerifier to save the product and get the response
         StepVerifier.create(productRepository.save(product))
@@ -160,7 +165,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                         "Conflicting Product",
                         "Conflicting Description",
                         null,
-                        30.0);
+                        new java.math.BigDecimal("30.0"));
 
         // First, create a mono that intentionally introduces a race condition
         // We'll mock the behavior of a database constraint violation by:
@@ -189,7 +194,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                                                     .setProductCode(TEST_PRODUCT_CODE_3)
                                                     .setProductName("Original Product")
                                                     .setDescription("Original Product Description")
-                                                    .setPrice(20.0))
+                                                    .setPrice(new java.math.BigDecimal(1)))
                                     .flatMap(
                                             savedProduct -> {
                                                 // Now try to save the conflicting product with the
@@ -251,35 +256,35 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                         "Concurrent Product 1",
                         "Concurrent Description 1",
                         null,
-                        10.0);
+                        new java.math.BigDecimal("10.0"));
         ProductRequest request2 =
                 new ProductRequest(
                         TEST_PRODUCT_CODE_3,
                         "Concurrent Product 2",
                         "Concurrent Description 2",
                         null,
-                        20.0);
+                        new java.math.BigDecimal("20.0"));
         ProductRequest request3 =
                 new ProductRequest(
                         TEST_PRODUCT_CODE_3,
                         "Concurrent Product 3",
                         "Concurrent Description 3",
                         null,
-                        30.0);
+                        new java.math.BigDecimal("30.0"));
         ProductRequest request4 =
                 new ProductRequest(
                         TEST_PRODUCT_CODE_3,
                         "Concurrent Product 4",
                         "Concurrent Description 4",
                         null,
-                        40.0);
+                        new java.math.BigDecimal("40.0"));
         ProductRequest request5 =
                 new ProductRequest(
                         TEST_PRODUCT_CODE_3,
                         "Concurrent Product 5",
                         "Concurrent Description 5",
                         null,
-                        50.0);
+                        new java.math.BigDecimal("50.0"));
 
         // Execute all concurrent save operations and verify the behavior
         StepVerifier.create(

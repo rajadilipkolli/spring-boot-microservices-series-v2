@@ -6,6 +6,7 @@ import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class RegistrationController {
                 request.state(),
                 request.zipCode(),
                 request.country(),
-                10_000);
+                BigDecimal.valueOf(10_000));
         CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
         logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());

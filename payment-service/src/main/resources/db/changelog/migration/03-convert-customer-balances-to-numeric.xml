@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="stop-on-nan-infinity" author="ai">
+        <preConditions onFail="HALT">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM payment.customers
+                WHERE amount_available = 'NaN' OR amount_available = 'Infinity' OR amount_available = '-Infinity'
+                   OR amount_reserved = 'NaN' OR amount_reserved = 'Infinity' OR amount_reserved = '-Infinity';
+            </sqlCheck>
+        </preConditions>
+    </changeSet>
+
+    <changeSet id="set-null-balances-to-zero" author="ai">
+        <update tableName="customers" schemaName="payment">
+            <column name="amount_available" valueNumeric="0"/>
+            <where>amount_available IS NULL</where>
+        </update>
+        <update tableName="customers" schemaName="payment">
+            <column name="amount_reserved" valueNumeric="0"/>
+            <where>amount_reserved IS NULL</where>
+        </update>
+    </changeSet>
+
+    <changeSet id="convert-balances-to-numeric" author="ai">
+        <sql>
+            ALTER TABLE payment.customers
+            ALTER COLUMN amount_available TYPE NUMERIC(19,2) USING ROUND(amount_available::numeric, 2),
+            ALTER COLUMN amount_reserved TYPE NUMERIC(19,2) USING ROUND(amount_reserved::numeric, 2);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE payment.customers
+                ALTER COLUMN amount_available TYPE double precision,
+                ALTER COLUMN amount_reserved TYPE double precision;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="add-not-null-and-default-balances" author="ai">
+        <addNotNullConstraint tableName="customers" schemaName="payment" columnName="amount_available" columnDataType="NUMERIC(19,2)"/>
+        <addNotNullConstraint tableName="customers" schemaName="payment" columnName="amount_reserved" columnDataType="NUMERIC(19,2)"/>
+        <addDefaultValue tableName="customers" schemaName="payment" columnName="amount_available" columnDataType="NUMERIC(19,2)" defaultValueNumeric="0"/>
+        <addDefaultValue tableName="customers" schemaName="payment" columnName="amount_reserved" columnDataType="NUMERIC(19,2)" defaultValueNumeric="0"/>
+        <rollback>
+            <dropDefaultValue tableName="customers" schemaName="payment" columnName="amount_available"/>
+            <dropDefaultValue tableName="customers" schemaName="payment" columnName="amount_reserved"/>
+            <dropNotNullConstraint tableName="customers" schemaName="payment" columnName="amount_available" columnDataType="NUMERIC(19,2)"/>
+            <dropNotNullConstraint tableName="customers" schemaName="payment" columnName="amount_reserved" columnDataType="NUMERIC(19,2)"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -20,7 +20,7 @@ class OrderDtoTest {
      */
     @Test
     void testSerialization() throws Exception {
-        OrderItemDto item = new OrderItemDto(1L, "Product A", 2, BigDecimal.TEN);
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "Product A", 2, BigDecimal.TEN);
         OrderDto order = new OrderDto(1L, 123L, "NEW", "TEST_SOURCE", List.of(item));
 
         String json = jsonMapper.writeValueAsString(order);

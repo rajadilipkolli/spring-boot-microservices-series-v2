@@ -1,4 +1,4 @@
-﻿# Schema Governance Architecture
+# Schema Governance Architecture
 
 ## 1. Overview
 Schema governance for all Kafka events is the **target state**. It is not currently enforced on the application data path.
@@ -33,6 +33,14 @@ For example, `"orderId":9007199254740993` becomes
 integer range. Inventory and payment use the same string output convention in
 their order payloads. Topic names, field names and Kafka string keys stay the
 same; quantities and prices remain numbers.
+
+### Monetary Policy
+
+- **Types**: Use `BigDecimal` in Java, JSON numbers in APIs, and `NUMERIC(19,2)` in PostgreSQL.
+- **Calculations**: Apply `setScale(2, RoundingMode.HALF_UP)` for calculated amounts.
+- **Validation**: Use `@Digits(integer = 17, fraction = 2)` for request validation.
+- **Comparisons**: Use `compareTo` instead of `equals` for monetary values.
+- **Instantiation**: No `new BigDecimal(double)`; use `BigDecimal.valueOf` or string constructors.
 
 ### Compatibility gate
 
