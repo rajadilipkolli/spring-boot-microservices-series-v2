@@ -395,7 +395,7 @@
                                 </schemata>
                             </database>
                             <target>
-                                <packageName>com.example.inventoryservice.jooq</packageName>
+                                <packageName>com.example.inventoryservice.inventory.jooq</packageName>
                                 <directory>target/generated-sources/jooq</directory>
                             </target>
                         </generator>
