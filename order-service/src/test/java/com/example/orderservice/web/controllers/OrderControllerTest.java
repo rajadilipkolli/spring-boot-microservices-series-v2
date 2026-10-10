@@ -139,7 +139,8 @@ class OrderControllerTest {
                         BigDecimal.TEN,
                         new ArrayList<>()));
         Page<OrderResponse> page = new PageImpl<>(orderResponseList);
-        PagedResult<OrderResponse> orderResponsePagedResult = new PagedResult<>(page);
+        PagedResult<OrderResponse> orderResponsePagedResult =
+                new PagedResult<>(page, orderResponseList);
 
         given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderResponsePagedResult);
 

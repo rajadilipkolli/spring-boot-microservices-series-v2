@@ -81,6 +81,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(problemDetail);
     }
 
+    /**
+     * Converts a duplicate registration into an HTTP 409 UI error or API problem detail.
+     *
+     * @param ex exception describing the username or email conflict
+     * @param request request used to select the UI or API response format
+     * @return an error view for UI requests or a response entity for API requests
+     */
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    Object handleUserAlreadyExistsException(UserAlreadyExistsException ex, HttpServletRequest request) {
+        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.CONFLICT);
+
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("User Already Exists");
+        problemDetail.setType(URI.create("https://api.retailstore.com/errors/conflict"));
+        problemDetail.setDetail(LogSanitizer.sanitizeException(ex));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
+    }
+
     @ExceptionHandler(InvalidRequestException.class)
     Object handleInvalidRequestException(InvalidRequestException ex, HttpServletRequest request) {
         if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);

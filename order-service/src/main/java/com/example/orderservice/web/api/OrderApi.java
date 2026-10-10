@@ -6,6 +6,7 @@
 
 package com.example.orderservice.web.api;
 
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
@@ -126,8 +127,7 @@ public interface OrderApi {
             @Parameter(name = "term", in = ParameterIn.QUERY) @NotBlank String term,
             @Parameter(name = "mode", in = ParameterIn.QUERY) String mode,
             @Parameter(name = "customerId", in = ParameterIn.QUERY) Long customerId,
-            @Parameter(name = "status", in = ParameterIn.QUERY)
-                    com.example.orderservice.entities.OrderStatus status,
+            @Parameter(name = "status", in = ParameterIn.QUERY) OrderStatus status,
             @Parameter(name = "threshold", in = ParameterIn.QUERY) Double threshold,
             @Parameter(hidden = true) Pageable pageable);
 }
