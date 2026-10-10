@@ -20,12 +20,12 @@ INSERT INTO inventory (product_code, quantity, reserved_items) VALUES
 ON CONFLICT (product_code) DO NOTHING;
 
 -- Sample Customers (Payment Service) - Using payment schema and avoiding existing IDs
-INSERT INTO payment.customers (id, name, email, address, phone, amount_available, amount_reserved) VALUES
-(401, 'retail', 'retail1@example.com', '123 Main St, New York, NY 10001', '+1-555-0101', 5000.00, 200.00),
-(402, 'Jane Smith', 'jane.smith@example.com', '456 Oak Ave, Los Angeles, CA 90210', '+1-555-0102', 3500.00, 150.00),
-(403, 'Mike Johnson', 'mike.johnson@example.com', '789 Pine Rd, Chicago, IL 60601', '+1-555-0103', 7500.00, 500.00),
-(404, 'Sarah Wilson', 'sarah.wilson@example.com', '321 Elm St, Miami, FL 33101', '+1-555-0104', 2800.00, 100.00),
-(405, 'David Brown', 'david.brown@example.com', '654 Maple Dr, Seattle, WA 98101', '+1-555-0105', 4200.00, 300.00)
+INSERT INTO payment.customers (id, name, email, address_line1, address_line2, city, state, zip_code, country, phone, amount_available, amount_reserved) VALUES
+(401, 'retail', 'retail1@example.com', '123 Main St', null, 'New York', 'NY', '10001', 'USA', '+1-555-0101', 5000.00, 200.00),
+(402, 'Jane Smith', 'jane.smith@example.com', '456 Oak Ave', null, 'Los Angeles', 'CA', '90210', 'USA', '+1-555-0102', 3500.00, 150.00),
+(403, 'Mike Johnson', 'mike.johnson@example.com', '789 Pine Rd', null, 'Chicago', 'IL', '60601', 'USA', '+1-555-0103', 7500.00, 500.00),
+(404, 'Sarah Wilson', 'sarah.wilson@example.com', '321 Elm St', null, 'Miami', 'FL', '33101', 'USA', '+1-555-0104', 2800.00, 100.00),
+(405, 'David Brown', 'david.brown@example.com', '654 Maple Dr', null, 'Seattle', 'WA', '98101', 'USA', '+1-555-0105', 4200.00, 300.00)
 ON CONFLICT (id) DO NOTHING;
 
 -- Sample Orders (Order Service) - Using customer IDs that exist (401-405)

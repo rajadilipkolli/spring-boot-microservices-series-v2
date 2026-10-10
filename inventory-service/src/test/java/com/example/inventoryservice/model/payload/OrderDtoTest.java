@@ -33,7 +33,7 @@ class OrderDtoTest {
 
     @Test
     void whenItemIsNull_thenValidationFails() {
-        List<OrderItemDto> items = new ArrayList<>();
+        List<OrderDto.OrderItemDto> items = new ArrayList<>();
         items.add(null);
         OrderDto orderDto = new OrderDto(1L, 100L, "NEW", "WEB", items);
 

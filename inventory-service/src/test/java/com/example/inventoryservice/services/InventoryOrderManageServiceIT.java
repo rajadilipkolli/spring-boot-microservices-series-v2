@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.inventoryservice.common.AbstractIntegrationTest;
 import com.example.inventoryservice.entities.Inventory;
 import com.example.inventoryservice.model.payload.OrderDto;
-import com.example.inventoryservice.model.payload.OrderItemDto;
 import com.example.inventoryservice.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -97,8 +96,8 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
 
     @Test
     void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() { // Arrange
-        OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
-        OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
+        OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
@@ -121,8 +120,8 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatus_ShouldDecreaseReservedItemsAndIncreaseAvailableQuantity() {
         // Arrange
-        OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
-        OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
+        OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // Not inventory source to trigger rollback logic
         OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
 
@@ -146,8 +145,8 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatusAndInventorySource_ShouldNotChangeInventory() {
         // Arrange
-        OrderItemDto item1 = new OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
-        OrderItemDto item2 = new OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
+        OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // inventory source, should not trigger rollback logic
         OrderDto orderDto =
                 new OrderDto(1L, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
@@ -172,8 +171,8 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithSufficientStock_ShouldReturnAcceptStatus() {
         // Arrange
-        OrderItemDto item1 = new OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
-        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
@@ -209,9 +208,10 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithInsufficientStock_ShouldReturnRejectStatus() {
         // Arrange
-        OrderItemDto item1 =
-                new OrderItemDto(1L, "product1", 120, BigDecimal.TEN); // More than available
-        OrderItemDto item2 = new OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 =
+                new OrderDto.OrderItemDto(
+                        1L, "product1", 120, BigDecimal.TEN); // More than available
+        OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
@@ -261,7 +261,8 @@ class InventoryOrderManageServiceIT extends AbstractIntegrationTest {
         inventoryRepository.save(product1);
 
         // Arrange the order with the parameterized quantity
-        OrderItemDto item1 = new OrderItemDto(1L, "product1", orderQuantity, BigDecimal.TEN);
+        OrderDto.OrderItemDto item1 =
+                new OrderDto.OrderItemDto(1L, "product1", orderQuantity, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1));
 
         // Define expected changes based on expected status
