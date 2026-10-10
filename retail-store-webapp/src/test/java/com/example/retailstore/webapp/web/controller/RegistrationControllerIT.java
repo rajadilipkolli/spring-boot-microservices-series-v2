@@ -99,6 +99,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         assertThat(user.getLastName()).isEqualTo(TEST_LAST_NAME);
         assertThat(user.isEnabled()).isTrue();
         assertThat(user.isEmailVerified()).isFalse(); // Typically email is not verified immediately
+        assertThat(user.getRealmRoles()).contains("user"); // Check that the "user" role is assigned
 
         // Assert: Verify that the CustomerService was called
         gatewayServiceMock.verify(
@@ -271,7 +272,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         // Clean up Keycloak
         Keycloak keycloakAdminClient = keycloakContainer.getKeycloakAdminClient();
         List<UserRepresentation> users =
-                keycloakAdminClient.realm(REALM_NAME).users().search(username, true);
+                keycloakAdminClient.realm(REALM_NAME).users().searchByUsername(username, true);
         if (!users.isEmpty()) {
             for (UserRepresentation user : users) {
                 if (username.equals(user.getUsername())) {

@@ -80,7 +80,7 @@ class KeycloakRegistrationServiceTest {
 
     /** Verifies user details, permanent credentials, role assignment, and response cleanup. */
     @Test
-    void registerSuccessPathPostsTokenAndUser() {
+    void registerSuccessPathCreatesUserAndAssignsUserRole() {
         RegistrationRequest request = new RegistrationRequest(
                 "testuser",
                 "test@example.com",

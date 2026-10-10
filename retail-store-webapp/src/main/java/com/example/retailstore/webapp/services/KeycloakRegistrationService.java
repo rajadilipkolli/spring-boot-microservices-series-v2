@@ -7,53 +7,28 @@ import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
-import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class KeycloakRegistrationService {
 
-    private final Keycloak keycloak;
+    private final Keycloak keycloakClient;
     private final String realm;
-
-    /**
-     * Builds an admin client authenticated against the master realm for user registration.
-     *
-     * @param props admin credentials, client configuration, and target registration realm
-     * @param url Keycloak server URL
-     */
-    @Autowired
-    public KeycloakRegistrationService(KeycloakProperties props, @Value("${OAUTH2_SERVER_URL}") String url) {
-        this(
-                props,
-                KeycloakBuilder.builder()
-                        .serverUrl(url)
-                        .realm("master")
-                        .clientId(props.getAdminClientId())
-                        .clientSecret(props.getAdminClientSecret())
-                        .username(props.getAdminUsername())
-                        .password(props.getAdminPassword())
-                        .grantType(OAuth2Constants.PASSWORD)
-                        .build());
-    }
 
     /**
      * Creates a registration service using an existing admin client.
      *
      * @param props configuration containing the target registration realm
-     * @param keycloak client used to create users and assign realm roles
+     * @param keycloakClient client used to create users and assign realm roles
      */
-    KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloak) {
+    KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloakClient) {
         this.realm = props.getRealm();
-        this.keycloak = keycloak;
+        this.keycloakClient = keycloakClient;
     }
 
     /**
@@ -69,7 +44,7 @@ public class KeycloakRegistrationService {
     public void registerUser(RegistrationRequest request) {
         UserRepresentation user = getUserRepresentation(request);
 
-        RealmResource realmResource = keycloak.realm(realm);
+        RealmResource realmResource = keycloakClient.realm(realm);
         try (Response response = realmResource.users().create(user)) {
             if (response.getStatus() == 409) {
                 throw new UserAlreadyExistsException("Username or email is already taken.");
@@ -77,12 +52,21 @@ public class KeycloakRegistrationService {
                 throw new KeyCloakException("Failed to register user. Status: " + response.getStatus());
             }
             String userId = CreatedResponseUtil.getCreatedId(response);
-            realmResource
-                    .users()
-                    .get(userId)
-                    .roles()
-                    .realmLevel()
-                    .add(List.of(realmResource.roles().get("user").toRepresentation()));
+            try {
+                realmResource
+                        .users()
+                        .get(userId)
+                        .roles()
+                        .realmLevel()
+                        .add(List.of(realmResource.roles().get("user").toRepresentation()));
+            } catch (Exception e) {
+                try {
+                    realmResource.users().get(userId).remove();
+                } catch (Exception cleanupException) {
+                    e.addSuppressed(cleanupException);
+                }
+                throw e;
+            }
         }
     }
 
