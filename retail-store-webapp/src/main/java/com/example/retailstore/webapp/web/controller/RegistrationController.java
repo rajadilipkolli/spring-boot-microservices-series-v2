@@ -6,6 +6,7 @@ import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,9 @@ public class RegistrationController {
 
     /**
      * Registers a Keycloak user, then gets or creates the payment customer using the supplied
-     * address components and an initial available balance of 10,000.
+     * address components and an initial available balance of 10,000. Keycloak and customer-service
+     * failures propagate, including duplicate-user errors. A customer-service failure does not undo
+     * the completed Keycloak registration.
      *
      * @param request validated user and customer registration details
      * @return a success message after both service calls complete
@@ -58,7 +61,7 @@ public class RegistrationController {
                 request.state(),
                 request.zipCode(),
                 request.country(),
-                10_000);
+                BigDecimal.valueOf(10_000));
         CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
         logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());

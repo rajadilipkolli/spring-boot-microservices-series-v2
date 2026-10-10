@@ -448,13 +448,17 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andReturn();
         }
 
+        /**
+         * Verifies blank product codes, zero quantities, and zero prices produce field validation
+         * errors.
+         */
         @Test
         void shouldReturn400WhenOrderItemValidationFails() throws Exception {
             // Test invalid productCode (blank)
             OrderRequest invalidProductCodeRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("", 2, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("", 2, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "");
@@ -484,7 +488,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidQuantityRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("Product1", 0, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -512,7 +516,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidPriceRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
+                            List.of(new OrderItemRequest("Product1", 2, BigDecimal.ZERO)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -735,5 +739,36 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray());
+    }
+
+    /** Verifies null prices and prices with more than two fractional digits are rejected. */
+    @Test
+    void shouldReturn400WhenOrderItemPriceIsInvalid() throws Exception {
+        OrderRequest invalidScaleRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, BigDecimal.valueOf(10.123))),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockProductsExistsRequest(true, "PRODUCT1");
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(invalidScaleRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
+
+        OrderRequest nullPriceRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, null)),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(nullPriceRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
     }
 }

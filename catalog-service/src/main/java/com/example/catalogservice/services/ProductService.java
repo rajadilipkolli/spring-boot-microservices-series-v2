@@ -18,6 +18,7 @@ import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
@@ -373,6 +374,17 @@ public class ProductService {
         return this.productRepository.findById(id);
     }
 
+    /**
+     * Creates sample products with whole-unit prices from 1.00 through 100.00, reusing products
+     * with existing codes. New products create outbox events, and product caches are invalidated.
+     * Save failures propagate through the returned Mono; Redis deletion failures are suppressed.
+     *
+     * @param idempotencyKey included in each product code with its zero-based batch index;
+     *     repeating a key reuses matching codes
+     * @param batchSize number of products, from 1 through 10,000, or null for 101
+     * @return true after all saves complete
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     */
     @Transactional
     public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
         validateBatchSize(batchSize);
@@ -392,7 +404,8 @@ public class ProductService {
                                                                 "Gen Product " + i,
                                                                 "Gen Prod Description " + i,
                                                                 null,
-                                                                (double) randomPrice)))
+                                                                BigDecimal.valueOf(randomPrice)
+                                                                        .setScale(2))))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));
     }
@@ -416,9 +429,26 @@ public class ProductService {
         return processSearchResults(productFlux, pageable);
     }
 
+    /**
+     * Returns a product page within the inclusive price range, enriched with inventory
+     * availability. Missing inventory entries, including those omitted by the inventory fallback,
+     * are out of stock. Database and unhandled inventory errors propagate through the returned
+     * Mono.
+     *
+     * @param minPrice inclusive lower unit-price bound
+     * @param maxPrice inclusive upper unit-price bound
+     * @param pageNo zero-based page index
+     * @param pageSize maximum number of products to return, greater than zero
+     * @param sortBy product property to sort by
+     * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
+     * @return the matching page; pagination totals use the fetched page size rather than a count of
+     *     all matches
+     * @throws IllegalArgumentException if the page index is negative, the page size is not
+     *     positive, or the sort property is empty
+     */
     public Mono<PagedResult<ProductResponse>> searchProductsByPriceRange(
-            double minPrice,
-            double maxPrice,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             int pageNo,
             int pageSize,
             String sortBy,
@@ -438,10 +468,28 @@ public class ProductService {
         return PageRequest.of(pageNo, pageSize, sort);
     }
 
+    /**
+     * Returns a page of case-insensitive name matches, or description matches within the inclusive
+     * price range, enriched with inventory availability. Name matches are not price-filtered.
+     * Missing inventory entries, including those omitted by the inventory fallback, are out of
+     * stock. Database and unhandled inventory errors propagate through the returned Mono.
+     *
+     * @param term text to match in the product name or description
+     * @param minPrice inclusive lower unit-price bound
+     * @param maxPrice inclusive upper unit-price bound
+     * @param pageNo zero-based page index
+     * @param pageSize maximum number of products to return, greater than zero
+     * @param sortBy product property to sort by
+     * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
+     * @return the matching page; pagination totals use the fetched page size rather than a count of
+     *     all matches
+     * @throws IllegalArgumentException if the page index is negative, the page size is not
+     *     positive, or the sort property is empty
+     */
     public Mono<PagedResult<ProductResponse>> searchProductsByTermAndPriceRange(
             String term,
-            double minPrice,
-            double maxPrice,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             int pageNo,
             int pageSize,
             String sortBy,

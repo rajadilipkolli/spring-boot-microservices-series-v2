@@ -3,6 +3,7 @@ package com.example.retailstore.webapp.web.controller;
 import com.example.retailstore.webapp.model.CartState;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -23,11 +24,15 @@ public class CartController {
 
     private static final String CART_SESSION_KEY = "CART_SESSION_STATE";
 
+    /**
+     * Returns the session cart, storing an empty cart with a zero total and a new revision when absent.
+     */
     @GetMapping
     public CartState getCart(HttpSession session) {
         CartState cart = (CartState) session.getAttribute(CART_SESSION_KEY);
         if (cart == null) {
-            cart = new CartState(new ArrayList<>(), 0.0, UUID.randomUUID().toString());
+            cart = new CartState(
+                    new ArrayList<>(), BigDecimal.ZERO, UUID.randomUUID().toString());
             session.setAttribute(CART_SESSION_KEY, cart);
         }
         return cart;

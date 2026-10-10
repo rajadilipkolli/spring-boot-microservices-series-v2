@@ -2,6 +2,7 @@
 package com.example.retailstore.webapp.clients.customer;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import java.math.BigDecimal;
 
 public record CustomerResponse(
         @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
@@ -14,4 +15,4 @@ public record CustomerResponse(
         String state,
         String zipCode,
         String country,
-        int amountAvailable) {}
+        BigDecimal amountAvailable) {}

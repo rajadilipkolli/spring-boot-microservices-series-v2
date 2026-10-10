@@ -22,6 +22,7 @@ import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +81,10 @@ class ProductServiceTest {
         lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }
 
+    /**
+     * Verifies default batch generation saves new products with prices in range and creates outbox
+     * events.
+     */
     @Test
     void testGenerateProducts() {
         // Stubbing productMapper.toEntity()
@@ -93,7 +98,7 @@ class ProductServiceTest {
                                     .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
-                                    .setPrice(randomPrice);
+                                    .setPrice(BigDecimal.valueOf(randomPrice));
                         });
 
         // Stubbing productMapper.toProductResponse()
@@ -135,7 +140,10 @@ class ProductServiceTest {
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
         assertThat(capturedProducts)
                 .isNotEmpty()
-                .allSatisfy(product -> assertThat(product.price()).isBetween(1.0, 100.0));
+                .allSatisfy(
+                        product ->
+                                assertThat(product.price())
+                                        .isBetween(BigDecimal.ONE, BigDecimal.valueOf(100.0)));
 
         then(productRepository).should(atLeastOnce()).save(productEntityCaptor.capture());
         assertThat(productEntityCaptor.getAllValues())
@@ -146,6 +154,10 @@ class ProductServiceTest {
                         });
     }
 
+    /**
+     * Verifies an explicit batch size produces the requested number of new products with distinct
+     * codes.
+     */
     @Test
     void shouldGenerateRequestedBatchSize() {
         given(productMapper.toEntity(any(ProductRequest.class)))
@@ -156,10 +168,18 @@ class ProductServiceTest {
                                     .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
-                                    .setPrice(request.price().intValue());
+                                    .setPrice(request.price());
                         });
         given(productMapper.toProductResponse(any(Product.class)))
-                .willReturn(new ProductResponse(1L, "code", "name", "description", null, 1, true));
+                .willReturn(
+                        new ProductResponse(
+                                1L,
+                                "code",
+                                "name",
+                                "description",
+                                null,
+                                BigDecimal.valueOf(6.00),
+                                true));
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
         given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
                 .willReturn(Mono.empty());
@@ -190,12 +210,18 @@ class ProductServiceTest {
                         });
     }
 
+    /**
+     * Verifies a missing product is created through the service proxy with transactional save
+     * methods.
+     */
     @Test
     void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
-        ProductRequest request = new ProductRequest("P001", "name", "desc", null, 10.0);
+        ProductRequest request =
+                new ProductRequest("P001", "name", "desc", null, BigDecimal.valueOf(5.00));
         Product product = new Product().setId(1L).setProductCode("P001");
         ProductResponse response =
-                new ProductResponse(1L, "P001", "name", "desc", null, 10.0, true);
+                new ProductResponse(
+                        1L, "P001", "name", "desc", null, BigDecimal.valueOf(6.00), true);
 
         given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
         given(productMapper.toEntity(request)).willReturn(product);

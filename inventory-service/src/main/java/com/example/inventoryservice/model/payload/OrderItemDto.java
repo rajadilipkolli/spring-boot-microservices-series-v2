@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public record OrderItemDto(
         @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
@@ -24,7 +25,14 @@ public record OrderItemDto(
 
     @Serial private static final long serialVersionUID = 1L;
 
+    /**
+     * Returns the unit price multiplied by quantity, rounded to two decimal places using HALF_UP.
+     *
+     * @throws NullPointerException if the unit price or quantity is null
+     */
     public BigDecimal getPrice() {
-        return this.productPrice().multiply(BigDecimal.valueOf(this.quantity()));
+        return this.productPrice()
+                .multiply(BigDecimal.valueOf(this.quantity()))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

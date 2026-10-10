@@ -8,6 +8,84 @@
 
 ![Microservices Architecture](images/microservicesArchitecture.png)
 
+## FlowChart
+
+```mermaid
+flowchart TD
+
+subgraph group_customer["Customer experience"]
+  node_storefront["Retail web app"]
+end
+
+subgraph group_platform["Platform access"]
+  node_gateway["API gateway"]
+  node_registry["Service registry"]
+  node_config["Configuration server"]
+end
+
+subgraph group_commerce["Commerce services"]
+  node_catalog["Catalog service"]
+  node_inventory["Inventory service"]
+  node_orders["Order service"]
+  node_payments["Payment service"]
+  node_database[("PostgreSQL")]
+end
+
+subgraph group_operations["Platform operations"]
+  node_kafka["Kafka"]
+  node_observability["Metrics and tracing"]
+end
+
+node_shopper(("Shopper"))
+node_prometheus["Prometheus"]
+node_grafana["Grafana"]
+
+node_shopper -->|"uses"| node_storefront
+node_storefront -->|"requests APIs"| node_gateway
+node_gateway -->|"routes requests"| node_catalog
+node_gateway -->|"routes requests"| node_inventory
+node_gateway -->|"routes requests"| node_orders
+node_gateway -->|"routes requests"| node_payments
+node_registry -->|"provides discovery"| node_gateway
+node_registry -->|"provides discovery"| node_catalog
+node_registry -->|"provides discovery"| node_inventory
+node_registry -->|"provides discovery"| node_orders
+node_registry -->|"provides discovery"| node_payments
+node_config -->|"provides config"| node_gateway
+node_config -->|"provides config"| node_catalog
+node_config -->|"provides config"| node_inventory
+node_config -->|"provides config"| node_orders
+node_config -->|"provides config"| node_payments
+node_orders -->|"publishes events"| node_kafka
+node_payments -->|"publishes events"| node_kafka
+node_inventory -->|"publishes events"| node_kafka
+node_catalog -->|"stores catalog"| node_database
+node_observability -.->|"configures metrics"| node_prometheus
+node_prometheus -->|"feeds dashboards"| node_grafana
+
+click node_storefront "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/retail-store-webapp/src/main"
+click node_gateway "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/api-gateway/src/main/java/com/example/api/gateway"
+click node_catalog "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/catalog-service/src/main/java/com/example/catalogservice"
+click node_inventory "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/inventory-service/src/main/java"
+click node_orders "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/order-service/src/main/java"
+click node_payments "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/payment-service/src/main/java"
+click node_registry "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/service-registry/src/main/java/org/service/registry"
+click node_config "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/config-server/src/main/java/com/example/configserver"
+click node_observability "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/deployment/config"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_storefront toneBlue
+class node_gateway,node_registry,node_config toneAmber
+class node_catalog,node_inventory,node_orders,node_payments,node_database toneMint
+class node_kafka,node_observability toneRose
+class node_shopper,node_prometheus,node_grafana toneIndigo
+```
 </div>
 
 ---
@@ -663,7 +741,7 @@ import static org.hamcrest.Matchers.closeTo;
 // .andExpected(jsonPath("$.totalPrice").value(100.00))
 
 // ✅ Do this instead:
-.andExpect(jsonPath("$.totalPrice").value(closeTo(new BigDecimal("100.00"), new BigDecimal("0.01"))))
+.andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
 ```
 
 </details>

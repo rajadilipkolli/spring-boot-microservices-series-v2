@@ -3,6 +3,7 @@ package com.example.retailstore.webapp.clients.customer;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.math.BigDecimal;
 
 public record CustomerRequest(
         @NotBlank(message = "Name cannot be Blank") String name,
@@ -19,4 +20,4 @@ public record CustomerRequest(
         String state,
         String zipCode,
         String country,
-        Integer amountAvailable) {}
+        BigDecimal amountAvailable) {}

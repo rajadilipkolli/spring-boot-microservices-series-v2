@@ -19,6 +19,7 @@ import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import com.example.retailstore.webapp.config.TestSecurityConfig;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,13 +49,25 @@ class ProductControllerTest {
 
     private PagedResult<ProductResponse> pagedResult;
 
+    /**
+     * Builds a single page of product response fixtures with decimal prices.
+     */
     @BeforeEach
     void setUp() {
         // Set up test data
         List<ProductResponse> productResponseList = List.of(
-                new ProductResponse(1L, "PROD-1", "Test Product 1", "Description 1", "image1.jpg", 10.99, true),
-                new ProductResponse(2L, "PROD-2", "Test Product 2", "Description 2", "image2.jpg", 20.99, true),
-                new ProductResponse(3L, "PROD-3", "Test Product 3", "Description 3", "image3.jpg", 30.99, true));
+                new ProductResponse(
+                        1L, "PROD-1", "Test Product 1", "Description 1", "image1.jpg", BigDecimal.valueOf(10.99), true),
+                new ProductResponse(
+                        2L, "PROD-2", "Test Product 2", "Description 2", "image2.jpg", BigDecimal.valueOf(20.99), true),
+                new ProductResponse(
+                        3L,
+                        "PROD-3",
+                        "Test Product 3",
+                        "Description 3",
+                        "image3.jpg",
+                        BigDecimal.valueOf(30.99),
+                        true));
 
         pagedResult = new PagedResult<>(
                 productResponseList,
@@ -139,9 +152,9 @@ class ProductControllerTest {
     @WithMockUser(roles = "ADMIN") // Ensure the user has ADMIN role
     void createProduct_shouldReturnCreatedProduct() throws Exception {
         ProductRequest productRequest =
-                new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", 40.99);
-        ProductResponse productResponse =
-                new ProductResponse(4L, "PROD-4", "New Product", "New Description", "image4.jpg", 40.99, true);
+                new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", BigDecimal.valueOf(40.99));
+        ProductResponse productResponse = new ProductResponse(
+                4L, "PROD-4", "New Product", "New Description", "image4.jpg", BigDecimal.valueOf(40.99), true);
 
         when(catalogServiceClient.createProduct(any(ProductRequest.class))).thenReturn(productResponse);
 
@@ -157,11 +170,14 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.price", is(40.99)));
     }
 
+    /**
+     * Verifies an authenticated product creation request without a CSRF token is forbidden.
+     */
     @Test
     @WithMockUser
     void createProduct_shouldRejectRequestWithoutCsrfToken() throws Exception {
         ProductRequest productRequest =
-                new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", 40.99);
+                new ProductRequest("PROD-4", "New Product", "New Description", "image4.jpg", BigDecimal.valueOf(40.99));
 
         mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)

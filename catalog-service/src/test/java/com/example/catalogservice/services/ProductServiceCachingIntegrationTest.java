@@ -17,6 +17,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import io.hypersistence.tsid.TSID;
+import java.math.BigDecimal;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean private InventoryServiceProxy inventoryServiceProxy;
 
+    /** Clears Redis and seeds a deterministic product for cache integration tests. */
     @BeforeEach
     void setUp() {
         redisOps.execute(connection -> connection.serverCommands().flushAll()).blockFirst();
@@ -42,7 +44,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                                 .setProductCode("P001")
                                 .setProductName("Cache test product")
                                 .setDescription("Deterministic fixture")
-                                .setPrice(10.0))
+                                .setPrice(BigDecimal.TEN))
                 .block();
         when(inventoryServiceProxy.getInventoryByProductCodes(anyList())).thenReturn(Flux.empty());
     }
@@ -58,6 +60,9 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .verifyComplete();
     }
 
+    /**
+     * Verifies case-insensitive cache hits and invalidation of the old code after a product rename.
+     */
     @Test
     void testFindProductByCodeIsCachedAndServedFromCache() {
         ProductResponse initialResponse =
@@ -79,7 +84,12 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
 
         productService
                 .updateProduct(
-                        new ProductRequest("RENAMED", "Proper Update Name", "Updated", null, 20.0),
+                        new ProductRequest(
+                                "RENAMED",
+                                "Proper Update Name",
+                                "Updated",
+                                null,
+                                BigDecimal.valueOf(20)),
                         productInDb)
                 .block();
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isFalse();
@@ -93,6 +103,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .verify();
     }
 
+    /** Verifies product cache expiry and page generation changes after product mutations. */
     @Test
     void idCacheExpiresAndMutationsChangePageGeneration() {
         Product product = productRepository.findByProductCodeAllIgnoreCase("P001").block();
@@ -107,7 +118,9 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         String beforeUpdate = cacheKey("products:0_10_id_asc");
         productService
                 .updateProduct(
-                        new ProductRequest("P001", "Updated name", "Updated", null, 20.0), product)
+                        new ProductRequest(
+                                "P001", "Updated name", "Updated", null, BigDecimal.valueOf(20)),
+                        product)
                 .block();
         assertThat(cacheKey("products:0_10_id_asc")).isNotEqualTo(beforeUpdate);
 
@@ -117,7 +130,9 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
 
         String beforeSave = productRepository.findCacheGeneration().block();
         productService
-                .saveProduct(new ProductRequest("P001", "Created", "Created", null, 20.0))
+                .saveProduct(
+                        new ProductRequest(
+                                "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
         assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeSave);
 

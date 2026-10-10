@@ -19,6 +19,7 @@ import com.example.retailstore.webapp.config.TestSecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -87,7 +88,7 @@ class RegistrationControllerTest {
                         "Test State",
                         "12345",
                         "Test Country",
-                        10_000));
+                        BigDecimal.valueOf(10_000)));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
@@ -128,7 +129,7 @@ class RegistrationControllerTest {
                         "Test State",
                         "12345",
                         "Test Country",
-                        10_000));
+                        BigDecimal.valueOf(10_000)));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)

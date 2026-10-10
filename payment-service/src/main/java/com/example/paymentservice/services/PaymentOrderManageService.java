@@ -5,7 +5,6 @@ import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.utils.LogSanitizer;
@@ -13,6 +12,7 @@ import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,10 +45,28 @@ public class PaymentOrderManageService {
     }
 
     /**
-     * Reserves the customer's available balance and publishes the payment outcome.
+     * Sums line totals after each is rounded to two decimal places using HALF_UP.
+     *
+     * @return the total with scale two, or 0.00 for an empty item list
+     * @throws NullPointerException if the order, item list, an item, its price, or its quantity is
+     *     null
+     */
+    private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
+        return orderDto.items().stream()
+                .map(OrderDto.OrderItemDto::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Moves the sum of individually rounded line totals from available to reserved balance when
+     * sufficient funds exist, including an exact balance match. Otherwise, rejects the order
+     * without changing balances. Saves the customer and sends the outcome to Kafka in either case.
+     * Database, optimistic locking, and synchronous send failures propagate; asynchronous delivery
+     * is not awaited.
      *
      * @param orderDto order whose payment should be reserved
-     * @return the order with its payment status and source
+     * @return the order with status ACCEPT or REJECT and source PAYMENT
      * @throws CustomerNotFoundException if the order's customer does not exist
      */
     @Timed(percentiles = 1.0)
@@ -64,17 +82,14 @@ public class PaymentOrderManageService {
             log.info(
                     "Found Customer: {}",
                     LogSanitizer.sanitizeForLog(String.valueOf(customer.getId())));
-            var totalOrderPrice =
-                    orderDto.items().stream()
-                            .map(OrderItemDto::getPrice)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add)
-                            .doubleValue();
+            var totalOrderPrice = calculateTotalOrderPrice(orderDto);
 
-            if (totalOrderPrice <= customer.getAmountAvailable()) {
+            if (totalOrderPrice.compareTo(customer.getAmountAvailable()) <= 0) {
                 orderDto = orderDto.withStatus("ACCEPT");
                 this.paymentsSuccessfulCounter.increment();
-                customer.setAmountReserved(customer.getAmountReserved() + totalOrderPrice);
-                customer.setAmountAvailable(customer.getAmountAvailable() - totalOrderPrice);
+                customer.setAmountReserved(customer.getAmountReserved().add(totalOrderPrice));
+                customer.setAmountAvailable(
+                        customer.getAmountAvailable().subtract(totalOrderPrice));
             } else {
                 orderDto = orderDto.withStatus("REJECT");
                 this.paymentsFailedCounter.increment();
@@ -99,6 +114,15 @@ public class PaymentOrderManageService {
         return orderDto;
     }
 
+    /**
+     * Deducts the sum of individually rounded line totals from reserved balance for CONFIRMED
+     * orders. For ROLLBACK orders from a source other than PAYMENT, also restores that amount to
+     * available balance. Other status/source combinations leave balances unchanged. Saves the
+     * customer in every case; database and optimistic locking failures propagate.
+     *
+     * @param orderDto the order outcome and items used to calculate the amount
+     * @throws CustomerNotFoundException if the order's customer does not exist
+     */
     @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {
         log.debug(
@@ -110,17 +134,13 @@ public class PaymentOrderManageService {
                         .findById(orderDto.customerId())
                         .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
         log.info("Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customer)));
-        var orderPrice =
-                orderDto.items().stream()
-                        .map(OrderItemDto::getPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .intValue();
+        var orderPrice = calculateTotalOrderPrice(orderDto);
         if (orderDto.status().equals("CONFIRMED")) {
-            customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
+            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
         } else if (orderDto.status().equals(AppConstants.ROLLBACK)
                 && !AppConstants.SOURCE.equals(orderDto.source())) {
-            customer.setAmountReserved(customer.getAmountReserved() - orderPrice);
-            customer.setAmountAvailable(customer.getAmountAvailable() + orderPrice);
+            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
+            customer.setAmountAvailable(customer.getAmountAvailable().add(orderPrice));
         }
         log.info(
                 "Saving customer :{} After Confirmation",

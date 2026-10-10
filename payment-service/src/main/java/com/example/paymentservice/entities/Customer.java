@@ -1,6 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
 package com.example.paymentservice.entities;
 
+import java.math.BigDecimal;
+
 public class Customer {
 
     private Long id;
@@ -23,9 +25,9 @@ public class Customer {
 
     private String phone;
 
-    private double amountAvailable;
+    private BigDecimal amountAvailable = BigDecimal.ZERO;
 
-    private double amountReserved;
+    private BigDecimal amountReserved = BigDecimal.ZERO;
 
     private Integer version;
 
@@ -73,11 +75,13 @@ public class Customer {
         return this.country;
     }
 
-    public double getAmountAvailable() {
+    /** Returns the available balance, initially zero. */
+    public BigDecimal getAmountAvailable() {
         return this.amountAvailable;
     }
 
-    public double getAmountReserved() {
+    /** Returns the balance reserved for orders, initially zero. */
+    public BigDecimal getAmountReserved() {
         return this.amountReserved;
     }
 
@@ -171,12 +175,24 @@ public class Customer {
         return this;
     }
 
-    public Customer setAmountAvailable(final double amountAvailable) {
+    /**
+     * Stores the available balance without validation or rounding.
+     *
+     * @param amountAvailable the balance to retain, including null
+     * @return this customer for chaining
+     */
+    public Customer setAmountAvailable(final BigDecimal amountAvailable) {
         this.amountAvailable = amountAvailable;
         return this;
     }
 
-    public Customer setAmountReserved(final double amountReserved) {
+    /**
+     * Stores the balance reserved for orders without validation or rounding.
+     *
+     * @param amountReserved the balance to retain, including null
+     * @return this customer for chaining
+     */
+    public Customer setAmountReserved(final BigDecimal amountReserved) {
         this.amountReserved = amountReserved;
         return this;
     }

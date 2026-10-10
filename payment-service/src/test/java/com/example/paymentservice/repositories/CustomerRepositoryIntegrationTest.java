@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,8 +73,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setZipCode("12345")
                         .setCountry("Testland")
                         .setPhone("123-456-7890")
-                        .setAmountAvailable(100.0)
-                        .setAmountReserved(0.0);
+                        .setAmountAvailable(BigDecimal.valueOf(100.0))
+                        .setAmountReserved(BigDecimal.ZERO);
 
         // 1. Insert sets version to 0
         Customer savedCustomer1 = customerRepository.save(customer);
@@ -86,14 +87,14 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                 customerRepository.findById(savedCustomer1.getId()).orElseThrow();
 
         // 3. Update the first fetched instance
-        fetchedCustomer1.setAmountAvailable(80.0);
+        fetchedCustomer1.setAmountAvailable(BigDecimal.valueOf(80.0));
         Customer updatedCustomer = customerRepository.save(fetchedCustomer1);
 
         // Version should be incremented
         assertThat(updatedCustomer.getVersion()).isEqualTo(1);
 
         // 4. Attempt to update the second fetched instance (stale update)
-        fetchedCustomer2.setAmountAvailable(50.0);
+        fetchedCustomer2.setAmountAvailable(BigDecimal.valueOf(50.0));
         assertThatThrownBy(() -> customerRepository.save(fetchedCustomer2))
                 .isInstanceOf(OptimisticLockingFailureException.class)
                 .hasMessageContaining("Customer was updated or deleted by another transaction");

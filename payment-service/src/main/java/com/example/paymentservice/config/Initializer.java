@@ -3,6 +3,7 @@ package com.example.paymentservice.config;
 
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.repositories.CustomerRepository;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,8 @@ class Initializer implements CommandLineRunner {
     /**
      * Seeds random sample customers and creates the retail and Raja customers when absent. A
      * duplicate-key failure for Raja is ignored only if a second lookup confirms concurrent
-     * creation.
+     * creation. Exceptions while creating the retail customer are suppressed; batch insertion,
+     * lookup, and other Raja creation failures propagate.
      *
      * @param args unused command-line arguments
      */
@@ -50,8 +52,8 @@ class Initializer implements CommandLineRunner {
                             .setZipCode(faker.address().zipCode())
                             .setCountry(faker.address().country())
                             .setPhone(faker.phoneNumber().phoneNumber())
-                            .setAmountAvailable(randomNumber)
-                            .setAmountReserved(0);
+                            .setAmountAvailable(BigDecimal.valueOf(randomNumber))
+                            .setAmountReserved(BigDecimal.ZERO);
             customerList.add(customer);
         }
 
@@ -72,8 +74,9 @@ class Initializer implements CommandLineRunner {
                                 .setZipCode(faker.address().zipCode())
                                 .setCountry(faker.address().country())
                                 .setPhone(faker.phoneNumber().phoneNumber())
-                                .setAmountAvailable(secureRandom.nextInt(100_000))
-                                .setAmountReserved(0);
+                                .setAmountAvailable(
+                                        BigDecimal.valueOf(secureRandom.nextInt(100_000)))
+                                .setAmountReserved(BigDecimal.ZERO);
                 this.customerRepository.save(retailCustomer);
             } catch (Exception e) {
                 // Handle race condition - another instance may have created the retail customer
@@ -96,8 +99,9 @@ class Initializer implements CommandLineRunner {
                                 .setZipCode(faker.address().zipCode())
                                 .setCountry(faker.address().country())
                                 .setPhone(faker.phoneNumber().phoneNumber())
-                                .setAmountAvailable(secureRandom.nextInt(100_000))
-                                .setAmountReserved(0);
+                                .setAmountAvailable(
+                                        BigDecimal.valueOf(secureRandom.nextInt(100_000)))
+                                .setAmountReserved(BigDecimal.ZERO);
                 this.customerRepository.save(rajaCustomer);
             } catch (DuplicateKeyException e) {
                 if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {

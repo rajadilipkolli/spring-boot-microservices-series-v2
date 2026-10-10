@@ -2,6 +2,7 @@
 package com.example.paymentservice.model.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import java.math.BigDecimal;
 
 public record CustomerResponse(
         @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
@@ -14,4 +15,5 @@ public record CustomerResponse(
         String state,
         String zipCode,
         String country,
-        double amountAvailable) {}
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
+                BigDecimal amountAvailable) {}

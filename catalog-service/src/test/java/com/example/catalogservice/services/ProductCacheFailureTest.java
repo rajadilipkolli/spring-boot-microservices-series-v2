@@ -20,6 +20,7 @@ import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,7 @@ class ProductCacheFailureTest {
             new Product().setId(1L).setProductCode("P001").setProductName("Fresh");
     private ProductService service;
 
+    /** Stubs shared cache storage and database generations for simulated Redis failures. */
     @BeforeEach
     void setUp() {
         service = newService();
@@ -82,7 +84,7 @@ class ProductCacheFailureTest {
                                         product.getProductName(),
                                         "Description",
                                         null,
-                                        10,
+                                        BigDecimal.TEN,
                                         false));
     }
 
@@ -109,6 +111,7 @@ class ProductCacheFailureTest {
                 .verifyComplete();
     }
 
+    /** Verifies a new cache generation hides stale entries after Redis eviction fails. */
     @Test
     void failedEvictionCannotExposeOldEntriesToAnotherNodeAfterRedisRecovers() {
         service.findProductByProductCode("P001", false).block();
@@ -120,7 +123,8 @@ class ProductCacheFailureTest {
         // Saving an existing product takes the idempotent path and invalidates its caches.
         StepVerifier.create(
                         service.saveProduct(
-                                new ProductRequest("P001", "Updated", "Description", null, 10.0)))
+                                new ProductRequest(
+                                        "P001", "Updated", "Description", null, BigDecimal.TEN)))
                 .assertNext(response -> assertThat(response.productName()).isEqualTo("Updated"))
                 .verifyComplete();
 

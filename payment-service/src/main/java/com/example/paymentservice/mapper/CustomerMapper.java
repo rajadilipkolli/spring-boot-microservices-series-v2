@@ -4,6 +4,7 @@ package com.example.paymentservice.mapper;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,8 @@ import org.springframework.stereotype.Service;
 public class CustomerMapper {
 
     /**
-     * Creates a customer with the request's contact details, balance, and separate address fields.
+     * Creates a customer with the request's contact details, available balance, and separate
+     * address fields, with a zero reserved balance.
      *
      * @param customerRequest customer details to copy
      * @return a new customer entity
@@ -28,6 +30,7 @@ public class CustomerMapper {
         customer.setCountry(customerRequest.country());
         customer.setPhone(customerRequest.phone());
         customer.setAmountAvailable(customerRequest.amountAvailable());
+        customer.setAmountReserved(BigDecimal.ZERO);
         return customer;
     }
 

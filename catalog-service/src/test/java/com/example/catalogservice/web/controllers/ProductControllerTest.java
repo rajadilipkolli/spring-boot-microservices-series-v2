@@ -22,6 +22,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,15 +49,37 @@ class ProductControllerTest {
 
     private List<ProductResponse> productResponseList;
 
+    /** Creates product response fixtures with decimal prices for controller tests. */
     @BeforeEach
     void setUp() {
         this.productResponseList = new ArrayList<>();
         this.productResponseList.add(
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true));
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(9.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(2L, "code 2", "name 2", "description 2", null, 10.0, true));
+                new ProductResponse(
+                        2L,
+                        "code 2",
+                        "name 2",
+                        "description 2",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(3L, "code 3", "name 3", "description 3", null, 11.0, true));
+                new ProductResponse(
+                        3L,
+                        "code 3",
+                        "name 3",
+                        "description 3",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true));
     }
 
     @Test
@@ -99,7 +122,13 @@ class ProductControllerTest {
         Long productId = 1L;
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "name 1", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -135,15 +164,24 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies product creation returns its details, decimal price, and location header. */
     @Test
     void shouldCreateProduct() {
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         ProductRequest productRequest =
-                new ProductRequest("code 1", "name 1", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "name 1", "description 1", null, BigDecimal.valueOf(1.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -169,9 +207,13 @@ class ProductControllerTest {
                 .isEqualTo(productResponse.price());
     }
 
+    /**
+     * Verifies a creation request with missing product fields returns a validation problem
+     * response.
+     */
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
-        ProductDto productDto = new ProductDto(null, null, null, 9.0);
+        ProductDto productDto = new ProductDto(null, null, null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .post()
@@ -206,11 +248,15 @@ class ProductControllerTest {
                         "Existing Product",
                         "This product already exists",
                         null,
-                        19.99,
+                        BigDecimal.valueOf(19.99),
                         true);
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code-123", "Existing Product", "This product already exists", null, 19.99);
+                        "code-123",
+                        "Existing Product",
+                        "This product already exists",
+                        null,
+                        BigDecimal.valueOf(19.99));
 
         // Mock the service to return the existing product when trying to save with the same product
         // code
@@ -264,12 +310,19 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "Updated name", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
                 .willReturn(Mono.just(productResponse));
@@ -295,12 +348,14 @@ class ProductControllerTest {
                 .isEqualTo(product.getPrice());
     }
 
+    /** Verifies updating an unknown product returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
         given(productService.findById(productId)).willReturn(Mono.empty());
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .put()
@@ -322,9 +377,16 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "Updated name", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
@@ -365,7 +427,8 @@ class ProductControllerTest {
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(42L, code, "Product XYZ", "desc", null, 99.0, true);
+                new ProductResponse(
+                        42L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -405,11 +468,13 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies the stock lookup flag is forwarded to the product service. */
     @Test
     void shouldFetchInStockWhenRequested() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(43L, code, "Product XYZ", "desc", null, 49.0, true);
+                new ProductResponse(
+                        43L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, true))
                 .willReturn(Mono.just(productResponse));
@@ -434,7 +499,8 @@ class ProductControllerTest {
     void shouldRespectDelayParameter() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(44L, code, "Product XYZ", "desc", null, 59.0, true);
+                new ProductResponse(
+                        44L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -604,13 +670,21 @@ class ProductControllerTest {
         verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
     }
 
+    /** Verifies decimal price bounds select the price-range search with default pagination. */
     @Test
     void shouldSearchByPriceRangeOnly() {
         org.springframework.data.domain.Page<ProductResponse> page =
                 new org.springframework.data.domain.PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
-        given(productService.searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc"))
+        given(
+                        productService.searchProductsByPriceRange(
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -627,9 +701,14 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        verify(productService).searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc");
+        verify(productService)
+                .searchProductsByPriceRange(
+                        BigDecimal.valueOf(50.0), BigDecimal.valueOf(150.0), 0, 10, "id", "asc");
     }
 
+    /**
+     * Verifies a term and decimal price bounds select the combined search with default pagination.
+     */
     @Test
     void shouldSearchByTermAndPriceRange() {
         org.springframework.data.domain.Page<ProductResponse> page =
@@ -638,7 +717,13 @@ class ProductControllerTest {
 
         given(
                         productService.searchProductsByTermAndPriceRange(
-                                "laptop", 50.0, 150.0, 0, 10, "id", "asc"))
+                                "laptop",
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -657,7 +742,14 @@ class ProductControllerTest {
                 .expectBody(PagedResult.class);
 
         verify(productService)
-                .searchProductsByTermAndPriceRange("laptop", 50.0, 150.0, 0, 10, "id", "asc");
+                .searchProductsByTermAndPriceRange(
+                        "laptop",
+                        BigDecimal.valueOf(50.0),
+                        BigDecimal.valueOf(150.0),
+                        0,
+                        10,
+                        "id",
+                        "asc");
     }
 
     @Test

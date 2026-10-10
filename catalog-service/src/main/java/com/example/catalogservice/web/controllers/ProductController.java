@@ -17,6 +17,7 @@ import com.example.catalogservice.web.api.ProductApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -141,12 +142,25 @@ public class ProductController implements ProductApi {
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
+    /**
+     * Searches products by a nonempty term, a complete price range, or both. Falls back to the full
+     * product listing when neither criterion is available.
+     *
+     * @param term optional search term
+     * @param minPrice lower price bound, used only when both bounds are present
+     * @param maxPrice upper price bound, used only when both bounds are present
+     * @param pageNo zero-based page index
+     * @param pageSize maximum products per page
+     * @param sortBy property used for sorting
+     * @param sortDir sort direction
+     * @return the matching page of products
+     */
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<PagedResult<ProductResponse>> searchProducts(
             @RequestParam(required = false) String term,
-            @RequestParam(required = false) Double minPrice,
-            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)

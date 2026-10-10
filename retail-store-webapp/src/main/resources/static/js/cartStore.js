@@ -121,9 +121,30 @@ async function deleteCart() {
     }
 }
 
+/**
+ * Returns the cart total in dollars, rounding each unit price to cents before multiplying by quantity.
+ * Returns zero when the cart or its items are absent, or the item list is empty.
+ */
 function calculateTotal(cart) {
     if (!cart || !cart.items) return 0;
-    return parseFloat(cart.items.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2));
+    const totalCents = cart.items.reduce((total, item) => total + (Math.round(item.price * 100) * item.quantity), 0);
+    return totalCents / 100;
+}
+
+/**
+ * Formats a dollar amount as an en-US USD currency string with two decimal places.
+ */
+function formatMoney(amount) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+/**
+ * Returns a line subtotal in dollars, rounding the unit price to cents before multiplying by quantity.
+ * @param {number} price Unit price in dollars.
+ * @param {number} quantity Number of units.
+ */
+function getLineSubtotal(price, quantity) {
+    return (Math.round(price * 100) * quantity) / 100;
 }
 
 function updateCartItemCountUI(count) {

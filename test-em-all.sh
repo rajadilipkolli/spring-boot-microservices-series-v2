@@ -381,7 +381,7 @@ function setupTestData() {
     echo "Setting up customer data..."
     body="{\"name\": \"$CUSTOMER_NAME"
     body+=\
-'","email": "docker@email.com","phone":"9876543210","address": "docker Address","amountAvailable":1000}'
+'","email": "docker@email.com","phone":"9876543210","addressLine1": "docker Address","city":"Hyderabad","country":"India","state":"Telangana","zipCode":"500081","amountAvailable":1000}'
 
     # Creating Customer
     recreateComposite "$CUSTOMER_NAME" "$body" "payment-service/api/customers" "POST" || return 1
@@ -714,7 +714,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" "Customer payment check" || return 1
-    assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) "Customer balance check" || return 1
+    assertEqual 950.00 $(echo ${RESPONSE} | jq .amountAvailable) "Customer balance check" || return 1
 
     # Step2, Order Should be rejected
     log_info "Step 2: Testing order rejection due to insufficient inventory..."
@@ -743,7 +743,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 950.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 950.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 3, Order Should be CONFIRMED
     echo "Step 3: Testing another order confirmation..."
@@ -772,7 +772,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 150.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 4, Order Should be ROLLBACK
     echo "Step 4: Testing order rollback due to payment issues..."
@@ -801,7 +801,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is not deducted as per order cant be processed
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 150.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     # Step 5, Order Should be REJECTED
     echo "Step 5: Testing order rejection..."
@@ -830,7 +830,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is not deducted as per order cant be processed
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 150.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 150.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
 
@@ -864,7 +864,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is deducted as per order
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 90.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     echo " "
 
@@ -898,7 +898,7 @@ function verifyAPIs() {
 
     # Verify that amountAvailable is not deducted as per order
     assertCurl 200 "curl -k $BASE_URL/payment-service/api/customers/$CUSTOMER_ID" || return 1
-    assertEqual 90.0 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
+    assertEqual 90.00 $(echo ${RESPONSE} | jq .amountAvailable) || return 1
 
     API_VERIFY_END_TIME=$(date +%s)
     log_success "All API verification tests completed successfully in $((API_VERIFY_END_TIME - API_VERIFY_START_TIME)) seconds."
