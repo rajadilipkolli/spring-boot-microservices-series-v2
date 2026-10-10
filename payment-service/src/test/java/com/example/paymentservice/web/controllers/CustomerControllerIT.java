@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,13 +20,21 @@ import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
+import com.example.paymentservice.model.response.OrderResponse;
+import com.example.paymentservice.model.response.PagedResult;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpServerErrorException;
 
 class CustomerControllerIT extends AbstractIntegrationTest {
 
@@ -421,5 +432,78 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath("$.detail")
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
+    }
+
+    @Test
+    void shouldGetOrdersByCustomerId() throws Exception {
+        Customer customer = customerList.getFirst();
+        Long customerId = customer.getId();
+
+        // Stub the proxy
+        OrderResponse.Address address =
+                new OrderResponse.Address("Street", "Suite", "City", "State", "Zip", "Country");
+        OrderResponse.OrderItemResponse item =
+                new OrderResponse.OrderItemResponse(
+                        100L, "P1", 2, new BigDecimal("10.0"), new BigDecimal("20.0"));
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L,
+                        customerId,
+                        "COMPLETED",
+                        "PAYMENT",
+                        address,
+                        LocalDateTime.now(),
+                        new BigDecimal("20.0"),
+                        List.of(item));
+
+        PagedResult<OrderResponse> pagedResult =
+                new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+        given(orderServiceProxy.getOrdersByCustomerId(eq(customerId), eq(0), eq(10), eq("id,asc")))
+                .willReturn(pagedResult);
+
+        this.mockMvc
+                .perform(get("/api/customers/{id}/orders", customerId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.data[0].orderId", is("1")))
+                .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
+                .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
+                .andExpect(jsonPath("$.data[0].items[0].itemId", is("100")))
+                .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10.0)))
+                .andExpect(jsonPath("$.data[0].items[0].price", is(20.0)))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine1", is("Street")))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine2", is("Suite")))
+                .andExpect(jsonPath("$.data[0].totalPrice", is(20.0)));
+    }
+
+    @Autowired private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Test
+    void shouldReturnErrorWhenOrderServiceFails() throws Exception {
+        Long customerId = customerList.getFirst().getId();
+        given(orderServiceProxy.getOrdersByCustomerId(eq(customerId), eq(0), eq(10), eq("id,asc")))
+                .willThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
+        try {
+            mockMvc.perform(get("/api/customers/{id}/orders", customerId))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+        } finally {
+            circuitBreakerRegistry.circuitBreaker("default").reset();
+        }
+    }
+
+    @Test
+    void shouldReturnErrorWhenOrderCircuitIsOpen() throws Exception {
+        var circuitBreaker = circuitBreakerRegistry.circuitBreaker("default");
+        circuitBreaker.transitionToOpenState();
+        try {
+            mockMvc.perform(get("/api/customers/{id}/orders", customerList.getFirst().getId()))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+            verifyNoInteractions(orderServiceProxy);
+        } finally {
+            circuitBreaker.reset();
+        }
     }
 }

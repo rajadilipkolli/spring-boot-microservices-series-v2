@@ -7,9 +7,32 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 @ConfigurationProperties("application")
 public class ApplicationProperties {
 
+    private String orderServiceUrl;
+    private boolean byPassCircuitBreaker;
+
     @NestedConfigurationProperty private Cors cors = new Cors();
 
     public ApplicationProperties() {}
+
+    /** Returns the base URL used by the order service HTTP client. */
+    public String getOrderServiceUrl() {
+        return this.orderServiceUrl;
+    }
+
+    /** Sets the order service base URL, including any service context path. */
+    public void setOrderServiceUrl(String orderServiceUrl) {
+        this.orderServiceUrl = orderServiceUrl;
+    }
+
+    /** Returns the configured bypass flag, which the order proxy currently does not use. */
+    public boolean isByPassCircuitBreaker() {
+        return this.byPassCircuitBreaker;
+    }
+
+    /** Stores the bypass flag; changing it currently has no effect on the order proxy. */
+    public void setByPassCircuitBreaker(boolean byPassCircuitBreaker) {
+        this.byPassCircuitBreaker = byPassCircuitBreaker;
+    }
 
     public Cors getCors() {
         return this.cors;

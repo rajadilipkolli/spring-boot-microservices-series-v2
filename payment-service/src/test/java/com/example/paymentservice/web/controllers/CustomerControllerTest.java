@@ -9,6 +9,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,12 +26,15 @@ import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
+import com.example.paymentservice.services.OrderProxyService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -52,6 +57,8 @@ class CustomerControllerTest {
     @Autowired private MockMvcTester mockMvcTester;
 
     @MockitoBean private CustomerService customerService;
+
+    @MockitoBean private OrderProxyService orderProxyService;
 
     @Autowired private JsonMapper jsonMapper;
 
@@ -144,6 +151,36 @@ class CustomerControllerTest {
                                         customer.getCountry(),
                                         customer.getAmountAvailable()))
                 .toList();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "pageNo,0,pageNo must be greater than or equal to 1",
+        "pageNo,-1,pageNo must be greater than or equal to 1",
+        "pageSize,0,pageSize must be greater than 0",
+        "pageSize,-1,pageSize must be greater than 0"
+    })
+    void shouldRejectInvalidOrderPagination(String parameter, String value, String detail)
+            throws Exception {
+        mockMvc.perform(get("/api/customers/1/orders").param(parameter, value))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(detail));
+
+        verifyNoInteractions(customerService, orderProxyService);
+    }
+
+    @Test
+    void shouldUseDefaultOrderPagination() throws Exception {
+        given(customerService.findCustomerById(1L))
+                .willReturn(Optional.of(getCustomerResponseList().getFirst()));
+        given(orderProxyService.getOrdersByCustomerId(1L, 1, 10, "id", "asc"))
+                .willReturn(new PagedResult<>(List.of(), 0, 1, 0, true, true, false, false));
+
+        mockMvc.perform(get("/api/customers/1/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        verify(orderProxyService).getOrdersByCustomerId(1L, 1, 10, "id", "asc");
     }
 
     @Nested
