@@ -43,3 +43,19 @@ spring:
     clients.imperative.factory: jdk
   main:
     web-application-type: servlet
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
+      staleness:
+        check-interval: 1m
+        processing: 30s
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+    properties:
+      org:
+        quartz:
+          jobStore:
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+            isClustered: true

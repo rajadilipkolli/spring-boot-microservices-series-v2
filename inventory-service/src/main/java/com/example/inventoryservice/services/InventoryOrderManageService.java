@@ -7,9 +7,8 @@
 package com.example.inventoryservice.services;
 
 import com.example.inventoryservice.entities.Inventory;
+import com.example.inventoryservice.events.InventoryProcessedEvent;
 import com.example.inventoryservice.model.payload.OrderDto;
-import com.example.inventoryservice.model.payload.OrderItemDto;
-import com.example.inventoryservice.repositories.InventoryJOOQRepository;
 import com.example.inventoryservice.repositories.InventoryRepository;
 import com.example.inventoryservice.utils.AppConstants;
 import com.example.inventoryservice.utils.logging.Loggable;
@@ -23,7 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,19 +33,16 @@ public class InventoryOrderManageService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryOrderManageService.class);
 
     private final InventoryRepository inventoryRepository;
-    private final InventoryJOOQRepository inventoryJOOQRepository;
-    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final ApplicationEventPublisher eventPublisher;
     private final Counter inventoryReservationsCounter;
     private final Counter inventoryFailuresCounter;
 
     public InventoryOrderManageService(
             InventoryRepository inventoryRepository,
             MeterRegistry meterRegistry,
-            InventoryJOOQRepository inventoryJOOQRepository,
-            KafkaTemplate<String, OrderDto> kafkaTemplate) {
+            ApplicationEventPublisher eventPublisher) {
         this.inventoryRepository = inventoryRepository;
-        this.inventoryJOOQRepository = inventoryJOOQRepository;
-        this.kafkaTemplate = kafkaTemplate;
+        this.eventPublisher = eventPublisher;
         this.inventoryReservationsCounter = meterRegistry.counter("inventory_reservations");
         this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
     }
@@ -66,7 +62,7 @@ public class InventoryOrderManageService {
             return orderDto;
         }
         List<String> productCodeList =
-                orderDto.items().stream().map(OrderItemDto::productId).toList();
+                orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
 
         // Using JPA repository for reading unpaged list to keep entities managed.
         // NOTE: Do not change this back to JOOQ for mutating operations.
@@ -84,10 +80,7 @@ public class InventoryOrderManageService {
                     productCodeList);
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
             this.inventoryFailuresCounter.increment();
-            kafkaTemplate.send(
-                    AppConstants.STOCK_ORDERS_TOPIC,
-                    String.valueOf(rejectedOrderDto.orderId()),
-                    rejectedOrderDto);
+            eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
                     "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
                     rejectedOrderDto,
@@ -124,7 +117,7 @@ public class InventoryOrderManageService {
             // called.
         } else {
             // Phase 2: Mutation pass - safe to persist
-            for (OrderItemDto orderItemDto : orderDto.items()) {
+            for (OrderDto.OrderItemDto orderItemDto : orderDto.items()) {
                 Inventory inventoryFromDB = inventoryMap.get(orderItemDto.productId());
                 int productCount = orderItemDto.quantity();
                 inventoryFromDB.setReservedItems(inventoryFromDB.getReservedItems() + productCount);
@@ -144,10 +137,7 @@ public class InventoryOrderManageService {
 
         // Send order to Kafka
         OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
-        kafkaTemplate.send(
-                AppConstants.STOCK_ORDERS_TOPIC,
-                String.valueOf(orderWithSource.orderId()),
-                orderWithSource);
+        eventPublisher.publishEvent(new InventoryProcessedEvent(orderWithSource));
         LOGGER.info(
                 "Sent Order with status {} : {} from inventory service to topic {}",
                 orderWithSource.status(),
@@ -161,7 +151,7 @@ public class InventoryOrderManageService {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
 
         List<String> productCodeList =
-                orderDto.items().stream().map(OrderItemDto::productId).toList();
+                orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
 
         // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
         // detached entities
@@ -169,7 +159,7 @@ public class InventoryOrderManageService {
                 inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
-        for (OrderItemDto orderItemDto : orderDto.items()) {
+        for (OrderDto.OrderItemDto orderItemDto : orderDto.items()) {
             String productId = orderItemDto.productId();
             Inventory inventory = inventoryMap.get(productId);
 

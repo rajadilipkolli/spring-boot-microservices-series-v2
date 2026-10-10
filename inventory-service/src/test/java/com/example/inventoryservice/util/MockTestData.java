@@ -7,13 +7,13 @@
 package com.example.inventoryservice.util;
 
 import com.example.inventoryservice.model.payload.OrderDto;
-import com.example.inventoryservice.model.payload.OrderItemDto;
 import java.math.BigDecimal;
 import java.util.List;
 
 public class MockTestData {
     public static OrderDto getOrderDto(String source) {
-        OrderItemDto orderItemDto = new OrderItemDto(1L, "JUNIT_000", 10, BigDecimal.TEN);
+        OrderDto.OrderItemDto orderItemDto =
+                new OrderDto.OrderItemDto(1L, "JUNIT_000", 10, BigDecimal.TEN);
         return new OrderDto(151L, 1001L, "NEW", source, List.of(orderItemDto));
     }
 }
