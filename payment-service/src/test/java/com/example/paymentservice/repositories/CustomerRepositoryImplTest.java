@@ -6,8 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 
@@ -18,6 +22,32 @@ class CustomerRepositoryImplTest extends AbstractIntegrationTest {
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = {0, 7})
+    void saveAllPreservesSuppliedVersions(Integer version) {
+        Customer customer =
+                new Customer()
+                        .setName("Batch Customer")
+                        .setEmail("batch@example.com")
+                        .setPhone("123-456-7890")
+                        .setAddressLine1("123 Test St")
+                        .setCity("Testville")
+                        .setState("TS")
+                        .setZipCode("12345")
+                        .setCountry("Testland")
+                        .setVersion(version);
+        int expectedVersion = version == null ? 0 : version;
+
+        List<Customer> insertedCustomers = customerRepository.saveAll(List.of(customer));
+
+        assertThat(customer.getVersion()).isEqualTo(expectedVersion);
+        assertThat(insertedCustomers).hasSize(1);
+        assertThat(insertedCustomers.getFirst().getVersion()).isEqualTo(expectedVersion);
+        assertThat(customerRepository.findById(customer.getId()).orElseThrow().getVersion())
+                .isEqualTo(expectedVersion);
     }
 
     @Test

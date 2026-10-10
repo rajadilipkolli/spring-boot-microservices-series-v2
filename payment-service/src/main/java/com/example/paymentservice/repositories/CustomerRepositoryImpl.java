@@ -160,8 +160,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
             }
             if (customer.getVersion() == null) {
                 customer.setVersion(0);
-            } else {
-                customer.setVersion(customer.getVersion() + 1);
             }
         }
         InsertSetMoreStep<CustomersRecord> insertStepN =
