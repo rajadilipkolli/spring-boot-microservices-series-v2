@@ -7,7 +7,12 @@
 package com.example.inventoryservice.inventory.events;
 
 import com.example.inventoryservice.inventory.model.payload.OrderDto;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.springframework.modulith.events.Externalized;
 
-@Externalized("stock-orders::#{#this.order().orderId()}")
-public record InventoryProcessedEvent(OrderDto order) {}
+@Externalized("stock-orders")
+public record InventoryProcessedEvent(@JsonValue OrderDto order) {
+    @JsonCreator
+    public InventoryProcessedEvent {}
+}

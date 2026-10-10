@@ -7,7 +7,6 @@
 package com.example.inventoryservice.inventory.config;
 
 import com.example.inventoryservice.inventory.model.payload.OrderDto;
-import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -36,13 +35,13 @@ public class TestStockOrderListenerConfig {
     @KafkaListener(id = "stocks", topics = "stock-orders", groupId = "inventory")
     public void onOrderEvent(ConsumerRecord<String, String> record) throws JacksonException {
         String orderDtoStr = record.value();
-        if (orderDtoStr.startsWith("\"") && orderDtoStr.endsWith("\"")) {
-            // Base64 encoded JSON string, decode it
-            orderDtoStr =
-                    new String(
-                            Base64.getDecoder()
-                                    .decode(orderDtoStr.substring(1, orderDtoStr.length() - 1)));
-        }
+        // if (orderDtoStr.startsWith("\"") && orderDtoStr.endsWith("\"")) {
+        //     // Base64 encoded JSON string, decode it
+        //     orderDtoStr =
+        //             new String(
+        //                     Base64.getDecoder()
+        //                             .decode(orderDtoStr.substring(1, orderDtoStr.length() - 1)));
+        // }
         OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info("Received Order: {}", orderDto);
         countDownLatch.countDown();

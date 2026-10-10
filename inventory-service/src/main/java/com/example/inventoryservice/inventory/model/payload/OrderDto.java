@@ -52,7 +52,7 @@ public record OrderDto(
         return new OrderDto(orderId(), customerId(), status, source, items());
     }
 
-    public static record OrderItemDto(
+    public record OrderItemDto(
             @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
             String productId,
             @NotNull(message = "Quantity cannot be null")

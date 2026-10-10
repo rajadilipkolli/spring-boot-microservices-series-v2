@@ -47,14 +47,12 @@ spring:
     events:
       externalization:
         mode: outbox  # NEW: Switch to Outbox Mode
+      completion-mode: archive
 
 namastack:
   outbox:
     retry:
-      policy: fixed
-      fixed:
-        delay: 5000
       exclude-exceptions:
         - java.lang.RuntimeException
     instance:
-      graceful-shutdown-timeout-seconds: 0
+      graceful-shutdown-timeout: 1s

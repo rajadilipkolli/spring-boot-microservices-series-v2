@@ -11,5 +11,6 @@
 
     <logger name="org.testcontainers" level="INFO"/>
     <logger name="com.github.dockerjava" level="WARN"/>
-    <logger name="liquibase" level="DEBUG"/>
+    <logger name="org.springframework.modulith" level="DEBUG" />
+    <logger name="io.namastack.outbox" level="DEBUG" />
 </configuration>
