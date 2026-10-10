@@ -6,12 +6,14 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
+import com.example.paymentservice.services.OrderServiceProxy;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import tools.jackson.databind.json.JsonMapper;
@@ -35,4 +37,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected CustomerRepository customerRepository;
 
     @Autowired protected KafkaListenerConfig kafkaListenerConfig;
+
+    @MockitoBean protected OrderServiceProxy orderServiceProxy;
 }

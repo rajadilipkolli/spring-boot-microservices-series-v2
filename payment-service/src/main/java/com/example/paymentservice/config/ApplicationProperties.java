@@ -7,9 +7,28 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 @ConfigurationProperties("application")
 public class ApplicationProperties {
 
+    private String orderServiceUrl;
+    private boolean byPassCircuitBreaker;
+
     @NestedConfigurationProperty private Cors cors = new Cors();
 
     public ApplicationProperties() {}
+
+    public String getOrderServiceUrl() {
+        return this.orderServiceUrl;
+    }
+
+    public void setOrderServiceUrl(String orderServiceUrl) {
+        this.orderServiceUrl = orderServiceUrl;
+    }
+
+    public boolean isByPassCircuitBreaker() {
+        return this.byPassCircuitBreaker;
+    }
+
+    public void setByPassCircuitBreaker(boolean byPassCircuitBreaker) {
+        this.byPassCircuitBreaker = byPassCircuitBreaker;
+    }
 
     public Cors getCors() {
         return this.cors;

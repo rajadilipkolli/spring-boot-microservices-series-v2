@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +19,10 @@ import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
+import com.example.paymentservice.model.response.OrderResponse;
+import com.example.paymentservice.model.response.PagedResult;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -421,5 +427,44 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath("$.detail")
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
+    }
+
+    @Test
+    void shouldGetOrdersByCustomerId() throws Exception {
+        Customer customer = customerList.getFirst();
+        Long customerId = customer.getId();
+
+        // Stub the proxy
+        OrderResponse.Address address =
+                new OrderResponse.Address("Street", "City", "State", "Zip", "Country");
+        OrderResponse.OrderItemResponse item =
+                new OrderResponse.OrderItemResponse(100L, "P1", 2, new BigDecimal("10.0"));
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L,
+                        customerId,
+                        "COMPLETED",
+                        "PAYMENT",
+                        address,
+                        LocalDateTime.now(),
+                        new BigDecimal("20.0"),
+                        List.of(item));
+
+        PagedResult<OrderResponse> pagedResult =
+                new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+        given(
+                        orderServiceProxy.getOrdersByCustomerId(
+                                eq(customerId), eq(1), eq(10), eq("id"), eq("asc")))
+                .willReturn(pagedResult);
+
+        this.mockMvc
+                .perform(get("/api/customers/{id}/orders", customerId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.data[0].orderId", is(1)))
+                .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
+                .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
+                .andExpect(jsonPath("$.data[0].totalPrice", is(20.0)));
     }
 }

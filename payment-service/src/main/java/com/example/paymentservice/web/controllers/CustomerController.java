@@ -6,8 +6,10 @@ import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
+import com.example.paymentservice.model.response.OrderResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
+import com.example.paymentservice.services.OrderProxyService;
 import com.example.paymentservice.utils.AppConstants;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -29,9 +31,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 class CustomerController {
 
     private final CustomerService customerService;
+    private final OrderProxyService orderProxyService;
 
-    CustomerController(CustomerService customerService) {
+    CustomerController(CustomerService customerService, OrderProxyService orderProxyService) {
         this.customerService = customerService;
+        this.orderProxyService = orderProxyService;
     }
 
     @GetMapping
@@ -106,6 +110,27 @@ class CustomerController {
                             customerService.deleteCustomerById(id);
                             return ResponseEntity.ok(customer);
                         })
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+    }
+
+    @GetMapping("/{id}/orders")
+    ResponseEntity<PagedResult<OrderResponse>> getOrdersByCustomerId(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+                    int pageNo,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+                    int pageSize,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+                    String sortBy,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+                    String sortDir) {
+        return customerService
+                .findCustomerById(id)
+                .map(
+                        customer ->
+                                ResponseEntity.ok(
+                                        orderProxyService.getOrdersByCustomerId(
+                                                id, pageNo, pageSize, sortBy, sortDir)))
                 .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 }
