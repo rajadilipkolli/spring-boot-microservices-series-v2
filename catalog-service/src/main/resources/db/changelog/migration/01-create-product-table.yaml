@@ -17,42 +17,43 @@ databaseChangeLog:
           not:
             - tableExists:
                 tableName: products
-      createTable:
-        columns:
-          - column:
-              constraints:
-                nullable: 'false'
-                primaryKey: 'true'
-                primaryKeyName: pk_products
-              name: id
-              type: BIGINT
-          - column:
-              constraints:
-                nullable: 'false'
-              name: product_code
-              type: ${string.type}
-          - column:
-              constraints:
-                nullable: 'false'
-              name: product_name
-              type: ${string.type}
-          - column:
-              name: description
-              type: ${string.type}
-          - column:
-              name: image_url
-              type: ${string.type}
-          - column:
-              name: price
-              type: 'NUMERIC(19,2)'
-          - column:
-              name: version
-              type: BIGINT
-              defaultValueNumeric: 0
-              constraints:
-                nullable: false
-        tableName: products
-      addUniqueConstraint:
-        columnNames: product_code
-        constraintName: uc_product_code
-        tableName: products
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_products
+                  name: id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_code
+                  type: ${string.type}
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_name
+                  type: ${string.type}
+              - column:
+                  name: description
+                  type: ${string.type}
+              - column:
+                  name: image_url
+                  type: ${string.type}
+              - column:
+                  name: price
+                  type: 'NUMERIC(19,2)'
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: '0'
+                  constraints:
+                    nullable: false
+            tableName: products
+        - addUniqueConstraint:
+            columnNames: product_code
+            constraintName: uc_product_code
+            tableName: products

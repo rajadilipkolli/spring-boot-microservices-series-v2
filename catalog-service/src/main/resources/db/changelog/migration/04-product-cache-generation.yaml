@@ -1,7 +1,13 @@
 databaseChangeLog:
   - changeSet:
       id: product-cache-generation
-      author: coderabbit
+      author: rajakolli
+      context: Creates DDL Script for product_cache_generation
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - tableExists:
+                tableName: product_cache_generation
       changes:
         - createTable:
             tableName: product_cache_generation
@@ -22,7 +28,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  valueNumeric: 1
+                  valueNumeric: '1'
               - column:
                   name: generation
-                  value: "initial"
+                  value: 'initial'

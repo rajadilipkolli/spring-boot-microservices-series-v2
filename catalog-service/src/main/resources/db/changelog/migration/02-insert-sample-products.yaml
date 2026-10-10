@@ -14,7 +14,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  value: 1
+                  value: '1'
               - column:
                   name: product_code
                   value: "P001"
@@ -26,7 +26,7 @@ databaseChangeLog:
                   value: "Latest Apple iPhone with advanced camera system"
               - column:
                   name: price
-                  value: 999.99
+                  value: '999.99'
               - column:
                   name: image_url
                   value: "https://example.com/images/iphone15pro.jpg"
@@ -35,7 +35,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  value: 2
+                  value: '2'
               - column:
                   name: product_code
                   value: "P002"
@@ -47,7 +47,7 @@ databaseChangeLog:
                   value: "Premium Android smartphone with AI features"
               - column:
                   name: price
-                  value: 899.99
+                  value: '899.99'
               - column:
                   name: image_url
                   value: "https://example.com/images/galaxy-s24.jpg"
@@ -56,7 +56,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  value: 3
+                  value: '3'
               - column:
                   name: product_code
                   value: "P003"
@@ -68,7 +68,7 @@ databaseChangeLog:
                   value: "Ultra-thin laptop with M3 chip"
               - column:
                   name: price
-                  value: 1299.99
+                  value: '1299.99'
               - column:
                   name: image_url
                   value: "https://example.com/images/macbook-air-m3.jpg"
@@ -77,7 +77,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  value: 4
+                  value: '4'
               - column:
                   name: product_code
                   value: "P004"
@@ -89,7 +89,7 @@ databaseChangeLog:
                   value: "Premium Windows ultrabook"
               - column:
                   name: price
-                  value: 1099.99
+                  value: '1099.99'
               - column:
                   name: image_url
                   value: "https://example.com/images/dell-xps13.jpg"
@@ -98,7 +98,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  value: 5
+                  value: '5'
               - column:
                   name: product_code
                   value: "P005"
@@ -110,7 +110,7 @@ databaseChangeLog:
                   value: "Wireless earbuds with active noise cancellation"
               - column:
                   name: price
-                  value: 249.99
+                  value: '249.99'
               - column:
                   name: image_url
                   value: "https://example.com/images/airpods-pro.jpg"
