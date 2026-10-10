@@ -49,6 +49,7 @@ class ProductControllerTest {
 
     private List<ProductResponse> productResponseList;
 
+    /** Creates product response fixtures with decimal prices for controller tests. */
     @BeforeEach
     void setUp() {
         this.productResponseList = new ArrayList<>();
@@ -163,6 +164,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies product creation returns its details, decimal price, and location header. */
     @Test
     void shouldCreateProduct() {
         ProductResponse productResponse =
@@ -205,6 +207,10 @@ class ProductControllerTest {
                 .isEqualTo(productResponse.price());
     }
 
+    /**
+     * Verifies a creation request with missing product fields returns a validation problem
+     * response.
+     */
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
         ProductDto productDto = new ProductDto(null, null, null, BigDecimal.valueOf(1.00));
@@ -342,6 +348,7 @@ class ProductControllerTest {
                 .isEqualTo(product.getPrice());
     }
 
+    /** Verifies updating an unknown product returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
@@ -461,6 +468,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies the stock lookup flag is forwarded to the product service. */
     @Test
     void shouldFetchInStockWhenRequested() {
         String code = "code-xyz";
@@ -662,6 +670,7 @@ class ProductControllerTest {
         verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
     }
 
+    /** Verifies decimal price bounds select the price-range search with default pagination. */
     @Test
     void shouldSearchByPriceRangeOnly() {
         org.springframework.data.domain.Page<ProductResponse> page =
@@ -697,6 +706,9 @@ class ProductControllerTest {
                         BigDecimal.valueOf(50.0), BigDecimal.valueOf(150.0), 0, 10, "id", "asc");
     }
 
+    /**
+     * Verifies a term and decimal price bounds select the combined search with default pagination.
+     */
     @Test
     void shouldSearchByTermAndPriceRange() {
         org.springframework.data.domain.Page<ProductResponse> page =

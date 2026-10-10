@@ -142,6 +142,19 @@ public class ProductController implements ProductApi {
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
+    /**
+     * Searches products by a nonempty term, a complete price range, or both. Falls back to the full
+     * product listing when neither criterion is available.
+     *
+     * @param term optional search term
+     * @param minPrice lower price bound, used only when both bounds are present
+     * @param maxPrice upper price bound, used only when both bounds are present
+     * @param pageNo zero-based page index
+     * @param pageSize maximum products per page
+     * @param sortBy property used for sorting
+     * @param sortDir sort direction
+     * @return the matching page of products
+     */
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<PagedResult<ProductResponse>> searchProducts(

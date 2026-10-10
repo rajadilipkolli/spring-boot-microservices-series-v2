@@ -81,6 +81,10 @@ class ProductServiceTest {
         lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }
 
+    /**
+     * Verifies default batch generation saves new products with prices in range and creates outbox
+     * events.
+     */
     @Test
     void testGenerateProducts() {
         // Stubbing productMapper.toEntity()
@@ -150,6 +154,10 @@ class ProductServiceTest {
                         });
     }
 
+    /**
+     * Verifies an explicit batch size produces the requested number of new products with distinct
+     * codes.
+     */
     @Test
     void shouldGenerateRequestedBatchSize() {
         given(productMapper.toEntity(any(ProductRequest.class)))
@@ -202,6 +210,10 @@ class ProductServiceTest {
                         });
     }
 
+    /**
+     * Verifies a missing product is created through the service proxy with transactional save
+     * methods.
+     */
     @Test
     void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
         ProductRequest request =

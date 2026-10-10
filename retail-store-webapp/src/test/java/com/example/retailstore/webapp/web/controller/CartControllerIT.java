@@ -17,6 +17,9 @@ import org.springframework.mock.web.MockHttpSession;
 
 class CartControllerIT extends AbstractIntegrationTest {
 
+    /**
+     * Verifies a cart posted with CSRF protection can be retrieved from the same session.
+     */
     @Test
     void cartDataShouldBeStoredInSession() {
         MockHttpSession session = new MockHttpSession();

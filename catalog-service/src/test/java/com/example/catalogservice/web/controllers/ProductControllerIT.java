@@ -76,6 +76,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         registry.add("spring.webflux.base-path", () -> "");
     }
 
+    /**
+     * Resets cache, circuit breakers, messaging fixtures, and persisted products before each test.
+     */
     @BeforeEach
     void setUp() {
         redisConnectionFactory.getReactiveConnection().serverCommands().flushAll().block();
@@ -612,6 +615,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(Boolean.FALSE);
     }
 
+    /**
+     * Verifies product creation persists the initial version and publishes its decimal price
+     * through the outbox.
+     */
     @Test
     void shouldCreateNewProduct() throws JacksonException {
         ProductRequest productRequest =
@@ -691,6 +698,9 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         assertThat(publishedEvent.getVersion()).isGreaterThan(0);
     }
 
+    /**
+     * Verifies posting an existing product code returns a created response with a location header.
+     */
     @Test
     void shouldNotThrowConflictForCreateNewProduct() {
         ProductRequest productRequest =
@@ -797,6 +807,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(100.00);
     }
 
+    /**
+     * Verifies concurrent product updates yield both successful and optimistic-lock conflict
+     * responses.
+     */
     @Test
     void shouldReturn409WhenOptimisticLockingFailureExceptionThrown() {
         Product product = savedProductList.getFirst();
@@ -1126,6 +1140,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockWebServer.enqueue(mockResponse);
     }
 
+    /**
+     * Verifies saving a persisted product again updates its price without treating it as a new
+     * insert.
+     */
     @Test
     void shouldSaveProductTwiceAndNotBeTreatedAsNew() {
         Product product =

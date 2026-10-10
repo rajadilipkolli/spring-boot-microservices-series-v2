@@ -60,6 +60,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         });
     }
 
+    /** Verifies a new order event transfers its decimal total from available to reserved funds. */
     @Test
     void onEventReserveOrder() {
         OrderDto orderDto = getOrderDto("NEW");
@@ -108,6 +109,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                                         .isZero());
     }
 
+    /**
+     * Verifies an inventory rollback event releases reserved funds back to the available balance.
+     */
     @Test
     void onEventConfirmOrder() {
 
@@ -135,6 +139,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         });
     }
 
+    /** Verifies a payment-originated rollback event leaves customer balances unchanged. */
     @Test
     void onEventConfirmOrderNoRollBack() {
 
@@ -159,6 +164,13 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         });
     }
 
+    /**
+     * Creates an inventory-sourced order event for the current customer with one item priced at
+     * ten.
+     *
+     * @param status order status to place in the event
+     * @return an order event with a generated identifier
+     */
     private OrderDto getOrderDto(String status) {
 
         Faker faker = new Faker();

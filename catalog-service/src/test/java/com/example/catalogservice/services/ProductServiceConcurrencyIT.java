@@ -55,6 +55,10 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
     }
 
+    /**
+     * Verifies saving a duplicate code preserves the original product details and a single database
+     * row.
+     */
     @Test
     void whenMultipleRequestsSaveSameProduct_onlyOneIsSaved() {
         // Given: Product data for our test
@@ -114,6 +118,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
     }
 
+    /** Verifies saving an existing product returns it without a duplicate insertion error. */
     @Test
     void whenSavingExistingProduct_shouldReturnExistingOne() {
         // Given: An existing product
@@ -151,6 +156,7 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
     }
 
+    /** Verifies duplicate-product conflict details and idempotent saves for competing requests. */
     @Test
     void whenProductAlreadyExistsException_shouldReturn409Conflict() { // Given: Two product
         // requests with the same

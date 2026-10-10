@@ -92,6 +92,10 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /**
+     * Verifies an administrator can create a product and receive its decimal price from the
+     * catalog.
+     */
     @Test
     void testCreateProduct() {
         // Example stub for catalog service

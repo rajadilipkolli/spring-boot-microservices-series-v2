@@ -405,6 +405,9 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /**
+     * Verifies customer creation rejects an available balance with more than two fractional digits.
+     */
     @Test
     void shouldReturn400WhenAmountHasTooManyDecimalPlaces() throws Exception {
         CustomerRequest customerRequest =
@@ -481,6 +484,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /**
+     * Verifies customer order responses include identifiers, address fields, and decimal monetary
+     * values.
+     */
     @Test
     void shouldGetOrdersByCustomerId() throws Exception {
         Customer customer = customerList.getFirst();

@@ -86,6 +86,13 @@ public class OrderGeneratorService {
         }
     }
 
+    /**
+     * Builds two sample order items with distinct product codes and random quantities from one to
+     * five. Each unit price is a decimal amount equal to 100 times that item's quantity.
+     *
+     * @param idempotencyKey batch identifier embedded in both product codes
+     * @return the two generated order items
+     */
     private List<OrderItemRequest> generateOrderItems(String idempotencyKey) {
         int x = RAND.nextInt(5) + 1;
         int orderItem1 = RAND.nextInt(100);

@@ -48,6 +48,7 @@ class ProductCacheFailureTest {
             new Product().setId(1L).setProductCode("P001").setProductName("Fresh");
     private ProductService service;
 
+    /** Stubs shared cache storage and database generations for simulated Redis failures. */
     @BeforeEach
     void setUp() {
         service = newService();
@@ -110,6 +111,7 @@ class ProductCacheFailureTest {
                 .verifyComplete();
     }
 
+    /** Verifies a new cache generation hides stale entries after Redis eviction fails. */
     @Test
     void failedEvictionCannotExposeOldEntriesToAnotherNodeAfterRedisRecovers() {
         service.findProductByProductCode("P001", false).block();

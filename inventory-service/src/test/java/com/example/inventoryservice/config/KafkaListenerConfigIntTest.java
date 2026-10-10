@@ -52,6 +52,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                         });
     }
 
+    /** Verifies a catalog product event with a decimal price creates an inventory entry. */
     @Test
     void onSaveProductEvent() {
         inventoryJOOQRepository.deleteByProductCode("P001");

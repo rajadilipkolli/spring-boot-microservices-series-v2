@@ -56,6 +56,10 @@ class CreateOrderRequestTest {
         assertThat(this.json.parse(jsonContent)).isEqualTo(expected);
     }
 
+    /**
+     * Verifies adding a customer identifier preserves order item prices, quantities, and delivery
+     * address.
+     */
     @Test
     void testWithCustomerId() {
         // Setup

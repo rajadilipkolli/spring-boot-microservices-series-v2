@@ -448,6 +448,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andReturn();
         }
 
+        /**
+         * Verifies blank product codes, zero quantities, and zero prices produce field validation
+         * errors.
+         */
         @Test
         void shouldReturn400WhenOrderItemValidationFails() throws Exception {
             // Test invalid productCode (blank)
@@ -737,6 +741,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data").isArray());
     }
 
+    /** Verifies null prices and prices with more than two fractional digits are rejected. */
     @Test
     void shouldReturn400WhenOrderItemPriceIsInvalid() throws Exception {
         OrderRequest invalidScaleRequest =

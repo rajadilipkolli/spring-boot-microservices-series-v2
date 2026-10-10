@@ -6,6 +6,11 @@ import com.example.paymentservice.model.payload.OrderDto;
 import java.math.BigDecimal;
 
 public class TestData {
+    /**
+     * Creates a customer fixture with 1000 available, 100 reserved, and initial version zero.
+     *
+     * @return a new customer with decimal balances
+     */
     public static Customer getCustomer() {
         return new Customer()
                 .setId(1L)

@@ -39,6 +39,7 @@ class PaymentOrderManageServiceTest {
 
     @InjectMocks private PaymentOrderManageService orderManageService;
 
+    /** Verifies confirmation deducts the order total from reserved funds and saves the customer. */
     @Test
     void confirmWithValidOrder() {
         // Arrange
@@ -57,6 +58,13 @@ class PaymentOrderManageServiceTest {
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
+    /**
+     * Verifies inventory rollback restores funds while payment rollback leaves balances unchanged.
+     *
+     * @param source service that initiated the rollback
+     * @param amountAvailable expected available balance after rollback
+     * @param amountReserved expected reserved balance after rollback
+     */
     @ParameterizedTest
     @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
     void confirmWithRejectedOrder(
@@ -90,6 +98,7 @@ class PaymentOrderManageServiceTest {
                 .isThrownBy(() -> orderManageService.confirm(orderDto));
     }
 
+    /** Verifies a funded order transfers its total to reserved funds and is accepted by payment. */
     @Test
     void reserveWithValidOrderAccepted() {
         // Arrange
@@ -111,6 +120,7 @@ class PaymentOrderManageServiceTest {
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
+    /** Verifies an unaffordable order is rejected without changing either customer balance. */
     @Test
     void reserveWithValidOrderRejected() {
         // Arrange
@@ -132,6 +142,10 @@ class PaymentOrderManageServiceTest {
         verify(customerRepository, times(1)).save(any(Customer.class));
     }
 
+    /**
+     * Verifies reservation and confirmation preserve the exact balance changes for a fractional
+     * price.
+     */
     @Test
     void fractionalOrderTest() {
         // Arrange
@@ -162,6 +176,7 @@ class PaymentOrderManageServiceTest {
                 .isEqualByComparingTo(initialAvailable.subtract(BigDecimal.valueOf(19.99)));
     }
 
+    /** Verifies rolling back a fractional-price reservation restores both original balances. */
     @Test
     void rollbackFractionalOrderTest() {
         // Arrange
@@ -187,6 +202,7 @@ class PaymentOrderManageServiceTest {
         assertThat(customer.getAmountAvailable()).isEqualByComparingTo(initialAvailable);
     }
 
+    /** Verifies reservation handles order totals larger than the maximum integer value. */
     @Test
     void largeValueOrderTest() {
         // Arrange

@@ -30,6 +30,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean private InventoryServiceProxy inventoryServiceProxy;
 
+    /** Clears Redis and seeds a deterministic product for cache integration tests. */
     @BeforeEach
     void setUp() {
         redisOps.execute(connection -> connection.serverCommands().flushAll()).blockFirst();
@@ -59,6 +60,9 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .verifyComplete();
     }
 
+    /**
+     * Verifies case-insensitive cache hits and invalidation of the old code after a product rename.
+     */
     @Test
     void testFindProductByCodeIsCachedAndServedFromCache() {
         ProductResponse initialResponse =
@@ -99,6 +103,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .verify();
     }
 
+    /** Verifies product cache expiry and page generation changes after product mutations. */
     @Test
     void idCacheExpiresAndMutationsChangePageGeneration() {
         Product product = productRepository.findByProductCodeAllIgnoreCase("P001").block();

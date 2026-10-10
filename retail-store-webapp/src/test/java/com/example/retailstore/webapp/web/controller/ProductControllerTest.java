@@ -49,6 +49,9 @@ class ProductControllerTest {
 
     private PagedResult<ProductResponse> pagedResult;
 
+    /**
+     * Builds a single page of product response fixtures with decimal prices.
+     */
     @BeforeEach
     void setUp() {
         // Set up test data
@@ -167,6 +170,9 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.price", is(40.99)));
     }
 
+    /**
+     * Verifies an authenticated product creation request without a CSRF token is forbidden.
+     */
     @Test
     @WithMockUser
     void createProduct_shouldRejectRequestWithoutCsrfToken() throws Exception {

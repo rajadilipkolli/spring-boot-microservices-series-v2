@@ -14,6 +14,9 @@ class CustomerResponseTest {
     @Autowired
     private JacksonTester<CustomerResponse> json;
 
+    /**
+     * Verifies a fractional JSON balance is deserialized without losing its decimal value.
+     */
     @Test
     void shouldDeserializeAmountAvailableWithoutLoss() throws Exception {
         String json = """
