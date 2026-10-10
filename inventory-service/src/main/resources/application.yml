@@ -45,9 +45,6 @@ spring:
     web-application-type: servlet
   modulith:
     events:
-      jdbc:
-        schema-initialization:
-          enabled: true
       republish-outstanding-events-on-restart: true
       staleness:
         check-interval: 1m
