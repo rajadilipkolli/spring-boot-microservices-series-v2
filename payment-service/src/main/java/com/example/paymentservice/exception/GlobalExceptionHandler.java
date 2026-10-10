@@ -114,8 +114,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Converts an upstream HTTP server error to an HTTP 503 problem response with a generic
-     * order service unavailable message, a timestamp, and the request's correlation ID if present.
+     * Converts an upstream HTTP server error to an HTTP 503 problem response with a generic order
+     * service unavailable message, a timestamp, and the request's correlation ID if present.
      */
     @ExceptionHandler(HttpServerErrorException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderServiceError(

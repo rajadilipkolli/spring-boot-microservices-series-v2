@@ -126,8 +126,8 @@ class CustomerController {
      * @throws CustomerNotFoundException if the customer does not exist
      * @throws org.springframework.web.client.RestClientResponseException if the order service
      *     returns an HTTP error
-     * @throws org.springframework.web.client.ResourceAccessException if the order request fails
-     *     due to an I/O error
+     * @throws org.springframework.web.client.ResourceAccessException if the order request fails due
+     *     to an I/O error
      * @throws io.github.resilience4j.circuitbreaker.CallNotPermittedException if the order circuit
      *     breaker rejects the call
      */

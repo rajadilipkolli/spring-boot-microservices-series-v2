@@ -26,8 +26,8 @@ public class OrderProxyService {
      * @return the order service's page and pagination metadata unchanged
      * @throws org.springframework.web.client.RestClientResponseException if the order service
      *     returns an HTTP error
-     * @throws org.springframework.web.client.ResourceAccessException if the HTTP request fails
-     *     due to an I/O error
+     * @throws org.springframework.web.client.ResourceAccessException if the HTTP request fails due
+     *     to an I/O error
      * @throws io.github.resilience4j.circuitbreaker.CallNotPermittedException if the Spring-managed
      *     circuit breaker rejects the call
      */

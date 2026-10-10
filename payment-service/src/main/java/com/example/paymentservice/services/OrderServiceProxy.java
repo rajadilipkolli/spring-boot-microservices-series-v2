@@ -21,10 +21,10 @@ public interface OrderServiceProxy {
      * @param size requested number of orders per page
      * @param sort sort property and direction, such as {@code id,asc}
      * @return the decoded orders and pagination metadata supplied by the order service
-     * @throws org.springframework.web.client.RestClientResponseException if the service returns
-     *     an HTTP error
-     * @throws org.springframework.web.client.ResourceAccessException if the request fails due to
-     *     an I/O error
+     * @throws org.springframework.web.client.RestClientResponseException if the service returns an
+     *     HTTP error
+     * @throws org.springframework.web.client.ResourceAccessException if the request fails due to an
+     *     I/O error
      */
     @GetExchange("/api/orders/customer/{id}")
     PagedResult<OrderResponse> getOrdersByCustomerId(
