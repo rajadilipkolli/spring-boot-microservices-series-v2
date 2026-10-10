@@ -53,9 +53,18 @@ public interface ProductRepository
             String productName, String description, Pageable pageable);
 
     // Search by price range
+    /**
+     * Returns products within the inclusive unit-price bounds using the requested page and sort.
+     * Database errors propagate through the returned Flux.
+     */
     Flux<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     // Search by both term and price range
+    /**
+     * Returns case-insensitive name matches, or description matches within the inclusive unit-price
+     * bounds, using the requested page and sort. The price bounds apply only to description matches.
+     * Database errors propagate through the returned Flux.
+     */
     Flux<Product>
             findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
                     String productName,

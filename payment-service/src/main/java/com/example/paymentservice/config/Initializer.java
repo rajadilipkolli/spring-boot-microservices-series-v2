@@ -28,7 +28,8 @@ class Initializer implements CommandLineRunner {
     /**
      * Seeds random sample customers and creates the retail and Raja customers when absent. A
      * duplicate-key failure for Raja is ignored only if a second lookup confirms concurrent
-     * creation.
+     * creation. Exceptions while creating the retail customer are suppressed; batch insertion,
+     * lookup, and other Raja creation failures propagate.
      *
      * @param args unused command-line arguments
      */

@@ -24,6 +24,9 @@ public class CartController {
 
     private static final String CART_SESSION_KEY = "CART_SESSION_STATE";
 
+    /**
+     * Returns the session cart, storing an empty cart with a zero total and a new revision when absent.
+     */
     @GetMapping
     public CartState getCart(HttpSession session) {
         CartState cart = (CartState) session.getAttribute(CART_SESSION_KEY);

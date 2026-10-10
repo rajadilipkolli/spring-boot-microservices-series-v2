@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 public class CustomerMapper {
 
     /**
-     * Creates a customer with the request's contact details, balance, and separate address fields.
+     * Creates a customer with the request's contact details, available balance, and separate
+     * address fields, with a zero reserved balance.
      *
      * @param customerRequest customer details to copy
      * @return a new customer entity

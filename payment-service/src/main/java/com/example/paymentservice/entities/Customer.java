@@ -75,10 +75,12 @@ public class Customer {
         return this.country;
     }
 
+    /** Returns the available balance, initially zero. */
     public java.math.BigDecimal getAmountAvailable() {
         return this.amountAvailable;
     }
 
+    /** Returns the balance reserved for orders, initially zero. */
     public java.math.BigDecimal getAmountReserved() {
         return this.amountReserved;
     }
@@ -173,11 +175,23 @@ public class Customer {
         return this;
     }
 
+    /**
+     * Stores the available balance without validation or rounding.
+     *
+     * @param amountAvailable the balance to retain, including null
+     * @return this customer for chaining
+     */
     public Customer setAmountAvailable(final BigDecimal amountAvailable) {
         this.amountAvailable = amountAvailable;
         return this;
     }
 
+    /**
+     * Stores the balance reserved for orders without validation or rounding.
+     *
+     * @param amountReserved the balance to retain, including null
+     * @return this customer for chaining
+     */
     public Customer setAmountReserved(final BigDecimal amountReserved) {
         this.amountReserved = amountReserved;
         return this;

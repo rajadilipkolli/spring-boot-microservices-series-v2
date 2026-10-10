@@ -40,7 +40,9 @@ public class RegistrationController {
 
     /**
      * Registers a Keycloak user, then gets or creates the payment customer using the supplied
-     * address components and an initial available balance of 10,000.
+     * address components and an initial available balance of 10,000. Keycloak and customer-service
+     * failures propagate, including duplicate-user errors. A customer-service failure does not undo
+     * the completed Keycloak registration.
      *
      * @param request validated user and customer registration details
      * @return a success message after both service calls complete

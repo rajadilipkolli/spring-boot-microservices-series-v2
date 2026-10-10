@@ -44,6 +44,12 @@ public class PaymentOrderManageService {
         this.paymentsFailedCounter = meterRegistry.counter("payments_failed");
     }
 
+    /**
+     * Sums line totals after each is rounded to two decimal places using HALF_UP.
+     *
+     * @return the total with scale two, or 0.00 for an empty item list
+     * @throws NullPointerException if the order, item list, an item, its price, or its quantity is null
+     */
     private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
         return orderDto.items().stream()
                 .map(OrderDto.OrderItemDto::getPrice)
@@ -52,10 +58,14 @@ public class PaymentOrderManageService {
     }
 
     /**
-     * Reserves the customer's available balance and publishes the payment outcome.
+     * Moves the sum of individually rounded line totals from available to reserved balance when
+     * sufficient funds exist, including an exact balance match. Otherwise, rejects the order
+     * without changing balances. Saves the customer and sends the outcome to Kafka in either case.
+     * Database, optimistic locking, and synchronous send failures propagate; asynchronous delivery
+     * is not awaited.
      *
      * @param orderDto order whose payment should be reserved
-     * @return the order with its payment status and source
+     * @return the order with status ACCEPT or REJECT and source PAYMENT
      * @throws CustomerNotFoundException if the order's customer does not exist
      */
     @Timed(percentiles = 1.0)
@@ -103,6 +113,15 @@ public class PaymentOrderManageService {
         return orderDto;
     }
 
+    /**
+     * Deducts the sum of individually rounded line totals from reserved balance for CONFIRMED
+     * orders. For ROLLBACK orders from a source other than PAYMENT, also restores that amount to
+     * available balance. Other status/source combinations leave balances unchanged. Saves the
+     * customer in every case; database and optimistic locking failures propagate.
+     *
+     * @param orderDto the order outcome and items used to calculate the amount
+     * @throws CustomerNotFoundException if the order's customer does not exist
+     */
     @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {
         log.debug(

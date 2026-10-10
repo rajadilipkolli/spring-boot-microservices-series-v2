@@ -89,10 +89,17 @@ public class Product implements Serializable, Persistable<Long> {
         return this;
     }
 
+    /** Returns the stored unit price, or null if unset. */
     public java.math.BigDecimal getPrice() {
         return price;
     }
 
+    /**
+     * Stores the unit price without validation or rounding.
+     *
+     * @param price the unit price to retain, or null to clear it
+     * @return this product for chaining
+     */
     public Product setPrice(java.math.BigDecimal price) {
         this.price = price;
         return this;

@@ -23,6 +23,20 @@ import reactor.core.publisher.Mono;
 @Tag(name = "product")
 public interface ProductApi {
 
+    /**
+     * Searches by a nonempty term, a complete price range, or both; returns all products when neither
+     * is supplied. A lone price bound is ignored. With both criteria, name matches bypass the price
+     * range while description matches must fall within it. Service errors propagate to the caller.
+     *
+     * @param term case-insensitive name or description text; null or empty disables term filtering
+     * @param minPrice inclusive lower unit-price bound, used only when maxPrice is also present
+     * @param maxPrice inclusive upper unit-price bound, used only when minPrice is also present
+     * @param pageNo zero-based page index
+     * @param pageSize maximum number of products per page, greater than zero
+     * @param sortBy product property to sort by
+     * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
+     * @return the product page with inventory availability
+     */
     @Operation(
             summary = "Search products by term, price range, or both",
             description = "Allows searching for products based on a text term and/or price range",

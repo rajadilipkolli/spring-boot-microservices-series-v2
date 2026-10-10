@@ -25,6 +25,11 @@ public record OrderItemDto(
 
     @Serial private static final long serialVersionUID = 1L;
 
+    /**
+     * Returns the unit price multiplied by quantity, rounded to two decimal places using HALF_UP.
+     *
+     * @throws NullPointerException if the unit price or quantity is null
+     */
     public BigDecimal getPrice() {
         return this.productPrice()
                 .multiply(BigDecimal.valueOf(this.quantity()))
