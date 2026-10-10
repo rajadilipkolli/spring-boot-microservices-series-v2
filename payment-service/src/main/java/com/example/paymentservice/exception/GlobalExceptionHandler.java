@@ -113,6 +113,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /**
+     * Converts an upstream HTTP server error to an HTTP 503 problem response with a generic
+     * order service unavailable message, a timestamp, and the request's correlation ID if present.
+     */
     @ExceptionHandler(HttpServerErrorException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderServiceError(
             HttpServerErrorException ex, WebRequest request) {
@@ -131,6 +135,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail);
     }
 
+    /**
+     * Converts a rejected circuit breaker call to an HTTP 503 problem response reporting an open
+     * order service circuit, with a timestamp and the request's correlation ID if present.
+     */
     @ExceptionHandler(CallNotPermittedException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleCircuitBreakerOpen(
             CallNotPermittedException ex, WebRequest request) {

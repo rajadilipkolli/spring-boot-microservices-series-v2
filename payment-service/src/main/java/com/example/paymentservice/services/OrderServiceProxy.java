@@ -14,6 +14,18 @@ import org.springframework.web.service.annotation.HttpExchange;
         contentType = MediaType.APPLICATION_JSON_VALUE)
 public interface OrderServiceProxy {
 
+    /**
+     * Retrieves a page of customer orders from the order service over HTTP.
+     *
+     * @param page zero-based page index
+     * @param size requested number of orders per page
+     * @param sort sort property and direction, such as {@code id,asc}
+     * @return the decoded orders and pagination metadata supplied by the order service
+     * @throws org.springframework.web.client.RestClientResponseException if the service returns
+     *     an HTTP error
+     * @throws org.springframework.web.client.ResourceAccessException if the request fails due to
+     *     an I/O error
+     */
     @GetExchange("/api/orders/customer/{id}")
     PagedResult<OrderResponse> getOrdersByCustomerId(
             @PathVariable("id") Long id,

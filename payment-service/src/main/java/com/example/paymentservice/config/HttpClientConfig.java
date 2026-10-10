@@ -12,6 +12,10 @@ import org.springframework.web.service.registry.ImportHttpServices;
 @ImportHttpServices(group = "order", types = OrderServiceProxy.class)
 class HttpClientConfig {
 
+    /**
+     * Returns a configurer that applies the configured base URL and observation registry to
+     * clients in the {@code order} HTTP service group.
+     */
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
