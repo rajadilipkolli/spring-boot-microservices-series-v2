@@ -24,6 +24,14 @@ import org.springframework.web.service.registry.ImportHttpServices;
 })
 class ClientsConfig {
 
+    /**
+     * Configures service clients with the gateway URL, JSON headers, OAuth2, and observations.
+     *
+     * @param observationRegistry registry for HTTP client observations
+     * @param applicationProperties configuration containing the API gateway URL
+     * @param authorizedClientManager manager used to authorize outgoing OAuth2 requests
+     * @return configurer applied to the imported HTTP service clients
+     */
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry,

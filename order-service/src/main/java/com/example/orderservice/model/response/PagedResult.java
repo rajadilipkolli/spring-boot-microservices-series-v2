@@ -19,6 +19,13 @@ public record PagedResult<T>(
         @JsonProperty("isLast") boolean isLast,
         @JsonProperty("hasNext") boolean hasNext,
         @JsonProperty("hasPrevious") boolean hasPrevious) {
+    /**
+     * Combines supplied data with the source page's metadata, using a one-based page number.
+     *
+     * @param <R> element type of the source page
+     * @param page source of pagination metadata
+     * @param data mapped content for this page
+     */
     public <R> PagedResult(Page<R> page, List<T> data) {
         this(
                 data,

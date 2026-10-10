@@ -24,6 +24,12 @@ public class KeycloakRegistrationService {
     private final Keycloak keycloak;
     private final String realm;
 
+    /**
+     * Builds an admin client authenticated against the master realm for user registration.
+     *
+     * @param props admin credentials, client configuration, and target registration realm
+     * @param url Keycloak server URL
+     */
     @Autowired
     public KeycloakRegistrationService(KeycloakProperties props, @Value("${OAUTH2_SERVER_URL}") String url) {
         this(
@@ -39,11 +45,27 @@ public class KeycloakRegistrationService {
                         .build());
     }
 
+    /**
+     * Creates a registration service using an existing admin client.
+     *
+     * @param props configuration containing the target registration realm
+     * @param keycloak client used to create users and assign realm roles
+     */
     KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloak) {
         this.realm = props.getRealm();
         this.keycloak = keycloak;
     }
 
+    /**
+     * Creates an enabled account and then assigns the realm's {@code user} role.
+     *
+     * <p>Role assignment occurs after account creation; a role assignment failure leaves the account
+     * in Keycloak. The user creation response is closed on success or failure.
+     *
+     * @param request profile and password for the new account
+     * @throws UserAlreadyExistsException if user creation returns HTTP 409
+     * @throws KeyCloakException if user creation returns another status of 400 or higher
+     */
     public void registerUser(RegistrationRequest request) {
         UserRepresentation user = getUserRepresentation(request);
 
@@ -64,6 +86,12 @@ public class KeycloakRegistrationService {
         }
     }
 
+    /**
+     * Maps registration details to an enabled Keycloak user with a non-temporary password.
+     *
+     * @param request profile and password for the new account
+     * @return user representation ready for creation
+     */
     private static @NonNull UserRepresentation getUserRepresentation(RegistrationRequest request) {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(request.username());

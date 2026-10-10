@@ -39,6 +39,15 @@ public class OutboxService {
         this.productMapper = productMapper;
     }
 
+    /**
+     * Serializes the payload and saves a pending outbox event, mapping products to DTOs first.
+     *
+     * @param aggregateType type of aggregate that produced the event
+     * @param aggregateId identifier of the aggregate
+     * @param eventType type of event to publish
+     * @param payload event data to serialize as JSON
+     * @return a publisher that saves and emits the new event on subscription
+     */
     @Transactional
     public Mono<OutboxEvent> createOutboxEvent(
             String aggregateType, String aggregateId, String eventType, Object payload) {

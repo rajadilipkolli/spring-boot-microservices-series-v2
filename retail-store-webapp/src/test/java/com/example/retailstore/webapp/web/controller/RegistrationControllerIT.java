@@ -28,6 +28,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final String TEST_ADDRESS_LINE = "Test Address";
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
 
+    /** Removes accounts created by successful and duplicate registration scenarios after each test. */
     @AfterEach
     void cleanupUsers() {
         deleteUsers(TEST_USERNAME);
@@ -261,6 +262,11 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .contains("already taken");
     }
 
+    /**
+     * Deletes test accounts whose usernames exactly match the supplied value.
+     *
+     * @param username username to remove from the test realm
+     */
     private void deleteUsers(String username) {
         // Clean up Keycloak
         Keycloak keycloakAdminClient = keycloakContainer.getKeycloakAdminClient();

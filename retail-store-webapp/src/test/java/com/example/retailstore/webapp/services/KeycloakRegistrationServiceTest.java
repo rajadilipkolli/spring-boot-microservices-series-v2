@@ -71,12 +71,14 @@ class KeycloakRegistrationServiceTest {
 
     private KeycloakRegistrationService svc;
 
+    /** Creates the service with a mocked admin client and the retailstore realm. */
     @BeforeEach
     void beforeEach() {
         given(keycloakProperties.getRealm()).willReturn("retailstore");
         svc = new KeycloakRegistrationService(keycloakProperties, keycloak);
     }
 
+    /** Verifies user details, permanent credentials, role assignment, and response cleanup. */
     @Test
     void registerSuccessPathPostsTokenAndUser() {
         RegistrationRequest request = new RegistrationRequest(
@@ -128,6 +130,7 @@ class KeycloakRegistrationServiceTest {
         assertThat(captured.getCredentials().get(0).isTemporary()).isFalse();
     }
 
+    /** Verifies HTTP 409 raises a duplicate-user error, skips roles, and closes the response. */
     @Test
     void throwsUserAlreadyExistsWhen409() {
         RegistrationRequest request = new RegistrationRequest(
@@ -156,6 +159,7 @@ class KeycloakRegistrationServiceTest {
         verify(response).close();
     }
 
+    /** Verifies HTTP 500 raises a registration error, skips roles, and closes the response. */
     @Test
     void throwsKeyCloakExceptionWhenOtherError() {
         RegistrationRequest request = new RegistrationRequest(
