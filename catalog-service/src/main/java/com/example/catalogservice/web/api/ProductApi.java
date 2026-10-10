@@ -25,9 +25,10 @@ import reactor.core.publisher.Mono;
 public interface ProductApi {
 
     /**
-     * Searches by a nonempty term, a complete price range, or both; returns all products when neither
-     * is supplied. A lone price bound is ignored. With both criteria, name matches bypass the price
-     * range while description matches must fall within it. Service errors propagate to the caller.
+     * Searches by a nonempty term, a complete price range, or both; returns all products when
+     * neither is supplied. A lone price bound is ignored. With both criteria, name matches bypass
+     * the price range while description matches must fall within it. Service errors propagate to
+     * the caller.
      *
      * @param term case-insensitive name or description text; null or empty disables term filtering
      * @param minPrice inclusive lower unit-price bound, used only when maxPrice is also present

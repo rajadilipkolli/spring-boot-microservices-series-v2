@@ -62,8 +62,8 @@ public interface ProductRepository
     // Search by both term and price range
     /**
      * Returns case-insensitive name matches, or description matches within the inclusive unit-price
-     * bounds, using the requested page and sort. The price bounds apply only to description matches.
-     * Database errors propagate through the returned Flux.
+     * bounds, using the requested page and sort. The price bounds apply only to description
+     * matches. Database errors propagate through the returned Flux.
      */
     Flux<Product>
             findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(

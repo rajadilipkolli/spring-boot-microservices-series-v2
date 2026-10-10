@@ -430,9 +430,10 @@ public class ProductService {
     }
 
     /**
-     * Returns a product page within the inclusive price range, enriched with inventory availability.
-     * Missing inventory entries, including those omitted by the inventory fallback, are out of stock.
-     * Database and unhandled inventory errors propagate through the returned Mono.
+     * Returns a product page within the inclusive price range, enriched with inventory
+     * availability. Missing inventory entries, including those omitted by the inventory fallback,
+     * are out of stock. Database and unhandled inventory errors propagate through the returned
+     * Mono.
      *
      * @param minPrice inclusive lower unit-price bound
      * @param maxPrice inclusive upper unit-price bound
@@ -440,8 +441,8 @@ public class ProductService {
      * @param pageSize maximum number of products to return, greater than zero
      * @param sortBy product property to sort by
      * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
-     * @return the matching page; pagination totals use the fetched page size rather than a count
-     *     of all matches
+     * @return the matching page; pagination totals use the fetched page size rather than a count of
+     *     all matches
      * @throws IllegalArgumentException if the page index is negative, the page size is not
      *     positive, or the sort property is empty
      */
@@ -470,8 +471,8 @@ public class ProductService {
     /**
      * Returns a page of case-insensitive name matches, or description matches within the inclusive
      * price range, enriched with inventory availability. Name matches are not price-filtered.
-     * Missing inventory entries, including those omitted by the inventory fallback, are out of stock.
-     * Database and unhandled inventory errors propagate through the returned Mono.
+     * Missing inventory entries, including those omitted by the inventory fallback, are out of
+     * stock. Database and unhandled inventory errors propagate through the returned Mono.
      *
      * @param term text to match in the product name or description
      * @param minPrice inclusive lower unit-price bound
@@ -480,8 +481,8 @@ public class ProductService {
      * @param pageSize maximum number of products to return, greater than zero
      * @param sortBy product property to sort by
      * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
-     * @return the matching page; pagination totals use the fetched page size rather than a count
-     *     of all matches
+     * @return the matching page; pagination totals use the fetched page size rather than a count of
+     *     all matches
      * @throws IllegalArgumentException if the page index is negative, the page size is not
      *     positive, or the sort property is empty
      */

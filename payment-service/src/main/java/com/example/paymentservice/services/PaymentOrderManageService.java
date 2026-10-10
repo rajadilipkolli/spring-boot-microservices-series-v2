@@ -48,7 +48,8 @@ public class PaymentOrderManageService {
      * Sums line totals after each is rounded to two decimal places using HALF_UP.
      *
      * @return the total with scale two, or 0.00 for an empty item list
-     * @throws NullPointerException if the order, item list, an item, its price, or its quantity is null
+     * @throws NullPointerException if the order, item list, an item, its price, or its quantity is
+     *     null
      */
     private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
         return orderDto.items().stream()
