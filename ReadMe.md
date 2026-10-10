@@ -741,7 +741,7 @@ import static org.hamcrest.Matchers.closeTo;
 // .andExpected(jsonPath("$.totalPrice").value(100.00))
 
 // ✅ Do this instead:
-.andExpect(jsonPath("$.totalPrice").value(closeTo(new BigDecimal("100.00"),BigDecimal.valueOf("0.01"))))
+.andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
 ```
 
 </details>
