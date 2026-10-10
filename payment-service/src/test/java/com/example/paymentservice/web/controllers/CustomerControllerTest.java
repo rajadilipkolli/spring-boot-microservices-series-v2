@@ -65,21 +65,36 @@ class CustomerControllerTest {
                                 .setId(1L)
                                 .setName("First Customer")
                                 .setEmail("first@customer.email")
-                                .setAddress("First Address")
+                                .setAddressLine1("First Address")
+                                .setAddressLine2("Second Address")
+                                .setCity("City")
+                                .setState("State")
+                                .setZipCode("12345")
+                                .setCountry("Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setId(2L)
                                 .setName("Second Customer")
                                 .setEmail("second@customer.email")
-                                .setAddress("Second Address")
+                                .setAddressLine1("Second Address")
+                                .setAddressLine2("Second Address")
+                                .setCity("City")
+                                .setState("State")
+                                .setZipCode("12345")
+                                .setCountry("Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setId(3L)
                                 .setName("Third Customer")
                                 .setEmail("third@customer.email")
-                                .setAddress("Third Address")
+                                .setAddressLine1("Third Address")
+                                .setAddressLine2("Third Address")
+                                .setCity("City")
+                                .setState("State")
+                                .setZipCode("12345")
+                                .setCountry("Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0));
     }
@@ -115,7 +130,12 @@ class CustomerControllerTest {
                                         customer.getName(),
                                         customer.getEmail(),
                                         customer.getPhone(),
-                                        customer.getAddress(),
+                                        customer.getAddressLine1(),
+                                        customer.getAddressLine2(),
+                                        customer.getCity(),
+                                        customer.getState(),
+                                        customer.getZipCode(),
+                                        customer.getCountry(),
                                         customer.getAmountAvailable()))
                 .toList();
     }
@@ -133,6 +153,11 @@ class CustomerControllerTest {
                             "junit@email.com",
                             "9876543210",
                             "junitAddress",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
                             100);
             given(customerService.findCustomerById(customerId))
                     .willReturn(Optional.of(customerResponse));
@@ -187,7 +212,18 @@ class CustomerControllerTest {
         void shouldFindCustomerByEmail() throws Exception {
             String email = "junit@email.com";
             CustomerResponse customerResponse =
-                    new CustomerResponse(1L, "text 1", email, "9876543210", "junitAddress", 100);
+                    new CustomerResponse(
+                            1L,
+                            "text 1",
+                            email,
+                            "9876543210",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            100);
             given(customerService.findCustomerByEmail(email))
                     .willReturn(Optional.of(customerResponse));
 
@@ -245,16 +281,26 @@ class CustomerControllerTest {
                             "junitName",
                             "email@junit.com",
                             "1234567890",
-                            "junitAddress",
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
                             10);
             CustomerResponse customerResponse =
                     new CustomerResponse(
-                            1L, "junitName", "email@junit.com", "9876543210", "junitAddress", 10);
+                            1L,
+                            "junitName",
+                            "email@junit.com",
+                            "9876543210",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            10);
             given(customerService.saveCustomer(any(CustomerRequest.class)))
                     .willReturn(customerResponse);
             mockMvc.perform(
@@ -286,11 +332,20 @@ class CustomerControllerTest {
                                     is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
-                    .andExpect(jsonPath("$.violations", hasSize(3)))
-                    .andExpect(jsonPath("$.violations[0].field", is("email")))
-                    .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
-                    .andExpect(jsonPath("$.violations[1].field", is("name")))
-                    .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
+                    .andExpect(jsonPath("$.violations", hasSize(8)))
+                    .andExpect(jsonPath("$.violations[0].field", is("addressLine1")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Address Line 1 cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[1].field", is("city")))
+                    .andExpect(jsonPath("$.violations[1].message", is("City cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[2].field", is("country")))
+                    .andExpect(jsonPath("$.violations[2].message", is("Country cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[3].field", is("email")))
+                    .andExpect(jsonPath("$.violations[3].message", is("Email cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[4].field", is("name")))
+                    .andExpect(jsonPath("$.violations[4].message", is("Name cannot be Blank")))
                     .andReturn();
         }
     }
@@ -307,12 +362,12 @@ class CustomerControllerTest {
                             "customerUpdatedName",
                             "junitEmail@email.com",
                             "1234567890",
-                            "junitAddress",
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
                             100);
 
             given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
@@ -322,7 +377,12 @@ class CustomerControllerTest {
                                     "customerUpdatedName",
                                     "junitEmail@email.com",
                                     "9876543210",
-                                    "junitAddress",
+                                    "junitAddress1",
+                                    "junitAddress2",
+                                    "City",
+                                    "State",
+                                    "12345",
+                                    "Country",
                                     100));
 
             mockMvc.perform(
@@ -342,12 +402,12 @@ class CustomerControllerTest {
                             "customerUpdatedName",
                             "junitEmail@email.com",
                             "1234567890",
-                            "junitAddress",
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
                             100);
             given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
                     .willThrow(new CustomerNotFoundException(customerId));
@@ -382,7 +442,12 @@ class CustomerControllerTest {
                             "Some text",
                             "junit@email.com",
                             "9876543210",
-                            "junitAddress",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
                             0);
             given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
             doNothing().when(customerService).deleteCustomerById(customerId);

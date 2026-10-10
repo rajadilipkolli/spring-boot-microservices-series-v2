@@ -1,8 +1,4 @@
 const customerDetails = document.getElementById('customer-details').dataset;
-const getAddressPart = (index, defaultValue) => {
-    const part = customerDetails.address?.split(',')[index]?.trim();
-    return part || defaultValue;
-};
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('initData', () => ({
@@ -14,12 +10,12 @@ document.addEventListener('alpine:init', () => {
                 phone: customerDetails.phone || "999999999999"
             },
             deliveryAddress: {
-                addressLine1: getAddressPart(0, null) || "KPHB",
-                addressLine2: getAddressPart(1, '') || "Kukatpally",
-                city: getAddressPart(2, '') || "Hyderabad",
-                state: getAddressPart(3, '') || "TS",
-                zipCode: getAddressPart(4, '') || "500072",
-                country: getAddressPart(5, '') || "India"
+                addressLine1: customerDetails.addressLine1 || "KPHB",
+                addressLine2: customerDetails.addressLine2,
+                city: customerDetails.city || "Hyderabad",
+                state: customerDetails.state || "TS",
+                zipCode: customerDetails.zipCode || "500072",
+                country: customerDetails.country || "India"
             }
         },
 

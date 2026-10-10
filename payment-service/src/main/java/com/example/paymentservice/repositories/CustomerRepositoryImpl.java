@@ -59,7 +59,12 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                         CUSTOMERS.NAME,
                         CUSTOMERS.EMAIL,
                         CUSTOMERS.PHONE,
-                        CUSTOMERS.ADDRESS,
+                        CUSTOMERS.ADDRESS_LINE1,
+                        CUSTOMERS.ADDRESS_LINE2,
+                        CUSTOMERS.CITY,
+                        CUSTOMERS.STATE,
+                        CUSTOMERS.ZIP_CODE,
+                        CUSTOMERS.COUNTRY,
                         CUSTOMERS.AMOUNT_AVAILABLE)
                 .from(CUSTOMERS)
                 .where(CUSTOMERS.NAME.eq(name))
@@ -109,13 +114,18 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                     .returningResult()
                     .fetchOneInto(Customer.class);
         } else {
-            Integer currentVersion = customer.getVersion() == null ? 0 : customer.getVersion();
+            int currentVersion = customer.getVersion() == null ? 0 : customer.getVersion();
             Customer updatedCustomer =
                     dslContext
                             .update(CUSTOMERS)
                             .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
                             .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
-                            .set(CUSTOMERS.ADDRESS, customer.getAddress())
+                            .set(CUSTOMERS.ADDRESS_LINE1, customer.getAddressLine1())
+                            .set(CUSTOMERS.ADDRESS_LINE2, customer.getAddressLine2())
+                            .set(CUSTOMERS.STATE, customer.getState())
+                            .set(CUSTOMERS.CITY, customer.getCity())
+                            .set(CUSTOMERS.ZIP_CODE, customer.getZipCode())
+                            .set(CUSTOMERS.COUNTRY, customer.getCountry())
                             .set(CUSTOMERS.NAME, customer.getName())
                             .set(CUSTOMERS.EMAIL, customer.getEmail())
                             .set(CUSTOMERS.PHONE, customer.getPhone())
@@ -150,6 +160,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
             }
             if (customer.getVersion() == null) {
                 customer.setVersion(0);
+            } else {
+                customer.setVersion(customer.getVersion() + 1);
             }
         }
         InsertSetMoreStep<CustomersRecord> insertStepN =

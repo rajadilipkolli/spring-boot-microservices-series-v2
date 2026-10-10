@@ -8,7 +8,10 @@
 <div layout:fragment="content">
     <div id="customer-details" x-data="initData()"
          th:data-name="${customer?.name}" th:data-email="${customer?.email}"
-         th:data-phone="${customer?.phone}" th:data-address="${customer?.address}">
+         th:data-phone="${customer?.phone}" th:data-address-line1="${customer?.addressLine1}"
+         th:data-address-line2="${customer?.addressLine2}" th:data-address-city="${customer?.city}"
+         th:data-address-state="${customer?.state}" th:data-address-zip="${customer?.zipCode}"
+         th:data-address-country="${customer?.country}">
         <div class="col-md-8 offset-md-2">
 
             <div x-show="cart.items.length == 0">

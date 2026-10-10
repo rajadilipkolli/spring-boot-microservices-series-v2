@@ -9,7 +9,17 @@ public class Customer {
 
     private String email;
 
-    private String address;
+    private String addressLine1;
+
+    private String addressLine2;
+
+    private String city;
+
+    private String state;
+
+    private String zipCode;
+
+    private String country;
 
     private String phone;
 
@@ -33,8 +43,28 @@ public class Customer {
         return this.email;
     }
 
-    public String getAddress() {
-        return this.address;
+    public String getAddressLine1() {
+        return this.addressLine1;
+    }
+
+    public String getAddressLine2() {
+        return this.addressLine2;
+    }
+
+    public String getCity() {
+        return this.city;
+    }
+
+    public String getState() {
+        return this.state;
+    }
+
+    public String getZipCode() {
+        return this.zipCode;
+    }
+
+    public String getCountry() {
+        return this.country;
     }
 
     public double getAmountAvailable() {
@@ -60,8 +90,33 @@ public class Customer {
         return this;
     }
 
-    public Customer setAddress(final String address) {
-        this.address = address;
+    public Customer setAddressLine1(final String addressLine1) {
+        this.addressLine1 = addressLine1;
+        return this;
+    }
+
+    public Customer setAddressLine2(final String addressLine2) {
+        this.addressLine2 = addressLine2;
+        return this;
+    }
+
+    public Customer setCity(final String city) {
+        this.city = city;
+        return this;
+    }
+
+    public Customer setState(final String state) {
+        this.state = state;
+        return this;
+    }
+
+    public Customer setZipCode(final String zipCode) {
+        this.zipCode = zipCode;
+        return this;
+    }
+
+    public Customer setCountry(final String country) {
+        this.country = country;
         return this;
     }
 
@@ -109,8 +164,18 @@ public class Customer {
                 + this.getEmail()
                 + ", phone="
                 + this.getPhone()
-                + ", address="
-                + this.getAddress()
+                + ", addressLine1="
+                + this.getAddressLine1()
+                + ", addressLine2="
+                + this.getAddressLine2()
+                + ", city="
+                + this.getCity()
+                + ", state="
+                + this.getState()
+                + ", zipCode="
+                + this.getZipCode()
+                + ", country="
+                + this.getCountry()
                 + ", amountAvailable="
                 + this.getAmountAvailable()
                 + ", amountReserved="

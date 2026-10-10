@@ -26,7 +26,12 @@ class CustomerRepositoryImplTest extends AbstractIntegrationTest {
                 new Customer()
                         .setName("Test User")
                         .setEmail("test@example.com")
-                        .setAddress("123 Test St")
+                        .setAddressLine1("123 Test St")
+                        .setAddressLine2("Apt 4B")
+                        .setCity("Testville")
+                        .setState("TS")
+                        .setZipCode("12345")
+                        .setCountry("Testland")
                         .setPhone("123-456-7890")
                         .setAmountAvailable(100.0)
                         .setAmountReserved(0.0);

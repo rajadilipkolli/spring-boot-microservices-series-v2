@@ -79,7 +79,7 @@ class CustomerController {
         CustomerResponse response = customerService.saveCustomer(customerRequest);
         URI location =
                 ServletUriComponentsBuilder.fromCurrentRequest()
-                        .path("/api/customers/{id}")
+                        .path("/{id}")
                         .buildAndExpand(response.customerId())
                         .toUri();
         return ResponseEntity.created(location).body(response);

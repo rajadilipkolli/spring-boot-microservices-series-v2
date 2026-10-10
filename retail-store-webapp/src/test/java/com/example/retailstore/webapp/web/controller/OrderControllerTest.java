@@ -109,7 +109,17 @@ class OrderControllerTest {
 
         // Set up customer response
         customerResponse = new CustomerResponse(
-                1L, "Test User", "test@example.com", "1234567890", "123 Test St,Test City,TS 12345", 5000);
+                1L,
+                "Test User",
+                "test@example.com",
+                "1234567890",
+                "123 Test St",
+                null,
+                "Test City",
+                "TS",
+                "12345",
+                "US",
+                5000);
 
         // Set up order confirmation
         orderConfirmation = new OrderConfirmationDTO(123L, 1L, "NEW");

@@ -4,6 +4,7 @@ package com.example.paymentservice.web.controllers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,21 +39,36 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .setName("First Customer")
                                 .setEmail("first@customer.email")
                                 .setPhone("9876543210")
-                                .setAddress("First Address")
+                                .setAddressLine1("First Address")
+                                .setAddressLine2("First Address Line 2")
+                                .setCity("First City")
+                                .setState("First State")
+                                .setZipCode("12345")
+                                .setCountry("First Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Second Customer")
                                 .setEmail("second@customer.email")
                                 .setPhone("9876543210")
-                                .setAddress("Second Address")
+                                .setAddressLine1("Second Address")
+                                .setAddressLine2("Second Address Line 2")
+                                .setCity("Second City")
+                                .setState("Second State")
+                                .setZipCode("12345")
+                                .setCountry("Second Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0),
                         new Customer()
                                 .setName("Third Customer")
                                 .setEmail("third@customer.email")
                                 .setPhone("9876543210")
-                                .setAddress("Third Address")
+                                .setAddressLine1("Third Address")
+                                .setAddressLine2("Third Address Line 2")
+                                .setCity("Third City")
+                                .setState("Third State")
+                                .setZipCode("12345")
+                                .setCountry("Third Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(0));
         customerList = customerRepository.saveAll(customerList);
@@ -87,7 +103,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
@@ -99,7 +120,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -122,7 +143,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
@@ -155,9 +181,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email().toLowerCase())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(
-                        jsonPath(
-                                "$.address", is("First Address,,Hyderabad,Telangana,500081,India")))
+                .andExpect(jsonPath("$.addressLine1", is("First Address")))
+                .andExpect(jsonPath("$.addressLine2", is(nullValue())))
+                .andExpect(jsonPath("$.city", is("Hyderabad")))
+                .andExpect(jsonPath("$.state", is("Telangana")))
+                .andExpect(jsonPath("$.zipCode", is("500081")))
+                .andExpect(jsonPath("$.country", is("India")))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
@@ -181,7 +210,8 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                             assertThat(customerResponse.name()).isEqualTo(customer.getName());
                             assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
                             assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
-                            assertThat(customerResponse.address()).isEqualTo(customer.getAddress());
+                            assertThat(customerResponse.addressLine1())
+                                    .isEqualTo(customer.getAddressLine1());
                             assertThat(customerResponse.amountAvailable())
                                     .isEqualTo(customer.getAmountAvailable());
                         });
@@ -199,12 +229,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         customer.getName(),
                         customer.getEmail(),
                         customer.getPhone(),
-                        customer.getAddress(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        customer.getAddressLine1(),
+                        customer.getAddressLine2(),
+                        customer.getCity(),
+                        customer.getState(),
+                        customer.getZipCode(),
+                        customer.getCountry(),
                         customer.getAmountAvailable());
         this.mockMvc
                 .perform(
@@ -217,7 +247,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
@@ -243,16 +278,31 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(4)))
-                .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
+                .andExpect(jsonPath("$.violations", hasSize(9)))
+                .andExpect(jsonPath("$.violations[1].field", is("amountAvailable")))
                 .andExpect(
                         jsonPath(
-                                "$.violations[0].message",
+                                "$.violations[1].message",
                                 is("AmountAvailable must be greater than 0")))
-                .andExpect(jsonPath("$.violations[1].field", is("email")))
-                .andExpect(jsonPath("$.violations[1].message", is("Email cannot be Blank")))
-                .andExpect(jsonPath("$.violations[2].field", is("name")))
-                .andExpect(jsonPath("$.violations[2].message", is("Name cannot be Blank")))
+                .andExpect(jsonPath("$.violations[0].field", is("addressLine1")))
+                .andExpect(
+                        jsonPath("$.violations[0].message", is("Address Line 1 cannot be Blank")))
+                .andExpect(jsonPath("$.violations[2].field", is("city")))
+                .andExpect(jsonPath("$.violations[2].message", is("City cannot be Blank")))
+                .andExpect(jsonPath("$.violations[3].field", is("country")))
+                .andExpect(jsonPath("$.violations[3].message", is("Country cannot be Blank")))
+                .andExpect(jsonPath("$.violations[4].field", is("email")))
+                .andExpect(jsonPath("$.violations[4].message", is("Email cannot be Blank")))
+                .andExpect(jsonPath("$.violations[5].field", is("name")))
+                .andExpect(jsonPath("$.violations[5].message", is("Name cannot be Blank")))
+                .andExpect(jsonPath("$.violations[6].field", is("phone")))
+                .andExpect(
+                        jsonPath(
+                                "$.violations[6].message", is("Customer Phone number is required")))
+                .andExpect(jsonPath("$.violations[7].field", is("state")))
+                .andExpect(jsonPath("$.violations[7].message", is("State cannot be Blank")))
+                .andExpect(jsonPath("$.violations[8].field", is("zipCode")))
+                .andExpect(jsonPath("$.violations[8].message", is("Zip Code cannot be Blank")))
                 .andReturn();
     }
 
@@ -267,10 +317,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "1234567890",
                         "First Address",
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
                         500);
 
         this.mockMvc
@@ -282,7 +332,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
-                .andExpect(jsonPath("$.address", is(customerRequest.addressLine1() + ",,,,,")))
+                .andExpect(jsonPath("$.addressLine1", is(customerRequest.addressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customerRequest.addressLine2())))
+                .andExpect(jsonPath("$.city", is(customerRequest.city())))
+                .andExpect(jsonPath("$.state", is(customerRequest.state())))
+                .andExpect(jsonPath("$.zipCode", is(customerRequest.zipCode())))
+                .andExpect(jsonPath("$.country", is(customerRequest.country())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
@@ -298,10 +353,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "1234567890",
                         "First Address",
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
                         10_000);
 
         this.mockMvc
@@ -333,7 +388,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId").value(customer.getId().toString()))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }

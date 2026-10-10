@@ -76,7 +76,18 @@ class RegistrationControllerTest {
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 10_000));
+                .thenReturn(new CustomerResponse(
+                        1L,
+                        TEST_USERNAME,
+                        TEST_EMAIL,
+                        "9848022334",
+                        "junitAddress",
+                        null,
+                        "Test City",
+                        "Test State",
+                        "12345",
+                        "Test Country",
+                        10_000));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
@@ -106,7 +117,18 @@ class RegistrationControllerTest {
         doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
         // Mock CustomerServiceClient to return a valid CustomerResponse
         when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenReturn(new CustomerResponse(1L, TEST_USERNAME, TEST_EMAIL, "9848022334", "junitAddress", 0));
+                .thenReturn(new CustomerResponse(
+                        1L,
+                        TEST_USERNAME,
+                        TEST_EMAIL,
+                        "9848022334",
+                        "junitAddress",
+                        null,
+                        "Test City",
+                        "Test State",
+                        "12345",
+                        "Test Country",
+                        10_000));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
