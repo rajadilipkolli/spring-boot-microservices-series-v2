@@ -1,0 +1,161 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.repositories;
+
+import static com.example.inventoryservice.inventory.jooq.tables.Inventory.INVENTORY;
+
+import com.example.inventoryservice.inventory.entities.Inventory;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import org.jooq.DSLContext;
+import org.jooq.SortField;
+import org.jooq.TableField;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+public class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
+
+    private final DSLContext dslContext;
+
+    public InventoryJOOQRepositoryImpl(DSLContext dslContext) {
+        this.dslContext = dslContext;
+    }
+
+    @Override
+    public Optional<Inventory> findById(Long inventoryId) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.ID.eq(inventoryId))
+                .fetchOptionalInto(Inventory.class);
+    }
+
+    @Override
+    public Page<Inventory> findAll(Pageable pageable) {
+        return new PageImpl<>(
+                dslContext
+                        .select(
+                                INVENTORY.ID,
+                                INVENTORY.PRODUCT_CODE,
+                                INVENTORY.QUANTITY,
+                                INVENTORY.RESERVED_ITEMS,
+                                INVENTORY.VERSION)
+                        .from(INVENTORY)
+                        .orderBy(getSortFields(pageable.getSort()))
+                        .limit(pageable.getPageSize())
+                        .offset(pageable.getOffset())
+                        .fetchInto(Inventory.class),
+                pageable,
+                dslContext.fetchCount(INVENTORY));
+    }
+
+    @Override
+    public Optional<Inventory> findByProductCode(String productCode) {
+        return dslContext
+                .select(
+                        INVENTORY.ID,
+                        INVENTORY.PRODUCT_CODE,
+                        INVENTORY.QUANTITY,
+                        INVENTORY.RESERVED_ITEMS,
+                        INVENTORY.VERSION)
+                .from(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
+                .fetchOptionalInto(Inventory.class);
+    }
+
+    @Override
+    public Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable) {
+        return new PageImpl<>(
+                dslContext
+                        .select(
+                                INVENTORY.ID,
+                                INVENTORY.PRODUCT_CODE,
+                                INVENTORY.QUANTITY,
+                                INVENTORY.RESERVED_ITEMS,
+                                INVENTORY.VERSION)
+                        .from(INVENTORY)
+                        .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                        .orderBy(getSortFields(pageable.getSort()))
+                        .limit(pageable.getPageSize())
+                        .offset(pageable.getOffset())
+                        .fetchInto(Inventory.class),
+                pageable,
+                dslContext.fetchCount(INVENTORY, INVENTORY.PRODUCT_CODE.in(productCodes)));
+    }
+
+    @Override
+    public boolean existsByProductCode(String productCode) {
+        return dslContext.fetchExists(
+                dslContext
+                        .selectOne()
+                        .from(INVENTORY)
+                        .where(INVENTORY.PRODUCT_CODE.eq(productCode)));
+    }
+
+    @Override
+    @Transactional
+    public int deleteByProductCode(String productCode) {
+        return dslContext
+                .deleteFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
+                .execute();
+    }
+
+    private Collection<SortField<?>> getSortFields(Sort sortSpecification) {
+        Collection<SortField<?>> querySortFields = new ArrayList<>();
+
+        if (sortSpecification == null) {
+            return querySortFields;
+        }
+
+        for (Sort.Order specifiedField : sortSpecification) {
+            String sortFieldName = specifiedField.getProperty();
+            Sort.Direction sortDirection = specifiedField.getDirection();
+
+            TableField<InventoryRecord, Object> tableField = getTableField(sortFieldName);
+            SortField<?> querySortField = convertTableFieldToSortField(tableField, sortDirection);
+            querySortFields.add(querySortField);
+        }
+
+        return querySortFields;
+    }
+
+    private TableField<InventoryRecord, Object> getTableField(String sortFieldName) {
+        TableField<InventoryRecord, Object> sortField;
+        try {
+            String jooqFieldName =
+                    sortFieldName.replaceAll("([a-z])([A-Z]+)", "$1_$2").toUpperCase(Locale.ROOT);
+            Field tableField = INVENTORY.getClass().getField(jooqFieldName);
+            sortField = (TableField<InventoryRecord, Object>) tableField.get(INVENTORY);
+        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            String errorMessage = "Could not find table field: %s".formatted(sortFieldName);
+            throw new InvalidDataAccessApiUsageException(errorMessage, ex);
+        }
+        return sortField;
+    }
+
+    private SortField<?> convertTableFieldToSortField(
+            TableField<InventoryRecord, Object> tableField, Sort.Direction sortDirection) {
+        if (sortDirection == Sort.Direction.ASC) {
+            return tableField.asc();
+        } else {
+            return tableField.desc();
+        }
+    }
+}

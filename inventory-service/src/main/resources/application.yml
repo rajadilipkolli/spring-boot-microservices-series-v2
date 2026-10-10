@@ -13,7 +13,7 @@ spring:
       enabled: false
   testcontainers:
     beans:
-      startup: parallel
+      startup: sequential
   kafka:
 # bootstrap-servers: 127.0.0.1:9092
     consumer:
@@ -29,7 +29,8 @@ spring:
               packages: "com.example.common.dtos"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # as we are using spring modulith OOTB to send events, we need to use ByteArraySerializer for value-serializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
       properties:
         spring:
           json:
@@ -43,3 +44,16 @@ spring:
     clients.imperative.factory: jdk
   main:
     web-application-type: servlet
+  modulith:
+    events:
+      externalization:
+        mode: outbox  # NEW: Switch to Outbox Mode
+      completion-mode: archive
+
+namastack:
+  outbox:
+    retry:
+      exclude-exceptions:
+        - java.lang.RuntimeException
+    instance:
+      graceful-shutdown-timeout: 1s
