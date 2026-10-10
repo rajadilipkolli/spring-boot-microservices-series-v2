@@ -41,6 +41,25 @@ jobs:
       - name: Run End to End Tests
         run: ./test-em-all.sh --detailed-logs ${{ inputs.command_args || 'start stop' }}
 
+      - name: Collect Diagnostics
+        if: failure()
+        run: |
+          set +e
+          mkdir -p diagnostics
+          docker ps -a > diagnostics/docker-ps.txt
+          docker compose logs > diagnostics/docker-compose.log
+          for container in $(docker ps -a --format '{{.Names}}'); do
+            docker logs $container > diagnostics/${container}.log 2>&1 || true
+          done
+
+      - name: Upload Diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-diagnostics
+          path: diagnostics
+          retention-days: 5
+
       - name: Stop latency_analyzer.py and collect logs
         if: always()
         run: |
