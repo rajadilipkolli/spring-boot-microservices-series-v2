@@ -517,7 +517,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
                 .andExpect(jsonPath("$.data[0].items[0].itemId", is("100")))
-                .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10.0)))
+                .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10)))
                 .andExpect(jsonPath("$.data[0].items[0].price", is(20.0)))
                 .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine1", is("Street")))
                 .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine2", is("Suite")))

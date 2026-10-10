@@ -122,7 +122,7 @@ class OrderControllerTest {
                 "TS",
                 "12345",
                 "US",
-                java.math.BigDecimal.valueOf(5000));
+                BigDecimal.valueOf(5000));
 
         // Set up order confirmation
         orderConfirmation = new OrderConfirmationDTO(123L, 1L, "NEW");
@@ -243,7 +243,7 @@ class OrderControllerTest {
                 null,
                 null,
                 null,
-                java.math.BigDecimal.valueOf(5000));
+                BigDecimal.valueOf(5000));
 
         List<OrderItemRequest> items = List.of(
                 new OrderItemRequest("PROD-1", 2, BigDecimal.valueOf(10.99)),
@@ -303,7 +303,7 @@ class OrderControllerTest {
                 null,
                 null,
                 null,
-                java.math.BigDecimal.valueOf(5000));
+                BigDecimal.valueOf(5000));
         List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, BigDecimal.valueOf(99.99)));
         Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
@@ -332,7 +332,7 @@ class OrderControllerTest {
                 null,
                 null,
                 null,
-                java.math.BigDecimal.valueOf(5000));
+                BigDecimal.valueOf(5000));
         // Invalid order item: blank product code, negative quantity, negative price
         List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, BigDecimal.valueOf(-10.00)));
         Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
