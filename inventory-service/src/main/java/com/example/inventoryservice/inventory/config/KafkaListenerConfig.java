@@ -79,9 +79,9 @@ class KafkaListenerConfig {
     }
 
     /**
-     * Validates the product JSON in the record value and creates inventory if the product code
-     * is absent. Existing products, including concurrent duplicate creation, are ignored;
-     * other persistence failures propagate to the listener container.
+     * Validates the product JSON in the record value and creates inventory if the product code is
+     * absent. Existing products, including concurrent duplicate creation, are ignored; other
+     * persistence failures propagate to the listener container.
      *
      * @throws JacksonException if the record value cannot be deserialized as a product
      * @throws ConstraintViolationException if the product violates bean validation constraints

@@ -42,7 +42,9 @@ class LoggingAspect {
         // Pointcut definition
     }
 
-    /** Matches methods in a {@link Loggable} class without their own {@link Loggable} annotation. */
+    /**
+     * Matches methods in a {@link Loggable} class without their own {@link Loggable} annotation.
+     */
     @Pointcut(
             "@within(com.example.inventoryservice.inventory.utils.logging.Loggable)"
                     + " && !@annotation(com.example.inventoryservice.inventory.utils.logging.Loggable)")
