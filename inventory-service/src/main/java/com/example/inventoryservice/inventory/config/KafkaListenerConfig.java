@@ -1,0 +1,95 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.config;
+
+import com.example.inventoryservice.inventory.model.payload.OrderDto;
+import com.example.inventoryservice.inventory.model.payload.ProductDto;
+import com.example.inventoryservice.inventory.services.InventoryOrderManageService;
+import com.example.inventoryservice.inventory.services.ProductManageService;
+import com.example.inventoryservice.inventory.utils.AppConstants;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+import java.util.Set;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.BackOff;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+
+@EnableKafka
+@Configuration(proxyBeanMethods = false)
+class KafkaListenerConfig {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+    private final InventoryOrderManageService orderManageService;
+    private final ProductManageService productManageService;
+    private final JsonMapper jsonMapper;
+    private final Validator validator;
+
+    KafkaListenerConfig(
+            InventoryOrderManageService orderManageService,
+            ProductManageService productManageService,
+            JsonMapper jsonMapper,
+            Validator validator) {
+        this.orderManageService = orderManageService;
+        this.productManageService = productManageService;
+        this.jsonMapper = jsonMapper;
+        this.validator = validator;
+    }
+
+    // retries if processing of event fails
+    @RetryableTopic(
+            backOff = @BackOff(delay = 1000, multiplier = 2.0),
+            retryTopicSuffix = "-retry-inventory",
+            dltTopicSuffix = "-dlt-inventory",
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
+    @KafkaListener(id = "inventory-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "stock")
+    public void onEvent(ConsumerRecord<String, String> record) throws JacksonException {
+        String orderDtoStr = record.value();
+        OrderDto orderDto = validate(jsonMapper.readValue(orderDtoStr, OrderDto.class));
+        log.info("Received Order: {}", orderDto);
+        if ("NEW".equals(orderDto.status())) {
+            orderManageService.reserve(orderDto);
+        } else {
+            orderManageService.confirm(orderDto);
+        }
+    }
+
+    @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
+    public void onSaveProductEvent(ConsumerRecord<String, String> record) throws JacksonException {
+        String productDtoStr = record.value();
+        log.info("Received Product: {}", productDtoStr);
+        ProductDto productDto = validate(jsonMapper.readValue(productDtoStr, ProductDto.class));
+        productManageService.manage(productDto);
+    }
+
+    private <T> T validate(T object) {
+        Set<ConstraintViolation<T>> violations = validator.validate(object);
+        if (!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+        return object;
+    }
+
+    @DltHandler
+    public void dlt(
+            ConsumerRecord<String, String> record,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("Received dead-letter message : {} from topic {}", record.value(), topic);
+    }
+}

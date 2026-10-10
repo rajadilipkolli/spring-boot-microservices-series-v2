@@ -1,0 +1,19 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2024-2026 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.util;
+
+import com.example.inventoryservice.inventory.model.payload.OrderDto;
+import java.math.BigDecimal;
+import java.util.List;
+
+public class MockTestData {
+    public static OrderDto getOrderDto(String source) {
+        OrderDto.OrderItemDto orderItemDto =
+                new OrderDto.OrderItemDto(1L, "JUNIT_000", 10, BigDecimal.TEN);
+        return new OrderDto(151L, 1001L, "NEW", source, List.of(orderItemDto));
+    }
+}

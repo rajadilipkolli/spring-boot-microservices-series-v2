@@ -13,7 +13,7 @@ spring:
       enabled: false
   testcontainers:
     beans:
-      startup: parallel
+      startup: sequential
   kafka:
 # bootstrap-servers: 127.0.0.1:9092
     consumer:
@@ -45,17 +45,16 @@ spring:
     web-application-type: servlet
   modulith:
     events:
-      republish-outstanding-events-on-restart: true
-      staleness:
-        check-interval: 1m
-        processing: 30s
-  quartz:
-    job-store-type: jdbc
-    jdbc:
-      initialize-schema: always
-    properties:
-      org:
-        quartz:
-          jobStore:
-            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
-            isClustered: true
+      externalization:
+        mode: outbox  # NEW: Switch to Outbox Mode
+
+namastack:
+  outbox:
+    retry:
+      policy: fixed
+      fixed:
+        delay: 5000
+      exclude-exceptions:
+        - java.lang.RuntimeException
+    instance:
+      graceful-shutdown-timeout-seconds: 0
