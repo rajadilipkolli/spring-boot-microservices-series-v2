@@ -49,7 +49,7 @@ class CreateOrderRequestTest {
                 """;
 
         CreateOrderRequest expected = new CreateOrderRequest(
-                List.of(new OrderItemRequest("P001", 1, new BigDecimal("999.99"))),
+                List.of(new OrderItemRequest("P001", 1, BigDecimal.valueOf(999.99))),
                 new CustomerRequest(
                         "retail", "retail@gmail.com", "(274) 748-2938", null, null, null, null, null, null, null),
                 new Address("280 Rick Lakes", "Arnoldland", "FL 86710", "TS", "500072", "India"));
@@ -61,7 +61,7 @@ class CreateOrderRequestTest {
         // Setup
         Address deliveryAddress = mock(Address.class);
         CustomerRequest customer = mock(CustomerRequest.class);
-        List<OrderItemRequest> items = List.of(new OrderItemRequest("ABC123", 2, new BigDecimal("199.99")));
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("ABC123", 2, BigDecimal.valueOf(199.99)));
 
         CreateOrderRequest request = new CreateOrderRequest(items, customer, deliveryAddress);
 

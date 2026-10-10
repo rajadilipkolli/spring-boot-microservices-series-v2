@@ -81,12 +81,12 @@ class OrderControllerTest {
         Address address = new Address("123 Test St", "Apt 4", "Test City", "Test State", "12345", "Test Country");
 
         List<OrderItemResponse> orderItems = List.of(
-                new OrderItemResponse(1L, "PROD-1", 2, new BigDecimal("10.99"), new BigDecimal("21.98")),
-                new OrderItemResponse(2L, "PROD-2", 1, new BigDecimal("20.99"), new BigDecimal("20.99")));
+                new OrderItemResponse(1L, "PROD-1", 2, BigDecimal.valueOf(10.99), BigDecimal.valueOf(21.98)),
+                new OrderItemResponse(2L, "PROD-2", 1, BigDecimal.valueOf(20.99), BigDecimal.valueOf(20.99)));
 
         // Create OrderResponse instances using the constructor
-        OrderResponse order1 =
-                new OrderResponse(1L, 1L, "NEW", "", address, LocalDateTime.now(), new BigDecimal("42.97"), orderItems);
+        OrderResponse order1 = new OrderResponse(
+                1L, 1L, "NEW", "", address, LocalDateTime.now(), BigDecimal.valueOf(42.97), orderItems);
         OrderResponse order2 = new OrderResponse(
                 2L,
                 1L,
@@ -94,8 +94,8 @@ class OrderControllerTest {
                 "",
                 address,
                 LocalDateTime.now().minusDays(1),
-                new BigDecimal("30.99"),
-                List.of(new OrderItemResponse(3L, "PROD-3", 1, new BigDecimal("30.99"), new BigDecimal("30.99"))));
+                BigDecimal.valueOf(30.99),
+                List.of(new OrderItemResponse(3L, "PROD-3", 1, BigDecimal.valueOf(30.99), BigDecimal.valueOf(30.99))));
 
         orderResponseList = List.of(order1, order2);
 
@@ -246,8 +246,8 @@ class OrderControllerTest {
                 java.math.BigDecimal.valueOf(5000));
 
         List<OrderItemRequest> items = List.of(
-                new OrderItemRequest("PROD-1", 2, new BigDecimal("10.99")),
-                new OrderItemRequest("PROD-2", 1, new BigDecimal("20.99")));
+                new OrderItemRequest("PROD-1", 2, BigDecimal.valueOf(10.99)),
+                new OrderItemRequest("PROD-2", 1, BigDecimal.valueOf(20.99)));
 
         Address address = new Address("123 Test St", "Apt 4", "Test City", "Test State", "12345", "Test Country");
 
@@ -304,7 +304,7 @@ class OrderControllerTest {
                 null,
                 null,
                 java.math.BigDecimal.valueOf(5000));
-        List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, new BigDecimal("99.99")));
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("PROD-FAIL", 1, BigDecimal.valueOf(99.99)));
         Address address = new Address("Fail St", "Apt 0", "Fail City", "Fail State", "00000", "Fail Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 
@@ -334,7 +334,7 @@ class OrderControllerTest {
                 null,
                 java.math.BigDecimal.valueOf(5000));
         // Invalid order item: blank product code, negative quantity, negative price
-        List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, new BigDecimal("-10.00")));
+        List<OrderItemRequest> items = List.of(new OrderItemRequest("", -1, BigDecimal.valueOf(-10.00)));
         Address address = new Address("Test St", "Apt 1", "Test City", "Test State", "12345", "Test Country");
         CreateOrderRequest createOrderRequest = new CreateOrderRequest(items, customerRequest, address);
 

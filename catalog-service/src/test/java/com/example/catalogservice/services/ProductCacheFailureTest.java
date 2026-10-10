@@ -20,6 +20,7 @@ import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,7 +83,7 @@ class ProductCacheFailureTest {
                                         product.getProductName(),
                                         "Description",
                                         null,
-                                        new java.math.BigDecimal("10"),
+                                        BigDecimal.TEN,
                                         false));
     }
 
@@ -121,11 +122,7 @@ class ProductCacheFailureTest {
         StepVerifier.create(
                         service.saveProduct(
                                 new ProductRequest(
-                                        "P001",
-                                        "Updated",
-                                        "Description",
-                                        null,
-                                        new java.math.BigDecimal(5))))
+                                        "P001", "Updated", "Description", null, BigDecimal.TEN)))
                 .assertNext(response -> assertThat(response.productName()).isEqualTo("Updated"))
                 .verifyComplete();
 

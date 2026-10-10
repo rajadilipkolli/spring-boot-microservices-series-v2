@@ -287,7 +287,8 @@ class OrderControllerTest {
                                     "zipCode",
                                     "country"));
             OrderItemResponse orderItemDto =
-                    new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
+                    new OrderItemResponse(
+                            2L, "Product1", 10, BigDecimal.TEN, BigDecimal.valueOf(100));
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,

@@ -17,6 +17,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import io.hypersistence.tsid.TSID;
+import java.math.BigDecimal;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                                 .setProductCode("P001")
                                 .setProductName("Cache test product")
                                 .setDescription("Deterministic fixture")
-                                .setPrice(new java.math.BigDecimal(1)))
+                                .setPrice(BigDecimal.TEN))
                 .block();
         when(inventoryServiceProxy.getInventoryByProductCodes(anyList())).thenReturn(Flux.empty());
     }
@@ -84,7 +85,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                                 "Proper Update Name",
                                 "Updated",
                                 null,
-                                new java.math.BigDecimal(5)),
+                                BigDecimal.valueOf(20)),
                         productInDb)
                 .block();
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isFalse();
@@ -113,11 +114,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productService
                 .updateProduct(
                         new ProductRequest(
-                                "P001",
-                                "Updated name",
-                                "Updated",
-                                null,
-                                new java.math.BigDecimal(5)),
+                                "P001", "Updated name", "Updated", null, BigDecimal.valueOf(20)),
                         product)
                 .block();
         assertThat(cacheKey("products:0_10_id_asc")).isNotEqualTo(beforeUpdate);
@@ -130,7 +127,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productService
                 .saveProduct(
                         new ProductRequest(
-                                "P001", "Created", "Created", null, new java.math.BigDecimal(5)))
+                                "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
         assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeSave);
 

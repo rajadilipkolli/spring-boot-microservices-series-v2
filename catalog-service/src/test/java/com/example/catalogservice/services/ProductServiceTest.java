@@ -22,6 +22,7 @@ import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,7 +94,7 @@ class ProductServiceTest {
                                     .setProductCode(request.productCode())
                                     .setProductName(request.productName())
                                     .setDescription(request.description())
-                                    .setPrice(new java.math.BigDecimal(randomPrice));
+                                    .setPrice(BigDecimal.valueOf(randomPrice));
                         });
 
         // Stubbing productMapper.toProductResponse()
@@ -138,9 +139,7 @@ class ProductServiceTest {
                 .allSatisfy(
                         product ->
                                 assertThat(product.price())
-                                        .isBetween(
-                                                new java.math.BigDecimal(1.0),
-                                                new java.math.BigDecimal(100.0)));
+                                        .isBetween(BigDecimal.ONE, BigDecimal.valueOf(100.0)));
 
         then(productRepository).should(atLeastOnce()).save(productEntityCaptor.capture());
         assertThat(productEntityCaptor.getAllValues())
@@ -171,7 +170,7 @@ class ProductServiceTest {
                                 "name",
                                 "description",
                                 null,
-                                new java.math.BigDecimal(6.00),
+                                BigDecimal.valueOf(6.00),
                                 true));
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
         given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
@@ -206,11 +205,11 @@ class ProductServiceTest {
     @Test
     void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
         ProductRequest request =
-                new ProductRequest("P001", "name", "desc", null, new java.math.BigDecimal(5.00));
+                new ProductRequest("P001", "name", "desc", null, BigDecimal.valueOf(5.00));
         Product product = new Product().setId(1L).setProductCode("P001");
         ProductResponse response =
                 new ProductResponse(
-                        1L, "P001", "name", "desc", null, new java.math.BigDecimal(6.00), true);
+                        1L, "P001", "name", "desc", null, BigDecimal.valueOf(6.00), true);
 
         given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
         given(productMapper.toEntity(request)).willReturn(product);

@@ -76,12 +76,12 @@ public class Customer {
     }
 
     /** Returns the available balance, initially zero. */
-    public java.math.BigDecimal getAmountAvailable() {
+    public BigDecimal getAmountAvailable() {
         return this.amountAvailable;
     }
 
     /** Returns the balance reserved for orders, initially zero. */
-    public java.math.BigDecimal getAmountReserved() {
+    public BigDecimal getAmountReserved() {
         return this.amountReserved;
     }
 

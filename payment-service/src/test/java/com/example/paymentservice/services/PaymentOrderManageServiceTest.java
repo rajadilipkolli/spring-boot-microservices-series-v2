@@ -104,8 +104,8 @@ class PaymentOrderManageServiceTest {
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(new BigDecimal("200"));
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(new BigDecimal("900"));
+        assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(200));
+        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(900));
         assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
         assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
         verify(customerRepository, times(1)).save(any(Customer.class));
@@ -125,8 +125,8 @@ class PaymentOrderManageServiceTest {
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
         // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(new BigDecimal("100"));
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(new BigDecimal("1000"));
+        assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(100));
+        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(1000));
         assertThat(reservedOrder.status()).isEqualTo("REJECT");
         assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
         verify(customerRepository, times(1)).save(any(Customer.class));
@@ -136,7 +136,7 @@ class PaymentOrderManageServiceTest {
     void fractionalOrderTest() {
         // Arrange
         OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1, new BigDecimal("19.99"));
+                new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         BigDecimal initialAvailable = customer.getAmountAvailable();
@@ -150,23 +150,23 @@ class PaymentOrderManageServiceTest {
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
         assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
         assertThat(customer.getAmountReserved())
-                .isEqualByComparingTo(initialReserved.add(new BigDecimal("19.99")));
+                .isEqualByComparingTo(initialReserved.add(BigDecimal.valueOf(19.99)));
         assertThat(customer.getAmountAvailable())
-                .isEqualByComparingTo(initialAvailable.subtract(new BigDecimal("19.99")));
+                .isEqualByComparingTo(initialAvailable.subtract(BigDecimal.valueOf(19.99)));
 
         // Confirm
         OrderDto confirmDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
         orderManageService.confirm(confirmDto);
         assertThat(customer.getAmountReserved()).isEqualByComparingTo(initialReserved);
         assertThat(customer.getAmountAvailable())
-                .isEqualByComparingTo(initialAvailable.subtract(new BigDecimal("19.99")));
+                .isEqualByComparingTo(initialAvailable.subtract(BigDecimal.valueOf(19.99)));
     }
 
     @Test
     void rollbackFractionalOrderTest() {
         // Arrange
         OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1, new BigDecimal("19.99"));
+                new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         BigDecimal initialAvailable = customer.getAmountAvailable();
@@ -190,13 +190,13 @@ class PaymentOrderManageServiceTest {
     @Test
     void largeValueOrderTest() {
         // Arrange
-        BigDecimal largePrice = new BigDecimal("5000000000.00"); // > Integer.MAX_VALUE
+        BigDecimal largePrice = BigDecimal.valueOf(5000000000.00); // > Integer.MAX_VALUE
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 1, largePrice);
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
         Customer customer = TestData.getCustomer();
         // Give customer enough funds
-        customer.setAmountAvailable(new BigDecimal("6000000000.00"));
+        customer.setAmountAvailable(BigDecimal.valueOf(6000000000.00));
         BigDecimal initialAvailable = customer.getAmountAvailable();
         BigDecimal initialReserved = customer.getAmountReserved();
 

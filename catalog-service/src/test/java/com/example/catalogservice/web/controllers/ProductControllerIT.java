@@ -20,6 +20,7 @@ import com.example.catalogservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.hypersistence.tsid.TSID;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,21 +91,21 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 .setProductCode("P001")
                                 .setProductName("name 1")
                                 .setDescription("description 1")
-                                .setPrice(new java.math.BigDecimal("9.0")),
+                                .setPrice(BigDecimal.valueOf(9.0)),
                         new Product()
                                 .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P002")
                                 .setProductName("name 2")
                                 .setDescription("description 2")
-                                .setPrice(new java.math.BigDecimal("10.0")),
+                                .setPrice(BigDecimal.valueOf(10.0)),
                         new Product()
                                 .setId(TSID.fast().toLong())
                                 .setNew(true)
                                 .setProductCode("P003")
                                 .setProductName("name 3")
                                 .setDescription("description 3")
-                                .setPrice(new java.math.BigDecimal("11.0")));
+                                .setPrice(BigDecimal.valueOf(11.0)));
         // Initialize the product list in a non-blocking way
         // Use StepVerifier to ensure products are saved before proceeding with tests
         StepVerifier.create(
@@ -615,7 +616,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     void shouldCreateNewProduct() throws JacksonException {
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code 4", "name 4", "description 4", null, new java.math.BigDecimal(19.00));
+                        "code 4", "name 4", "description 4", null, BigDecimal.valueOf(19.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -680,7 +681,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                             assertThat(productDto.code()).isEqualTo("code 4");
                             assertThat(productDto.productName()).isEqualTo("name 4");
                             assertThat(productDto.price())
-                                    .isEqualByComparingTo(new java.math.BigDecimal(19.00));
+                                    .isEqualByComparingTo(BigDecimal.valueOf(19.00));
                         });
 
         // Verify the outbox event was updated successfully (status and version)
@@ -694,7 +695,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     void shouldNotThrowConflictForCreateNewProduct() {
         ProductRequest productRequest =
                 new ProductRequest(
-                        "P001", "name 4", "description 4", null, new java.math.BigDecimal(19.00));
+                        "P001", "name 4", "description 4", null, BigDecimal.valueOf(19.00));
 
         webTestClient
                 .post()
@@ -771,7 +772,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         product.getProductName(),
                         "Updated Catalog",
                         null,
-                        new java.math.BigDecimal(100.00));
+                        BigDecimal.valueOf(100.00));
 
         webTestClient
                 .put()
@@ -806,11 +807,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         product.getProductName(),
                         "Concurrent Update",
                         null,
-                        new java.math.BigDecimal(100.00));
+                        BigDecimal.valueOf(100.00));
 
         // Fetch the product, modify it directly in the DB to increment version
         Product fetchedProduct = productRepository.findById(product.getId()).block();
-        fetchedProduct.setPrice(new java.math.BigDecimal(200.00));
+        fetchedProduct.setPrice(BigDecimal.valueOf(200.00));
         productRepository.save(fetchedProduct).block();
 
         // The only way to trigger OptimisticLockingFailureException purely from the DB without
@@ -828,9 +829,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                                 .findById(product.getId())
                                                 .flatMap(
                                                         p -> {
-                                                            p.setPrice(
-                                                                    new java.math.BigDecimal(
-                                                                            "500"));
+                                                            p.setPrice(BigDecimal.valueOf(500.00));
                                                             return productRepository.save(p);
                                                         }))
                         .then();
@@ -1135,7 +1134,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         .setNew(true)
                         .setProductCode("P_DOUBLE_SAVE")
                         .setProductName("Double Save Product")
-                        .setPrice(new java.math.BigDecimal("10.0"));
+                        .setPrice(BigDecimal.TEN);
         // First save should succeed and set isNew to false
         StepVerifier.create(productRepository.save(product))
                 .assertNext(
@@ -1144,13 +1143,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         })
                 .verifyComplete();
         // Update a field
-        product.setPrice(new java.math.BigDecimal(15.00));
+        product.setPrice(BigDecimal.valueOf(15.00));
         // Second save should succeed (as an update, not a conflicting insert)
         StepVerifier.create(productRepository.save(product))
                 .assertNext(
                         saved -> {
                             assertThat(saved.getPrice())
-                                    .isEqualByComparingTo(new java.math.BigDecimal(15.00));
+                                    .isEqualByComparingTo(BigDecimal.valueOf(15.00));
                         })
                 .verifyComplete();
     }

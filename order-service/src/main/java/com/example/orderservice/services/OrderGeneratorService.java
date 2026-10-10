@@ -98,7 +98,7 @@ public class OrderGeneratorService {
                 new OrderItemRequest(
                         "ProductCode_" + idempotencyKey + "_" + orderItem1,
                         x,
-                        new BigDecimal(100 * x));
+                        BigDecimal.valueOf(100 * x));
 
         int y = RAND.nextInt(5) + 1;
 
@@ -106,7 +106,7 @@ public class OrderGeneratorService {
                 new OrderItemRequest(
                         "ProductCode_" + idempotencyKey + "_" + orderItem2,
                         y,
-                        new BigDecimal(100 * y));
+                        BigDecimal.valueOf(100 * y));
 
         return List.of(orderItemRequest, orderItemRequest2);
     }

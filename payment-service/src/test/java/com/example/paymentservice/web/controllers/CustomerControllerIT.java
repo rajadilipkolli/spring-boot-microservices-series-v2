@@ -188,7 +188,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        new BigDecimal("10000"));
+                        BigDecimal.valueOf(10000));
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -349,7 +349,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        new BigDecimal("500"));
+                        BigDecimal.valueOf(500));
 
         this.mockMvc
                 .perform(
@@ -385,7 +385,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        new BigDecimal("10000"));
+                        BigDecimal.valueOf(10000));
 
         this.mockMvc
                 .perform(
@@ -418,7 +418,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        new BigDecimal("10.005"));
+                        BigDecimal.valueOf(10.005));
 
         this.mockMvc
                 .perform(
@@ -491,7 +491,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 new OrderResponse.Address("Street", "Suite", "City", "State", "Zip", "Country");
         OrderResponse.OrderItemResponse item =
                 new OrderResponse.OrderItemResponse(
-                        100L, "P1", 2, new BigDecimal("10.0"), new BigDecimal("20.0"));
+                        100L, "P1", 2, BigDecimal.TEN, BigDecimal.valueOf(20.0));
         OrderResponse orderResponse =
                 new OrderResponse(
                         1L,
@@ -500,7 +500,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "PAYMENT",
                         address,
                         LocalDateTime.now(),
-                        new BigDecimal("20.0"),
+                        BigDecimal.valueOf(20.0),
                         List.of(item));
 
         PagedResult<OrderResponse> pagedResult =

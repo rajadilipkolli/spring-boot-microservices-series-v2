@@ -454,7 +454,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidProductCodeRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("", 2, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("", 2, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "");
@@ -484,7 +484,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidQuantityRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("Product1", 0, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -512,7 +512,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidPriceRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
+                            List.of(new OrderItemRequest("Product1", 2, BigDecimal.ZERO)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -742,7 +742,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
         OrderRequest invalidScaleRequest =
                 new OrderRequest(
                         1L,
-                        List.of(new OrderItemRequest("Product1", 2, new BigDecimal("10.123"))),
+                        List.of(new OrderItemRequest("Product1", 2, BigDecimal.valueOf(10.123))),
                         new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
         mockProductsExistsRequest(true, "PRODUCT1");

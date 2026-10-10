@@ -59,7 +59,7 @@ class ProductControllerTest {
                         "name 1",
                         "description 1",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(9.00),
                         true));
         this.productResponseList.add(
                 new ProductResponse(
@@ -68,7 +68,7 @@ class ProductControllerTest {
                         "name 2",
                         "description 2",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true));
         this.productResponseList.add(
                 new ProductResponse(
@@ -77,7 +77,7 @@ class ProductControllerTest {
                         "name 3",
                         "description 3",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true));
     }
 
@@ -126,7 +126,7 @@ class ProductControllerTest {
                         "name 1",
                         "description 1",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true);
         given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
@@ -172,14 +172,14 @@ class ProductControllerTest {
                         "name 1",
                         "description 1",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true);
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code 1", "name 1", "description 1", null, new java.math.BigDecimal(1.00));
+                        "code 1", "name 1", "description 1", null, BigDecimal.valueOf(1.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -207,7 +207,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
-        ProductDto productDto = new ProductDto(null, null, null, new java.math.BigDecimal(1.00));
+        ProductDto productDto = new ProductDto(null, null, null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .post()
@@ -242,7 +242,7 @@ class ProductControllerTest {
                         "Existing Product",
                         "This product already exists",
                         null,
-                        new java.math.BigDecimal("19.99"),
+                        BigDecimal.valueOf(19.99),
                         true);
         ProductRequest productRequest =
                 new ProductRequest(
@@ -250,7 +250,7 @@ class ProductControllerTest {
                         "Existing Product",
                         "This product already exists",
                         null,
-                        new java.math.BigDecimal("19.99"));
+                        BigDecimal.valueOf(19.99));
 
         // Mock the service to return the existing product when trying to save with the same product
         // code
@@ -304,14 +304,10 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(new java.math.BigDecimal(1.00));
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code 1",
-                        "Updated name",
-                        "description 1",
-                        null,
-                        new java.math.BigDecimal(1.00));
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
                 new ProductResponse(
                         productId,
@@ -319,7 +315,7 @@ class ProductControllerTest {
                         "Updated name",
                         "description 1",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true);
         given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
@@ -352,11 +348,7 @@ class ProductControllerTest {
         given(productService.findById(productId)).willReturn(Mono.empty());
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code 1",
-                        "Updated name",
-                        "description 1",
-                        null,
-                        new java.math.BigDecimal(1.00));
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .put()
@@ -378,7 +370,7 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(new java.math.BigDecimal(1.00));
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
                 new ProductResponse(
                         1L,
@@ -386,7 +378,7 @@ class ProductControllerTest {
                         "Updated name",
                         "description 1",
                         null,
-                        new java.math.BigDecimal(1.00),
+                        BigDecimal.valueOf(1.00),
                         true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
@@ -429,13 +421,7 @@ class ProductControllerTest {
         String code = "code-xyz";
         ProductResponse productResponse =
                 new ProductResponse(
-                        42L,
-                        code,
-                        "Product XYZ",
-                        "desc",
-                        null,
-                        new java.math.BigDecimal(1.00),
-                        true);
+                        42L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -480,13 +466,7 @@ class ProductControllerTest {
         String code = "code-xyz";
         ProductResponse productResponse =
                 new ProductResponse(
-                        43L,
-                        code,
-                        "Product XYZ",
-                        "desc",
-                        null,
-                        new java.math.BigDecimal(1.00),
-                        true);
+                        43L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, true))
                 .willReturn(Mono.just(productResponse));
@@ -512,13 +492,7 @@ class ProductControllerTest {
         String code = "code-xyz";
         ProductResponse productResponse =
                 new ProductResponse(
-                        44L,
-                        code,
-                        "Product XYZ",
-                        "desc",
-                        null,
-                        new java.math.BigDecimal(1.00),
-                        true);
+                        44L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
