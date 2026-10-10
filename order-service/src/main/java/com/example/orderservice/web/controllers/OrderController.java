@@ -7,6 +7,7 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
@@ -194,7 +195,7 @@ class OrderController implements OrderApi {
             @RequestParam @NotBlank String term,
             @RequestParam(defaultValue = "keyword", required = false) String mode,
             @RequestParam(required = false) Long customerId,
-            @RequestParam(required = false) com.example.orderservice.entities.OrderStatus status,
+            @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) Double threshold,
             Pageable pageable) {
         if ("similarity".equalsIgnoreCase(mode)

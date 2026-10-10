@@ -2,121 +2,72 @@ package com.example.retailstore.webapp.services;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
+import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
+import jakarta.ws.rs.core.Response;
 import java.util.List;
-import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jspecify.annotations.NonNull;
+import org.keycloak.OAuth2Constants;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClient;
 
 @Service
 public class KeycloakRegistrationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(KeycloakRegistrationService.class);
-
-    private final String keycloakUrl;
-    private final RestClient restClient;
-    private final KeycloakProperties keycloakProperties;
+    private final Keycloak keycloak;
+    private final String realm;
 
     @Autowired
-    public KeycloakRegistrationService(
-            @Value("${OAUTH2_SERVER_URL}") String keycloakUrl, KeycloakProperties keycloakProperties) {
-        this(keycloakUrl, RestClient.create(), keycloakProperties);
+    public KeycloakRegistrationService(KeycloakProperties props, @Value("${OAUTH2_SERVER_URL}") String url) {
+        this(
+                props,
+                KeycloakBuilder.builder()
+                        .serverUrl(url)
+                        .realm("master")
+                        .clientId(props.getAdminClientId())
+                        .clientSecret(props.getAdminClientSecret())
+                        .username(props.getAdminUsername())
+                        .password(props.getAdminPassword())
+                        .grantType(OAuth2Constants.PASSWORD)
+                        .build());
     }
 
-    // Constructor for testing
-    protected KeycloakRegistrationService(
-            String keycloakUrl, RestClient restClient, KeycloakProperties keycloakProperties) {
-        this.keycloakUrl = keycloakUrl;
-        this.restClient = restClient;
-        this.keycloakProperties = keycloakProperties;
-    }
-
-    private String getAdminToken() {
-        try {
-
-            var formData = new LinkedMultiValueMap<String, String>();
-            formData.add("grant_type", "password");
-            formData.add("client_id", keycloakProperties.getAdminClientId());
-            if (StringUtils.hasText(keycloakProperties.getAdminClientSecret())) {
-                formData.add("client_secret", keycloakProperties.getAdminClientSecret());
-            }
-            formData.add("username", keycloakProperties.getAdminUsername());
-            formData.add("password", keycloakProperties.getAdminPassword());
-
-            var response = restClient
-                    .post()
-                    .uri(keycloakUrl + "/realms/master/protocol/openid-connect/token")
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(formData)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
-
-            if (response == null) {
-                logger.error("Failed to obtain access token from Keycloak.");
-                throw new KeyCloakException("Failed to obtain access token from Keycloak");
-            }
-
-            if (!response.containsKey("access_token")) {
-                logger.error(
-                        "Failed to obtain access token from Keycloak. error={}, error_description={}",
-                        response.get("error"),
-                        response.get("error_description"));
-                throw new KeyCloakException("500: [Failed to obtain access token from Keycloak]");
-            }
-            return (String) response.get("access_token");
-        } catch (KeyCloakException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error obtaining admin token from Keycloak", e);
-            throw new KeyCloakException("500: [Failed to authenticate with Keycloak]", e);
-        }
+    KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloak) {
+        this.realm = props.getRealm();
+        this.keycloak = keycloak;
     }
 
     public void registerUser(RegistrationRequest request) {
-        try {
-            logger.info("Registering new user: {}", request.username());
-            // First, get an admin access token
-            String adminToken = getAdminToken();
+        UserRepresentation user = getUserRepresentation(request);
 
-            logger.debug("Admin token obtained successfully");
-            // Create the user in Keycloak with USER role
-            restClient
-                    .post()
-                    .uri(keycloakUrl + "/admin/realms/" + keycloakProperties.getRealm() + "/users")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .header("Authorization", "Bearer " + adminToken)
-                    .body(Map.of(
-                            "username",
-                            request.username(),
-                            "email",
-                            request.email(),
-                            "enabled",
-                            true,
-                            "firstName",
-                            request.firstName(),
-                            "lastName",
-                            request.lastName(),
-                            "credentials",
-                            List.of(Map.of("type", "password", "value", request.password(), "temporary", false)),
-                            "realmRoles",
-                            List.of("user") // Assigning user role
-                            ))
-                    .retrieve()
-                    .toBodilessEntity();
-            logger.info("User {} registered successfully", request.username());
-        } catch (KeyCloakException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("Error registering user: {}", request.username(), e);
-            throw new KeyCloakException("Keycloak registration failed", e);
+        try (Response response = keycloak.realm(realm).users().create(user)) {
+            if (response.getStatus() == 409) {
+                throw new UserAlreadyExistsException("Username or email is already taken.");
+            } else if (response.getStatus() >= 400) {
+                throw new KeyCloakException("Failed to register user. Status: " + response.getStatus());
+            }
         }
+    }
+
+    private static @NonNull UserRepresentation getUserRepresentation(RegistrationRequest request) {
+        UserRepresentation user = new UserRepresentation();
+        user.setUsername(request.username());
+        user.setEmail(request.email());
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setEnabled(true);
+        user.setRealmRoles(List.of("user"));
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(request.password());
+        credential.setTemporary(false);
+        user.setCredentials(List.of(credential));
+        return user;
     }
 }

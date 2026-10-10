@@ -8,7 +8,6 @@ import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import java.util.List;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
@@ -98,21 +97,9 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 1, // Ensure it was called exactly once
                 postRequestedFor(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
                         .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest))));
-    }
 
-    @AfterEach
-    void tearDown() {
         // Clean up the created user in Keycloak to ensure test idempotency
-        Keycloak keycloakAdminClient = keycloakContainer.getKeycloakAdminClient();
-        List<UserRepresentation> users =
-                keycloakAdminClient.realm(REALM_NAME).users().search(TEST_USERNAME, true);
-        if (!users.isEmpty()) {
-            for (UserRepresentation user : users) {
-                if (TEST_USERNAME.equals(user.getUsername())) {
-                    keycloakAdminClient.realm(REALM_NAME).users().delete(user.getId());
-                }
-            }
-        }
+        deleteUsers(TEST_USERNAME);
     }
 
     /** Verifies that a username shorter than the allowed minimum produces HTTP 400. */
@@ -123,7 +110,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "test@example.com",
                 "Test",
                 "User",
-                "Password123!",
+                "Password123@",
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
@@ -148,7 +135,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
 
     /** Verifies that a password lacking required character types produces HTTP 400. */
     @Test
-    void shouldReturnBadRequestForInvalidPassword() throws Exception {
+    void shouldReturnBadRequestForInvalidPassword() {
         RegistrationRequest request = new RegistrationRequest(
                 "testuser",
                 "test@example.com",
@@ -179,13 +166,13 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
 
     /** Verifies that a malformed email address produces HTTP 400. */
     @Test
-    void shouldReturnBadRequestForInvalidEmail() throws Exception {
+    void shouldReturnBadRequestForInvalidEmail() {
         RegistrationRequest request = new RegistrationRequest(
                 "testuser",
                 "invalid-email", // invalid email format
                 "Test",
                 "User",
-                "Password123!",
+                "Password123@",
                 TEST_PHONE_NUMBER,
                 TEST_ADDRESS_LINE,
                 null,
@@ -206,5 +193,83 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .extractingPath("$.detail")
                 .asString()
                 .isEqualTo("Invalid request content.");
+    }
+
+    /** Verifies that a duplicate username produces HTTP 409 Conflict. */
+    @Test
+    void shouldReturnConflictWhenUserAlreadyExists() {
+        RegistrationRequest registrationRequest = new RegistrationRequest(
+                "existinguser",
+                "existing@example.com",
+                "Test",
+                "User",
+                "Password123@",
+                1234567890L,
+                "Test Address",
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
+
+        CustomerRequest expectedCustomerRequest = new CustomerRequest(
+                "existinguser",
+                "existing@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                10_000);
+
+        CustomerResponse expectedCustomerResponse =
+                new CustomerResponse(1L, "existinguser", "existing@example.com", "1234567890", "Test Address", 10_000);
+
+        gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
+                .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest)))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(jsonMapper.writeValueAsString(expectedCustomerResponse))));
+
+        // First registration
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(jsonMapper.writeValueAsString(registrationRequest))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.OK);
+
+        // Second registration should fail with 409 Conflict
+        mockMvcTester
+                .post()
+                .uri("/api/register")
+                .content(jsonMapper.writeValueAsString(registrationRequest))
+                .contentType(MediaType.APPLICATION_JSON)
+                .assertThat()
+                .hasStatus(HttpStatus.CONFLICT)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyJson()
+                .extractingPath("$.detail")
+                .asString()
+                .contains("already taken");
+
+        deleteUsers("existinguser");
+    }
+
+    private void deleteUsers(String username) {
+        // Clean up Keycloak
+        Keycloak keycloakAdminClient = keycloakContainer.getKeycloakAdminClient();
+        List<UserRepresentation> users =
+                keycloakAdminClient.realm(REALM_NAME).users().search(username, true);
+        if (!users.isEmpty()) {
+            for (UserRepresentation user : users) {
+                if (username.equals(user.getUsername())) {
+                    keycloakAdminClient.realm(REALM_NAME).users().delete(user.getId());
+                }
+            }
+        }
     }
 }

@@ -4,197 +4,141 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
+import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
-import java.util.Map;
-import java.util.Set;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.UserRepresentation;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestClient;
 
 @ExtendWith(MockitoExtension.class)
 class KeycloakRegistrationServiceTest {
 
     @Mock
-    private RestClient restClient;
+    private Keycloak keycloak;
 
     @Mock
     private KeycloakProperties keycloakProperties;
 
     @Mock
-    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+    private RealmResource realmResource;
 
     @Mock
-    private RestClient.RequestBodySpec requestBodySpec;
+    private UsersResource usersResource;
 
     @Mock
-    private RestClient.ResponseSpec responseSpec;
+    private Response response;
 
     @Captor
-    ArgumentCaptor<MultiValueMap<String, String>> formCaptor;
-
-    @Captor
-    ArgumentCaptor<Map<String, Object>> jsonCaptor;
+    ArgumentCaptor<UserRepresentation> userCaptor;
 
     private KeycloakRegistrationService svc;
 
     @BeforeEach
     void beforeEach() {
-        svc = new KeycloakRegistrationService("http://kc", restClient, keycloakProperties);
-        given(restClient.post()).willReturn(requestBodyUriSpec);
-        given(requestBodyUriSpec.uri(anyString())).willReturn(requestBodySpec);
-        given(requestBodySpec.retrieve()).willReturn(responseSpec);
+        given(keycloakProperties.getRealm()).willReturn("retailstore");
+        svc = new KeycloakRegistrationService(keycloakProperties, keycloak);
     }
 
-    /** Verifies that registration obtains an admin token and uses it to submit the user details. */
     @Test
     void registerSuccessPathPostsTokenAndUser() {
-        // arrange
-        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
-        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
-        given(keycloakProperties.getAdminUsername()).willReturn("admin");
-        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
-        given(keycloakProperties.getRealm()).willReturn("realm1");
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "test@example.com",
+                "Test",
+                "User",
+                "pass123",
+                1234567890L,
+                "Addr1",
+                null,
+                "City",
+                "State",
+                "12345",
+                "Country");
 
-        // token form body: accept MultiValueMap
-        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
-                .willReturn(requestBodySpec);
-        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
-                .willReturn(Map.of("access_token", "tkn"));
+        given(keycloak.realm("retailstore")).willReturn(realmResource);
+        given(realmResource.users()).willReturn(usersResource);
+        given(usersResource.create(any(UserRepresentation.class))).willReturn(response);
+        given(response.getStatus()).willReturn(201);
 
-        // user creation JSON
-        given(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<Map<String, Object>>any())).willReturn(requestBodySpec);
-        given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
-        given(responseSpec.toBodilessEntity()).willReturn(ResponseEntity.ok().build());
+        assertDoesNotThrow(() -> svc.registerUser(request));
 
-        var r = new RegistrationRequest(
-                "u1", "e@example.com", "First", "Last", "p", 1L, "addr", null, null, null, null, null);
+        verify(usersResource).create(userCaptor.capture());
+        UserRepresentation captured = userCaptor.getValue();
 
-        // act / assert
-        assertDoesNotThrow(() -> svc.registerUser(r));
-
-        // verify: capture the two body calls in the execution order (form then json)
-        InOrder ord = inOrder(requestBodySpec, responseSpec);
-        ord.verify(requestBodySpec).contentType(MediaType.APPLICATION_FORM_URLENCODED);
-        ord.verify(requestBodySpec).body(formCaptor.capture());
-        // assert token form contains expected keys; values can be any
-        var tokenForm = formCaptor.getValue();
-        assertThat(tokenForm.keySet())
-                .containsAll(Set.of("client_id", "client_secret", "username", "password", "grant_type"));
-
-        ord.verify(requestBodySpec).contentType(MediaType.APPLICATION_JSON);
-        ord.verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
-        ord.verify(requestBodySpec).body(jsonCaptor.capture());
-        var userJson = jsonCaptor.getValue();
-        assertThat(userJson.keySet())
-                .containsAll(Set.of("username", "email", "firstName", "lastName", "enabled", "credentials"));
-        ord.verify(responseSpec).toBodilessEntity();
+        assertThat(captured.getUsername()).isEqualTo("testuser");
+        assertThat(captured.getEmail()).isEqualTo("test@example.com");
+        assertThat(captured.getFirstName()).isEqualTo("Test");
+        assertThat(captured.getLastName()).isEqualTo("User");
+        assertThat(captured.isEnabled()).isTrue();
+        assertThat(captured.getRealmRoles()).containsExactly("user");
+        assertThat(captured.getCredentials()).hasSize(1);
+        assertThat(captured.getCredentials().get(0).getValue()).isEqualTo("pass123");
+        assertThat(captured.getCredentials().get(0).isTemporary()).isFalse();
     }
 
-    /** Verifies that a token response containing an error causes a KeyCloakException. */
     @Test
-    void registerFailsWhenTokenReturnsErrorMap() {
-        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
-        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
-        given(keycloakProperties.getAdminUsername()).willReturn("admin");
-        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
+    void throwsUserAlreadyExistsWhen409() {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "test@example.com",
+                "Test",
+                "User",
+                "pass123",
+                1234567890L,
+                "Addr1",
+                null,
+                "City",
+                "State",
+                "12345",
+                "Country");
 
-        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
-                .willReturn(requestBodySpec);
-        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
-                .willReturn(Map.of("error", "nope"));
+        given(keycloak.realm("retailstore")).willReturn(realmResource);
+        given(realmResource.users()).willReturn(usersResource);
+        given(usersResource.create(any(UserRepresentation.class))).willReturn(response);
+        given(response.getStatus()).willReturn(409);
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
-
-        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
+        assertThatThrownBy(() -> svc.registerUser(request))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessageContaining("already taken");
     }
 
-    /** Verifies that a null token response body causes a KeyCloakException. */
     @Test
-    void registerFailsWhenTokenBodyIsNull() {
-        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
-        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
-        given(keycloakProperties.getAdminUsername()).willReturn("admin");
-        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
+    void throwsKeyCloakExceptionWhenOtherError() {
+        RegistrationRequest request = new RegistrationRequest(
+                "testuser",
+                "test@example.com",
+                "Test",
+                "User",
+                "pass123",
+                1234567890L,
+                "Addr1",
+                null,
+                "City",
+                "State",
+                "12345",
+                "Country");
 
-        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
-                .willReturn(requestBodySpec);
-        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
-                .willReturn(null);
+        given(keycloak.realm("retailstore")).willReturn(realmResource);
+        given(realmResource.users()).willReturn(usersResource);
+        given(usersResource.create(any(UserRepresentation.class))).willReturn(response);
+        given(response.getStatus()).willReturn(500);
 
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
-        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
-    }
-
-    /** Verifies that a token request failure is wrapped in a KeyCloakException. */
-    @Test
-    void registerWrapsExceptionsFromTokenCall() {
-        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
-        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
-        given(keycloakProperties.getAdminUsername()).willReturn("admin");
-        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
-
-        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
-                .willReturn(requestBodySpec);
-        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
-                .willThrow(new RuntimeException("boom"));
-
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
-
-        assertThatThrownBy(() -> svc.registerUser(r))
+        assertThatThrownBy(() -> svc.registerUser(request))
                 .isInstanceOf(KeyCloakException.class)
-                .hasCauseInstanceOf(RuntimeException.class);
-    }
-
-    /** Verifies that user creation failures are wrapped after sending the bearer token. */
-    @Test
-    void registerWrapsExceptionsFromUserCreation() {
-        // token ok
-        given(keycloakProperties.getAdminClientId()).willReturn("admin-cli");
-        given(keycloakProperties.getAdminClientSecret()).willReturn("secret");
-        given(keycloakProperties.getAdminUsername()).willReturn("admin");
-        given(keycloakProperties.getAdminPassword()).willReturn("admin123");
-        given(keycloakProperties.getRealm()).willReturn("realm1");
-
-        given(requestBodySpec.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<MultiValueMap<String, String>>any()))
-                .willReturn(requestBodySpec);
-        given(responseSpec.body(ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()))
-                .willReturn(Map.of("access_token", "tkn"));
-
-        // user creation stubbed to fail
-        given(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).willReturn(requestBodySpec);
-        given(requestBodySpec.body(ArgumentMatchers.<Map<String, Object>>any())).willReturn(requestBodySpec);
-        given(requestBodySpec.header(anyString(), any())).willReturn(requestBodySpec);
-        given(responseSpec.toBodilessEntity()).willThrow(new RuntimeException("create-fail"));
-
-        var r = new RegistrationRequest("u1", "e@example.com", "F", "L", "p", 2L, "addr", null, null, null, null, null);
-        assertThatThrownBy(() -> svc.registerUser(r)).isInstanceOf(KeyCloakException.class);
-        verify(requestBodySpec).header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer tkn"));
+                .hasMessageContaining("Failed to register user. Status: 500");
     }
 }

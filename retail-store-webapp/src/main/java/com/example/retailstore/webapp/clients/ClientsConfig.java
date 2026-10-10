@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.web.client.OAuth2ClientHttpRequestInterceptor;
 import org.springframework.web.client.support.RestClientHttpServiceGroupConfigurer;
 import org.springframework.web.service.registry.ImportHttpServices;
 
@@ -24,12 +26,19 @@ class ClientsConfig {
 
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
-            ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
+            ObservationRegistry observationRegistry,
+            ApplicationProperties applicationProperties,
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+
+        OAuth2ClientHttpRequestInterceptor interceptor =
+                new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
+
         return groups -> groups.forEachClient((group, builder) -> builder.baseUrl(applicationProperties.apiGatewayUrl())
                 .defaultHeaders(httpHeaders -> {
                     httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                     httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 })
+                .requestInterceptor(interceptor)
                 .observationRegistry(observationRegistry)
                 .build());
     }

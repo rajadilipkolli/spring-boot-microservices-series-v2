@@ -272,6 +272,9 @@ public class OrderService {
      * @return order responses with the original pagination metadata and a one-based page number
      */
     private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
+        if (page.isEmpty()) {
+            return new PagedResult<>(page, List.of());
+        }
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
         Map<Long, Integer> positions = new HashMap<>();
@@ -290,15 +293,7 @@ public class OrderService {
         // Joining all completable Future to get DTOs
         List<OrderResponse> orderListDto =
                 completableFutureList.stream().map(CompletableFuture::join).toList();
-        return new PagedResult<>(
-                orderListDto,
-                page.getTotalElements(),
-                page.getNumber() + 1,
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast(),
-                page.hasNext(),
-                page.hasPrevious());
+        return new PagedResult<>(page, orderListDto);
     }
 
     @Job(name = "reProcessNewOrders", retries = 2)
@@ -359,18 +354,6 @@ public class OrderService {
                             pageable);
         } else {
             page = orderRepository.searchOrdersByKeyword(term, customerId, status, pageable);
-        }
-
-        if (page.isEmpty()) {
-            return new PagedResult<>(
-                    List.of(),
-                    page.getTotalElements(),
-                    page.getNumber() + 1,
-                    page.getTotalPages(),
-                    page.isFirst(),
-                    page.isLast(),
-                    page.hasNext(),
-                    page.hasPrevious());
         }
 
         return getOrderResponsePagedResult(page);
