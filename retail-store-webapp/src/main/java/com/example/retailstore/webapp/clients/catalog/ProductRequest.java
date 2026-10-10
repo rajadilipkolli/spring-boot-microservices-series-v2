@@ -5,8 +5,11 @@
  ***/
 package com.example.retailstore.webapp.clients.catalog;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 
 public record ProductRequest(
         @NotBlank(message = "Product code can't be blank") String productCode,
@@ -14,5 +17,5 @@ public record ProductRequest(
         String description,
         String imageUrl,
 
-        @Positive @jakarta.validation.constraints.Digits(integer = 17, fraction = 2)
-        java.math.BigDecimal price) {}
+        @NotNull(message = "Price cannot be null") @Positive @Digits(integer = 17, fraction = 2)
+        BigDecimal price) {}
