@@ -37,6 +37,7 @@ public class InventoryOrderManageService {
     private final Counter inventoryReservationsCounter;
     private final Counter inventoryFailuresCounter;
 
+    /** Creates the service and obtains reservation and failure counters from the registry. */
     public InventoryOrderManageService(
             InventoryRepository inventoryRepository,
             MeterRegistry meterRegistry,
@@ -50,8 +51,16 @@ public class InventoryOrderManageService {
     /**
      * Reserves available inventory for a new order and publishes the reservation outcome.
      *
+     * <p>Orders whose status is not {@code NEW} are returned unchanged without publishing an
+     * event. New orders are rejected without stock changes if products are missing, product
+     * codes are repeated, or any requested quantity exceeds availability. Accepted orders move
+     * the requested quantities from available to reserved stock. Both outcomes publish an
+     * {@link InventoryProcessedEvent}; persistence and event publication failures propagate to
+     * the caller.
+     *
      * @param orderDto order whose items should be reserved
-     * @return the order with its inventory status and source
+     * @return the order with status {@code ACCEPT} or {@code REJECT} and source {@code INVENTORY},
+     *     or the original order if its status is not {@code NEW}
      */
     @Transactional
     public OrderDto reserve(OrderDto orderDto) {
@@ -146,6 +155,14 @@ public class InventoryOrderManageService {
         return orderWithSource;
     }
 
+    /**
+     * Decreases reserved stock for {@code CONFIRMED} orders, or restores it to available stock
+     * for {@code ROLLBACK} orders whose source is not {@code INVENTORY} (case-insensitive).
+     * Missing products are skipped and other statuses leave quantities unchanged. Changes are
+     * persisted without publishing an event; persistence failures propagate to the caller.
+     *
+     * @param orderDto order whose item quantities are deducted from reserved stock
+     */
     @Transactional
     public void confirm(OrderDto orderDto) {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);

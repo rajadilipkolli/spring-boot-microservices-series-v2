@@ -13,6 +13,7 @@ import org.springframework.modulith.events.Externalized;
 
 @Externalized("stock-orders")
 public record InventoryProcessedEvent(@JsonValue OrderDto order) {
+    /** Wraps the processed order as an externalizable inventory outcome without validating it. */
     @JsonCreator
     public InventoryProcessedEvent {}
 }

@@ -52,6 +52,14 @@ class KafkaListenerConfig {
         this.validator = validator;
     }
 
+    /**
+     * Validates the order JSON in the record value and reserves inventory for {@code NEW} orders;
+     * other statuses are passed to confirmation handling. Processing failures propagate to the
+     * Kafka listener's retry handling.
+     *
+     * @throws JacksonException if the record value cannot be deserialized as an order
+     * @throws ConstraintViolationException if the order violates bean validation constraints
+     */
     // retries if processing of event fails
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
@@ -70,6 +78,14 @@ class KafkaListenerConfig {
         }
     }
 
+    /**
+     * Validates the product JSON in the record value and creates inventory if the product code
+     * is absent. Existing products, including concurrent duplicate creation, are ignored;
+     * other persistence failures propagate to the listener container.
+     *
+     * @throws JacksonException if the record value cannot be deserialized as a product
+     * @throws ConstraintViolationException if the product violates bean validation constraints
+     */
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
     public void onSaveProductEvent(ConsumerRecord<String, String> record) throws JacksonException {
         String productDtoStr = record.value();
@@ -86,6 +102,7 @@ class KafkaListenerConfig {
         return object;
     }
 
+    /** Reports an order message delivered to the dead-letter topic for diagnosis. */
     @DltHandler
     public void dlt(
             ConsumerRecord<String, String> record,

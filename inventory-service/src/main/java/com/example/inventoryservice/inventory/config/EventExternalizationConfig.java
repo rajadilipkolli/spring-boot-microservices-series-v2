@@ -15,6 +15,10 @@ import org.springframework.modulith.events.RoutingTarget;
 @Configuration(proxyBeanMethods = false)
 class EventExternalizationConfig {
 
+    /**
+     * Selects events annotated for externalization and routes inventory outcomes to {@code
+     * stock-orders}, keyed by the order ID as a string.
+     */
     @Bean
     EventExternalizationConfiguration eventExternalizationConfiguration() {
         return EventExternalizationConfiguration.externalizing()

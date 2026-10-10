@@ -36,11 +36,13 @@ class LoggingAspect {
         this.env = env;
     }
 
+    /** Matches methods annotated with {@link Loggable}. */
     @Pointcut("@annotation(com.example.inventoryservice.inventory.utils.logging.Loggable)")
     private void methodLoggablePointcut() {
         // Pointcut definition
     }
 
+    /** Matches methods in a {@link Loggable} class without their own {@link Loggable} annotation. */
     @Pointcut(
             "@within(com.example.inventoryservice.inventory.utils.logging.Loggable)"
                     + " && !@annotation(com.example.inventoryservice.inventory.utils.logging.Loggable)")
