@@ -8,6 +8,7 @@ package com.example.catalogservice.entities;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
@@ -31,7 +32,7 @@ public class Product implements Serializable, Persistable<Long> {
 
     private String description;
 
-    private java.math.BigDecimal price;
+    private BigDecimal price;
 
     private String imageUrl;
 
@@ -90,7 +91,7 @@ public class Product implements Serializable, Persistable<Long> {
     }
 
     /** Returns the stored unit price, or null if unset. */
-    public java.math.BigDecimal getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
@@ -100,7 +101,7 @@ public class Product implements Serializable, Persistable<Long> {
      * @param price the unit price to retain, or null to clear it
      * @return this product for chaining
      */
-    public Product setPrice(java.math.BigDecimal price) {
+    public Product setPrice(BigDecimal price) {
         this.price = price;
         return this;
     }

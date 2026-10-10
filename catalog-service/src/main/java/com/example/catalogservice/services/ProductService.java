@@ -404,8 +404,7 @@ public class ProductService {
                                                                 "Gen Product " + i,
                                                                 "Gen Prod Description " + i,
                                                                 null,
-                                                                java.math.BigDecimal.valueOf(
-                                                                                randomPrice)
+                                                                BigDecimal.valueOf(randomPrice)
                                                                         .setScale(2))))
                 .flatMap(this::saveProduct)
                 .then(Mono.just(Boolean.TRUE));

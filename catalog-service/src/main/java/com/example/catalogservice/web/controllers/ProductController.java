@@ -17,6 +17,7 @@ import com.example.catalogservice.web.api.ProductApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -145,8 +146,8 @@ public class ProductController implements ProductApi {
     @Override
     public Mono<PagedResult<ProductResponse>> searchProducts(
             @RequestParam(required = false) String term,
-            @RequestParam(required = false) java.math.BigDecimal minPrice,
-            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)

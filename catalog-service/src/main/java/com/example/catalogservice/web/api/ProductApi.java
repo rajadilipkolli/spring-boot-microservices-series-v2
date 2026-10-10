@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.math.BigDecimal;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -69,12 +70,12 @@ public interface ProductApi {
                             name = "minPrice",
                             description = "Minimum price range for filtering products")
                     @RequestParam(required = false)
-                    java.math.BigDecimal minPrice,
+                    BigDecimal minPrice,
             @Parameter(
                             name = "maxPrice",
                             description = "Maximum price range for filtering products")
                     @RequestParam(required = false)
-                    java.math.BigDecimal maxPrice,
+                    BigDecimal maxPrice,
             @Parameter(
                             name = "pageNo",
                             description = "Page number (1-based)",
