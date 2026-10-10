@@ -209,7 +209,7 @@ function print_summary() {
 
 function assertCurl() {
   local expectedHttpCode=$1
-  local curlCmd="$2 -w \"%{http_code}\""
+  local curlCmd="$2 -H \"Authorization: Bearer $ACCESS_TOKEN\" -w \"%{http_code}\""
   local testName="${3:-API Call}"
   local result
 
@@ -311,7 +311,7 @@ function recreateComposite() {
     local testName="API Request to $baseURL"
 
     echo -e "${CYAN}Calling URL ${BASE_URL}/${baseURL} with body -${NC} $composite"
-    COMPOSITE_RESPONSE=$(curl -X ${methodType} -k ${BASE_URL}/${baseURL} -H "Content-Type: application/json" \
+    COMPOSITE_RESPONSE=$(curl -X $methodType -k $BASE_URL/$baseURL -H "Content-Type: application/json" -H "Authorization: Bearer $ACCESS_TOKEN" \
     --data "$composite")
 
     # Check if curl was successful
@@ -752,7 +752,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 80,"productPrice": 10}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
+'","quantity": 80,"productPrice": 10}],"deliveryAddress": {"addressLine1": "Hno 143","addressLine2": "Love Colony","city": "Hyderabad","state": "TS","zipCode": "500072","country": "India"}}'
 
     echo " "
     # Creating 3rd Order, this should CONFIRMED as Inventory is available
@@ -781,7 +781,7 @@ function verifyAPIs() {
 ',"items":[{"productCode": '
     body+="\"$PROD_CODE"
     body+=\
-'","quantity": 8,"productPrice": 20}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
+'","quantity": 8,"productPrice": 20}],"deliveryAddress": {"addressLine1": "Hno 143","addressLine2": "Love Colony","city": "Hyderabad","state": "TS","zipCode": "500072","country": "India"}}'
 
     echo " "
     # Creating 4th Order, this should ROLLBACK as amount is not available for customer
@@ -844,7 +844,7 @@ function verifyAPIs() {
 '","quantity": 1,"productPrice": 10},{"productCode": '
       body+="\"$PROD_CODE_1"
       body+=\
-'","quantity": 5,"productPrice": 10}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
+'","quantity": 5,"productPrice": 10}],"deliveryAddress": {"addressLine1": "Hno 143","addressLine2": "Love Colony","city": "Hyderabad","state": "TS","zipCode": "500072","country": "India"}}'
 
     echo " "
     # Creating Order
@@ -878,7 +878,7 @@ function verifyAPIs() {
 '","quantity": 1,"productPrice": 10},{"productCode": '
       body+="\"$PROD_CODE_1"
       body+=\
-'","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "string","addressLine2": "string","city": "string","state": "string","zipCode": "string","country": "string"}}'
+'","quantity": 500,"productPrice": 9.99}],"deliveryAddress": {"addressLine1": "Hno 143","addressLine2": "Love Colony","city": "Hyderabad","state": "TS","zipCode": "500072","country": "India"}}'
 
     echo " "
     # Creating Order
@@ -934,6 +934,7 @@ function verifyKeycloakUsers() {
             -d "grant_type=password" || true)
 
         if [[ "$token_response" == *"access_token"* ]]; then
+            export ACCESS_TOKEN=$(echo $token_response | jq -r .access_token)
             log_info "Keycloak users verified successfully on attempt $attempt!"
             return 0
         fi
