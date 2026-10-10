@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -99,7 +100,16 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
         assertThat(user.getLastName()).isEqualTo(TEST_LAST_NAME);
         assertThat(user.isEnabled()).isTrue();
         assertThat(user.isEmailVerified()).isFalse(); // Typically email is not verified immediately
-        assertThat(user.getRealmRoles()).contains("user"); // Check that the "user" role is assigned
+        // User search results do not include role mappings; query the assigned realm roles directly.
+        assertThat(keycloakAdminClient
+                        .realm(REALM_NAME)
+                        .users()
+                        .get(user.getId())
+                        .roles()
+                        .realmLevel()
+                        .listAll())
+                .extracting(RoleRepresentation::getName)
+                .contains("user");
 
         // Assert: Verify that the CustomerService was called
         gatewayServiceMock.verify(
