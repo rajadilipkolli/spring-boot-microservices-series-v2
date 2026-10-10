@@ -23,8 +23,8 @@ jobs:
       services: ${{ steps.plan.outputs.build }}
       has_services: ${{ steps.plan.outputs.has_build }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: Continuous-Actions/dynamic-monorepo@v1
+      - uses: actions/checkout#3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: Continuous-Actions/dynamic-monorepo#77762731c30b63136a6cd3b37e854a75febb7eeb
         id: plan
 
   build:
