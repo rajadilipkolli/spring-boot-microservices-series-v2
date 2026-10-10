@@ -13,8 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.kafka.annotation.KafkaListener;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestStockOrderListenerConfig {
@@ -22,27 +20,21 @@ public class TestStockOrderListenerConfig {
     private static final Logger log = LoggerFactory.getLogger(TestStockOrderListenerConfig.class);
 
     private final CountDownLatch countDownLatch = new CountDownLatch(1);
-    private final JsonMapper jsonMapper;
-
-    public TestStockOrderListenerConfig(JsonMapper jsonMapper) {
-        this.jsonMapper = jsonMapper;
-    }
 
     public CountDownLatch getCountDownLatch() {
         return countDownLatch;
     }
 
-    @KafkaListener(id = "stocks", topics = "stock-orders", groupId = "inventory")
-    public void onOrderEvent(ConsumerRecord<String, String> record) throws JacksonException {
-        String orderDtoStr = record.value();
-        // if (orderDtoStr.startsWith("\"") && orderDtoStr.endsWith("\"")) {
-        //     // Base64 encoded JSON string, decode it
-        //     orderDtoStr =
-        //             new String(
-        //                     Base64.getDecoder()
-        //                             .decode(orderDtoStr.substring(1, orderDtoStr.length() - 1)));
-        // }
-        OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
+    @KafkaListener(
+            id = "stocks",
+            topics = "stock-orders",
+            groupId = "inventory",
+            properties = {
+                "spring.deserializer.value.delegate.class=org.springframework.kafka.support.serializer.JsonDeserializer",
+                "spring.json.trusted.packages=com.example.inventoryservice.inventory.events"
+            })
+    public void onOrderEvent(ConsumerRecord<String, OrderDto> record) {
+        OrderDto orderDto = record.value();
         log.info("Received Order: {}", orderDto);
         countDownLatch.countDown();
     }
