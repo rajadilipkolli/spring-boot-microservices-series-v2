@@ -1,13 +1,14 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.model.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderResponse(
-        Long orderId,
-        Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
         String status,
         String source,
         Address deliveryAddress,
@@ -16,8 +17,17 @@ public record OrderResponse(
         List<OrderItemResponse> items) {
 
     public record Address(
-            String street, String city, String state, String zipCode, String country) {}
+            String addressLine1,
+            String addressLine2,
+            String city,
+            String state,
+            String zipCode,
+            String country) {}
 
     public record OrderItemResponse(
-            Long itemId, String productId, int quantity, BigDecimal price) {}
+            @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
+            String productId,
+            int quantity,
+            BigDecimal productPrice,
+            BigDecimal price) {}
 }

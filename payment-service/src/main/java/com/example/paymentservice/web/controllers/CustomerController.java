@@ -124,6 +124,12 @@ class CustomerController {
                     String sortBy,
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
+        if (pageNo < 1) {
+            throw new IllegalArgumentException("pageNo must be greater than or equal to 1");
+        }
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("pageSize must be greater than 0");
+        }
         return customerService
                 .findCustomerById(id)
                 .map(

@@ -17,8 +17,7 @@ public interface OrderServiceProxy {
     @GetExchange("/api/orders/customer/{id}")
     PagedResult<OrderResponse> getOrdersByCustomerId(
             @PathVariable("id") Long id,
-            @RequestParam(name = "pageNo", defaultValue = "1") int pageNo,
-            @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
-            @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
-            @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir);
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "id,asc") String sort);
 }
