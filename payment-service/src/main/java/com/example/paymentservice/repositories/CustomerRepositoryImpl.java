@@ -51,6 +51,12 @@ public class CustomerRepositoryImpl implements CustomerRepository {
                 dslContext.fetchCount(CUSTOMERS));
     }
 
+    /**
+     * Finds a customer by exact name, including its separate address fields.
+     *
+     * @param name the customer name to match
+     * @return the matching customer response, or an empty optional when no match exists
+     */
     @Override
     public Optional<CustomerResponse> findByName(String name) {
         return dslContext

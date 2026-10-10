@@ -72,6 +72,9 @@ class OrderControllerTest {
     private CustomerResponse customerResponse;
     private OrderConfirmationDTO orderConfirmation;
 
+    /**
+     * Creates order and customer fixtures and stubs the authenticated user for controller tests.
+     */
     @BeforeEach
     void setUp() {
         // Set up test data for orders

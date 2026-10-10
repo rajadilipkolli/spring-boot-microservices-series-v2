@@ -80,6 +80,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .isEqualTo(orderConfirmationDTO);
     }
 
+    /**
+     * Verifies that an authenticated customer can retrieve their order and its customer details.
+     */
     @Test
     void testGetOrder() {
         OrderResponse orderResponse = new OrderResponse();
@@ -124,6 +127,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .isEqualTo(orderResponse);
     }
 
+    /**
+     * Verifies order JSON deserialization, including delivery address, timestamp, prices, and items.
+     */
     @Test
     void testGetOrderWithLiteralJsonFromOrderService() {
         String literalJsonResponse = """
@@ -217,6 +223,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /**
+     * Verifies that a customer with no orders receives an empty page with consistent pagination metadata.
+     */
     @Test
     void testGetOrders() {
         PagedResult<OrderResponse> pagedResult =
@@ -268,6 +277,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /** Verifies that another customer's order is hidden behind an HTTP 404 response. */
     @Test
     void testGetOrder_Forbidden() {
         OrderResponse orderResponse = new OrderResponse();

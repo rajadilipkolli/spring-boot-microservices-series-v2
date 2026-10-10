@@ -29,6 +29,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
 
     private List<Customer> customerList = null;
 
+    /** Replaces existing customers with three fixtures containing separate address fields. */
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
@@ -112,6 +113,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
     }
 
+    /** Verifies that lookup of an unknown customer ID returns HTTP 404 with problem details. */
     @Test
     void shouldReturn404WhenFetchingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;
@@ -190,6 +192,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
     }
 
+    /**
+     * Verifies that email lookup ignores case and returns the persisted customer details.
+     *
+     * @param email a case variant of the stored customer email
+     */
     @ParameterizedTest
     @ValueSource(strings = {"first@customer.email", "FIRST@CUSTOMER.EMAIL", "FiRsT@CuStOmEr.EmAiL"})
     void shouldFindCustomerByEmail(String email) {

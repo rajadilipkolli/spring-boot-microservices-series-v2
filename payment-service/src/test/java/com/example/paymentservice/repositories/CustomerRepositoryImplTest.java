@@ -24,6 +24,12 @@ class CustomerRepositoryImplTest extends AbstractIntegrationTest {
         customerRepository.deleteAll();
     }
 
+    /**
+     * Verifies that batch insertion preserves supplied versions and initializes null versions to
+     * zero.
+     *
+     * @param version the version to insert, or null to use the initial version
+     */
     @ParameterizedTest
     @NullSource
     @ValueSource(ints = {0, 7})
@@ -50,6 +56,9 @@ class CustomerRepositoryImplTest extends AbstractIntegrationTest {
                 .isEqualTo(expectedVersion);
     }
 
+    /**
+     * Verifies initial and incremented versions and rejection of an update using a stale version.
+     */
     @Test
     void testOptimisticLocking() {
         Customer customer =

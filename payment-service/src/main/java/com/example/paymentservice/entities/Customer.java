@@ -43,26 +43,32 @@ public class Customer {
         return this.email;
     }
 
+    /** Returns the first address line. */
     public String getAddressLine1() {
         return this.addressLine1;
     }
 
+    /** Returns the optional second address line. */
     public String getAddressLine2() {
         return this.addressLine2;
     }
 
+    /** Returns the city. */
     public String getCity() {
         return this.city;
     }
 
+    /** Returns the state or province. */
     public String getState() {
         return this.state;
     }
 
+    /** Returns the ZIP or postal code. */
     public String getZipCode() {
         return this.zipCode;
     }
 
+    /** Returns the country. */
     public String getCountry() {
         return this.country;
     }
@@ -90,31 +96,67 @@ public class Customer {
         return this;
     }
 
+    /**
+     * Sets the first address line.
+     *
+     * @param addressLine1 the first address line to store
+     * @return this customer for chaining
+     */
     public Customer setAddressLine1(final String addressLine1) {
         this.addressLine1 = addressLine1;
         return this;
     }
 
+    /**
+     * Sets the optional second address line.
+     *
+     * @param addressLine2 the optional second address line to store
+     * @return this customer for chaining
+     */
     public Customer setAddressLine2(final String addressLine2) {
         this.addressLine2 = addressLine2;
         return this;
     }
 
+    /**
+     * Sets the city.
+     *
+     * @param city the city to store
+     * @return this customer for chaining
+     */
     public Customer setCity(final String city) {
         this.city = city;
         return this;
     }
 
+    /**
+     * Sets the state or province.
+     *
+     * @param state the state or province to store
+     * @return this customer for chaining
+     */
     public Customer setState(final String state) {
         this.state = state;
         return this;
     }
 
+    /**
+     * Sets the ZIP or postal code.
+     *
+     * @param zipCode the ZIP or postal code to store
+     * @return this customer for chaining
+     */
     public Customer setZipCode(final String zipCode) {
         this.zipCode = zipCode;
         return this;
     }
 
+    /**
+     * Sets the country.
+     *
+     * @param country the country to store
+     * @return this customer for chaining
+     */
     public Customer setCountry(final String country) {
         this.country = country;
         return this;
@@ -155,6 +197,7 @@ public class Customer {
         return this;
     }
 
+    /** Returns customer details, including each address field and both balances. */
     public String toString() {
         return "Customer(id="
                 + this.getId()

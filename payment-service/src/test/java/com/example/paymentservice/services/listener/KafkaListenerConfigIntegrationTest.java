@@ -25,6 +25,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
     private Customer customer;
 
+    /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
     @BeforeEach
     void setUp() {
         this.customerRepository.deleteAll();

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class CustomerMapper {
 
     /**
-     * Creates a customer with the request's contact details, balance, and combined address.
+     * Creates a customer with the request's contact details, balance, and separate address fields.
      *
      * @param customerRequest customer details to copy
      * @return a new customer entity
@@ -31,6 +31,12 @@ public class CustomerMapper {
         return customer;
     }
 
+    /**
+     * Maps customer details, separate address fields, and the available balance to a response.
+     *
+     * @param customer the entity to read
+     * @return the customer response
+     */
     public CustomerResponse toResponse(Customer customer) {
         return new CustomerResponse(
                 customer.getId(),

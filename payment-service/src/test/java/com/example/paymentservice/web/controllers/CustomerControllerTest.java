@@ -57,6 +57,7 @@ class CustomerControllerTest {
 
     private List<Customer> customerList;
 
+    /** Creates three customer fixtures with separate address fields for controller tests. */
     @BeforeEach
     void setUp() {
         this.customerList =
@@ -121,6 +122,11 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /**
+     * Maps the customer fixtures to responses while preserving their separate address fields.
+     *
+     * @return responses in fixture order
+     */
     private List<CustomerResponse> getCustomerResponseList() {
         return customerList.stream()
                 .map(
@@ -143,6 +149,10 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("find methods")
     class Find {
+        /**
+         * Verifies that lookup by ID returns HTTP 200 and the customer name supplied by the
+         * service.
+         */
         @Test
         void shouldFindCustomerById() throws Exception {
             Long customerId = 1L;
@@ -208,6 +218,10 @@ class CustomerControllerTest {
                                     .value("Customer with Name 'junitCustomer' not found"));
         }
 
+        /**
+         * Verifies that email lookup returns HTTP 200 and the customer name supplied by the
+         * service.
+         */
         @Test
         void shouldFindCustomerByEmail() throws Exception {
             String email = "junit@email.com";
@@ -433,6 +447,7 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("delete methods")
     class Delete {
+        /** Verifies that deleting an existing customer returns HTTP 200 and the customer name. */
         @Test
         void shouldDeleteCustomer() throws Exception {
             Long customerId = 1L;
