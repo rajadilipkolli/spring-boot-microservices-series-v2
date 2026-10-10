@@ -8,5 +8,10 @@ public record CustomerResponse(
         String name,
         String email,
         String phone,
-        String address,
+        String addressLine1,
+        String addressLine2,
+        String city,
+        String state,
+        String zipCode,
+        String country,
         double amountAvailable) {}

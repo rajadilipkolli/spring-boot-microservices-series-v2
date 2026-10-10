@@ -26,7 +26,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final String TEST_FIRST_NAME = "firstName";
     private static final String TEST_LAST_NAME = "lastName";
     private static final Long TEST_PHONE_NUMBER = 1234567890L;
-    private static final String TEST_ADDRESS_LINE = "Test Address";
+    private static final String TEST_ADDRESS_LINE_1 = "Test Address";
+    private static final String TEST_ADDRESS_LINE_2 = null;
+    private static final String TEST_CITY = "Test City";
+    private static final String TEST_STATE = "Test State";
+    private static final String TEST_ZIP_CODE = "12345";
+    private static final String TEST_COUNTRY = "Test Country";
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
 
     /** Removes accounts created by successful and duplicate registration scenarios after each test. */
@@ -47,27 +52,37 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 TEST_LAST_NAME,
                 "Test@1234",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE,
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY);
 
         // Arrange: Expected CustomerRequest and CustomerResponse for mocking CustomerServiceClient
         CustomerRequest expectedCustomerRequest = new CustomerRequest(
                 TEST_USERNAME,
                 TEST_EMAIL,
                 String.valueOf(TEST_PHONE_NUMBER),
-                TEST_ADDRESS_LINE,
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country",
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY,
                 10_000);
         CustomerResponse expectedCustomerResponse = new CustomerResponse(
-                1L, TEST_USERNAME, TEST_EMAIL, String.valueOf(TEST_PHONE_NUMBER), TEST_ADDRESS_LINE, 10_000);
+                1L,
+                TEST_USERNAME,
+                TEST_EMAIL,
+                String.valueOf(TEST_PHONE_NUMBER),
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY,
+                10_000);
 
         // Arrange: Stub for CustomerServiceClient call via gatewayServiceMock
         gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
@@ -129,12 +144,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123@",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE,
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY);
 
         mockMvcTester
                 .post()
@@ -160,12 +175,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "password",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE,
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country"); // invalid password (no uppercase, numbers, or special chars)
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY); // invalid password (no uppercase, numbers, or special chars)
 
         mockMvcTester
                 .post()
@@ -191,12 +206,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "User",
                 "Password123@",
                 TEST_PHONE_NUMBER,
-                TEST_ADDRESS_LINE,
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
+                TEST_ADDRESS_LINE_1,
+                TEST_ADDRESS_LINE_2,
+                TEST_CITY,
+                TEST_STATE,
+                TEST_ZIP_CODE,
+                TEST_COUNTRY);
 
         mockMvcTester
                 .post()
@@ -241,8 +256,18 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 "Test Country",
                 10_000);
 
-        CustomerResponse expectedCustomerResponse =
-                new CustomerResponse(1L, "existinguser", "existing@example.com", "1234567890", "Test Address", 10_000);
+        CustomerResponse expectedCustomerResponse = new CustomerResponse(
+                1L,
+                "existinguser",
+                "existing@example.com",
+                "1234567890",
+                "Test Address",
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                10_000);
 
         gatewayServiceMock.stubFor(post(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
                 .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest)))

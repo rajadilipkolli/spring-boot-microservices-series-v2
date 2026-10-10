@@ -25,6 +25,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
     private Customer customer;
 
+    /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
     @BeforeEach
     void setUp() {
         this.customerRepository.deleteAll();
@@ -39,7 +40,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                                 .setName(uniqueName)
                                 .setEmail(uniqueEmail)
                                 .setPhone("1234567890")
-                                .setAddress("First Address")
+                                .setAddressLine1("First Address")
+                                .setAddressLine2("Second Address")
+                                .setCity("City")
+                                .setState("State")
+                                .setZipCode("12345")
+                                .setCountry("Country")
                                 .setAmountAvailable(100)
                                 .setAmountReserved(10));
         // Ensure the customer is saved before running tests

@@ -36,8 +36,18 @@ class OrderControllerIT extends AbstractIntegrationTest {
         CreateOrderRequest createOrderRequest =
                 new CreateOrderRequest(Collections.singletonList(orderItemRequest), customerRequest, address);
 
-        CustomerResponse customerResponse =
-                new CustomerResponse(1L, "Test User", "test@example.com", "1234567890", "Test Address", 0);
+        CustomerResponse customerResponse = new CustomerResponse(
+                1L,
+                "Test User",
+                "test@example.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
         OrderConfirmationDTO orderConfirmationDTO = new OrderConfirmationDTO(1L, 1L, "CONFIRMED");
 
         // Mock Customer Service
@@ -70,13 +80,26 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .isEqualTo(orderConfirmationDTO);
     }
 
+    /**
+     * Verifies that an authenticated customer can retrieve their order and its customer details.
+     */
     @Test
     void testGetOrder() {
         OrderResponse orderResponse = new OrderResponse();
         orderResponse.setOrderId(1L);
         orderResponse.setCustomerId(2L);
-        CustomerResponse customerResponse =
-                new CustomerResponse(2L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
+        CustomerResponse customerResponse = new CustomerResponse(
+                2L,
+                "Test User",
+                "testemail@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
         orderResponse.setCustomer(customerResponse); // Set the customer in the expected response
         gatewayServiceMock.stubFor(
                 get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
@@ -104,6 +127,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .isEqualTo(orderResponse);
     }
 
+    /**
+     * Verifies order JSON deserialization, including delivery address, timestamp, prices, and items.
+     */
     @Test
     void testGetOrderWithLiteralJsonFromOrderService() {
         String literalJsonResponse = """
@@ -141,8 +167,18 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 }
                 """;
 
-        CustomerResponse customerResponse =
-                new CustomerResponse(405L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
+        CustomerResponse customerResponse = new CustomerResponse(
+                405L,
+                "Test User",
+                "testemail@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
 
         gatewayServiceMock.stubFor(
                 get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
@@ -187,13 +223,26 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /**
+     * Verifies that a customer with no orders receives an empty page with consistent pagination metadata.
+     */
     @Test
     void testGetOrders() {
         PagedResult<OrderResponse> pagedResult =
                 new PagedResult<>(Collections.emptyList(), 0L, 1, 0, true, true, false, false);
 
-        CustomerResponse customerResponse =
-                new CustomerResponse(4L, "Empty User", "empty@gmail.com", "1234567890", "Test Address", 0);
+        CustomerResponse customerResponse = new CustomerResponse(
+                4L,
+                "Empty User",
+                "empty@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=empty%40gmail.com"))
                 .willReturn(aResponse()
@@ -228,17 +277,38 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /** Verifies that another customer's order is hidden behind an HTTP 404 response. */
     @Test
     void testGetOrder_Forbidden() {
         OrderResponse orderResponse = new OrderResponse();
         orderResponse.setOrderId(1L);
         orderResponse.setCustomerId(2L);
-        CustomerResponse orderCustomer =
-                new CustomerResponse(2L, "Test User", "testemail@gmail.com", "1234567890", "Test Address", 0);
+        CustomerResponse orderCustomer = new CustomerResponse(
+                2L,
+                "Test User",
+                "testemail@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
         orderResponse.setCustomer(orderCustomer);
 
-        CustomerResponse loggedInCustomer =
-                new CustomerResponse(3L, "Other User", "other@gmail.com", "1234567890", "Test Address", 0);
+        CustomerResponse loggedInCustomer = new CustomerResponse(
+                3L,
+                "Other User",
+                "other@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                0);
 
         gatewayServiceMock.stubFor(get(urlEqualTo("/payment-service/api/customers/by-email?email=other%40gmail.com"))
                 .willReturn(aResponse()

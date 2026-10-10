@@ -73,13 +73,19 @@ class CustomerController {
                 .orElseThrow(() -> CustomerNotFoundException.forEmail(email));
     }
 
+    /**
+     * Saves the customer and returns HTTP 201 with its details and resource location.
+     *
+     * @param customerRequest the validated customer details
+     * @return the customer response with its ID appended to the current request URI
+     */
     @PostMapping
     ResponseEntity<CustomerResponse> createCustomer(
             @RequestBody @Valid CustomerRequest customerRequest) {
         CustomerResponse response = customerService.saveCustomer(customerRequest);
         URI location =
                 ServletUriComponentsBuilder.fromCurrentRequest()
-                        .path("/api/customers/{id}")
+                        .path("/{id}")
                         .buildAndExpand(response.customerId())
                         .toUri();
         return ResponseEntity.created(location).body(response);

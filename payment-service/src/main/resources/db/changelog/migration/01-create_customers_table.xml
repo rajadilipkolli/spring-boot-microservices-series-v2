@@ -29,7 +29,22 @@
             <column name="phone" type="${string.type}">
                 <constraints nullable="false"/>
             </column>
-            <column name="address" type="${string.type}"/>
+            <column name="address_line1" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address_line2" type="${string.type}"/>
+            <column name="city" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="zip_code" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="country" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
             <column name="amount_available" type="double"/>
             <column name="amount_reserved" type="double"/>
             <column name="version" type="integer" defaultValueNumeric="0">
