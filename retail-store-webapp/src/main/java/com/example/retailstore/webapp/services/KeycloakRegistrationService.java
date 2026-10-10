@@ -8,8 +8,10 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.keycloak.OAuth2Constants;
+import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,12 +47,20 @@ public class KeycloakRegistrationService {
     public void registerUser(RegistrationRequest request) {
         UserRepresentation user = getUserRepresentation(request);
 
-        try (Response response = keycloak.realm(realm).users().create(user)) {
+        RealmResource realmResource = keycloak.realm(realm);
+        try (Response response = realmResource.users().create(user)) {
             if (response.getStatus() == 409) {
                 throw new UserAlreadyExistsException("Username or email is already taken.");
             } else if (response.getStatus() >= 400) {
                 throw new KeyCloakException("Failed to register user. Status: " + response.getStatus());
             }
+            String userId = CreatedResponseUtil.getCreatedId(response);
+            realmResource
+                    .users()
+                    .get(userId)
+                    .roles()
+                    .realmLevel()
+                    .add(List.of(realmResource.roles().get("user").toRepresentation()));
         }
     }
 
@@ -61,7 +71,6 @@ public class KeycloakRegistrationService {
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
         user.setEnabled(true);
-        user.setRealmRoles(List.of("user"));
 
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);

@@ -8,6 +8,7 @@ import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
@@ -26,6 +27,12 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
     private static final Long TEST_PHONE_NUMBER = 1234567890L;
     private static final String TEST_ADDRESS_LINE = "Test Address";
     private static final String CUSTOMER_SERVICE_API_PATH = "/payment-service/api/customers";
+
+    @AfterEach
+    void cleanupUsers() {
+        deleteUsers(TEST_USERNAME);
+        deleteUsers("existinguser");
+    }
 
     /** Verifies that registration creates a Keycloak user and forwards customer details to payment. */
     @Test
@@ -97,9 +104,6 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 1, // Ensure it was called exactly once
                 postRequestedFor(urlEqualTo(CUSTOMER_SERVICE_API_PATH))
                         .withRequestBody(equalToJson(jsonMapper.writeValueAsString(expectedCustomerRequest))));
-
-        // Clean up the created user in Keycloak to ensure test idempotency
-        deleteUsers(TEST_USERNAME);
     }
 
     /** Verifies that a username shorter than the allowed minimum produces HTTP 400. */
@@ -255,8 +259,6 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .extractingPath("$.detail")
                 .asString()
                 .contains("already taken");
-
-        deleteUsers("existinguser");
     }
 
     private void deleteUsers(String username) {

@@ -6,18 +6,27 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import jakarta.ws.rs.core.Response;
+import java.net.URI;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.admin.client.resource.RoleMappingResource;
+import org.keycloak.admin.client.resource.RoleResource;
+import org.keycloak.admin.client.resource.RoleScopeResource;
+import org.keycloak.admin.client.resource.RolesResource;
+import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -38,6 +47,21 @@ class KeycloakRegistrationServiceTest {
 
     @Mock
     private UsersResource usersResource;
+
+    @Mock
+    private UserResource userResource;
+
+    @Mock
+    private RolesResource rolesResource;
+
+    @Mock
+    private RoleResource roleResource;
+
+    @Mock
+    private RoleMappingResource roleMappingResource;
+
+    @Mock
+    private RoleScopeResource realmRoleScope;
 
     @Mock
     private Response response;
@@ -73,6 +97,18 @@ class KeycloakRegistrationServiceTest {
         given(realmResource.users()).willReturn(usersResource);
         given(usersResource.create(any(UserRepresentation.class))).willReturn(response);
         given(response.getStatus()).willReturn(201);
+        given(response.getStatusInfo()).willReturn(Response.Status.CREATED);
+        given(response.getLocation())
+                .willReturn(URI.create("http://localhost/realms/retailstore/users/created-user-id"));
+        given(usersResource.get("created-user-id")).willReturn(userResource);
+        given(userResource.roles()).willReturn(roleMappingResource);
+        given(roleMappingResource.realmLevel()).willReturn(realmRoleScope);
+        given(realmResource.roles()).willReturn(rolesResource);
+        given(rolesResource.get("user")).willReturn(roleResource);
+        RoleRepresentation userRole = new RoleRepresentation();
+        userRole.setId("user-role-id");
+        userRole.setName("user");
+        given(roleResource.toRepresentation()).willReturn(userRole);
 
         assertDoesNotThrow(() -> svc.registerUser(request));
 
@@ -84,7 +120,9 @@ class KeycloakRegistrationServiceTest {
         assertThat(captured.getFirstName()).isEqualTo("Test");
         assertThat(captured.getLastName()).isEqualTo("User");
         assertThat(captured.isEnabled()).isTrue();
-        assertThat(captured.getRealmRoles()).containsExactly("user");
+        assertThat(captured.getRealmRoles()).isNull();
+        verify(realmRoleScope).add(List.of(userRole));
+        verify(response).close();
         assertThat(captured.getCredentials()).hasSize(1);
         assertThat(captured.getCredentials().get(0).getValue()).isEqualTo("pass123");
         assertThat(captured.getCredentials().get(0).isTemporary()).isFalse();
@@ -114,6 +152,8 @@ class KeycloakRegistrationServiceTest {
         assertThatThrownBy(() -> svc.registerUser(request))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("already taken");
+        verifyNoInteractions(userResource, realmRoleScope);
+        verify(response).close();
     }
 
     @Test
@@ -140,5 +180,7 @@ class KeycloakRegistrationServiceTest {
         assertThatThrownBy(() -> svc.registerUser(request))
                 .isInstanceOf(KeyCloakException.class)
                 .hasMessageContaining("Failed to register user. Status: 500");
+        verifyNoInteractions(userResource, realmRoleScope);
+        verify(response).close();
     }
 }
