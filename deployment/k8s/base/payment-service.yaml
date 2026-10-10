@@ -56,6 +56,8 @@ spec:
           value: kafka:9092
         - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
           value: http://service-registry:8761/eureka/
+        - name: APPLICATION_ORDER_SERVICE_URL
+          value: http://order-service:18282/order-service
         - name: OTEL_SERVICE_NAME
           value: payment-service
         - name: OTEL_RESOURCE_ATTRIBUTES

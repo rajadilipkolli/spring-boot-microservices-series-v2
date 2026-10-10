@@ -415,6 +415,7 @@ services:
       - SERVER_TOMCAT_MBEANREGISTRY_ENABLED=true
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CONFIG_IMPORT=configserver:http://docker-dev:docker-pass@config-server:8888/
+      - APPLICATION_ORDER_SERVICE_URL=http://order-service:18282/order-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=payment-service
       - OTEL_RESOURCE_ATTRIBUTES=service.name=payment-service,service.version=0.0.1-SNAPSHOT
