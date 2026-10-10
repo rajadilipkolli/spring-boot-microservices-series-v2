@@ -29,7 +29,8 @@ spring:
               packages: "com.example.common.dtos"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # as we are using spring modulith OOTB to send events, we need to use ByteArraySerializer for value-serializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
       properties:
         spring:
           json:

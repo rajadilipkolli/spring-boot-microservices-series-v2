@@ -32,7 +32,10 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         assertThat(stockOrderListener.getCountDownLatch().getCount()).isEqualTo(1);
         // publish event
         OrderDto orderDto = MockTestData.getOrderDto("ORDER");
-        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
+        kafkaTemplate.send(
+                "orders",
+                String.valueOf(orderDto.orderId()),
+                jsonMapper.writeValueAsBytes(orderDto));
 
         await().untilAsserted(
                         () -> {
@@ -60,7 +63,8 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
         ProductDto productDto =
                 new ProductDto("P001", "Product 1", "Description 1", BigDecimal.TEN);
-        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, "1001", productDto);
+        kafkaTemplate.send(
+                AppConstants.PRODUCT_TOPIC, "1001", jsonMapper.writeValueAsBytes(productDto));
 
         await().untilAsserted(
                         () -> {
