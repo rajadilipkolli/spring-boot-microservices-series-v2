@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.common;
 
+import com.redis.testcontainers.RedisContainer;
 import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -22,6 +23,14 @@ public class ContainersConfig {
     @RestartScope
     KafkaContainer kafkaContainer() {
         return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.1"))
+                .withReuse(true);
+    }
+
+    @Bean
+    @ServiceConnection(name = "redis")
+    @RestartScope
+    RedisContainer redisContainer() {
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"))
                 .withReuse(true);
     }
 

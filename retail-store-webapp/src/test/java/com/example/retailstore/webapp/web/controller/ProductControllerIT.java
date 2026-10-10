@@ -19,6 +19,10 @@ import org.springframework.http.MediaType;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 
+    /**
+     * Verifies that a numeric catalog ID is exposed as a string while product and page details are
+     * preserved.
+     */
     @Test
     void testProducts() {
         // Example stub for catalog service
@@ -77,7 +81,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     @SuppressWarnings("unchecked") // Safe cast after isInstanceOf check
                     Map<String, Object> productMap = (Map<String, Object>) rawProductData;
 
-                    assertThat(productMap.get("id")).isEqualTo(1); // JSON '1' becomes Integer 1
+                    assertThat(productMap.get("id")).isEqualTo("1");
                     assertThat(productMap.get("productCode")).isEqualTo("TESTPROD001");
                     assertThat(productMap.get("productName")).isEqualTo("Test Product");
                     assertThat(productMap.get("description")).isEqualTo("A beautiful product");

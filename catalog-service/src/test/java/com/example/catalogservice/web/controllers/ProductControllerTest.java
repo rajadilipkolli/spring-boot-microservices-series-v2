@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,7 +8,6 @@ package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -92,6 +91,9 @@ class ProductControllerTest {
                                                 }));
     }
 
+    /**
+     * Verifies that product lookup by ID returns its details with the ID encoded as a JSON string.
+     */
     @Test
     void shouldFindProductById() {
         Long productId = 1L;
@@ -108,7 +110,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -194,6 +196,7 @@ class ProductControllerTest {
                 .isEqualTo("/api/catalog");
     }
 
+    /** Verifies that repeated creation requests return the same product code and string ID. */
     @Test
     void shouldHandleIdempotentProductCreation() {
         ProductResponse existingProductResponse =
@@ -227,7 +230,7 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
 
@@ -244,11 +247,14 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
     }
 
+    /**
+     * Verifies that updating a product returns the updated details with its ID encoded as a string.
+     */
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
@@ -278,15 +284,15 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .value(is(1))
+                .isEqualTo("1")
                 .jsonPath("$.productCode")
-                .value(is(product.getProductCode()))
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
-                .value(is(product.getProductName()))
+                .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
-                .value(is(product.getDescription()))
+                .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .value(is(product.getPrice()));
+                .isEqualTo(product.getPrice());
     }
 
     @Test
@@ -306,6 +312,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that deleting a product returns its details with a string ID. */
     @Test
     void shouldDeleteProduct() {
         Long productId = 1L;
@@ -329,7 +336,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(product.getId())
+                .isEqualTo(product.getId().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
@@ -353,6 +360,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that lookup by product code returns product details with a string ID. */
     @Test
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
@@ -370,7 +378,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -421,6 +429,7 @@ class ProductControllerTest {
         verify(productService).findProductByProductCode(code, true);
     }
 
+    /** Verifies that product lookup accepts the delay parameter and returns a string product ID. */
     @Test
     void shouldRespectDelayParameter() {
         String code = "code-xyz";
@@ -443,7 +452,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id());
+                .isEqualTo(productResponse.id().toString());
     }
 
     @Test

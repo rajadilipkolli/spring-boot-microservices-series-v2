@@ -13,5 +13,10 @@ public record CustomerRequest(
         @NotBlank(message = "Customer Phone number is required")
         String phone,
 
-        String address,
+        String addressLine1,
+        String addressLine2,
+        String city,
+        String state,
+        String zipCode,
+        String country,
         Integer amountAvailable) {}

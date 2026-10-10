@@ -7,6 +7,7 @@
 package com.example.catalogservice.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.List;
 import org.springframework.data.domain.Page;
 
@@ -18,7 +19,8 @@ public record PagedResult<T>(
         @JsonProperty("isFirst") Boolean isFirst,
         @JsonProperty("isLast") Boolean isLast,
         @JsonProperty("hasNext") Boolean hasNext,
-        @JsonProperty("hasPrevious") Boolean hasPrevious) {
+        @JsonProperty("hasPrevious") Boolean hasPrevious)
+        implements Serializable {
     public PagedResult(Page<T> page) {
         this(
                 page.getContent(),

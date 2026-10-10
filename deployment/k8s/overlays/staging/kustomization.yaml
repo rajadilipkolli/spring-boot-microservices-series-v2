@@ -7,7 +7,7 @@ resources:
 patches:
 - target:
     kind: Deployment
-  patch: "- op: replace\n  path: /spec/replicas\n  value: 2"
+  patch: "- op: replace\n  path: /spec/replicas\n  value: 1"
 - target:
     kind: Ingress
     name: retailstore-ingress

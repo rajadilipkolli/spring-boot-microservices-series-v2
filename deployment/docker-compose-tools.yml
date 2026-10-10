@@ -45,7 +45,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.10.1-alpine'
+    image: 'redis:8.10.2-alpine'
     extra_hosts: ['host.docker.internal:host-gateway']
     ports:
     - '127.0.0.1:6379:6379/tcp'
@@ -115,13 +115,14 @@ services:
     - microservice-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.3
-    command: [ 'start', '--import-realm', '--http-port=9191' ]
+    image: quay.io/keycloak/keycloak:26.8.0
+    # command: [ 'start', '--import-realm', '--http-port=9191' ]
+    command: [ 'start', '--http-port=9191' ]
     container_name: keycloak
-    extra_hosts: ['host.docker.internal:host-gateway']
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     hostname: keycloak
-    volumes:
-    - ./realm-config:/opt/keycloak/data/import
+    # volumes:
+    # - ./realm-config:/opt/keycloak/data/import
     environment:
       # Admin credentials
     - KC_BOOTSTRAP_ADMIN_USERNAME=admin
@@ -170,6 +171,39 @@ services:
     networks:
     - microservice-network
 
+  # ---------------------------------------------------------------------------
+  # Terraform realm manager (opt-in)
+  #
+  # Same opt-in Terraform service as docker-compose.yml.
+  # Default flow: keycloak uses --import-realm with ./realm-config mount.
+  # Terraform service is the recommended forward-looking path.
+  #
+  # To use:
+  #   docker compose -f docker-compose-tools.yml --profile terraform up terraform
+  # ---------------------------------------------------------------------------
+  terraform:
+    build:
+      context: ./terraform
+      dockerfile: Dockerfile
+    image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+    user: "root"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+    - TF_VAR_keycloak_url=http://keycloak:9191
+    - TF_VAR_keycloak_admin_username=admin
+    - TF_VAR_keycloak_admin_password=admin1234
+    - TF_VAR_webapp_client_secret=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
+    - KEYCLOAK_RAJA_PASSWORD=${RAJA_PASSWORD:-demo-throwaway-raja-pass}
+    - KEYCLOAK_RETAIL_PASSWORD=${RETAIL_PASSWORD:-demo-throwaway-retail-pass}
+    volumes:
+    - ./terraform/keycloak:/terraform
+    - /dev/null:/terraform/backend.tf
+    - terraform_cache:/terraform/.terraform
+    networks:
+    - microservice-network
+
   config-server:
     container_name: config-server
     image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
@@ -188,9 +222,7 @@ services:
     environment:
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     - OTEL_SERVICE_NAME=config-server
-    - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
-    - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
-      -XX:MaxDirectMemorySize=64M
+    - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=64M
     - SPRING_PROFILES_ACTIVE=native
     - SPRING_SECURITY_USER_NAME=dockerUser
     - SPRING_SECURITY_USER_PASSWORD=dockerSecret
@@ -281,9 +313,12 @@ services:
         condition: service_started
       api-gateway:
         condition: service_started
+      redis:
+        condition: service_healthy
     environment:
     - SPRING_PROFILES_ACTIVE=docker
     - SPRING_CONFIG_IMPORT=configserver:http://dockerUser:dockerSecret@config-server:8888/
+    - SPRING_DATA_REDIS_HOST=redis
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     - OTEL_SERVICE_NAME=catalog-service
     - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
@@ -404,6 +439,7 @@ services:
     - OTEL_INSTRUMENTATION_MICROMETER_ENABLED=true
     - KEYCLOAK_ADMIN_USERNAME=admin
     - KEYCLOAK_ADMIN_PASSWORD=admin1234
+    - OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}
     - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/classes/agent/opentelemetry-javaagent.jar
       -XX:MaxDirectMemorySize=64M -Xmx400m
     ports:
@@ -442,7 +478,7 @@ services:
 
   ## Observability
   grafana:
-    image: grafana/grafana:13.2.1
+    image: grafana/grafana:13.2.3
     container_name: grafana
     extra_hosts: ['host.docker.internal:host-gateway']
     depends_on:
@@ -472,7 +508,7 @@ services:
     - microservice-network
 
   loki:
-    image: grafana/loki:3.7.7
+    image: grafana/loki:3.7.8
     container_name: loki
     extra_hosts: ['host.docker.internal:host-gateway']
     command: -config.file=/etc/loki/local-config.yaml
@@ -482,7 +518,7 @@ services:
     - microservice-network
 
   prometheus:
-    image: prom/prometheus:v3.14.0
+    image: prom/prometheus:v3.15.0
     container_name: prometheus
     extra_hosts: ['host.docker.internal:host-gateway']
     command:
@@ -504,7 +540,7 @@ services:
       start_period: 90s
 
   tempo:
-    image: grafana/tempo:3.0.3
+    image: grafana/tempo:3.1.0
     container_name: tempo
     extra_hosts: ['host.docker.internal:host-gateway']
     command: -config.file /etc/tempo-config.yml
@@ -525,7 +561,7 @@ services:
       start_period: 30s
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.160.0
+    image: otel/opentelemetry-collector-contrib:0.162.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
@@ -537,7 +573,7 @@ services:
         condition: service_started
 
   alertmanager:
-    image: prom/alertmanager:v0.34.0
+    image: prom/alertmanager:v0.34.1
     container_name: alertmanager
     ports:
     - "9093:9093"
@@ -563,3 +599,5 @@ volumes:
   redis_data:
   postgres_data:
     driver: local
+  # Provider binary cache for the opt-in terraform service.
+  terraform_cache:

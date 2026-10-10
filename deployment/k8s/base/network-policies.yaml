@@ -34,8 +34,13 @@ spec:
         matchLabels:
           kubernetes.io/metadata.name: ingress-nginx
   podSelector:
-    matchLabels:
-      app: api-gateway
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - api-gateway
+      - retail-store-webapp
+      - keycloak
   policyTypes:
   - Ingress
 ---
@@ -59,6 +64,9 @@ spec:
           - catalog-service
           - payment-service
           - api-gateway
+          # Allow the Terraform runner Job to call Keycloak's HTTPS Admin API
+          # on port 8443 (in-cluster endpoint).
+          - keycloak-terraform-runner
   podSelector:
     matchExpressions:
     - key: app

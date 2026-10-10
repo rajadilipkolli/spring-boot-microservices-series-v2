@@ -3,6 +3,15 @@ kind: Kustomization
 resources:
   - ../../base
 
+# Demo credentials are restricted to local/CI deployments.
+secretGenerator:
+  - name: webapp-oauth2-credentials
+    namespace: retailstore
+    literals:
+      - OAUTH2_CLIENT_SECRET=demo-throwaway-oauth-secret
+generatorOptions:
+  disableNameSuffixHash: true
+
 patches:
   - target:
       kind: Deployment

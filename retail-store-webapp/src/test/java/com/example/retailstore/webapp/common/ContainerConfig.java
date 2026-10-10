@@ -11,7 +11,7 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
-    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.7.3";
+    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.8.0";
     private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 
@@ -23,10 +23,15 @@ public class ContainerConfig {
                 .withRealmImportFile(REALM_IMPORT_FILE);
     }
 
+    /**
+     * Provides the Redis container used by integration tests through a Spring service connection.
+     *
+     * @return a Redis 8.10.2 Alpine container
+     */
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.1-alpine"));
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"));
     }
 
     @Bean

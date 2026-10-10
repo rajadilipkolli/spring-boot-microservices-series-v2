@@ -30,6 +30,14 @@ class SecurityConfig {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
+    /**
+     * Configures public routes, authenticated access, OAuth2 login, logout, and response headers.
+     * Registration bypasses CSRF checks; other requests use cookie-based CSRF protection.
+     *
+     * @param http the security configuration builder
+     * @param userAuthoritiesMapper mapper for authorities supplied by the identity provider
+     * @return the configured security filter chain
+     */
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
         http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
@@ -47,15 +55,27 @@ class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))
                 .logout(logout -> logout.clearAuthentication(true)
                         .invalidateHttpSession(true)
-                        .logoutSuccessHandler(oidcLogoutSuccessHandler()));
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler()))
+                // Alpine's standard build evaluates template expressions with AsyncFunction.
+                // Keep unsafe-eval until the templates can use Alpine's CSP build.
+                .headers(
+                        headers -> headers.contentSecurityPolicy(
+                                csp -> csp.policyDirectives(
+                                        "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
 
         return http.build();
     }
 
+    /**
+     * Creates an OIDC logout handler that redirects to the application base URL with a trailing
+     * slash.
+     *
+     * @return the configured logout success handler
+     */
     private LogoutSuccessHandler oidcLogoutSuccessHandler() {
         OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
                 new OidcClientInitiatedLogoutSuccessHandler(this.clientRegistrationRepository);
-        oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}");
+        oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/");
         return oidcLogoutSuccessHandler;
     }
 

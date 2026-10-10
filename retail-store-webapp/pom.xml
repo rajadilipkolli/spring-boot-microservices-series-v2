@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <spotless.version>3.10.2</spotless.version>
+        <spotless.version>3.10.4</spotless.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -51,6 +51,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+        <!-- forcing keycloak-admin-client to use latest commons-io version -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.22.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+            <version>26.0.12</version>
         </dependency>
         <dependency>
             <groupId>nz.net.ultraq.thymeleaf</groupId>
@@ -103,7 +114,7 @@
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>alpinejs</artifactId>
-            <version>3.17.2</version>
+            <version>3.17.4</version>
         </dependency>
 
         <dependency>
@@ -115,7 +126,7 @@
         <dependency>
             <groupId>com.julien-dubois.bootui</groupId>
             <artifactId>bootui-spring-boot-starter</artifactId>
-            <version>1.17.0</version>
+            <version>1.21.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -141,19 +152,19 @@
         <dependency>
             <groupId>com.redis</groupId>
             <artifactId>testcontainers-redis</artifactId>
-            <version>2.2.4</version>
+            <version>3.0.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.github.dasniko</groupId>
             <artifactId>testcontainers-keycloak</artifactId>
-            <version>4.3.1</version>
+            <version>4.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wiremock.integrations</groupId>
             <artifactId>wiremock-spring-boot</artifactId>
-            <version>4.2.3</version>
+            <version>4.4.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -176,7 +187,7 @@
                                 <artifactItem>
                                     <groupId>io.opentelemetry.javaagent</groupId>
                                     <artifactId>opentelemetry-javaagent</artifactId>
-                                    <version>2.31.1</version>
+                                    <version>2.32.0</version>
                                     <type>jar</type>
                                     <outputDirectory>${project.build.directory}/classes/agent</outputDirectory>
                                     <destFileName>opentelemetry-javaagent.jar</destFileName>
@@ -192,6 +203,11 @@
                 <configuration>
                     <image>
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
+                        <env>
+                            <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
+                            <THC_PATH>/actuator/health</THC_PATH>
+                            <THC_PORT>8080</THC_PORT>
+                        </env>
                     </image>
                 </configuration>
                 <executions>
@@ -401,3 +417,4 @@
     </pluginRepositories>
 
 </project>
+

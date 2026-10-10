@@ -27,7 +27,7 @@
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <spotless.version>3.10.2</spotless.version>
+        <spotless.version>3.10.4</spotless.version>
         <maven-pmd-plugin.version>3.16.0</maven-pmd-plugin.version>
 
         <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
@@ -98,7 +98,7 @@
         You can switch to using Caffeine cache, by adding it -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-cache</artifactId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
@@ -128,7 +128,7 @@
         <dependency>
             <groupId>com.julien-dubois.bootui</groupId>
             <artifactId>bootui-spring-boot-starter-reactive</artifactId>
-            <version>1.17.0</version>
+            <version>1.21.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -184,6 +184,17 @@
         </dependency>
 
         <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+            <version>7.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-redis-spring</artifactId>
+            <version>7.10.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux-test</artifactId>
             <scope>test</scope>
@@ -230,6 +241,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.redis</groupId>
+            <artifactId>testcontainers-redis</artifactId>
+            <version>3.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>5.5.0</version>
@@ -272,7 +289,7 @@
                                 <artifactItem>
                                     <groupId>io.opentelemetry.javaagent</groupId>
                                     <artifactId>opentelemetry-javaagent</artifactId>
-                                    <version>2.31.1</version>
+                                    <version>2.32.0</version>
                                     <type>jar</type>
                                     <outputDirectory>${project.build.directory}/classes/agent</outputDirectory>
                                     <destFileName>opentelemetry-javaagent.jar</destFileName>
@@ -305,8 +322,8 @@
                         <name>dockertmt/mmv2-${project.artifactId}:${project.version}</name>
                         <env>
                             <BP_HEALTH_CHECKER_ENABLED>true</BP_HEALTH_CHECKER_ENABLED>
+                            <THC_PATH>/catalog-service/actuator/health</THC_PATH>
                             <THC_PORT>18080</THC_PORT>
-                            <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>--initialize-at-build-time=io.micrometer.common.util.internal.logging.LocationAwareSlf4JLogger,ch.qos.logback,org.slf4j</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                         </env>
                     </image>
                 </configuration>
@@ -426,7 +443,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>14.1.0</version>
+                        <version>14.3.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>

@@ -1,9 +1,9 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('initData', () => ({
         orders: [],
+        /** Loads the initial orders when Alpine initializes this component. */
         init() {
             this.loadOrders();
-            updateCartItemCount();
         },
         loadOrders() {
             $.getJSON("/api/orders", (data) => {

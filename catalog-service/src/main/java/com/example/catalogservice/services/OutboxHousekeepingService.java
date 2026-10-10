@@ -11,11 +11,11 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicLong;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import reactor.core.scheduler.Schedulers;
 
 @Service
 public class OutboxHousekeepingService {
@@ -36,6 +36,11 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.failed", failedCount);
     }
 
+    /**
+     * Refreshes the local pending, published, and failed event gauges, blocking until completion.
+     * Query errors emitted by the publisher are suppressed; gauges already refreshed retain their
+     * new values, and remaining gauges keep their previous values.
+     */
     @Scheduled(fixedDelayString = "${application.outbox.housekeeping-delay:10000}")
     public void updateMetrics() {
         outboxEventRepository
@@ -45,11 +50,17 @@ public class OutboxHousekeepingService {
                 .doOnNext(publishedCount::set)
                 .then(outboxEventRepository.countByStatus(OutboxEventStatus.FAILED))
                 .doOnNext(failedCount::set)
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(v -> {}, ex -> log.warn("Failed to refresh outbox metrics", ex));
+                .doOnError(ex -> log.warn("Failed to refresh outbox metrics", ex))
+                .onErrorComplete()
+                .block();
     }
 
+    /**
+     * Deletes published events created strictly more than seven days ago and waits for completion.
+     * Deletion errors emitted by the publisher are suppressed.
+     */
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
+    @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {
         OffsetDateTime threshold = OffsetDateTime.now().minusDays(7);
         log.info("Starting cleanup of published events older than {}", threshold);
@@ -57,7 +68,7 @@ public class OutboxHousekeepingService {
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe();
+                .onErrorComplete()
+                .block();
     }
 }

@@ -6,7 +6,11 @@ import com.example.paymentservice.model.payload.OrderDto;
 
 public class TestData {
     public static Customer getCustomer() {
-        return new Customer().setId(1L).setAmountAvailable(1000).setAmountReserved(100);
+        return new Customer()
+                .setId(1L)
+                .setAmountAvailable(1000)
+                .setAmountReserved(100)
+                .setVersion(0);
     }
 
     public static OrderDto withCustomerId(long nonExistentCustomerId, OrderDto orderDto) {

@@ -6,34 +6,9 @@
       layout:decorate="~{layout}">
 <body>
 <div layout:fragment="content">
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        window.customerName = /*[[${customer?.name}]]*/ null;
-        window.customerEmail = /*[[${customer?.email}]]*/ null;
-        window.customerPhone = /*[[${customer?.phone}]]*/ null;
-
-        const getAddressPart = (addressStr, index, defaultValue) => {
-            if (addressStr == null) {
-                return defaultValue;
-            }
-            const parts = addressStr.split(',');
-            if (parts.length > index && parts[index] != null && parts[index].trim() !== '') {
-                return parts[index].trim();
-            }
-            return defaultValue;
-        };
-
-        const customerAddress = /*[[${customer?.address}]]*/ null;
-
-        window.customerAddressLine1 = getAddressPart(customerAddress, 0, null);
-        window.customerAddressLine2 = getAddressPart(customerAddress, 1, '');
-        window.customerCity = getAddressPart(customerAddress, 2, '');
-        window.customerState = getAddressPart(customerAddress, 3, '');
-        window.customerZipCode = getAddressPart(customerAddress, 4, '');
-        window.customerCountry = getAddressPart(customerAddress, 5, '');
-        /*]]>*/
-    </script>
-    <div x-data="initData()">
+    <div id="customer-details" x-data="initData()"
+         th:data-name="${customer?.name}" th:data-email="${customer?.email}"
+         th:data-phone="${customer?.phone}" th:data-address="${customer?.address}">
         <div class="col-md-8 offset-md-2">
 
             <div x-show="cart.items.length == 0">

@@ -97,6 +97,7 @@ class ProductControllerTest {
                 .andExpect(model().attribute("pageNo", pageNumber));
     }
 
+    /** Verifies that the product page returns string product IDs and pagination metadata. */
     @Test
     @WithMockUser
     void products_shouldReturnPagedResult() throws Exception {
@@ -105,12 +106,12 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/products").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(3)))
-                .andExpect(jsonPath("$.data[0].id", is(1)))
+                .andExpect(jsonPath("$.data[0].id", is("1")))
                 .andExpect(jsonPath("$.data[0].productCode", is("PROD-1")))
                 .andExpect(jsonPath("$.data[0].productName", is("Test Product 1")))
                 .andExpect(jsonPath("$.data[0].price", is(10.99)))
-                .andExpect(jsonPath("$.data[1].id", is(2)))
-                .andExpect(jsonPath("$.data[2].id", is(3)))
+                .andExpect(jsonPath("$.data[1].id", is("2")))
+                .andExpect(jsonPath("$.data[2].id", is("3")))
                 .andExpect(jsonPath("$.totalElements", is(3)))
                 .andExpect(jsonPath("$.pageNumber", is(0)))
                 .andExpect(jsonPath("$.totalPages", is(1)))
@@ -130,6 +131,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data", hasSize(3)));
     }
 
+    /**
+     * Verifies that an administrator can create a product and receive its details with a string
+     * ID.
+     */
     @Test
     @WithMockUser(roles = "ADMIN") // Ensure the user has ADMIN role
     void createProduct_shouldReturnCreatedProduct() throws Exception {
@@ -145,7 +150,7 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(productRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(4)))
+                .andExpect(jsonPath("$.id", is("4")))
                 .andExpect(jsonPath("$.productCode", is("PROD-4")))
                 .andExpect(jsonPath("$.productName", is("New Product")))
                 .andExpect(jsonPath("$.description", is("New Description")))

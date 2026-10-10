@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.model.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -16,8 +17,10 @@ import java.util.List;
 import java.util.Objects;
 
 public record OrderDto(
-        Long orderId,
-        @Positive(message = "CustomerId should be positive") Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+                @Positive(message = "CustomerId should be positive")
+                Long customerId,
         String status,
         String source,
         @NotEmpty(message = "Order without items not valid")

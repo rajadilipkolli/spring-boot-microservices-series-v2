@@ -6,6 +6,7 @@
 
 package com.example.orderservice.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
@@ -13,7 +14,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 public record OrderItemDto(
-        Long itemId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
         String productId,
         @NotNull(message = "Quantity cannot be null")
                 @Positive(message = "Quantity should be positive")

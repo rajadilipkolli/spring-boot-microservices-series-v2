@@ -14,6 +14,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -118,6 +119,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     is(orderList.getFirst().getItems().size())));
         }
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Order order = orderList.getFirst();
@@ -125,8 +130,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
-                    .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                    .andExpect(jsonPath("$.customerId", is(order.getCustomerId().toString())))
                     .andExpect(jsonPath("$.status", is(order.getStatus().name())))
                     .andExpect(jsonPath("$.source", is(order.getSource())))
                     .andExpect(
@@ -181,6 +186,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @DisplayName("save methods")
     class SaveOrder {
 
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
             OrderRequest orderRequest =
@@ -203,7 +211,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(status().isCreated())
                     .andExpect(header().exists("Location"))
                     .andExpect(jsonPath("$.orderId", notNullValue()))
-                    .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
+                    .andExpect(jsonPath("$.customerId", is(orderRequest.customerId().toString())))
                     .andExpect(jsonPath("$.status", is("NEW")))
                     .andExpect(jsonPath("$.source", nullValue()))
                     .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
@@ -278,10 +286,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             () ->
                                     mockMvc.perform(get("/api/orders/store/{id}", orderId))
                                             .andExpect(status().isOk())
-                                            .andExpect(jsonPath("orderId", is(orderId), Long.class))
+                                            .andExpect(jsonPath("orderId", is(orderId.toString())))
                                             .andExpect(jsonPath("status", is("CONFIRMED")))
                                             .andExpect(jsonPath("source", emptyOrNullString()))
-                                            .andExpect(jsonPath("customerId", is(1)))
+                                            .andExpect(jsonPath("customerId", is("1")))
                                             .andExpect(
                                                     jsonPath(
                                                             "items.size()",
@@ -609,6 +617,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 BigDecimal.class));
     }
 
+    /**
+     * Verifies that updating an order preserves its response structure, string IDs, and persisted
+     * item details.
+     */
     @Test
     void shouldPreserveOrderStructureAfterUpdate() throws Exception {
         // Get an order from the existing list
@@ -639,8 +651,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
-                .andExpect(jsonPath("$.customerId", is(1)))
+                .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                .andExpect(jsonPath("$.customerId", is("1")))
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Updated Address")))
                 .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("Suite 123")))
@@ -684,5 +696,44 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
+    }
+
+    /**
+     * Verifies that keyword search returns an order with a matching delivery address.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersByKeyword() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Address")
+                                .param("mode", "keyword")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].deliveryAddress.addressLine1",
+                                containsString("Junit Address")));
+    }
+
+    /**
+     * Verifies that similarity search accepts a misspelled term and returns a successful array
+     * response.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersBySimilarity() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Adress")
+                                .param("mode", "similarity")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
     }
 }

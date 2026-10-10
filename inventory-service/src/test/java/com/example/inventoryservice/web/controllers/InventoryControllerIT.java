@@ -7,7 +7,6 @@
 package com.example.inventoryservice.web.controllers;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.instancio.Select.field;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -107,6 +106,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .value(inventoryList.get(1).getReservedItems()));
     }
 
+    /** Verifies that inventory creation returns a string ID and the initial stock quantities. */
     @Test
     void shouldCreateNewInventory() throws Exception {
         InventoryRequest inventoryRequest = new InventoryRequest("New Inventory", 10);
@@ -116,7 +116,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(inventoryRequest)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue(), Long.class))
+                .andExpect(jsonPath("$.id").isString())
                 .andExpect(jsonPath("$.availableQuantity", is(10)))
                 .andExpect(jsonPath("$.reservedItems", is(0)))
                 .andExpect(jsonPath("$.productCode", is(inventoryRequest.productCode())));

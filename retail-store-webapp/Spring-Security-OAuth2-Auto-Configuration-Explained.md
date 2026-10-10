@@ -13,7 +13,7 @@ This document explains the "magic" behind Spring Security OAuth2 auto-configurat
 When you add these properties:
 ```properties
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
 ```
 
 Spring Boot **automatically creates** the OAuth2 authorization endpoint pattern:
@@ -140,7 +140,7 @@ flowchart LR
 ```properties
 # Creates ClientRegistration bean with these values
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope=openid, profile
 spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={baseUrl}/login/oauth2/code/retailstore-webapp
@@ -152,7 +152,7 @@ spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={base
 public ClientRegistrationRepository clientRegistrationRepository() {
     ClientRegistration registration = ClientRegistration.withRegistrationId("retailstore-webapp")
         .clientId("retailstore-webapp")
-        .clientSecret("P1sibsIrELBhmvK18BOzw1bUl96DcP2z")
+        .clientSecret("demo-throwaway-oauth-secret")
         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
         .scope("openid", "profile")
         .redirectUri("{baseUrl}/login/oauth2/code/retailstore-webapp")
@@ -246,7 +246,7 @@ sequenceDiagram
     Note over Provider: Class: OAuth2AuthorizationCodeAuthenticationProvider<br/>Makes POST to token endpoint
     
     Provider->>Keycloak: POST /protocol/openid-connect/token
-    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
+    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=demo-throwaway-oauth-secret<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
     
     Keycloak-->>Provider: Access Token + ID Token
     Provider-->>Filter2: OAuth2LoginAuthenticationToken
@@ -375,7 +375,7 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=authorization_code&
 code=def456&
 client_id=retailstore-webapp&
-client_secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z&
+client_secret=demo-throwaway-oauth-secret&
 redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp
 ```
 

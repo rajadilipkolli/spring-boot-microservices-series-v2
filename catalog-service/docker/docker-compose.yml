@@ -20,7 +20,7 @@ services:
       - catalog-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.33.0
+    image: grafana/otel-lgtm:0.36.0
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -32,6 +32,24 @@ services:
       - "4317:4317" # OTLP gRPC receiver
       - "4318:4318" # OTLP HTTP receiver
       - "9090:9090" # Prometheus metrics endpoint
+    networks:
+      - catalog-network
+
+  redis:
+    image: 'redis:8.10.2-alpine'
+    ports:
+      - '127.0.0.1:6379:6379/tcp'
+    volumes:
+      - 'redis_data:/data:rw'
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
     networks:
       - catalog-network
 

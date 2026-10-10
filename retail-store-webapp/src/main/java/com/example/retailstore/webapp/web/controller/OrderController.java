@@ -101,8 +101,16 @@ class OrderController {
         return orderServiceClient.getOrdersByCustomer(getHeaders(), loggedInCustomer.customerId());
     }
 
+    /**
+     * Builds downstream request headers from the current user's access token.
+     *
+     * @return a bearer authorization header, or an empty map when no token is available
+     */
     private Map<String, ?> getHeaders() {
         String accessToken = securityHelper.getAccessToken();
+        if (accessToken == null) {
+            return Map.of();
+        }
         return Map.of("Authorization", "Bearer " + accessToken);
     }
 

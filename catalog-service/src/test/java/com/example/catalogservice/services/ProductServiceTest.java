@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 
@@ -31,7 +32,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -48,6 +49,8 @@ class ProductServiceTest {
 
     @Mock private InventoryServiceProxy inventoryServiceProxy;
 
+    @Mock private ReactiveRedisOperations<String, Object> redisOps;
+
     private ProductService productService;
 
     @Captor private ArgumentCaptor<ProductRequest> productCaptor;
@@ -62,12 +65,19 @@ class ProductServiceTest {
                                 productMapper,
                                 inventoryServiceProxy,
                                 outboxService,
+                                redisOps,
                                 null,
                                 TSID.Factory.builder().build()));
         ProxyFactory proxyFactory = new ProxyFactory(spy);
         ProductService proxy = (ProductService) proxyFactory.getProxy();
         ReflectionTestUtils.setField(spy, "self", proxy);
         productService = spy;
+
+        lenient().when(productRepository.findCacheGeneration()).thenReturn(Mono.just("initial"));
+        lenient()
+                .when(productRepository.updateCacheGeneration(any(String.class)))
+                .thenReturn(Mono.just(1));
+        lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }
 
     @Test
@@ -109,7 +119,8 @@ class ProductServiceTest {
                 .willReturn(Mono.empty());
 
         // Stubbing productRepository.save()
-        given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
+        given(productRepository.save(any(Product.class)))
+                .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
 
         // Use StepVerifier to test the method
         StepVerifier.create(productService.generateProducts("test-batch-123", null))
@@ -152,7 +163,8 @@ class ProductServiceTest {
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
         given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
                 .willReturn(Mono.empty());
-        given(productRepository.save(any(Product.class))).willReturn(Mono.just(new Product()));
+        given(productRepository.save(any(Product.class)))
+                .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
 
         StepVerifier.create(productService.generateProducts("test-batch-456", 5))
                 .expectSubscription()
@@ -203,15 +215,9 @@ class ProductServiceTest {
         assertThat(capturedProduct.getId()).isNotNull();
         assertThat(capturedProduct.isNew()).isTrue();
 
-        // Verify annotations for Transactional and CacheEvict are present to confirm cache
-        // invalidation logic
+        // Verify createAndSaveProduct is transactional
         Method method = ProductService.class.getMethod("saveProduct", ProductRequest.class);
         assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
-
-        CacheEvict cacheEvict = method.getAnnotation(CacheEvict.class);
-        assertThat(cacheEvict).isNotNull();
-        assertThat(cacheEvict.cacheNames()).contains("products");
-        assertThat(cacheEvict.allEntries()).isTrue();
 
         // Verify createAndSaveProduct is transactional
         Method createMethod =

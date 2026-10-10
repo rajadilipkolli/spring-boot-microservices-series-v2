@@ -14,6 +14,11 @@ spec:
     spec:
       containers:
       - name: keycloak
+        # Remove --import-realm: in prod the Terraform runner Job applies the
+        # realm after Keycloak is healthy. The realm-config volumeMount and
+        # volume are removed via JSON patches in kustomization.yaml.
+        args:
+        - start
         env:
         - name: KC_CACHE
           value: ispn
@@ -21,7 +26,26 @@ spec:
           value: kubernetes
         - name: JAVA_OPTS_APPEND
           value: -Djgroups.dns.query=keycloak-discovery.retailstore.svc.cluster.local
+        - name: KC_HTTPS_CERTIFICATE_FILE
+          value: /etc/keycloak-tls/tls.crt
+        - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+          value: /etc/keycloak-tls/tls.key
+        # Keep the health-only management interface on HTTP for the existing
+        # readiness probe and runner initContainer; the Admin API uses HTTPS.
+        - name: KC_HTTP_MANAGEMENT_SCHEME
+          value: http
         ports:
         - containerPort: 7800
           name: jgroups
           protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        volumeMounts:
+        - name: keycloak-internal-tls
+          mountPath: /etc/keycloak-tls
+          readOnly: true
+      volumes:
+      - name: keycloak-internal-tls
+        secret:
+          secretName: keycloak-internal-tls

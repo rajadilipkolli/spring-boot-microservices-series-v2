@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet author="rajakolli" id="add-pg-trgm-extension" dbms="postgresql">
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        </sql>
+    </changeSet>
+
+    <changeSet author="rajakolli" id="create-trgm-indexes" dbms="postgresql">
+        <sql>
+            CREATE INDEX idx_orders_source_trgm ON orders USING gin (source gin_trgm_ops);
+            CREATE INDEX idx_orders_address_line1_trgm ON orders USING gin (delivery_address_line1 gin_trgm_ops);
+            CREATE INDEX idx_orders_address_line2_trgm ON orders USING gin (delivery_address_line2 gin_trgm_ops);
+            CREATE INDEX idx_orders_address_city_trgm ON orders USING gin (delivery_address_city gin_trgm_ops);
+            CREATE INDEX idx_orders_address_state_trgm ON orders USING gin (delivery_address_state gin_trgm_ops);
+            CREATE INDEX idx_orders_address_zip_code_trgm ON orders USING gin (delivery_address_zip_code gin_trgm_ops);
+            CREATE INDEX idx_orders_address_country_trgm ON orders USING gin (delivery_address_country gin_trgm_ops);
+            CREATE INDEX idx_order_items_product_code_trgm ON order_items USING gin (product_code gin_trgm_ops);
+        </sql>
+    </changeSet>
+</databaseChangeLog>

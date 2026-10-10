@@ -58,18 +58,26 @@ require_commands() {
   done
 }
 
+if [[ -f /c/Windows/System32/drivers/etc/hosts ]]; then
+  HOSTS_FILE="/c/Windows/System32/drivers/etc/hosts"
+elif [[ -f /mnt/c/Windows/System32/drivers/etc/hosts ]]; then
+  HOSTS_FILE="/mnt/c/Windows/System32/drivers/etc/hosts"
+else
+  HOSTS_FILE="/etc/hosts"
+fi
+
 add_hosts_entry() {
-  if grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
-    warn "Hosts entries already present; skipping."
+  if grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' "$HOSTS_FILE"; then
+    warn "Hosts entries already present in $HOSTS_FILE; skipping."
   else
-    printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null
-    ok "Added /etc/hosts entries."
+    printf '%s\n' "$HOSTS_ENTRY" | sudo tee -a "$HOSTS_FILE" >/dev/null || warn "Please manually add hosts entry to $HOSTS_FILE."
+    ok "Added $HOSTS_FILE entries."
   fi
 }
 
 remove_hosts_entry() {
-  sudo sed -i '\|retailstore\.local|d' /etc/hosts
-  ok "Removed local hosts entries."
+  sudo sed -i '\|retailstore\.local|d' "$HOSTS_FILE" || warn "Please manually remove hosts entry from $HOSTS_FILE."
+  ok "Removed $HOSTS_FILE entries."
 }
 
 collect_diagnostics() {
@@ -114,12 +122,29 @@ kubectl wait --namespace ingress-nginx --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller --timeout=120s
 ok "NGINX Ingress controller is ready."
 
+###############################################################################
+# DOCKER IMAGES
+###############################################################################
+
 step "Pulling and loading Docker images"
+
+# Build the Terraform runner image locally since it's not published to Docker Hub
+printf '  building %s ...\n' "dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT"
+docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f "$PROJECT_ROOT/deployment/terraform/Dockerfile" "$PROJECT_ROOT/deployment/terraform/"
+
 for image in "${IMAGES[@]}"; do
   printf '  pulling %s ...\n' "$image"
   docker pull "$image"
+done
+
+# Add terraform runner to images array so it gets loaded into kind
+IMAGES+=("dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT")
+
+for image in "${IMAGES[@]}"; do
   printf '  loading %s ...\n' "$image"
-  kind load docker-image "$image" --name "$CLUSTER_NAME"
+  kind load docker-image \
+    "$image" \
+    --name "$CLUSTER_NAME"
 done
 ok "All images loaded."
 
@@ -190,7 +215,7 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 set +e
-HOST=api.retailstore.local PORT=80 "$E2E_SCRIPT" --no-cb-strict
+HOST=api.retailstore.local PORT=80 KEYCLOAK_URL=http://keycloak.local "$E2E_SCRIPT" --no-cb-strict
 test_exit=$?
 set -e
 
