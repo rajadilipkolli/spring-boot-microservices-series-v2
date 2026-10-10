@@ -482,11 +482,11 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldReturnErrorWhenOrderServiceFails() throws Exception {
         Long customerId = customerList.getFirst().getId();
-        given(orderServiceProxy.getOrdersByCustomerId(customerId, 0, 10, "id,asc"))
+        given(orderServiceProxy.getOrdersByCustomerId(eq(customerId), eq(0), eq(10), eq("id,asc")))
                 .willThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
         try {
             mockMvc.perform(get("/api/customers/{id}/orders", customerId))
-                    .andExpect(status().isInternalServerError())
+                    .andExpect(status().isServiceUnavailable())
                     .andExpect(jsonPath("$.data").doesNotExist());
         } finally {
             circuitBreakerRegistry.circuitBreaker("default").reset();
@@ -499,7 +499,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         circuitBreaker.transitionToOpenState();
         try {
             mockMvc.perform(get("/api/customers/{id}/orders", customerList.getFirst().getId()))
-                    .andExpect(status().isInternalServerError())
+                    .andExpect(status().isServiceUnavailable())
                     .andExpect(jsonPath("$.data").doesNotExist());
             verifyNoInteractions(orderServiceProxy);
         } finally {

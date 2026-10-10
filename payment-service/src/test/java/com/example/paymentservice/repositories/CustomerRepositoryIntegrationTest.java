@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 
-class CustomerRepositoryImplTest extends AbstractIntegrationTest {
+class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private CustomerRepository customerRepository;
 
