@@ -7,7 +7,6 @@
 package com.example.inventoryservice.inventory.config;
 
 import com.example.inventoryservice.inventory.ApplicationProperties;
-import com.example.inventoryservice.inventory.ApplicationProperties.Cors;
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -22,9 +21,10 @@ class WebMvcConfig implements WebMvcConfigurer {
         this.properties = properties;
     }
 
+    /** Registers the configured CORS paths, methods, headers, and origins for MVC requests. */
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
-        Cors cors = properties.getCors();
+        ApplicationProperties.Cors cors = properties.getCors();
         registry.addMapping(cors.getPathPattern())
                 .allowedMethods(cors.getAllowedMethods().split(","))
                 .allowedHeaders(cors.getAllowedHeaders().split(","))

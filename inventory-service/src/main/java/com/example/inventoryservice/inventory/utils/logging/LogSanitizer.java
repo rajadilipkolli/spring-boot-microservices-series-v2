@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /** Utility to sanitize strings before writing them to logs to prevent log injection. */
-public final class LogSanitizer {
+final class LogSanitizer {
 
     private static final Pattern CRLF = Pattern.compile("[\r\n]+");
     private static final Pattern CONTROL =

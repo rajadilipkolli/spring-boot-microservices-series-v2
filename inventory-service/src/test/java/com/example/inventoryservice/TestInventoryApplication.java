@@ -6,8 +6,8 @@
 
 package com.example.inventoryservice;
 
-import com.example.inventoryservice.inventory.common.NonSQLContainersConfig;
-import com.example.inventoryservice.inventory.common.SQLContainersConfig;
+import com.example.inventoryservice.inventory.shared.NonSQLContainersConfig;
+import com.example.inventoryservice.inventory.shared.SQLContainersConfig;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import org.springframework.boot.SpringApplication;
 

@@ -1,16 +1,15 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.inventory.web.controllers;
 
-import com.example.inventoryservice.inventory.mapper.InventoryMapper;
-import com.example.inventoryservice.inventory.model.request.InventoryRequest;
-import com.example.inventoryservice.inventory.model.response.InventoryResponse;
-import com.example.inventoryservice.inventory.model.response.PagedResult;
-import com.example.inventoryservice.inventory.services.InventoryService;
+import com.example.inventoryservice.inventory.InventoryAPI;
+import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
+import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
+import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import com.example.inventoryservice.inventory.utils.logging.Loggable;
 import jakarta.validation.Valid;
@@ -40,14 +39,14 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 class InventoryController {
 
-    private final InventoryService inventoryService;
-    private final InventoryMapper inventoryMapper;
+    private final InventoryAPI inventoryAPI;
 
-    InventoryController(InventoryService inventoryService, InventoryMapper inventoryMapper) {
-        this.inventoryService = inventoryService;
-        this.inventoryMapper = inventoryMapper;
+    /** Creates the HTTP adapter for the inventory module API. */
+    InventoryController(InventoryAPI inventoryAPI) {
+        this.inventoryAPI = inventoryAPI;
     }
 
+    /** Returns inventory records using the requested pagination and sort options. */
     @GetMapping
     PagedResult<InventoryResponse> getAllInventories(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
@@ -58,19 +57,17 @@ class InventoryController {
                     String sortBy,
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
-        return inventoryService.findAllInventories(pageNo, pageSize, sortBy, sortDir);
+        return inventoryAPI.findAllInventories(pageNo, pageSize, sortBy, sortDir);
     }
 
+    /**
+     * Returns inventory by product code, or HTTP 404 when it is absent.
+     *
+     * <p>A positive optional delay pauses the lookup for the supplied number of seconds.
+     */
     @GetMapping("/{productCode}")
-    // @Retry(name = "inventory-api", fallbackMethod = "hardcodedResponse")
-    // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    // @RateLimiter(name = "default")
-    // @Bulkhead(name = "inventory-api")
     ResponseEntity<InventoryResponse> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
-        // If delay is specified, block for the requested seconds — used by tests to
-        // simulate slow
-        // responses
         if (delay != null && delay > 0) {
             try {
                 TimeUnit.SECONDS.sleep(delay);
@@ -78,13 +75,13 @@ class InventoryController {
                 Thread.currentThread().interrupt();
             }
         }
-        return inventoryService
+        return inventoryAPI
                 .findInventoryByProductCode(productCode)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** Returns HTTP 200 with a sorted page of inventory matching the supplied product codes. */
     @GetMapping("/product")
     ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
             @RequestParam List<String> codes,
@@ -97,35 +94,40 @@ class InventoryController {
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
         return ResponseEntity.ok(
-                inventoryService.getInventoryByProductCodes(
-                        codes, pageNo, pageSize, sortBy, sortDir));
+                inventoryAPI.getInventoryByProductCodes(codes, pageNo, pageSize, sortBy, sortDir));
     }
 
+    /** Updates a generated batch using the idempotency key and returns true on completion. */
     @PostMapping("/generate")
     boolean updateInventoryWithRandomValue(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) @Min(1) @Max(InventoryService.MAX_GENERATION_BATCH_SIZE)
-                    Integer batchSize) {
-        inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
+            @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize) {
+        inventoryAPI.updateGeneratedInventory(idempotencyKey, batchSize);
         return true;
     }
 
+    /** Creates inventory from a validated request and returns its representation with HTTP 201. */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
-        return inventoryMapper.toResponse(inventoryService.saveInventory(inventoryRequest));
+        return inventoryAPI.saveInventory(inventoryRequest);
     }
 
+    /** Updates inventory by identifier, returning HTTP 404 when it is absent. */
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<InventoryResponse> updateInventory(
             @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest) {
-        return inventoryService
+        return inventoryAPI
                 .updateInventoryById(id, inventoryRequest)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Updates inventory by product code, returning HTTP 404 when it is absent.
+     *
+     * <p>A request product code that differs from the path is rejected with HTTP 400.
+     */
     @PutMapping(value = "/product/{productCode}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<InventoryResponse> updateInventoryByProductCode(
             @PathVariable String productCode,
@@ -134,21 +136,23 @@ class InventoryController {
                 && !inventoryRequest.productCode().equals(productCode)) {
             return ResponseEntity.badRequest().build();
         }
-        return inventoryService
+        return inventoryAPI
                 .updateInventoryByProductCode(productCode, inventoryRequest)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Deletes existing inventory and returns its previous representation, or HTTP 404 if absent.
+     */
     @DeleteMapping("/{id}")
     ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
-        return inventoryService
+        return inventoryAPI
                 .findInventoryById(id)
                 .map(
                         inventory -> {
-                            inventoryService.deleteInventoryById(id);
-                            return ResponseEntity.ok(inventoryMapper.toResponse(inventory));
+                            inventoryAPI.deleteInventoryById(id);
+                            return ResponseEntity.ok(inventory);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
