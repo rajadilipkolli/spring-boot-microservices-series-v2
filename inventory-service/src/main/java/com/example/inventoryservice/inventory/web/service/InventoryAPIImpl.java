@@ -97,16 +97,19 @@ class InventoryAPIImpl implements InventoryAPI {
     }
 
     @Override
+    @Transactional
     public void reserve(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
         orderManageService.reserve(orderDto);
     }
 
     @Override
+    @Transactional
     public void confirm(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
         orderManageService.confirm(orderDto);
     }
 
     @Override
+    @Transactional
     public void manage(com.example.inventoryservice.inventory.domain.models.ProductDto productDto) {
         productManageService.manage(productDto);
     }
