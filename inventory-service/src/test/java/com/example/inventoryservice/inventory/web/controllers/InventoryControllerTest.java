@@ -58,6 +58,7 @@ class InventoryControllerTest {
 
     private List<InventoryResponse> inventoryList;
 
+    /** Builds ten inventory responses used by the controller tests. */
     @BeforeEach
     void setUp() {
         inventoryList =
@@ -66,6 +67,7 @@ class InventoryControllerTest {
                         .toList();
     }
 
+    /** Verifies default paging returns the API records and pagination metadata. */
     @Test
     void shouldFetchAllInventories() throws Exception {
         PagedResult<InventoryResponse> inventoryPagedResult =
@@ -85,6 +87,7 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /** Verifies a known product code returns HTTP 200 and the matching inventory. */
     @Test
     void shouldFindInventoryByProductCode() throws Exception {
         String productCode = "prod-1";
@@ -98,6 +101,7 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.productCode", is(inventory.productCode())));
     }
 
+    /** Verifies an absent product code returns HTTP 404. */
     @Test
     void shouldReturn404WhenFetchingNonExistingInventory() throws Exception {
         String productCode = "non-existing";
@@ -108,6 +112,7 @@ class InventoryControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    /** Verifies a valid creation request returns HTTP 201 and the saved inventory. */
     @Test
     void shouldCreateNewInventory() throws Exception {
         InventoryRequest inventoryRequest = new InventoryRequest("prod-new", 10);
@@ -163,6 +168,7 @@ class InventoryControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Verifies updating an absent inventory identifier returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
@@ -178,6 +184,9 @@ class InventoryControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Verifies an update returns the identifier, product code, and available quantity from the API.
+     */
     @Test
     void shouldUpdateInventorySuccessfully() throws Exception {
         Long inventoryId = 5L;
@@ -210,6 +219,7 @@ class InventoryControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Verifies deleting existing inventory returns HTTP 200 with its previous values. */
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
@@ -224,6 +234,7 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.availableQuantity", is(10)));
     }
 
+    /** Verifies deleting an absent inventory identifier returns HTTP 404. */
     @Test
     void shouldReturn404WhenDeletingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
@@ -234,6 +245,9 @@ class InventoryControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Verifies generation forwards the idempotency key and an unspecified batch size to the API.
+     */
     @Test
     void testUpdateInventoryWithRandomValue() throws Exception {
         doNothing().when(inventoryAPI).updateGeneratedInventory(anyString(), isNull());
@@ -250,6 +264,7 @@ class InventoryControllerTest {
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", null);
     }
 
+    /** Verifies generation forwards an explicit batch size and returns a successful result. */
     @Test
     void shouldUpdateInventoryWithBatchSize() throws Exception {
         doNothing().when(inventoryAPI).updateGeneratedInventory(anyString(), eq(25));
@@ -268,6 +283,7 @@ class InventoryControllerTest {
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", 25);
     }
 
+    /** Verifies out-of-range batch sizes return HTTP 400 without invoking the inventory API. */
     @ParameterizedTest
     @ValueSource(ints = {0, -1, 10_001})
     void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
@@ -279,6 +295,7 @@ class InventoryControllerTest {
         verifyNoInteractions(inventoryAPI);
     }
 
+    /** Verifies a generation failure from the inventory API produces HTTP 500. */
     @Test
     void shouldReturn500WhenGenerationFails() throws Exception {
         doThrow(new RuntimeException("failure"))

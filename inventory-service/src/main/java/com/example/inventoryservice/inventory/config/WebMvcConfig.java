@@ -21,6 +21,7 @@ class WebMvcConfig implements WebMvcConfigurer {
         this.properties = properties;
     }
 
+    /** Registers the configured CORS paths, methods, headers, and origins for MVC requests. */
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         ApplicationProperties.Cors cors = properties.getCors();

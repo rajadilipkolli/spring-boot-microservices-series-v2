@@ -25,6 +25,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
     private Inventory product1;
 
+    /** Clears persisted inventory and seeds two products with available and reserved quantities. */
     @BeforeEach
     void setUp() {
         // Clear existing inventory

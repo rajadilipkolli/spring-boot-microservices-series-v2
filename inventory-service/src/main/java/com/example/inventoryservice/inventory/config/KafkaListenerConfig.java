@@ -39,6 +39,7 @@ class KafkaListenerConfig {
     private final JsonMapper jsonMapper;
     private final Validator validator;
 
+    /** Creates the Kafka adapter with the inventory API, JSON mapper, and payload validator. */
     KafkaListenerConfig(InventoryAPI inventoryAPI, JsonMapper jsonMapper, Validator validator) {
         this.inventoryAPI = inventoryAPI;
         this.jsonMapper = jsonMapper;

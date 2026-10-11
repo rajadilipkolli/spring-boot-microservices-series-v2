@@ -48,6 +48,10 @@ class InventoryOrderManageServiceImplTest {
 
     @InjectMocks private InventoryOrderManageServiceImpl inventoryOrderManageServiceImpl;
 
+    /**
+     * Verifies a new order with sufficient stock is accepted and moves quantities into
+     * reservations.
+     */
     @Test
     void reserve_AllProductsExist_OrderStatusIsNew_OrderIsAccepted() {
         // Arrange
@@ -83,6 +87,7 @@ class InventoryOrderManageServiceImplTest {
         verify(eventPublisher).publishEvent(any(InventoryProcessedEvent.class));
     }
 
+    /** Verifies insufficient stock rejects the order without saving inventory changes. */
     @Test
     void reserve_AllProductsExistWithLessQuantity_OrderStatusIsNew_OrderIsRejected() {
         // Arrange
@@ -112,6 +117,7 @@ class InventoryOrderManageServiceImplTest {
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository);
     }
 
+    /** Verifies missing products reject the order and publish an inventory outcome event. */
     @Test
     void reserve_NotAllProductsExist_OrderStatusIsNew_OrderIsRejectedAndKafkaMessageSent() {
         // Arrange
@@ -138,6 +144,7 @@ class InventoryOrderManageServiceImplTest {
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository);
     }
 
+    /** Verifies non-new orders are returned unchanged without persistence or event publication. */
     @Test
     void reserve_OrderStatusIsNotNew_OrderIsIgnored() {
         // Arrange
@@ -154,6 +161,7 @@ class InventoryOrderManageServiceImplTest {
         verifyNoInteractions(eventPublisher, inventoryRepository, inventoryJOOQRepository);
     }
 
+    /** Verifies confirmation saves the loaded inventory without publishing an event. */
     @Test
     void confirm() {
         // Arrange
@@ -186,6 +194,7 @@ class InventoryOrderManageServiceImplTest {
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository, eventPublisher);
     }
 
+    /** Verifies an external rollback restores available quantities and reduces reserved stock. */
     @Test
     void confirmWhenOrderStatusIsROLLBACK() {
         // Arrange

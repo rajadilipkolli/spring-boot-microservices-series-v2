@@ -19,6 +19,7 @@ class ProductManageServiceImpl implements ProductManageService {
     private final InventoryRepository inventoryRepository;
     private final InventoryJOOQRepository inventoryJOOQRepository;
 
+    /** Creates the product handler with repositories for duplicate checks and inventory writes. */
     public ProductManageServiceImpl(
             InventoryRepository inventoryRepository,
             InventoryJOOQRepository inventoryJOOQRepository) {
@@ -26,6 +27,12 @@ class ProductManageServiceImpl implements ProductManageService {
         this.inventoryJOOQRepository = inventoryJOOQRepository;
     }
 
+    /**
+     * Creates inventory for a new product code, ignoring existing or concurrently created codes.
+     *
+     * <p>Integrity failures propagate when the product code is still absent after the failed
+     * insert.
+     */
     @Override
     public void manage(ProductDto productDto) {
         String productCode = productDto.code();
