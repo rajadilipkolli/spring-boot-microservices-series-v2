@@ -13,32 +13,10 @@ import java.util.UUID;
 import org.springframework.data.r2dbc.repository.Modifying;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEvent, UUID> {
-
-    /**
-     * Claims the oldest pending events, skipping rows locked by other transactions. Marks them as
-     * processing, records the lock time, and increments their versions.
-     *
-     * @param limit the maximum number of events to claim; zero claims none
-     * @return the claimed events with updated state; database failures are emitted as errors
-     */
-    @Query(
-            """
-            UPDATE outbox_events
-            SET status = 'PROCESSING', locked_at = NOW(), version = version + 1
-            WHERE id IN (
-                SELECT id FROM outbox_events
-                WHERE status = 'PENDING'
-                ORDER BY created_at ASC
-                LIMIT :limit
-                FOR UPDATE SKIP LOCKED
-            )
-            RETURNING *
-            """)
-    Flux<OutboxEvent> claimPendingEvents(int limit);
+public interface OutboxEventRepository
+        extends ReactiveCrudRepository<OutboxEvent, UUID>, CustomOutboxEventRepository {
 
     /**
      * Releases expired processing locks and increments retry counts and versions. Events whose new

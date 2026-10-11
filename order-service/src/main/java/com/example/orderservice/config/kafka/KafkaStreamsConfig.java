@@ -138,7 +138,8 @@ class KafkaStreamsConfig {
                         kafkaStreamBuilder.stream(
                                 STOCK_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde)),
                         orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        JoinWindows.ofTimeDifferenceAndGrace(
+                                Duration.ofSeconds(30), Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));

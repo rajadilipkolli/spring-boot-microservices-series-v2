@@ -26,6 +26,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                 inventoryRepository.save(
                         new Inventory().setProductCode("JUNIT_000").setAvailableQuantity(1000));
 
+        stockOrderListener.reset();
         assertThat(stockOrderListener.getCountDownLatch().getCount()).isEqualTo(1);
         // publish event
         OrderDto orderDto = MockTestData.getOrderDto("ORDER");
@@ -64,9 +65,8 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                 AppConstants.PRODUCT_TOPIC, "1001", jsonMapper.writeValueAsBytes(productDto));
 
         await().untilAsserted(
-                        () -> {
-                            assertThat(inventoryJOOQRepository.findByProductCode("P001"))
-                                    .isPresent();
-                        });
+                        () ->
+                                assertThat(inventoryJOOQRepository.findByProductCode("P001"))
+                                        .isPresent());
     }
 }

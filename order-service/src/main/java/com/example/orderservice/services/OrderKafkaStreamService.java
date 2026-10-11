@@ -11,8 +11,8 @@ import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.KeyValueIterator;
@@ -31,8 +31,6 @@ public class OrderKafkaStreamService {
 
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
 
-    private ReadOnlyKeyValueStore<String, OrderDto> store = null;
-
     public OrderKafkaStreamService(StreamsBuilderFactoryBean kafkaStreamsFactory) {
         this.kafkaStreamsFactory = kafkaStreamsFactory;
     }
@@ -44,9 +42,16 @@ public class OrderKafkaStreamService {
                 pageSize);
         List<OrderDto> orders = new ArrayList<>();
 
+        Optional<ReadOnlyKeyValueStore<String, OrderDto>> optionalStore =
+                getReadOnlyKeyValueStore();
+        if (optionalStore.isEmpty()) {
+            log.warn("Orders store is not ready, returning empty list");
+            return orders;
+        }
+
         long startIndex = (long) pageNo * pageSize;
         long endIndex = startIndex + pageSize;
-        try (KeyValueIterator<String, OrderDto> it = getReadOnlyKeyValueStore().all()) {
+        try (KeyValueIterator<String, OrderDto> it = optionalStore.get().all()) {
             long currentIndex = 0;
 
             log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
@@ -67,6 +72,9 @@ public class OrderKafkaStreamService {
             }
 
             log.info("Returning {} orders out of {} total entries", orders.size(), currentIndex);
+        } catch (InvalidStateStoreException ex) {
+            log.warn("Orders store became unavailable during iteration: {}", ex.getMessage());
+            return List.of();
         }
 
         return orders;
@@ -74,22 +82,38 @@ public class OrderKafkaStreamService {
 
     public Optional<OrderDto> getOrderFromStoreById(String orderId) {
         log.info("Fetching order from Kafka Store with orderId :{}", orderId);
-        return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
+        return getReadOnlyKeyValueStore()
+                .flatMap(
+                        store -> {
+                            try {
+                                return Optional.ofNullable(store.get(orderId));
+                            } catch (InvalidStateStoreException ex) {
+                                log.warn(
+                                        "Orders store became unavailable when fetching orderId {}: {}",
+                                        orderId,
+                                        ex.getMessage());
+                                return Optional.empty();
+                            }
+                        });
     }
 
-    private ReadOnlyKeyValueStore<String, OrderDto> getReadOnlyKeyValueStore() {
-        if (store == null) {
-            try {
-                store =
-                        Objects.requireNonNull(kafkaStreamsFactory.getKafkaStreams())
-                                .store(
-                                        StoreQueryParameters.fromNameAndType(
-                                                AppConstants.ORDERS_STORE,
-                                                QueryableStoreTypes.keyValueStore()));
-            } catch (InvalidStateStoreException ex) {
-                throw new IllegalStateException("Orders store not ready", ex);
+    private Optional<ReadOnlyKeyValueStore<String, OrderDto>> getReadOnlyKeyValueStore() {
+        try {
+            KafkaStreams kafkaStreams = kafkaStreamsFactory.getKafkaStreams();
+            if (kafkaStreams == null || kafkaStreams.state() != KafkaStreams.State.RUNNING) {
+                log.warn(
+                        "Kafka Streams is not in RUNNING state (current state: {})",
+                        kafkaStreams == null ? "null" : kafkaStreams.state());
+                return Optional.empty();
             }
+            return Optional.of(
+                    kafkaStreams.store(
+                            StoreQueryParameters.fromNameAndType(
+                                    AppConstants.ORDERS_STORE,
+                                    QueryableStoreTypes.keyValueStore())));
+        } catch (InvalidStateStoreException ex) {
+            log.warn("Orders store not ready: {}", ex.getMessage());
+            return Optional.empty();
         }
-        return store;
     }
 }
