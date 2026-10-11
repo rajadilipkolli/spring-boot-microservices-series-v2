@@ -1,16 +1,15 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.inventoryservice.inventory.web.controllers;
 
-import com.example.inventoryservice.inventory.mapper.InventoryMapper;
-import com.example.inventoryservice.inventory.model.request.InventoryRequest;
-import com.example.inventoryservice.inventory.model.response.InventoryResponse;
-import com.example.inventoryservice.inventory.model.response.PagedResult;
-import com.example.inventoryservice.inventory.services.InventoryService;
+import com.example.inventoryservice.inventory.InventoryAPI;
+import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
+import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
+import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import com.example.inventoryservice.inventory.utils.logging.Loggable;
 import jakarta.validation.Valid;
@@ -40,12 +39,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 class InventoryController {
 
-    private final InventoryService inventoryService;
-    private final InventoryMapper inventoryMapper;
+    private final InventoryAPI inventoryAPI;
 
-    InventoryController(InventoryService inventoryService, InventoryMapper inventoryMapper) {
-        this.inventoryService = inventoryService;
-        this.inventoryMapper = inventoryMapper;
+    InventoryController(InventoryAPI inventoryAPI) {
+        this.inventoryAPI = inventoryAPI;
     }
 
     @GetMapping
@@ -58,19 +55,12 @@ class InventoryController {
                     String sortBy,
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
-        return inventoryService.findAllInventories(pageNo, pageSize, sortBy, sortDir);
+        return inventoryAPI.findAllInventories(pageNo, pageSize, sortBy, sortDir);
     }
 
     @GetMapping("/{productCode}")
-    // @Retry(name = "inventory-api", fallbackMethod = "hardcodedResponse")
-    // @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
-    // @RateLimiter(name = "default")
-    // @Bulkhead(name = "inventory-api")
     ResponseEntity<InventoryResponse> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
-        // If delay is specified, block for the requested seconds — used by tests to
-        // simulate slow
-        // responses
         if (delay != null && delay > 0) {
             try {
                 TimeUnit.SECONDS.sleep(delay);
@@ -78,9 +68,8 @@ class InventoryController {
                 Thread.currentThread().interrupt();
             }
         }
-        return inventoryService
+        return inventoryAPI
                 .findInventoryByProductCode(productCode)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -97,31 +86,28 @@ class InventoryController {
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
         return ResponseEntity.ok(
-                inventoryService.getInventoryByProductCodes(
-                        codes, pageNo, pageSize, sortBy, sortDir));
+                inventoryAPI.getInventoryByProductCodes(codes, pageNo, pageSize, sortBy, sortDir));
     }
 
     @PostMapping("/generate")
     boolean updateInventoryWithRandomValue(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) @Min(1) @Max(InventoryService.MAX_GENERATION_BATCH_SIZE)
-                    Integer batchSize) {
-        inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
+            @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize) {
+        inventoryAPI.updateGeneratedInventory(idempotencyKey, batchSize);
         return true;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
-        return inventoryMapper.toResponse(inventoryService.saveInventory(inventoryRequest));
+        return inventoryAPI.saveInventory(inventoryRequest);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<InventoryResponse> updateInventory(
             @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest) {
-        return inventoryService
+        return inventoryAPI
                 .updateInventoryById(id, inventoryRequest)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -134,21 +120,20 @@ class InventoryController {
                 && !inventoryRequest.productCode().equals(productCode)) {
             return ResponseEntity.badRequest().build();
         }
-        return inventoryService
+        return inventoryAPI
                 .updateInventoryByProductCode(productCode, inventoryRequest)
-                .map(inventoryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
-        return inventoryService
+        return inventoryAPI
                 .findInventoryById(id)
                 .map(
                         inventory -> {
-                            inventoryService.deleteInventoryById(id);
-                            return ResponseEntity.ok(inventoryMapper.toResponse(inventory));
+                            inventoryAPI.deleteInventoryById(id);
+                            return ResponseEntity.ok(inventory);
                         })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

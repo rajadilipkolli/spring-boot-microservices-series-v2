@@ -9,7 +9,7 @@ package com.example.inventoryservice.inventory;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.inventoryservice.inventory.common.AbstractIntegrationTest;
+import com.example.inventoryservice.inventory.web.service.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 
 class InventoryServiceApplicationIntegrationTest extends AbstractIntegrationTest {

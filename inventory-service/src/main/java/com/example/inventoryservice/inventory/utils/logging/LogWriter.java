@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 
-public final class LogWriter {
+final class LogWriter {
 
     private LogWriter() {
         // Utility class
