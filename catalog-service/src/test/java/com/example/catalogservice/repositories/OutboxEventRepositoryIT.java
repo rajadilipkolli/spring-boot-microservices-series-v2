@@ -12,13 +12,17 @@ import com.example.catalogservice.common.AbstractIntegrationTest;
 import com.example.catalogservice.entities.OutboxEvent;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.entities.OutboxPayload;
+import com.example.catalogservice.services.OutboxPublisher;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import reactor.test.StepVerifier;
 
+// A fixed delay still allows an immediate first run that can claim the test fixtures.
+@MockitoBean(types = OutboxPublisher.class)
 class OutboxEventRepositoryIT extends AbstractIntegrationTest {
 
     @BeforeEach
