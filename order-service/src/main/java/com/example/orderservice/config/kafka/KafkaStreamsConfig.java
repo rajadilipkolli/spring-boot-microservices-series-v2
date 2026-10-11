@@ -121,6 +121,13 @@ class KafkaStreamsConfig {
         return new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
     }
 
+    /**
+     * Registers a join of payment and inventory responses for the same order and attempt, with a
+     * maximum timestamp difference of 30 seconds and a 30-second grace period. Publishes non-null
+     * confirmation results to the orders topic keyed by order ID.
+     *
+     * @return the original payment stream, before correlation and joining
+     */
     @Bean
     KStream<String, OrderDto> stream(
             StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
@@ -153,6 +160,10 @@ class KafkaStreamsConfig {
         return paymentStream;
     }
 
+    /**
+     * Drops null orders, missing order IDs, and null or blank attempt IDs, then keys the remaining
+     * responses by {@code orderId:attemptId} for correlation.
+     */
     private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
         // Legacy responses cannot be correlated safely; NEW orders will be retried with an ID.
         return stream.filter(

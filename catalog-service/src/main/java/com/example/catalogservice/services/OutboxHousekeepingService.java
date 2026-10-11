@@ -41,6 +41,11 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.failed", failedCount);
     }
 
+    /**
+     * Validates the configured retention period during initialization.
+     *
+     * @throws IllegalArgumentException if {@code application.outbox.retention-days} is negative
+     */
     @PostConstruct
     void validateRetentionDays() {
         if (retentionDays < 0) {
@@ -70,7 +75,9 @@ public class OutboxHousekeepingService {
 
     /**
      * Deletes published events created strictly before the retention cutoff and waits for
-     * completion. Deletion errors emitted by the publisher are suppressed.
+     * completion. The cutoff is the current time minus {@code application.outbox.retention-days}
+     * (default seven days); zero uses the current time. Deletion errors emitted by the publisher
+     * are suppressed.
      */
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
     @SchedulerLock(name = "cleanupPublishedEventsLock")

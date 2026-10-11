@@ -33,15 +33,25 @@ public record OrderDto(
 
     @Serial private static final long serialVersionUID = 1L;
 
+    /** Creates an order with a null attempt ID. */
     public OrderDto(
             Long orderId, Long customerId, String status, String source, List<OrderItemDto> items) {
         this(orderId, customerId, status, source, items, null);
     }
 
+    /**
+     * Returns a new order with the supplied attempt ID and all other fields preserved.
+     *
+     * @param attemptId identifier used to correlate payment and inventory responses, or null
+     */
     public OrderDto withAttemptId(String attemptId) {
         return new OrderDto(orderId(), customerId(), status(), source(), items(), attemptId);
     }
 
+    /**
+     * Returns this order if the status and source are unchanged; otherwise returns a copy with the
+     * requested status and source, preserving the attempt ID and all other fields.
+     */
     public OrderDto withStatusAndSource(String status, String source) {
         if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
             return this;

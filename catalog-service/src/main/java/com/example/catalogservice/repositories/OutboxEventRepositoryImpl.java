@@ -32,6 +32,7 @@ public class OutboxEventRepositoryImpl implements CustomOutboxEventRepository {
     private final DatabaseClient databaseClient;
     private final R2dbcConverter r2dbcConverter;
 
+    /** Creates a repository using the supplied database client and event row converter. */
     public OutboxEventRepositoryImpl(DatabaseClient databaseClient, R2dbcConverter r2dbcConverter) {
         this.databaseClient = databaseClient;
         this.r2dbcConverter = r2dbcConverter;

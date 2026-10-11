@@ -35,6 +35,10 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
+    /**
+     * Returns HTTP 503 with the exception message as the problem detail and the request's {@code
+     * X-Correlation-ID}, when present, as the {@code correlationId} property.
+     */
     @ExceptionHandler(OrderStoreUnavailableException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderStoreUnavailable(
             OrderStoreUnavailableException ex, WebRequest request) {

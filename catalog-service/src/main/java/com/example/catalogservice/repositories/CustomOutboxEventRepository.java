@@ -15,7 +15,7 @@ public interface CustomOutboxEventRepository {
      * Claims the oldest pending events, skipping rows locked by other transactions. Marks them as
      * processing, records the lock time, and increments their versions.
      *
-     * @param limit the maximum number of events to claim; zero claims none
+     * @param limit the maximum number of events to claim; zero or negative values claim none
      * @return the claimed events with updated state; database failures are emitted as errors
      */
     Flux<OutboxEvent> claimPendingEvents(int limit);

@@ -37,11 +37,19 @@ public class OrderManageService {
     }
 
     /**
-     * Reconciles the payment and inventory outcomes and persists the resulting order status.
+     * Reconciles payment and inventory outcomes for the same order and attempt, updating only NEW
+     * orders. Increments the completion or failure counter only after a successful status update.
+     * Persistence failures propagate to the caller.
      *
      * @param orderPayment payment reservation outcome
      * @param orderStock inventory reservation outcome
-     * @return the reconciled order outcome, or null when the order already has a terminal outcome
+     * @return the reconciled outcome after an update; otherwise null for a persisted CONFIRMED,
+     *     REJECTED, ROLLBACK, or FAILED order, or the inventory response with the persisted status
+     *     and source for any other state
+     * @throws IllegalArgumentException if order IDs are missing or differ, attempt IDs are missing,
+     *     blank, or differ, or the derived status is not an {@link OrderStatus} constant
+     * @throws OrderNotFoundException if no order is updated and the order cannot be found
+     * @throws NullPointerException if either response or the derived status is null
      */
     public @Nullable OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         if (orderPayment.orderId() == null

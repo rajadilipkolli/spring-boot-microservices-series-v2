@@ -36,6 +36,15 @@ public class OrderKafkaStreamService {
         this.kafkaStreamsFactory = kafkaStreamsFactory;
     }
 
+    /**
+     * Reads a page of orders in the store's iteration order.
+     *
+     * @param pageNo zero-based page number
+     * @param pageSize maximum number of entries to return
+     * @return the page's orders, or an empty list if the page contains no entries
+     * @throws OrderStoreUnavailableException if Kafka Streams is absent or not running, or the
+     *     store becomes unavailable during acquisition or iteration; no partial page is returned
+     */
     public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
         log.info(
                 "Fetching all orders from Kafka Store with pageNo :{} and pageSize : {}",
@@ -76,6 +85,13 @@ public class OrderKafkaStreamService {
         return orders;
     }
 
+    /**
+     * Looks up an order by its store key.
+     *
+     * @return the stored order, or an empty optional if the key is absent
+     * @throws OrderStoreUnavailableException if Kafka Streams is absent or not running, or the
+     *     store is unavailable during acquisition or lookup
+     */
     public Optional<OrderDto> getOrderFromStoreById(String orderId) {
         log.info("Fetching order from Kafka Store with orderId :{}", orderId);
         try {
@@ -85,6 +101,12 @@ public class OrderKafkaStreamService {
         }
     }
 
+    /**
+     * Acquires the orders store from the current Kafka Streams instance on each call.
+     *
+     * @throws OrderStoreUnavailableException if Kafka Streams is absent or not running, or store
+     *     acquisition raises an {@link InvalidStateStoreException}
+     */
     private ReadOnlyKeyValueStore<String, OrderDto> getReadOnlyKeyValueStore() {
         try {
             KafkaStreams kafkaStreams = kafkaStreamsFactory.getKafkaStreams();
