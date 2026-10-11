@@ -31,6 +31,7 @@ import org.mapstruct.NullValueCheckStrategy;
 public interface OrderMapper {
 
     @Mapping(source = "id", target = "orderId")
+    @Mapping(target = "attemptId", ignore = true)
     OrderDto toDto(Order order);
 
     @Mapping(target = "itemId", source = "id")

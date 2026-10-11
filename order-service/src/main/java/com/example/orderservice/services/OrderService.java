@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
@@ -150,7 +151,8 @@ public class OrderService {
     private OrderResponse persistOrder(OrderRequest orderRequest) {
         Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
         Order savedOrder = this.orderRepository.save(orderEntity);
-        OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
+        OrderDto persistedOrderDto =
+                this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
         // Should send persistedOrderDto as it contains OrderId used for subsequent processing
         eventPublisher.publishEvent(persistedOrderDto);
         return this.orderMapper.toResponse(savedOrder);
@@ -217,7 +219,8 @@ public class OrderService {
         // OrderEventPublisher
         savedOrders.forEach(
                 order -> {
-                    OrderDto dto = orderMapper.toDto(order);
+                    OrderDto dto =
+                            orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
                     eventPublisher.publishEvent(dto);
                 });
 
@@ -306,7 +309,10 @@ public class OrderService {
         byStatusOrderByIdAsc.forEach(
                 order -> {
                     try {
-                        OrderDto persistedOrderDto = this.orderMapper.toDto(order);
+                        OrderDto persistedOrderDto =
+                                this.orderMapper
+                                        .toDto(order)
+                                        .withAttemptId(UUID.randomUUID().toString());
                         log.info(
                                 "Retrying Order :{}",
                                 LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));

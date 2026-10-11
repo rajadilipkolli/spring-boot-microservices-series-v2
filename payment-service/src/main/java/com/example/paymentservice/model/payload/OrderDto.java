@@ -21,23 +21,29 @@ public record OrderDto(
                 Long customerId,
         String status,
         String source,
-        @NotEmpty(message = "Order without items not valid") List<@Valid OrderItemDto> items)
+        @NotEmpty(message = "Order without items not valid") List<@Valid OrderItemDto> items,
+        String attemptId)
         implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
+
+    public OrderDto(
+            Long orderId, Long customerId, String status, String source, List<OrderItemDto> items) {
+        this(orderId, customerId, status, source, items, null);
+    }
 
     public OrderDto withSource(String source) {
         if (Objects.equals(this.source(), source)) {
             return this;
         }
-        return new OrderDto(orderId(), customerId(), status(), source, items());
+        return new OrderDto(orderId(), customerId(), status(), source, items(), attemptId());
     }
 
     public OrderDto withStatus(String status) {
         if (Objects.equals(this.status(), status)) {
             return this;
         }
-        return new OrderDto(orderId(), customerId(), status, source(), items());
+        return new OrderDto(orderId(), customerId(), status, source(), items(), attemptId());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

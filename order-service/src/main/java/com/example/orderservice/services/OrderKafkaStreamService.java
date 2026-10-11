@@ -7,6 +7,7 @@
 package com.example.orderservice.services;
 
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.exception.OrderStoreUnavailableException;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import java.util.ArrayList;
@@ -42,16 +43,11 @@ public class OrderKafkaStreamService {
                 pageSize);
         List<OrderDto> orders = new ArrayList<>();
 
-        Optional<ReadOnlyKeyValueStore<String, OrderDto>> optionalStore =
-                getReadOnlyKeyValueStore();
-        if (optionalStore.isEmpty()) {
-            log.warn("Orders store is not ready, returning empty list");
-            return orders;
-        }
+        ReadOnlyKeyValueStore<String, OrderDto> store = getReadOnlyKeyValueStore();
 
         long startIndex = (long) pageNo * pageSize;
         long endIndex = startIndex + pageSize;
-        try (KeyValueIterator<String, OrderDto> it = optionalStore.get().all()) {
+        try (KeyValueIterator<String, OrderDto> it = store.all()) {
             long currentIndex = 0;
 
             log.info("Store iteration - startIndex: {}, endIndex: {}", startIndex, endIndex);
@@ -74,7 +70,7 @@ public class OrderKafkaStreamService {
             log.info("Returning {} orders out of {} total entries", orders.size(), currentIndex);
         } catch (InvalidStateStoreException ex) {
             log.warn("Orders store became unavailable during iteration: {}", ex.getMessage());
-            return List.of();
+            throw new OrderStoreUnavailableException(ex);
         }
 
         return orders;
@@ -82,38 +78,28 @@ public class OrderKafkaStreamService {
 
     public Optional<OrderDto> getOrderFromStoreById(String orderId) {
         log.info("Fetching order from Kafka Store with orderId :{}", orderId);
-        return getReadOnlyKeyValueStore()
-                .flatMap(
-                        store -> {
-                            try {
-                                return Optional.ofNullable(store.get(orderId));
-                            } catch (InvalidStateStoreException ex) {
-                                log.warn(
-                                        "Orders store became unavailable when fetching orderId {}: {}",
-                                        orderId,
-                                        ex.getMessage());
-                                return Optional.empty();
-                            }
-                        });
+        try {
+            return Optional.ofNullable(getReadOnlyKeyValueStore().get(orderId));
+        } catch (InvalidStateStoreException ex) {
+            throw new OrderStoreUnavailableException(ex);
+        }
     }
 
-    private Optional<ReadOnlyKeyValueStore<String, OrderDto>> getReadOnlyKeyValueStore() {
+    private ReadOnlyKeyValueStore<String, OrderDto> getReadOnlyKeyValueStore() {
         try {
             KafkaStreams kafkaStreams = kafkaStreamsFactory.getKafkaStreams();
             if (kafkaStreams == null || kafkaStreams.state() != KafkaStreams.State.RUNNING) {
                 log.warn(
                         "Kafka Streams is not in RUNNING state (current state: {})",
                         kafkaStreams == null ? "null" : kafkaStreams.state());
-                return Optional.empty();
+                throw new OrderStoreUnavailableException();
             }
-            return Optional.of(
-                    kafkaStreams.store(
-                            StoreQueryParameters.fromNameAndType(
-                                    AppConstants.ORDERS_STORE,
-                                    QueryableStoreTypes.keyValueStore())));
+            return kafkaStreams.store(
+                    StoreQueryParameters.fromNameAndType(
+                            AppConstants.ORDERS_STORE, QueryableStoreTypes.keyValueStore()));
         } catch (InvalidStateStoreException ex) {
             log.warn("Orders store not ready: {}", ex.getMessage());
-            return Optional.empty();
+            throw new OrderStoreUnavailableException(ex);
         }
     }
 }

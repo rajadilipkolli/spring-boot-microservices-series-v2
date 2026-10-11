@@ -183,4 +183,19 @@ class OrderManageServiceIT extends AbstractIntegrationTest {
         assertThat(updatedOrder.getSource()).isNull();
         assertThat(updatedOrder.getCustomerId()).isEqualTo(testOrder.getCustomerId());
     }
+
+    @Test
+    void lateRejectionDoesNotReplaceConfirmation() {
+        var payment = getPaymentOrderDto("ACCEPT", testOrder);
+        var stock = getStockOrderDto("ACCEPT", testOrder);
+        orderManageService.confirm(payment, stock);
+        var result =
+                orderManageService.confirm(
+                        payment.withAttemptId("retry"),
+                        stock.withStatusAndSource("REJECT", "INVENTORY").withAttemptId("retry"));
+        assertThat(result.status()).isEqualTo("CONFIRMED");
+        assertThat(result.source()).isNull();
+        assertThat(orderRepository.findById(testOrder.getId()).orElseThrow().getStatus())
+                .isEqualTo(OrderStatus.CONFIRMED);
+    }
 }

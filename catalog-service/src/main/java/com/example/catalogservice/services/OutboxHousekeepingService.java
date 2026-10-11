@@ -9,6 +9,7 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -38,6 +39,14 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.pending", pendingCount);
         meterRegistry.gauge("outbox.events.published", publishedCount);
         meterRegistry.gauge("outbox.events.failed", failedCount);
+    }
+
+    @PostConstruct
+    void validateRetentionDays() {
+        if (retentionDays < 0) {
+            throw new IllegalArgumentException(
+                    "application.outbox.retention-days must be zero or positive");
+        }
     }
 
     /**

@@ -133,20 +133,34 @@ class KafkaStreamsConfig {
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
 
-        paymentStream
+        correlateByAttempt(paymentStream)
                 .join(
-                        kafkaStreamBuilder.stream(
-                                STOCK_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde)),
+                        correlateByAttempt(
+                                kafkaStreamBuilder.stream(
+                                        STOCK_ORDERS_TOPIC,
+                                        Consumed.with(Serdes.String(), orderSerde))),
                         orderManageService::confirm,
                         JoinWindows.ofTimeDifferenceAndGrace(
                                 Duration.ofSeconds(30), Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+                .selectKey((key, order) -> order.orderId().toString())
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
 
         paymentStream.print(Printed.toSysOut());
 
         return paymentStream;
+    }
+
+    private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+        // Legacy responses cannot be correlated safely; NEW orders will be retried with an ID.
+        return stream.filter(
+                        (key, order) ->
+                                order != null
+                                        && order.orderId() != null
+                                        && order.attemptId() != null
+                                        && !order.attemptId().isBlank())
+                .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
     }
 
     @Bean

@@ -7,20 +7,28 @@
 package com.example.orderservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Collections;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -36,14 +44,26 @@ class OrderManageServiceTest {
 
     @InjectMocks private OrderManageService orderManageService;
 
+    @BeforeEach
+    void setUp() {
+        when(orderRepository.updateOrderStatusAndSourceById(any(), any(), any())).thenReturn(1);
+    }
+
     @Test
     void confirm_BothPaymentAndStockAreAccepted_ReturnsConfirmedOrder() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "ACCEPT", "INVENTORY", Collections.emptyList());
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "ACCEPT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
@@ -68,10 +88,17 @@ class OrderManageServiceTest {
     void confirm_BothPaymentAndStockAreRejected_ReturnsRejectedOrder() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "REJECT", "INVENTORY", Collections.emptyList());
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "REJECT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
@@ -95,10 +122,17 @@ class OrderManageServiceTest {
     void confirm_PaymentIsRejectedAndStockIsAccepted_ReturnsRollbackOrderWithPaymentAsSource() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "REJECT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "ACCEPT", "INVENTORY", Collections.emptyList());
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "ACCEPT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
@@ -124,10 +158,17 @@ class OrderManageServiceTest {
     void confirm_PaymentIsAcceptedAndStockIsRejected_ReturnsRollbackOrderWithStockAsSource() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "REJECT", "INVENTORY", Collections.emptyList());
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "REJECT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto actual = orderManageService.confirm(orderPayment, orderStock);
@@ -152,12 +193,17 @@ class OrderManageServiceTest {
     void confirm_VerifiesRepositoryIsCalledWithCorrectParameters() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "ACCEPT", "INVENTORY", Collections.emptyList());
-
-        when(orderRepository.updateOrderStatusAndSourceById(any(), any(), any())).thenReturn(1);
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "ACCEPT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto result = orderManageService.confirm(orderPayment, orderStock);
@@ -181,12 +227,17 @@ class OrderManageServiceTest {
     void confirm_RollbackCase_VerifiesRepositoryIsCalledWithCorrectParameters() {
         // Arrange
         OrderDto orderPayment =
-                new OrderDto(12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList());
+                new OrderDto(
+                        12345L, 67890L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
 
         OrderDto orderStock =
-                new OrderDto(12345L, 67890L, "REJECT", "INVENTORY", Collections.emptyList());
-
-        when(orderRepository.updateOrderStatusAndSourceById(any(), any(), any())).thenReturn(1);
+                new OrderDto(
+                        12345L,
+                        67890L,
+                        "REJECT",
+                        "INVENTORY",
+                        Collections.emptyList(),
+                        "attempt-1");
 
         // Act
         OrderDto result = orderManageService.confirm(orderPayment, orderStock);
@@ -205,5 +256,38 @@ class OrderManageServiceTest {
         assertThat(result)
                 .usingRecursiveComparison()
                 .isEqualTo(orderStock.withStatusAndSource("ROLLBACK", "INVENTORY"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = OrderStatus.class,
+            names = {"CONFIRMED", "REJECTED", "ROLLBACK", "FAILED"})
+    void lateResponsesPreservePersistedTerminalOutcome(OrderStatus status) {
+        var payment =
+                new OrderDto(1L, 2L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-2");
+        var stock = payment.withStatusAndSource("REJECT", "INVENTORY");
+        var persisted = new Order();
+        persisted.setStatus(status);
+        persisted.setSource("original-source");
+        when(orderRepository.updateOrderStatusAndSourceById(any(), any(), any())).thenReturn(0);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(persisted));
+
+        assertThat(orderManageService.confirm(payment, stock))
+                .isEqualTo(stock.withStatusAndSource(status.name(), "original-source"));
+        verify(meterRegistry.counter("orders_completed"), never()).increment();
+        verify(meterRegistry.counter("orders_failed"), never()).increment();
+    }
+
+    @Test
+    void rejectsResponsesFromDifferentAttempts() {
+        var payment =
+                new OrderDto(1L, 2L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
+        reset(orderRepository);
+        assertThatThrownBy(
+                        () ->
+                                orderManageService.confirm(
+                                        payment, payment.withAttemptId("attempt-2")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoMoreInteractions(orderRepository);
     }
 }

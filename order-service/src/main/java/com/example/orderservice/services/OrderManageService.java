@@ -8,11 +8,13 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,13 @@ public class OrderManageService {
      * @return the reconciled order outcome
      */
     public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+        if (orderPayment.orderId() == null
+                || !Objects.equals(orderPayment.orderId(), orderStock.orderId())
+                || orderPayment.attemptId() == null
+                || orderPayment.attemptId().isBlank()
+                || !Objects.equals(orderPayment.attemptId(), orderStock.attemptId())) {
+            throw new IllegalArgumentException("Order responses must belong to the same attempt");
+        }
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = getOrderDto(orderPayment, orderStock);
         int rows =
@@ -48,6 +57,14 @@ public class OrderManageService {
                         orderDto.orderId(),
                         OrderStatus.valueOf(orderDto.status()),
                         orderDto.source());
+        if (rows == 0) {
+            var persisted =
+                    orderRepository
+                            .findById(orderDto.orderId())
+                            .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
+            return orderDto.withStatusAndSource(
+                    persisted.getStatus().name(), persisted.getSource());
+        }
         log.info(
                 "Updated Status as {} for orderId :{} in {} rows",
                 orderDto.status(),
@@ -56,7 +73,7 @@ public class OrderManageService {
         if ("CONFIRMED".equals(orderDto.status())) {
             this.ordersCompletedCounter.increment();
         } else if ("REJECTED".equals(orderDto.status())
-                || com.example.orderservice.utils.AppConstants.ROLLBACK.equals(orderDto.status())) {
+                || AppConstants.ROLLBACK.equals(orderDto.status())) {
             this.ordersFailedCounter.increment();
         }
         return orderDto;

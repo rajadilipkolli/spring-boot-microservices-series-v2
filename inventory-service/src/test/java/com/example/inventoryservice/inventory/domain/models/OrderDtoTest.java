@@ -65,4 +65,13 @@ class OrderDtoTest {
         assertThat(order.customerId()).isEqualTo(9007199254740993L);
         assertThat(order.items().getFirst().itemId()).isEqualTo(9007199254740993L);
     }
+
+    @Test
+    void responseCopiesAndJsonPreserveAttemptId() {
+        var order = new OrderDto(1L, 2L, "NEW", null, List.of(), "attempt-1");
+        var response = order.withSource("PARTICIPANT").withStatus("ACCEPT");
+        var mapper = JsonMapper.builder().build();
+        var decoded = mapper.readValue(mapper.writeValueAsString(response), OrderDto.class);
+        assertThat(decoded.attemptId()).isEqualTo("attempt-1");
+    }
 }

@@ -35,6 +35,16 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
+    @ExceptionHandler(OrderStoreUnavailableException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleOrderStoreUnavailable(
+            OrderStoreUnavailableException ex, WebRequest request) {
+        ProblemDetail problem =
+                ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        problem.setTitle("Orders Store Unavailable");
+        addCorrelationId(problem, request);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+    }
+
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(
             OrderNotFoundException ex, WebRequest request) {
