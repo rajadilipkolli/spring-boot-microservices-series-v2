@@ -70,7 +70,7 @@ public class TestData {
     }
 
     public static OrderDto getOrderDto(String source, long orderId) {
-        return new OrderDto(orderId, 1L, "ACCEPT", source, getOrderItemDtoList());
+        return new OrderDto(orderId, 1L, "ACCEPT", source, getOrderItemDtoList(), "test-attempt");
     }
 
     public static OrderDto getStockOrderDto(String status, Order testOrder) {
@@ -88,7 +88,8 @@ public class TestData {
                 testOrder.getCustomerId(),
                 status,
                 source,
-                getOrderItemDtoList());
+                getOrderItemDtoList(),
+                "test-attempt");
     }
 
     private static List<OrderItemDto> getOrderItemDtoList() {

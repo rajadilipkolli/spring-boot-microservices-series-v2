@@ -30,7 +30,9 @@ import org.mapstruct.NullValueCheckStrategy;
 @DecoratedWith(OrderMapperDecorator.class)
 public interface OrderMapper {
 
+    /** Maps an order to a DTO, leaving the attempt ID null for the publisher to assign. */
     @Mapping(source = "id", target = "orderId")
+    @Mapping(target = "attemptId", ignore = true)
     OrderDto toDto(Order order);
 
     @Mapping(target = "itemId", source = "id")

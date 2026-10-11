@@ -121,6 +121,13 @@ class KafkaStreamsConfig {
         return new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
     }
 
+    /**
+     * Registers a join of payment and inventory responses for the same order and attempt, with a
+     * maximum timestamp difference of 30 seconds and a 30-second grace period. Publishes non-null
+     * confirmation results to the orders topic keyed by order ID.
+     *
+     * @return the original payment stream, before correlation and joining
+     */
     @Bean
     KStream<String, OrderDto> stream(
             StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
@@ -133,19 +140,39 @@ class KafkaStreamsConfig {
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
 
-        paymentStream
+        correlateByAttempt(paymentStream)
                 .join(
-                        kafkaStreamBuilder.stream(
-                                STOCK_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde)),
+                        correlateByAttempt(
+                                kafkaStreamBuilder.stream(
+                                        STOCK_ORDERS_TOPIC,
+                                        Consumed.with(Serdes.String(), orderSerde))),
                         orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        JoinWindows.ofTimeDifferenceAndGrace(
+                                Duration.ofSeconds(30), Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+                .filter((key, order) -> order != null)
+                .selectKey((key, order) -> order.orderId().toString())
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
 
         paymentStream.print(Printed.toSysOut());
 
         return paymentStream;
+    }
+
+    /**
+     * Drops null orders, missing order IDs, and null or blank attempt IDs, then keys the remaining
+     * responses by {@code orderId:attemptId} for correlation.
+     */
+    private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+        // Legacy responses cannot be correlated safely; NEW orders will be retried with an ID.
+        return stream.filter(
+                        (key, order) ->
+                                order != null
+                                        && order.orderId() != null
+                                        && order.attemptId() != null
+                                        && !order.attemptId().isBlank())
+                .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
     }
 
     @Bean

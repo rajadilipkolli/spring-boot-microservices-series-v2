@@ -20,7 +20,7 @@ public class TestStockOrderListenerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(TestStockOrderListenerConfig.class);
 
-    private final CountDownLatch countDownLatch = new CountDownLatch(1);
+    private volatile CountDownLatch countDownLatch = new CountDownLatch(1);
     private final JsonMapper jsonMapper;
 
     public TestStockOrderListenerConfig(JsonMapper jsonMapper) {
@@ -29,6 +29,10 @@ public class TestStockOrderListenerConfig {
 
     public CountDownLatch getCountDownLatch() {
         return countDownLatch;
+    }
+
+    public void reset() {
+        this.countDownLatch = new CountDownLatch(1);
     }
 
     @KafkaListener(

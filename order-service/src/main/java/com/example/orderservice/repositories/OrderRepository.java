@@ -40,9 +40,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o.id from Order o where o.customerId = :customerId")
     Page<Long> findAllOrdersByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
+    /**
+     * Updates status and source only while the identified order is NEW. Flushes pending changes
+     * before the update and clears the persistence context afterward.
+     *
+     * @return the number of updated orders, or zero if the order is absent or no longer NEW
+     */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query("update Order o set o.status =:status, o.source =:source where o.id = :id")
+    @Query(
+            "update Order o set o.status =:status, o.source =:source where o.id = :id and o.status = com.example.orderservice.entities.OrderStatus.NEW")
     int updateOrderStatusAndSourceById(
             @Param("id") Long orderId,
             @Param("status") OrderStatus status,

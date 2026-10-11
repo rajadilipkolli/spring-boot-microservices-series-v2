@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
@@ -142,7 +143,7 @@ public class OrderService {
     }
 
     /**
-     * Persists an order and publishes its persisted representation.
+     * Persists an order and publishes its persisted representation with a new random attempt ID.
      *
      * @param orderRequest order to persist
      * @return the persisted order response
@@ -150,7 +151,8 @@ public class OrderService {
     private OrderResponse persistOrder(OrderRequest orderRequest) {
         Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
         Order savedOrder = this.orderRepository.save(orderEntity);
-        OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
+        OrderDto persistedOrderDto =
+                this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
         // Should send persistedOrderDto as it contains OrderId used for subsequent processing
         eventPublisher.publishEvent(persistedOrderDto);
         return this.orderMapper.toResponse(savedOrder);
@@ -202,7 +204,8 @@ public class OrderService {
     }
 
     /**
-     * Persists a batch of orders and publishes each persisted representation.
+     * Persists a batch of orders and publishes each persisted representation with a new random
+     * attempt ID per order.
      *
      * @param orderRequests orders to persist
      * @return the persisted order responses
@@ -217,7 +220,8 @@ public class OrderService {
         // OrderEventPublisher
         savedOrders.forEach(
                 order -> {
-                    OrderDto dto = orderMapper.toDto(order);
+                    OrderDto dto =
+                            orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
                     eventPublisher.publishEvent(dto);
                 });
 
@@ -296,6 +300,12 @@ public class OrderService {
         return new PagedResult<>(page, orderListDto);
     }
 
+    /**
+     * Republishes NEW orders last modified strictly more than five minutes ago, in ascending ID
+     * order, with a new random attempt ID for each. After publishing, saves the order with its last
+     * modified time set to the current time. Exceptions while processing an individual order are
+     * caught so remaining orders are attempted; failures fetching the orders propagate.
+     */
     @Job(name = "reProcessNewOrders", retries = 2)
     @Transactional
     public void retryNewOrders() {
@@ -306,7 +316,10 @@ public class OrderService {
         byStatusOrderByIdAsc.forEach(
                 order -> {
                     try {
-                        OrderDto persistedOrderDto = this.orderMapper.toDto(order);
+                        OrderDto persistedOrderDto =
+                                this.orderMapper
+                                        .toDto(order)
+                                        .withAttemptId(UUID.randomUUID().toString());
                         log.info(
                                 "Retrying Order :{}",
                                 LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));

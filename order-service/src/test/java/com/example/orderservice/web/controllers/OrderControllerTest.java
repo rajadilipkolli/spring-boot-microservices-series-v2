@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.exception.OrderStoreUnavailableException;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
@@ -73,6 +74,27 @@ class OrderControllerTest {
     @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
 
     @Autowired private JsonMapper jsonMapper;
+
+    @Test
+    void storeEndpointsReportTemporaryFailures() throws Exception {
+        given(orderKafkaStreamService.getOrderFromStoreById("1"))
+                .willThrow(new OrderStoreUnavailableException());
+        given(orderKafkaStreamService.getAllOrders(0, 10))
+                .willThrow(new OrderStoreUnavailableException());
+        mockMvc.perform(get("/api/orders/store/1")).andExpect(status().isServiceUnavailable());
+        mockMvc.perform(get("/api/orders/store?pageNo=0&pageSize=10"))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void completedStoreQueriesPreserveEmptyResponses() throws Exception {
+        given(orderKafkaStreamService.getOrderFromStoreById("1")).willReturn(Optional.empty());
+        given(orderKafkaStreamService.getAllOrders(0, 10)).willReturn(List.of());
+        mockMvc.perform(get("/api/orders/store/1")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/orders/store?pageNo=0&pageSize=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
 
     @ParameterizedTest
     @ValueSource(ints = {0, -1, 10_001})

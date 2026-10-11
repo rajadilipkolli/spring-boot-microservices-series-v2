@@ -9,11 +9,13 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import java.time.OffsetDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,9 @@ public class OutboxHousekeepingService {
     private final AtomicLong publishedCount = new AtomicLong(0);
     private final AtomicLong failedCount = new AtomicLong(0);
 
+    @Value("${application.outbox.retention-days:7}")
+    private int retentionDays = 7;
+
     public OutboxHousekeepingService(
             OutboxEventRepository outboxEventRepository, MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
@@ -34,6 +39,19 @@ public class OutboxHousekeepingService {
         meterRegistry.gauge("outbox.events.pending", pendingCount);
         meterRegistry.gauge("outbox.events.published", publishedCount);
         meterRegistry.gauge("outbox.events.failed", failedCount);
+    }
+
+    /**
+     * Validates the configured retention period during initialization.
+     *
+     * @throws IllegalArgumentException if {@code application.outbox.retention-days} is negative
+     */
+    @PostConstruct
+    void validateRetentionDays() {
+        if (retentionDays < 0) {
+            throw new IllegalArgumentException(
+                    "application.outbox.retention-days must be zero or positive");
+        }
     }
 
     /**
@@ -56,13 +74,15 @@ public class OutboxHousekeepingService {
     }
 
     /**
-     * Deletes published events created strictly more than seven days ago and waits for completion.
-     * Deletion errors emitted by the publisher are suppressed.
+     * Deletes published events created strictly before the retention cutoff and waits for
+     * completion. The cutoff is the current time minus {@code application.outbox.retention-days}
+     * (default seven days); zero uses the current time. Deletion errors emitted by the publisher
+     * are suppressed.
      */
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
     @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {
-        OffsetDateTime threshold = OffsetDateTime.now().minusDays(7);
+        OffsetDateTime threshold = OffsetDateTime.now().minusDays(retentionDays);
         log.info("Starting cleanup of published events older than {}", threshold);
         outboxEventRepository
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
