@@ -69,7 +69,7 @@ spec:
               key: POSTGRES_PASSWORD
               name: postgres-credentials
         - name: JAVA_TOOL_OPTIONS
-          value: -XX:MaxDirectMemorySize=256m -Xmx400m
+          value: -XX:MaxDirectMemorySize=64m -Xmx400m
         - name: APPLICATION_INVENTORY_SERVICE_URL
           value: http://inventory-service:18181/inventory-service
         - name: SPRING_DATA_REDIS_HOST

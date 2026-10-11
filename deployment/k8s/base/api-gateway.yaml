@@ -49,7 +49,7 @@ spec:
         - name: SPRING_DATA_REDIS_HOST
           value: redis
         - name: JAVA_TOOL_OPTIONS
-          value: -XX:MaxDirectMemorySize=256m -Xmx400m
+          value: -XX:MaxDirectMemorySize=64m -Xmx400m
         - name: OTEL_SERVICE_NAME
           value: api-gateway
         - name: OTEL_RESOURCE_ATTRIBUTES
