@@ -262,10 +262,29 @@ class OrderManageServiceTest {
     @EnumSource(
             value = OrderStatus.class,
             names = {"CONFIRMED", "REJECTED", "ROLLBACK", "FAILED"})
-    void lateResponsesPreservePersistedTerminalOutcome(OrderStatus status) {
+    void lateResponsesDoNotRepublishPersistedTerminalOutcome(OrderStatus status) {
         var payment =
                 new OrderDto(1L, 2L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-2");
         var stock = payment.withStatusAndSource("REJECT", "INVENTORY");
+        var persisted = new Order();
+        persisted.setStatus(status);
+        persisted.setSource("original-source");
+        when(orderRepository.updateOrderStatusAndSourceById(any(), any(), any())).thenReturn(0);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(persisted));
+
+        assertThat(orderManageService.confirm(payment, stock)).isNull();
+        verify(meterRegistry.counter("orders_completed"), never()).increment();
+        verify(meterRegistry.counter("orders_failed"), never()).increment();
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = OrderStatus.class,
+            names = {"NEW", "ACCEPT"})
+    void zeroRowUpdatePreservesPersistedNonterminalResponse(OrderStatus status) {
+        var payment =
+                new OrderDto(1L, 2L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-2");
+        var stock = payment.withStatusAndSource("ACCEPT", "INVENTORY");
         var persisted = new Order();
         persisted.setStatus(status);
         persisted.setSource("original-source");

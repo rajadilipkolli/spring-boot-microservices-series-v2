@@ -143,6 +143,7 @@ class KafkaStreamsConfig {
                         JoinWindows.ofTimeDifferenceAndGrace(
                                 Duration.ofSeconds(30), Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+                .filter((key, order) -> order != null)
                 .selectKey((key, order) -> order.orderId().toString())
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));

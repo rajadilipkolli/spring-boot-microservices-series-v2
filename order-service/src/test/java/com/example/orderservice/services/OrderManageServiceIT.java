@@ -193,8 +193,7 @@ class OrderManageServiceIT extends AbstractIntegrationTest {
                 orderManageService.confirm(
                         payment.withAttemptId("retry"),
                         stock.withStatusAndSource("REJECT", "INVENTORY").withAttemptId("retry"));
-        assertThat(result.status()).isEqualTo("CONFIRMED");
-        assertThat(result.source()).isNull();
+        assertThat(result).isNull();
         assertThat(orderRepository.findById(testOrder.getId()).orElseThrow().getStatus())
                 .isEqualTo(OrderStatus.CONFIRMED);
     }

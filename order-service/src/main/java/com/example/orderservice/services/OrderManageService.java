@@ -15,6 +15,7 @@ import com.example.orderservice.utils.AppConstants;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,9 +41,9 @@ public class OrderManageService {
      *
      * @param orderPayment payment reservation outcome
      * @param orderStock inventory reservation outcome
-     * @return the reconciled order outcome
+     * @return the reconciled order outcome, or null when the order already has a terminal outcome
      */
-    public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+    public @Nullable OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
         if (orderPayment.orderId() == null
                 || !Objects.equals(orderPayment.orderId(), orderStock.orderId())
                 || orderPayment.attemptId() == null
@@ -62,6 +63,12 @@ public class OrderManageService {
                     orderRepository
                             .findById(orderDto.orderId())
                             .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
+            if (switch (persisted.getStatus()) {
+                case CONFIRMED, REJECTED, ROLLBACK, FAILED -> true;
+                default -> false;
+            }) {
+                return null;
+            }
             return orderDto.withStatusAndSource(
                     persisted.getStatus().name(), persisted.getSource());
         }
