@@ -39,6 +39,9 @@ spring:
           json:
             trusted:
               packages: '*'
+            use:
+              type:
+                headers: false
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
   modulith:

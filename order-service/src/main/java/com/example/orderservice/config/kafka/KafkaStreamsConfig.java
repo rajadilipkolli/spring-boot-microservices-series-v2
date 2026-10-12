@@ -80,7 +80,7 @@ class KafkaStreamsConfig {
             // Enhanced error handling
             streamsConfiguration.put(
                     StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-                    RecoveringDeserializationExceptionHandler.class);
+                    RecoveringDeserializationExceptionHandler.class.getName());
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.RECOVERER,
                     deadLetterPublishingRecoverer);
