@@ -62,6 +62,13 @@ class KafkaStreamsConfig {
         this.orderManageService = orderManageService;
     }
 
+    /**
+     * Configures Kafka Streams state logging, deserialization recovery, exactly-once processing,
+     * timeouts, caching, and metrics.
+     *
+     * @param deadLetterPublishingRecoverer recoverer for records that fail deserialization
+     * @return customizer applied to the Kafka Streams factory bean
+     */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     StreamsBuilderFactoryBeanConfigurer configurer(

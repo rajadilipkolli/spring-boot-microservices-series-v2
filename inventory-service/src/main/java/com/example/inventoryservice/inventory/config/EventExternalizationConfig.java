@@ -45,6 +45,7 @@ class EventExternalizationConfig {
     ByteArrayJacksonJsonMessageConverter byteArrayJacksonJsonMessageConverter(
             ObjectProvider<JsonMapper> jsonMapper) {
         return new ByteArrayJacksonJsonMessageConverter(jsonMapper.getIfUnique(JsonMapper::new)) {
+            /** Returns empty Kafka headers so the converter does not add Java type information. */
             @Override
             protected Headers initialRecordHeaders(Message<?> message) {
                 return new RecordHeaders();
