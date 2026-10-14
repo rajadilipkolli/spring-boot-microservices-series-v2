@@ -20,6 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
 
+    /** Removes existing customers so each test starts with an empty customer table. */
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
@@ -109,6 +110,11 @@ class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(customerDAO.findByEmail("fresh@example.com")).isEmpty();
     }
 
+    /**
+     * Builds an unsaved customer record for seeding duplicate-insertion tests.
+     *
+     * @return a customer with valid required fields and no reserved funds
+     */
     private CustomersRecord buildFreshCustomerRecord() {
         return new CustomersRecord()
                 .setName("Seed User")
@@ -123,6 +129,14 @@ class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
                 .setAmountReserved(BigDecimal.ZERO);
     }
 
+    /**
+     * Finds the first exception of the expected type, including the supplied exception itself.
+     *
+     * @param <T> the expected exception type
+     * @param throwable the exception whose cause chain to inspect
+     * @param expectedType the exception class to match
+     * @return the first matching exception, or null if none is found
+     */
     private static <T extends Throwable> T findCause(Throwable throwable, Class<T> expectedType) {
         for (Throwable current = throwable; current != null; current = current.getCause()) {
             if (expectedType.isInstance(current)) {
