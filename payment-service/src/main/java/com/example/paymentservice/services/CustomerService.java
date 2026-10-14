@@ -15,8 +15,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jooq.OrderField;
+import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,9 +104,30 @@ public class CustomerService {
                     "Customer with email " + normalizedEmail + " already exists.");
         }
 
-        CustomersRecord savedCustomer =
-                customerRepository.saveCustomer(customerRequest.toCustomersRecord());
+        CustomersRecord savedCustomer;
+        try {
+            savedCustomer = customerRepository.saveCustomer(customerRequest.toCustomersRecord());
+        } catch (DataIntegrityViolationException e) {
+            if (isEmailUniqueConstraintViolation(e)) {
+                throw new CustomerExistsException(
+                        "Customer with email " + normalizedEmail + " already exists.");
+            }
+            throw e;
+        }
         return CustomerResponse.toResponse(savedCustomer);
+    }
+
+    private boolean isEmailUniqueConstraintViolation(DataIntegrityViolationException exception) {
+        for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof PSQLException sqlException
+                    && "23505".equals(sqlException.getSQLState())
+                    && sqlException.getServerErrorMessage() != null
+                    && "uc_customers_name_email_key"
+                            .equals(sqlException.getServerErrorMessage().getConstraint())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Transactional
