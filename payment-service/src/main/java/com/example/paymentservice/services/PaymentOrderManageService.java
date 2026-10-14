@@ -150,6 +150,7 @@ public class PaymentOrderManageService {
         updateCustomer(customersRecord);
     }
 
+    /** Persists updated customer balances with optimistic locking and logs the saved version. */
     private void updateCustomer(CustomersRecord customersRecord) {
         CustomersRecord saved = customerRepository.saveCustomer(customersRecord);
         log.debug("Customer save :{} version : {}", saved.getId(), saved.getVersion());

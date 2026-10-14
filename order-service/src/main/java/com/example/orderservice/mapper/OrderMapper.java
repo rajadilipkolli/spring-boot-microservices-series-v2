@@ -34,6 +34,12 @@ public interface OrderMapper {
     @Mapping(target = "attemptId", ignore = true)
     OrderDto toDto(Order order);
 
+    /**
+     * Maps an order item to the nested DTO, using its ID and product code as identifiers.
+     *
+     * @param orderItem the persisted order item
+     * @return the item details included in an order event
+     */
     @Mapping(target = "itemId", source = "id")
     @Mapping(target = "productId", source = "productCode")
     OrderDto.OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);

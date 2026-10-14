@@ -8,6 +8,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 public class JooqConfig {
 
+    /**
+     * Enables jOOQ optimistic locking and automatic record-version updates.
+     *
+     * @return the customizer applied to the jOOQ configuration
+     */
     @Bean
     DefaultConfigurationCustomizer jooqCustomizer() {
         return configuration ->

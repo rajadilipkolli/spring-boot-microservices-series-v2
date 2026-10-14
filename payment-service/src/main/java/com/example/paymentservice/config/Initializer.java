@@ -83,6 +83,12 @@ class Initializer implements CommandLineRunner {
         }
     }
 
+    /**
+     * Populates the supplied record with generated address and phone details.
+     *
+     * @param faker the generator for sample contact details
+     * @param customersRecord the record to update
+     */
     private void createCustomerRecordAddress(Faker faker, CustomersRecord customersRecord) {
         customersRecord
                 .setAddressLine1(faker.address().streetAddress())
@@ -94,6 +100,13 @@ class Initializer implements CommandLineRunner {
                 .setPhone(faker.phoneNumber().phoneNumber());
     }
 
+    /**
+     * Adds sample contact details and balances to a named customer, then persists it.
+     *
+     * @param secureRandom the generator for an available balance below 100,000
+     * @param faker the generator for sample contact details
+     * @param customersRecord the record with its name and email already set
+     */
     private void setCustomerRecord(
             SecureRandom secureRandom, Faker faker, CustomersRecord customersRecord) {
         createCustomerRecordAddress(faker, customersRecord);

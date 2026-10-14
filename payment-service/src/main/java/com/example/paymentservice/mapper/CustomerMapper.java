@@ -32,10 +32,23 @@ public class CustomerMapper {
         customer.setPhone(customerRequest.phone());
     }
 
+    /**
+     * Converts customer records to response DTOs in encounter order.
+     *
+     * @param customerList the records to convert
+     * @return an unmodifiable list of customer responses
+     */
     public List<CustomerResponse> toListResponse(List<CustomersRecord> customerList) {
         return customerList.stream().map(CustomerResponse::toResponse).toList();
     }
 
+    /**
+     * Builds a customer sort expression, defaulting unknown properties to the ID field.
+     *
+     * @param sortBy the name, email, amountAvailable, or fallback ID property
+     * @param sortDir ascending when equal to "ASC", ignoring case; descending otherwise
+     * @return a single sort expression for the selected field
+     */
     public List<OrderField<?>> toOrderFields(String sortBy, String sortDir) {
         boolean ascending = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name());
         TableField<CustomersRecord, ?> orderField;
@@ -53,6 +66,12 @@ public class CustomerMapper {
         return List.of(ascending ? orderField.asc() : orderField.desc());
     }
 
+    /**
+     * Copies customer details and balances while preserving the target record's ID and version.
+     *
+     * @param existingRecord the persisted record to update
+     * @param requestCustomer the replacement details and balances
+     */
     public void mapCustomerWithRecord(
             CustomersRecord existingRecord, CustomersRecord requestCustomer) {
         existingRecord.setAmountAvailable(requestCustomer.getAmountAvailable());

@@ -26,6 +26,14 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     private final TSID.Factory tsidFactory;
     private final CustomerMapper customerMapper;
 
+    /**
+     * Creates the repository with database access, ID generation, and record mapping.
+     *
+     * @param dslContext the context for inserts and bulk deletion
+     * @param customerDAO the DAO for customer lookups and versioned updates
+     * @param tsidFactory the generator for missing customer IDs
+     * @param customerMapper the mapper for updating persisted customer details
+     */
     public CustomerRepositoryImpl(
             DSLContext dslContext,
             CustomerDAO customerDAO,
@@ -37,31 +45,37 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         this.customerMapper = customerMapper;
     }
 
+    /** Returns the customer matching the ID, or empty if none exists. */
     @Override
     public Optional<CustomersRecord> findById(Long id) {
         return customerDAO.findById(id);
     }
 
+    /** Returns the customer matching the exact name, or empty if none exists. */
     @Override
     public Optional<CustomersRecord> findByName(String name) {
         return customerDAO.findByName(name);
     }
 
+    /** Returns the customer matching the normalized email, or empty if none exists. */
     @Override
     public Optional<CustomersRecord> findByEmail(String normalizedEmail) {
         return customerDAO.findByEmail(normalizedEmail);
     }
 
+    /** Returns a customer slice using the supplied row offset, limit, and sort expressions. */
     @Override
     public List<CustomersRecord> findAll(int offset, int limit, List<OrderField<?>> orderFields) {
         return customerDAO.findAll(offset, limit, orderFields);
     }
 
+    /** Checks for an exact match against the supplied normalized email address. */
     @Override
     public boolean existsByEmail(String email) {
         return customerDAO.existsByEmail(email);
     }
 
+    /** Returns the total customer count reported by the DAO. */
     @Override
     public long count() {
         return customerDAO.count();
@@ -157,18 +171,21 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         return insertStepN.returning().fetch().into(CustomersRecord.class);
     }
 
+    /** Deletes the customer by ID and returns the number of affected rows. */
     @Override
     @Transactional
     public int deleteById(Long id) {
         return customerDAO.deleteById(id);
     }
 
+    /** Deletes all customer rows in the current transaction. */
     @Override
     @Transactional
     public void deleteAll() {
         dslContext.deleteFrom(CUSTOMERS).execute();
     }
 
+    /** Lowercases a non-null email on the supplied record using the root locale. */
     private void normalizeCustomer(CustomersRecord customer) {
         if (customer.getEmail() != null) {
             customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));

@@ -52,6 +52,9 @@ class CustomerServiceTest {
                     "Testland",
                     BigDecimal.TEN);
 
+    /**
+     * Verifies that an existing normalized email is rejected before a customer insert is attempted.
+     */
     @Test
     void rejectsExistingEmailBeforeInsert() {
         given(customerRepository.existsByEmail("customer@example.com")).willReturn(true);
@@ -63,6 +66,9 @@ class CustomerServiceTest {
         verify(customerRepository, never()).saveCustomer(any(CustomersRecord.class));
     }
 
+    /**
+     * Verifies that an available email permits creation and returns the persisted customer details.
+     */
     @Test
     void createsCustomerWhenEmailIsAvailable() {
         CustomersRecord saved =
@@ -76,6 +82,7 @@ class CustomerServiceTest {
         verify(customerRepository).existsByEmail("customer@example.com");
     }
 
+    /** Verifies that a concurrent email-constraint violation becomes a customer conflict. */
     @Test
     void translatesEmailConstraintViolationAfterPreInsertCheck() {
         DataIntegrityViolationException failure =
@@ -93,6 +100,11 @@ class CustomerServiceTest {
         verify(customerRepository).existsByEmail("customer@example.com");
     }
 
+    /**
+     * Verifies that failures unrelated to the customer email constraint propagate unchanged.
+     *
+     * @param failure the persistence failure supplied by the method source
+     */
     @ParameterizedTest
     @MethodSource("unrelatedFailures")
     void rethrowsUnrelatedSaveFailureUnchanged(RuntimeException failure) {
@@ -101,6 +113,9 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.saveCustomer(request)).isSameAs(failure);
     }
 
+    /**
+     * Supplies integrity and access failures that must retain their original exception identity.
+     */
     private static Stream<RuntimeException> unrelatedFailures() {
         return Stream.of(
                 new DuplicateKeyException("unidentified duplicate"),
@@ -121,6 +136,13 @@ class CustomerServiceTest {
                 new DataAccessResourceFailureException("database unavailable"));
     }
 
+    /**
+     * Creates a PostgreSQL failure with server metadata for constraint-translation tests.
+     *
+     * @param sqlState the SQL state to report
+     * @param constraint the constraint name, or null to omit it from server metadata
+     * @return the simulated PostgreSQL exception
+     */
     private static PSQLException postgresFailure(String sqlState, String constraint) {
         String constraintField = constraint == null ? "" : "n" + constraint + "\0";
         return new PSQLException(

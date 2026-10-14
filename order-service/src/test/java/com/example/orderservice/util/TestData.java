@@ -91,6 +91,7 @@ public class TestData {
                 "test-attempt");
     }
 
+    /** Creates a nested order-item DTO fixture with quantity ten and unit price ten. */
     private static List<OrderDto.OrderItemDto> getOrderItemDtoList() {
         return List.of(new OrderDto.OrderItemDto(205L, "Product10", 10, BigDecimal.TEN));
     }

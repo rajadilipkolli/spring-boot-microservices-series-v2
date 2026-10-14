@@ -50,6 +50,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    /**
+     * Returns HTTP 409 problem details for a duplicate customer, including a correlation ID if
+     * present.
+     *
+     * @param ex the duplicate-customer failure
+     * @param request the request supplying the optional correlation ID
+     * @return the conflict response with a timestamp and sanitized error details
+     */
     @ExceptionHandler(CustomerExistsException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(
             CustomerExistsException ex, WebRequest request) {

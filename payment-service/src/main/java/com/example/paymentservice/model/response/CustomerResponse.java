@@ -19,6 +19,12 @@ public record CustomerResponse(
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
                 BigDecimal amountAvailable) {
 
+    /**
+     * Copies customer details and available funds from a record into an API response.
+     *
+     * @param customersRecord the source customer record
+     * @return the customer response without reserved funds or version metadata
+     */
     public static CustomerResponse toResponse(CustomersRecord customersRecord) {
         return new CustomerResponse(
                 customersRecord.getId(),

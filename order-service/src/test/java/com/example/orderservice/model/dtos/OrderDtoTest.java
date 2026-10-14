@@ -33,6 +33,7 @@ class OrderDtoTest {
         }
     }
 
+    /** Verifies that validation rejects an order containing a null item. */
     @Test
     void whenItemIsNull_thenValidationFails() {
         List<OrderDto.OrderItemDto> items = new ArrayList<>();

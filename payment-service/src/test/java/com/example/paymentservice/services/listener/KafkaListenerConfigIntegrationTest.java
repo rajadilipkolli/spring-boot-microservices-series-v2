@@ -50,6 +50,13 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         });
     }
 
+    /**
+     * Creates an unsaved listener-test customer with 100 available and 10 reserved.
+     *
+     * @param uniqueName the name chosen for this test
+     * @param uniqueEmail the email chosen for this test
+     * @return the customer record with sample contact details
+     */
     private @NonNull CustomersRecord createCustomersRecord(String uniqueName, String uniqueEmail) {
         return new CustomersRecord()
                 .setName(uniqueName)

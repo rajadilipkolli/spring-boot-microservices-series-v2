@@ -109,6 +109,10 @@ class CustomerControllerTest {
         this.customerList = List.of(customer1, customer2, customer3);
     }
 
+    /**
+     * Verifies that listing customers returns the page data and pagination metadata from the
+     * service.
+     */
     @Test
     void shouldFetchAllCustomers() throws Exception {
         Page<CustomersRecord> page = new PageImpl<>(customerList);

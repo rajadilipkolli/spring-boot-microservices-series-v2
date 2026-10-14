@@ -27,6 +27,11 @@ public record CustomerRequest(
                         fraction = 2,
                         message = "AmountAvailable can have at most 2 decimal places")
                 BigDecimal amountAvailable) {
+    /**
+     * Creates an unsaved customer record from this request with zero reserved funds.
+     *
+     * @return a record with the supplied email unchanged and no ID or version assigned
+     */
     public CustomersRecord toCustomersRecord() {
         return new CustomersRecord()
                 .setName(name)

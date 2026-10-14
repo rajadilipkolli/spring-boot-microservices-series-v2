@@ -66,6 +66,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         customerList = customerRepository.saveAll(List.of(customer1, customer2, customer3));
     }
 
+    /** Creates the second unsaved customer fixture with 100 available and zero reserved. */
     private @NonNull CustomersRecord createCustomer2() {
         CustomersRecord customer2 = new CustomersRecord();
         customer2.setName("Second Customer");
@@ -82,6 +83,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         return customer2;
     }
 
+    /** Creates the first unsaved customer fixture with 100 available and zero reserved. */
     private @NonNull CustomersRecord createCustomersRecord() {
         CustomersRecord customer1 = new CustomersRecord();
         customer1.setName("First Customer");
@@ -475,6 +477,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 is(customer.getAmountAvailable().doubleValue())));
     }
 
+    /** Verifies that deleting an unknown customer returns HTTP 404 with problem details. */
     @Test
     void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;
