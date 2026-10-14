@@ -9,6 +9,7 @@ import com.example.paymentservice.config.JooqConfig;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
+import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderServiceProxy;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import tools.jackson.databind.json.JsonMapper;
@@ -42,11 +44,13 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
 
-    @Autowired protected CustomerRepository customerRepository;
+    @MockitoSpyBean protected CustomerRepository customerRepository;
 
     @Autowired protected CustomerDAO customerDAO;
 
     @Autowired protected KafkaListenerConfig kafkaListenerConfig;
+
+    @Autowired protected CustomerService customerService;
 
     @MockitoBean protected OrderServiceProxy orderServiceProxy;
 }
