@@ -50,6 +50,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    /**
+     * Returns HTTP 409 problem details for a duplicate customer, including a correlation ID if
+     * present.
+     *
+     * @param ex the duplicate-customer failure
+     * @param request the request supplying the optional correlation ID
+     * @return the conflict response with a timestamp and sanitized error details
+     */
+    @ExceptionHandler(CustomerExistsException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(
+            CustomerExistsException ex, WebRequest request) {
+        log.warn("Customer already exists: {}", LogSanitizer.sanitizeException(ex));
+
+        // Use the ProblemDetail from the exception itself since it already has proper formatting
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT, LogSanitizer.sanitizeException(ex));
+        problemDetail.setTitle("Customer Already Exists");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/conflict"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {

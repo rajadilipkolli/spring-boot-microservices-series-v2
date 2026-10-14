@@ -1,7 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -38,46 +38,28 @@ class Initializer implements CommandLineRunner {
         log.info("Running Initializer.....");
         SecureRandom secureRandom = new SecureRandom();
         Faker faker = new Faker();
-        List<Customer> customerList = new ArrayList<>();
+        List<CustomersRecord> customersRecordList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             int randomNumber = secureRandom.nextInt(10_000);
-            Customer customer =
-                    new Customer()
+            CustomersRecord customersRecord =
+                    new CustomersRecord()
                             .setName(faker.name().fullName())
                             .setEmail(faker.name().lastName() + i + "@gmail.com")
-                            .setAddressLine1(faker.address().streetAddress())
-                            .setAddressLine2(faker.address().buildingNumber())
-                            .setCity(faker.address().city())
-                            .setState(faker.address().stateAbbr())
-                            .setZipCode(faker.address().zipCode())
-                            .setCountry(faker.address().country())
-                            .setPhone(faker.phoneNumber().phoneNumber())
                             .setAmountAvailable(BigDecimal.valueOf(randomNumber))
                             .setAmountReserved(BigDecimal.ZERO);
-            customerList.add(customer);
+            createCustomerRecordAddress(faker, customersRecord);
+            customersRecordList.add(customersRecord);
         }
 
         // Using BatchMode to save Entities
-        this.customerRepository.saveAll(customerList);
+        this.customerRepository.saveAll(customersRecordList);
 
         // Save retail customer separately with conflict handling
-        if (this.customerRepository.findByEmail("retailstore@gmail.com").isEmpty()) {
+        if (!this.customerRepository.existsByEmail("retailstore@gmail.com")) {
             try {
-                Customer retailCustomer =
-                        new Customer()
-                                .setName("retail")
-                                .setEmail("retailstore@gmail.com")
-                                .setAddressLine1(faker.address().streetAddress())
-                                .setAddressLine2(faker.address().buildingNumber())
-                                .setCity(faker.address().city())
-                                .setState(faker.address().stateAbbr())
-                                .setZipCode(faker.address().zipCode())
-                                .setCountry(faker.address().country())
-                                .setPhone(faker.phoneNumber().phoneNumber())
-                                .setAmountAvailable(
-                                        BigDecimal.valueOf(secureRandom.nextInt(100_000)))
-                                .setAmountReserved(BigDecimal.ZERO);
-                this.customerRepository.save(retailCustomer);
+                CustomersRecord retailCustomer =
+                        new CustomersRecord().setName("retail").setEmail("retailstore@gmail.com");
+                setCustomerRecord(secureRandom, faker, retailCustomer);
             } catch (Exception e) {
                 // Handle race condition - another instance may have created the retail customer
                 log.debug(
@@ -86,30 +68,51 @@ class Initializer implements CommandLineRunner {
         }
 
         // Save raja customer separately with conflict handling
-        if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {
+        if (!this.customerRepository.existsByEmail("rajakolli@gmail.com")) {
             try {
-                Customer rajaCustomer =
-                        new Customer()
-                                .setName("raja")
-                                .setEmail("rajakolli@gmail.com")
-                                .setAddressLine1(faker.address().streetAddress())
-                                .setAddressLine2(faker.address().buildingNumber())
-                                .setCity(faker.address().city())
-                                .setState(faker.address().stateAbbr())
-                                .setZipCode(faker.address().zipCode())
-                                .setCountry(faker.address().country())
-                                .setPhone(faker.phoneNumber().phoneNumber())
-                                .setAmountAvailable(
-                                        BigDecimal.valueOf(secureRandom.nextInt(100_000)))
-                                .setAmountReserved(BigDecimal.ZERO);
-                this.customerRepository.save(rajaCustomer);
+                CustomersRecord rajaCustomer =
+                        new CustomersRecord().setName("raja").setEmail("rajakolli@gmail.com");
+                setCustomerRecord(secureRandom, faker, rajaCustomer);
             } catch (DuplicateKeyException e) {
-                if (this.customerRepository.findByEmail("rajakolli@gmail.com").isEmpty()) {
+                if (!this.customerRepository.existsByEmail("rajakolli@gmail.com")) {
                     throw e;
                 }
                 // Another instance created the customer after the initial lookup.
                 log.debug("Raja customer already exists (concurrent creation): {}", e.getMessage());
             }
         }
+    }
+
+    /**
+     * Populates the supplied record with generated address and phone details.
+     *
+     * @param faker the generator for sample contact details
+     * @param customersRecord the record to update
+     */
+    private void createCustomerRecordAddress(Faker faker, CustomersRecord customersRecord) {
+        customersRecord
+                .setAddressLine1(faker.address().streetAddress())
+                .setAddressLine2(faker.address().buildingNumber())
+                .setCity(faker.address().city())
+                .setState(faker.address().stateAbbr())
+                .setZipCode(faker.address().zipCode())
+                .setCountry(faker.address().country())
+                .setPhone(faker.phoneNumber().phoneNumber());
+    }
+
+    /**
+     * Adds sample contact details and balances to a named customer, then persists it.
+     *
+     * @param secureRandom the generator for an available balance below 100,000
+     * @param faker the generator for sample contact details
+     * @param customersRecord the record with its name and email already set
+     */
+    private void setCustomerRecord(
+            SecureRandom secureRandom, Faker faker, CustomersRecord customersRecord) {
+        createCustomerRecordAddress(faker, customersRecord);
+        customersRecord
+                .setAmountAvailable(BigDecimal.valueOf(secureRandom.nextInt(100_000)))
+                .setAmountReserved(BigDecimal.ZERO);
+        this.customerRepository.saveCustomer(customersRecord);
     }
 }

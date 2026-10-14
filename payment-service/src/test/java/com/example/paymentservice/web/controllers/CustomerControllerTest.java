@@ -8,7 +8,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -19,8 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
@@ -63,54 +62,60 @@ class CustomerControllerTest {
 
     @Autowired private JsonMapper jsonMapper;
 
-    private List<Customer> customerList;
+    private List<CustomersRecord> customerList;
 
     /** Creates three customer fixtures with separate address fields for controller tests. */
     @BeforeEach
     void setUp() {
-        this.customerList =
-                List.of(
-                        new Customer()
-                                .setId(1L)
-                                .setName("First Customer")
-                                .setEmail("first@customer.email")
-                                .setAddressLine1("First Address")
-                                .setAddressLine2("Second Address")
-                                .setCity("City")
-                                .setState("State")
-                                .setZipCode("12345")
-                                .setCountry("Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO),
-                        new Customer()
-                                .setId(2L)
-                                .setName("Second Customer")
-                                .setEmail("second@customer.email")
-                                .setAddressLine1("Second Address")
-                                .setAddressLine2("Second Address")
-                                .setCity("City")
-                                .setState("State")
-                                .setZipCode("12345")
-                                .setCountry("Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO),
-                        new Customer()
-                                .setId(3L)
-                                .setName("Third Customer")
-                                .setEmail("third@customer.email")
-                                .setAddressLine1("Third Address")
-                                .setAddressLine2("Third Address")
-                                .setCity("City")
-                                .setState("State")
-                                .setZipCode("12345")
-                                .setCountry("Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO));
+        CustomersRecord customer1 = new CustomersRecord();
+        customer1.setId(1L);
+        customer1.setName("First Customer");
+        customer1.setEmail("first@customer.email");
+        customer1.setAddressLine1("First Address");
+        customer1.setAddressLine2("Second Address");
+        customer1.setCity("City");
+        customer1.setState("State");
+        customer1.setZipCode("12345");
+        customer1.setCountry("Country");
+        customer1.setAmountAvailable(BigDecimal.valueOf(100));
+        customer1.setAmountReserved(BigDecimal.ZERO);
+
+        CustomersRecord customer2 = new CustomersRecord();
+        customer2.setId(2L);
+        customer2.setName("Second Customer");
+        customer2.setEmail("second@customer.email");
+        customer2.setAddressLine1("Second Address");
+        customer2.setAddressLine2("Second Address");
+        customer2.setCity("City");
+        customer2.setState("State");
+        customer2.setZipCode("12345");
+        customer2.setCountry("Country");
+        customer2.setAmountAvailable(BigDecimal.valueOf(100));
+        customer2.setAmountReserved(BigDecimal.ZERO);
+
+        CustomersRecord customer3 = new CustomersRecord();
+        customer3.setId(3L);
+        customer3.setName("Third Customer");
+        customer3.setEmail("third@customer.email");
+        customer3.setAddressLine1("Third Address");
+        customer3.setAddressLine2("Third Address");
+        customer3.setCity("City");
+        customer3.setState("State");
+        customer3.setZipCode("12345");
+        customer3.setCountry("Country");
+        customer3.setAmountAvailable(BigDecimal.valueOf(100));
+        customer3.setAmountReserved(BigDecimal.ZERO);
+
+        this.customerList = List.of(customer1, customer2, customer3);
     }
 
+    /**
+     * Verifies that listing customers returns the page data and pagination metadata from the
+     * service.
+     */
     @Test
     void shouldFetchAllCustomers() throws Exception {
-        Page<Customer> page = new PageImpl<>(customerList);
+        Page<CustomersRecord> page = new PageImpl<>(customerList);
         PagedResult<CustomerResponse> postPagedResult =
                 new PagedResult<>(getCustomerResponseList(), page);
         FindCustomersQuery findCustomersQuery = new FindCustomersQuery(0, 10, "id", "desc");
@@ -504,7 +509,7 @@ class CustomerControllerTest {
                             "Country",
                             BigDecimal.ZERO);
             given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
-            doNothing().when(customerService).deleteCustomerById(customerId);
+            given(customerService.deleteCustomerById(customerId)).willReturn(1);
 
             mockMvc.perform(delete("/api/customers/{id}", customerId))
                     .andExpect(status().isOk())
