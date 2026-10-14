@@ -38,6 +38,7 @@ public record CustomerRequest(
                 .setState(state)
                 .setZipCode(zipCode)
                 .setCountry(country)
-                .setAmountAvailable(amountAvailable);
+                .setAmountAvailable(amountAvailable)
+                .setAmountReserved(BigDecimal.ZERO);
     }
 }
