@@ -41,12 +41,13 @@ class Initializer implements CommandLineRunner {
         List<CustomersRecord> customersRecordList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             int randomNumber = secureRandom.nextInt(10_000);
-            CustomersRecord customersRecord = new CustomersRecord();
-            customersRecord.setName(faker.name().fullName());
-            customersRecord.setEmail(faker.name().lastName() + i + "@gmail.com");
+            CustomersRecord customersRecord =
+                    new CustomersRecord()
+                            .setName(faker.name().fullName())
+                            .setEmail(faker.name().lastName() + i + "@gmail.com")
+                            .setAmountAvailable(BigDecimal.valueOf(randomNumber))
+                            .setAmountReserved(BigDecimal.ZERO);
             createCustomerRecordAddress(faker, customersRecord);
-            customersRecord.setAmountAvailable(BigDecimal.valueOf(randomNumber));
-            customersRecord.setAmountReserved(BigDecimal.ZERO);
             customersRecordList.add(customersRecord);
         }
 
@@ -56,9 +57,8 @@ class Initializer implements CommandLineRunner {
         // Save retail customer separately with conflict handling
         if (!this.customerRepository.existsByEmail("retailstore@gmail.com")) {
             try {
-                CustomersRecord retailCustomer = new CustomersRecord();
-                retailCustomer.setName("retail");
-                retailCustomer.setEmail("retailstore@gmail.com");
+                CustomersRecord retailCustomer =
+                        new CustomersRecord().setName("retail").setEmail("retailstore@gmail.com");
                 setCustomerRecord(secureRandom, faker, retailCustomer);
             } catch (Exception e) {
                 // Handle race condition - another instance may have created the retail customer
@@ -70,9 +70,8 @@ class Initializer implements CommandLineRunner {
         // Save raja customer separately with conflict handling
         if (!this.customerRepository.existsByEmail("rajakolli@gmail.com")) {
             try {
-                CustomersRecord rajaCustomer = new CustomersRecord();
-                rajaCustomer.setName("raja");
-                rajaCustomer.setEmail("rajakolli@gmail.com");
+                CustomersRecord rajaCustomer =
+                        new CustomersRecord().setName("raja").setEmail("rajakolli@gmail.com");
                 setCustomerRecord(secureRandom, faker, rajaCustomer);
             } catch (DuplicateKeyException e) {
                 if (!this.customerRepository.existsByEmail("rajakolli@gmail.com")) {
@@ -85,20 +84,22 @@ class Initializer implements CommandLineRunner {
     }
 
     private void createCustomerRecordAddress(Faker faker, CustomersRecord customersRecord) {
-        customersRecord.setAddressLine1(faker.address().streetAddress());
-        customersRecord.setAddressLine2(faker.address().buildingNumber());
-        customersRecord.setCity(faker.address().city());
-        customersRecord.setState(faker.address().stateAbbr());
-        customersRecord.setZipCode(faker.address().zipCode());
-        customersRecord.setCountry(faker.address().country());
-        customersRecord.setPhone(faker.phoneNumber().phoneNumber());
+        customersRecord
+                .setAddressLine1(faker.address().streetAddress())
+                .setAddressLine2(faker.address().buildingNumber())
+                .setCity(faker.address().city())
+                .setState(faker.address().stateAbbr())
+                .setZipCode(faker.address().zipCode())
+                .setCountry(faker.address().country())
+                .setPhone(faker.phoneNumber().phoneNumber());
     }
 
     private void setCustomerRecord(
             SecureRandom secureRandom, Faker faker, CustomersRecord customersRecord) {
         createCustomerRecordAddress(faker, customersRecord);
-        customersRecord.setAmountAvailable(BigDecimal.valueOf(secureRandom.nextInt(100_000)));
-        customersRecord.setAmountReserved(BigDecimal.ZERO);
+        customersRecord
+                .setAmountAvailable(BigDecimal.valueOf(secureRandom.nextInt(100_000)))
+                .setAmountReserved(BigDecimal.ZERO);
         this.customerRepository.saveCustomer(customersRecord);
     }
 }
