@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,12 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
-
-    @Autowired private CustomerRepository customerRepository;
 
     @BeforeEach
     void setUp() {
@@ -35,8 +32,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
     @NullSource
     @ValueSource(ints = {0, 7})
     void saveAllPreservesSuppliedVersions(Integer version) {
-        Customer customer =
-                new Customer()
+        CustomersRecord customer =
+                new CustomersRecord()
                         .setName("Batch Customer")
                         .setEmail("batch@example.com")
                         .setPhone("123-456-7890")
@@ -48,7 +45,7 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setVersion(version);
         int expectedVersion = version == null ? 0 : version;
 
-        List<Customer> insertedCustomers = customerRepository.saveAll(List.of(customer));
+        List<CustomersRecord> insertedCustomers = customerRepository.saveAll(List.of(customer));
 
         assertThat(customer.getVersion()).isEqualTo(expectedVersion);
         assertThat(insertedCustomers).hasSize(1);
@@ -62,8 +59,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
      */
     @Test
     void testOptimisticLocking() {
-        Customer customer =
-                new Customer()
+        CustomersRecord customer =
+                new CustomersRecord()
                         .setName("Test User")
                         .setEmail("test@example.com")
                         .setAddressLine1("123 Test St")
@@ -77,25 +74,25 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setAmountReserved(BigDecimal.ZERO);
 
         // 1. Insert sets version to 0
-        Customer savedCustomer1 = customerRepository.save(customer);
+        CustomersRecord savedCustomer1 = customerRepository.saveCustomer(customer);
         assertThat(savedCustomer1.getVersion()).isEqualTo(0);
 
         // 2. Fetch the same customer twice
-        Customer fetchedCustomer1 =
+        CustomersRecord fetchedCustomer1 =
                 customerRepository.findById(savedCustomer1.getId()).orElseThrow();
-        Customer fetchedCustomer2 =
+        CustomersRecord fetchedCustomer2 =
                 customerRepository.findById(savedCustomer1.getId()).orElseThrow();
 
         // 3. Update the first fetched instance
         fetchedCustomer1.setAmountAvailable(BigDecimal.valueOf(80.0));
-        Customer updatedCustomer = customerRepository.save(fetchedCustomer1);
+        CustomersRecord updatedCustomer = customerRepository.saveCustomer(fetchedCustomer1);
 
         // Version should be incremented
         assertThat(updatedCustomer.getVersion()).isEqualTo(1);
 
         // 4. Attempt to update the second fetched instance (stale update)
         fetchedCustomer2.setAmountAvailable(BigDecimal.valueOf(50.0));
-        assertThatThrownBy(() -> customerRepository.save(fetchedCustomer2))
+        assertThatThrownBy(() -> customerRepository.saveCustomer(fetchedCustomer2))
                 .isInstanceOf(OptimisticLockingFailureException.class)
                 .hasMessageContaining("Customer was updated or deleted by another transaction");
     }

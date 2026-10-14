@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
@@ -26,6 +26,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,52 +39,63 @@ import org.springframework.web.client.HttpServerErrorException;
 
 class CustomerControllerIT extends AbstractIntegrationTest {
 
-    private List<Customer> customerList = null;
+    private List<CustomersRecord> customerList = null;
 
     /** Replaces existing customers with three fixtures containing separate address fields. */
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
 
-        customerList =
-                List.of(
-                        new Customer()
-                                .setName("First Customer")
-                                .setEmail("first@customer.email")
-                                .setPhone("9876543210")
-                                .setAddressLine1("First Address")
-                                .setAddressLine2("First Address Line 2")
-                                .setCity("First City")
-                                .setState("First State")
-                                .setZipCode("12345")
-                                .setCountry("First Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO),
-                        new Customer()
-                                .setName("Second Customer")
-                                .setEmail("second@customer.email")
-                                .setPhone("9876543210")
-                                .setAddressLine1("Second Address")
-                                .setAddressLine2("Second Address Line 2")
-                                .setCity("Second City")
-                                .setState("Second State")
-                                .setZipCode("12345")
-                                .setCountry("Second Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO),
-                        new Customer()
-                                .setName("Third Customer")
-                                .setEmail("third@customer.email")
-                                .setPhone("9876543210")
-                                .setAddressLine1("Third Address")
-                                .setAddressLine2("Third Address Line 2")
-                                .setCity("Third City")
-                                .setState("Third State")
-                                .setZipCode("12345")
-                                .setCountry("Third Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.ZERO));
-        customerList = customerRepository.saveAll(customerList);
+        CustomersRecord customer1 = createCustomersRecord();
+
+        CustomersRecord customer2 = createCustomer2();
+
+        CustomersRecord customer3 = new CustomersRecord();
+        customer3.setName("Third Customer");
+        customer3.setEmail("third@customer.email");
+        customer3.setPhone("9876543210");
+        customer3.setAddressLine1("Third Address");
+        customer3.setAddressLine2("Third Address Line 2");
+        customer3.setCity("Third City");
+        customer3.setState("Third State");
+        customer3.setZipCode("12345");
+        customer3.setCountry("Third Country");
+        customer3.setAmountAvailable(BigDecimal.valueOf(100));
+        customer3.setAmountReserved(BigDecimal.ZERO);
+
+        customerList = customerRepository.saveAll(List.of(customer1, customer2, customer3));
+    }
+
+    private @NonNull CustomersRecord createCustomer2() {
+        CustomersRecord customer2 = new CustomersRecord();
+        customer2.setName("Second Customer");
+        customer2.setEmail("second@customer.email");
+        customer2.setPhone("9876543210");
+        customer2.setAddressLine1("Second Address");
+        customer2.setAddressLine2("Second Address Line 2");
+        customer2.setCity("Second City");
+        customer2.setState("Second State");
+        customer2.setZipCode("12345");
+        customer2.setCountry("Second Country");
+        customer2.setAmountAvailable(BigDecimal.valueOf(100));
+        customer2.setAmountReserved(BigDecimal.ZERO);
+        return customer2;
+    }
+
+    private @NonNull CustomersRecord createCustomersRecord() {
+        CustomersRecord customer1 = new CustomersRecord();
+        customer1.setName("First Customer");
+        customer1.setEmail("first@customer.email");
+        customer1.setPhone("9876543210");
+        customer1.setAddressLine1("First Address");
+        customer1.setAddressLine2("First Address Line 2");
+        customer1.setCity("First City");
+        customer1.setState("First State");
+        customer1.setZipCode("12345");
+        customer1.setCountry("First Country");
+        customer1.setAmountAvailable(BigDecimal.valueOf(100));
+        customer1.setAmountReserved(BigDecimal.ZERO);
+        return customer1;
     }
 
     @Test
@@ -105,7 +117,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     /** Verifies that customer lookup by ID returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerById() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
         Long customerId = customer.getId();
 
         this.mockMvc
@@ -149,7 +161,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     /** Verifies that customer lookup by name returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerByName() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
         String customerName = customer.getName();
 
         this.mockMvc
@@ -217,7 +229,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"first@customer.email", "FIRST@CUSTOMER.EMAIL", "FiRsT@CuStOmEr.EmAiL"})
     void shouldFindCustomerByEmail(String email) {
-        Customer customer = customerList.getFirst(); // first@customer.email
+        CustomersRecord customer = customerList.getFirst(); // first@customer.email
 
         this.mockMvcTester
                 .get()
@@ -237,17 +249,14 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                             assertThat(customerResponse.addressLine1())
                                     .isEqualTo(customer.getAddressLine1());
                             assertThat(customerResponse.amountAvailable())
-                                    .isEqualTo(customer.getAmountAvailable());
+                                    .isEqualByComparingTo(customer.getAmountAvailable());
                         });
     }
 
-    /**
-     * Verifies that creating an existing customer succeeds and returns its details with a string
-     * ID.
-     */
+    /** Verifies that creating an existing customer returns a conflict error. */
     @Test
-    void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
-        Customer customer = customerList.getFirst();
+    void shouldReturnWithConflictErrorCreatingExistingCustomer() throws Exception {
+        CustomersRecord customer = customerList.getFirst();
         CustomerRequest customerRequest =
                 new CustomerRequest(
                         customer.getName(),
@@ -265,22 +274,19 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.customerId").isString())
-                .andExpect(jsonPath("$.name", is(customerRequest.name())))
-                .andExpect(jsonPath("$.email", is(customerRequest.email())))
-                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
-                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
-                .andExpect(jsonPath("$.city", is(customer.getCity())))
-                .andExpect(jsonPath("$.state", is(customer.getState())))
-                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
-                .andExpect(jsonPath("$.country", is(customer.getCountry())))
+                .andExpect(status().isConflict())
                 .andExpect(
-                        jsonPath(
-                                "$.amountAvailable",
-                                is(customerRequest.amountAvailable().doubleValue())));
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/conflict")))
+                .andExpect(jsonPath("$.title", is("Customer Already Exists")))
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(
+                        jsonPath("$.detail")
+                                .value(
+                                        "Customer with email %s already exists."
+                                                .formatted(customer.getEmail())));
     }
 
     /** Verifies that missing required customer details produce HTTP 400 validation errors. */
@@ -298,7 +304,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(
                         jsonPath(
@@ -349,7 +355,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "Telangana",
                         "500081",
                         "India",
-                        BigDecimal.valueOf(500));
+                        BigDecimal.valueOf(500.99));
 
         this.mockMvc
                 .perform(
@@ -367,7 +373,10 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.zipCode", is(customerRequest.zipCode())))
                 .andExpect(jsonPath("$.country", is(customerRequest.country())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.amountAvailable", is(500.0)));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customerRequest.amountAvailable().doubleValue())));
     }
 
     /** Verifies that updating an unknown customer returns HTTP 404. */
@@ -395,7 +404,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -431,7 +440,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
@@ -445,7 +454,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
     /** Verifies that deleting a customer returns the deleted details with a string customer ID. */
     @Test
     void shouldDeleteCustomer() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
 
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customer.getId()))
@@ -474,7 +483,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -490,7 +499,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
      */
     @Test
     void shouldGetOrdersByCustomerId() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
         Long customerId = customer.getId();
 
         // Stub the proxy

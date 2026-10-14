@@ -21,6 +21,7 @@
         <java.version>25</java.version>
         <spring-cloud.version>2025.1.3</spring-cloud.version>
         <springdoc-openapi.version>3.1.1</springdoc-openapi.version>
+        <jooq-spring.version>1.2.0</jooq-spring.version>
         <testcontainers-jooq-codegen-maven-plugin.version>1.0.0</testcontainers-jooq-codegen-maven-plugin.version>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
@@ -109,6 +110,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jooq</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.martinelli.oss</groupId>
+            <artifactId>jooq-spring</artifactId>
+            <version>${jooq-spring.version}</version>
         </dependency>
         <dependency>
             <groupId>io.hypersistence</groupId>
@@ -304,12 +311,16 @@
                             <database>
                                 <includes>.*</includes>
                                 <excludes>DATABASECHANGELOG.*</excludes>
+                                <recordVersionFields>(?i)^VERSION$</recordVersionFields>
                                 <schemata>
                                     <schema>
                                         <inputSchema>payment</inputSchema>
                                     </schema>
                                 </schemata>
                             </database>
+                            <generate>
+                                <fluentSetters>true</fluentSetters>
+                            </generate>
                             <target>
                                 <packageName>com.example.paymentservice.jooq</packageName>
                                 <directory>target/generated-sources/jooq</directory>
@@ -541,26 +552,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
 
 </project>

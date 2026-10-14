@@ -2,8 +2,8 @@
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.config.logging.Loggable;
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
@@ -76,28 +76,26 @@ public class PaymentOrderManageService {
                 "Reserving Order with Id :{} in payment service with payload {}",
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
-        Optional<Customer> optionalCustomer = customerRepository.findById(orderDto.customerId());
+        Optional<CustomersRecord> optionalCustomer =
+                customerRepository.findById(orderDto.customerId());
         if (optionalCustomer.isPresent()) {
-            Customer customer = optionalCustomer.get();
-            log.info(
-                    "Found Customer: {}",
-                    LogSanitizer.sanitizeForLog(String.valueOf(customer.getId())));
+            CustomersRecord customersRecord = optionalCustomer.get();
+            log.info("Found Customer: {}", customersRecord.getId());
             var totalOrderPrice = calculateTotalOrderPrice(orderDto);
 
-            if (totalOrderPrice.compareTo(customer.getAmountAvailable()) <= 0) {
+            if (totalOrderPrice.compareTo(customersRecord.getAmountAvailable()) <= 0) {
                 orderDto = orderDto.withStatus("ACCEPT");
                 this.paymentsSuccessfulCounter.increment();
-                customer.setAmountReserved(customer.getAmountReserved().add(totalOrderPrice));
-                customer.setAmountAvailable(
-                        customer.getAmountAvailable().subtract(totalOrderPrice));
+                customersRecord.setAmountReserved(
+                        customersRecord.getAmountReserved().add(totalOrderPrice));
+                customersRecord.setAmountAvailable(
+                        customersRecord.getAmountAvailable().subtract(totalOrderPrice));
             } else {
                 orderDto = orderDto.withStatus("REJECT");
                 this.paymentsFailedCounter.increment();
             }
-            log.info(
-                    "Saving customer: {} after reserving",
-                    LogSanitizer.sanitizeForLog(String.valueOf(customer)));
-            customerRepository.save(customer);
+            log.info("Saving customersRecord: {} after reserving", customersRecord);
+            updateCustomer(customersRecord);
             orderDto = orderDto.withSource(AppConstants.SOURCE);
             kafkaTemplate.send(
                     AppConstants.PAYMENT_ORDERS_TOPIC,
@@ -129,23 +127,31 @@ public class PaymentOrderManageService {
                 "Confirming Order with Id :{} in payment service with payload {}",
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
-        Customer customer =
+        CustomersRecord customersRecord =
                 customerRepository
                         .findById(orderDto.customerId())
                         .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
-        log.info("Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customer)));
+        log.info(
+                "Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customersRecord)));
         var orderPrice = calculateTotalOrderPrice(orderDto);
         if (orderDto.status().equals("CONFIRMED")) {
-            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
+            customersRecord.setAmountReserved(
+                    customersRecord.getAmountReserved().subtract(orderPrice));
         } else if (orderDto.status().equals(AppConstants.ROLLBACK)
                 && !AppConstants.SOURCE.equals(orderDto.source())) {
-            customer.setAmountReserved(customer.getAmountReserved().subtract(orderPrice));
-            customer.setAmountAvailable(customer.getAmountAvailable().add(orderPrice));
+            customersRecord.setAmountReserved(
+                    customersRecord.getAmountReserved().subtract(orderPrice));
+            customersRecord.setAmountAvailable(
+                    customersRecord.getAmountAvailable().add(orderPrice));
         }
         log.info(
-                "Saving customer :{} After Confirmation",
-                LogSanitizer.sanitizeForLog(String.valueOf(customer)));
-        Customer saved = customerRepository.save(customer);
-        log.debug("Saved customer :{}", LogSanitizer.sanitizeForLog(String.valueOf(saved)));
+                "Saving customersRecord :{} After Confirmation",
+                LogSanitizer.sanitizeForLog(String.valueOf(customersRecord)));
+        updateCustomer(customersRecord);
+    }
+
+    private void updateCustomer(CustomersRecord customersRecord) {
+        CustomersRecord saved = customerRepository.saveCustomer(customersRecord);
+        log.debug("Customer save :{} version : {}", saved.getId(), saved.getVersion());
     }
 }

@@ -50,6 +50,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    @ExceptionHandler(CustomerExistsException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(
+            CustomerExistsException ex, WebRequest request) {
+        log.warn("Customer already exists: {}", LogSanitizer.sanitizeException(ex));
+
+        // Use the ProblemDetail from the exception itself since it already has proper formatting
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT, LogSanitizer.sanitizeException(ex));
+        problemDetail.setTitle("Customer Already Exists");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/conflict"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {

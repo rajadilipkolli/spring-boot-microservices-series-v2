@@ -1,30 +1,30 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
-import com.example.paymentservice.entities.Customer;
-import com.example.paymentservice.model.response.CustomerResponse;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.jooq.OrderField;
 
 public interface CustomerRepository {
 
-    Optional<CustomerResponse> findByName(String name);
+    Optional<CustomersRecord> findById(Long id);
 
-    Optional<Customer> findById(Long customerId);
+    Optional<CustomersRecord> findByName(String name);
 
-    Optional<Customer> findByEmail(String email);
+    Optional<CustomersRecord> findByEmail(String normalizedEmail);
 
-    Customer save(Customer customer);
+    List<CustomersRecord> findAll(int offset, int limit, List<OrderField<?>> orderFields);
 
-    void deleteById(Long id);
+    boolean existsByEmail(String email);
 
-    Page<Customer> findAll(Pageable pageable);
+    long count();
 
-    List<Customer> saveAll(List<Customer> customerList);
+    List<CustomersRecord> saveAll(List<CustomersRecord> customerList);
+
+    CustomersRecord saveCustomer(CustomersRecord requestCustomer);
 
     void deleteAll();
 
-    int count();
+    int deleteById(Long id);
 }

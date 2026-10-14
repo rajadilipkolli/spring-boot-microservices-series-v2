@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
 package com.example.paymentservice.model.request;
 
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -25,4 +26,18 @@ public record CustomerRequest(
                         integer = 17,
                         fraction = 2,
                         message = "AmountAvailable can have at most 2 decimal places")
-                BigDecimal amountAvailable) {}
+                BigDecimal amountAvailable) {
+    public CustomersRecord toCustomersRecord() {
+        return new CustomersRecord()
+                .setName(name)
+                .setEmail(email)
+                .setPhone(phone)
+                .setAddressLine1(addressLine1)
+                .setAddressLine2(addressLine2)
+                .setCity(city)
+                .setState(state)
+                .setZipCode(zipCode)
+                .setCountry(country)
+                .setAmountAvailable(amountAvailable);
+    }
+}

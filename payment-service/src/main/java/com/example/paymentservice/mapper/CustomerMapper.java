@@ -1,59 +1,17 @@
 /*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.mapper;
 
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
-import java.math.BigDecimal;
 import java.util.List;
+import org.jooq.OrderField;
+import org.jooq.TableField;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CustomerMapper {
-
-    /**
-     * Creates a customer with the request's contact details, available balance, and separate
-     * address fields, with a zero reserved balance.
-     *
-     * @param customerRequest customer details to copy
-     * @return a new customer entity
-     */
-    public Customer toEntity(CustomerRequest customerRequest) {
-        Customer customer = new Customer();
-        customer.setName(customerRequest.name());
-        customer.setEmail(customerRequest.email());
-        customer.setAddressLine1(customerRequest.addressLine1());
-        customer.setAddressLine2(customerRequest.addressLine2());
-        customer.setCity(customerRequest.city());
-        customer.setState(customerRequest.state());
-        customer.setZipCode(customerRequest.zipCode());
-        customer.setCountry(customerRequest.country());
-        customer.setPhone(customerRequest.phone());
-        customer.setAmountAvailable(customerRequest.amountAvailable());
-        customer.setAmountReserved(BigDecimal.ZERO);
-        return customer;
-    }
-
-    /**
-     * Maps customer details, separate address fields, and the available balance to a response.
-     *
-     * @param customer the entity to read
-     * @return the customer response
-     */
-    public CustomerResponse toResponse(Customer customer) {
-        return new CustomerResponse(
-                customer.getId(),
-                customer.getName(),
-                customer.getEmail(),
-                customer.getPhone(),
-                customer.getAddressLine1(),
-                customer.getAddressLine2(),
-                customer.getCity(),
-                customer.getState(),
-                customer.getZipCode(),
-                customer.getCountry(),
-                customer.getAmountAvailable());
-    }
 
     /**
      * Updates a customer's contact details, available balance, and address fields.
@@ -61,7 +19,7 @@ public class CustomerMapper {
      * @param customer the entity to update
      * @param customerRequest replacement customer details
      */
-    public void mapCustomerWithRequest(Customer customer, CustomerRequest customerRequest) {
+    public void mapCustomerWithRequest(CustomersRecord customer, CustomerRequest customerRequest) {
         customer.setAmountAvailable(customerRequest.amountAvailable());
         customer.setName(customerRequest.name());
         customer.setAddressLine1(customerRequest.addressLine1());
@@ -74,7 +32,39 @@ public class CustomerMapper {
         customer.setPhone(customerRequest.phone());
     }
 
-    public List<CustomerResponse> toListResponse(List<Customer> customerList) {
-        return customerList.stream().map(this::toResponse).toList();
+    public List<CustomerResponse> toListResponse(List<CustomersRecord> customerList) {
+        return customerList.stream().map(CustomerResponse::toResponse).toList();
+    }
+
+    public List<OrderField<?>> toOrderFields(String sortBy, String sortDir) {
+        boolean ascending = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name());
+        TableField<CustomersRecord, ?> orderField;
+        switch (sortBy) {
+            case "name" ->
+                    orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.NAME;
+            case "email" ->
+                    orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.EMAIL;
+            case "amountAvailable" ->
+                    orderField =
+                            com.example.paymentservice.jooq.tables.Customers.CUSTOMERS
+                                    .AMOUNT_AVAILABLE;
+            default -> orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.ID;
+        }
+        return List.of(ascending ? orderField.asc() : orderField.desc());
+    }
+
+    public void mapCustomerWithRecord(
+            CustomersRecord existingRecord, CustomersRecord requestCustomer) {
+        existingRecord.setAmountAvailable(requestCustomer.getAmountAvailable());
+        existingRecord.setAmountReserved(requestCustomer.getAmountReserved());
+        existingRecord.setName(requestCustomer.getName());
+        existingRecord.setAddressLine1(requestCustomer.getAddressLine1());
+        existingRecord.setAddressLine2(requestCustomer.getAddressLine2());
+        existingRecord.setCity(requestCustomer.getCity());
+        existingRecord.setState(requestCustomer.getState());
+        existingRecord.setZipCode(requestCustomer.getZipCode());
+        existingRecord.setCountry(requestCustomer.getCountry());
+        existingRecord.setEmail(requestCustomer.getEmail());
+        existingRecord.setPhone(requestCustomer.getPhone());
     }
 }

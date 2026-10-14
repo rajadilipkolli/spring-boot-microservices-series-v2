@@ -8,8 +8,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.util.TestData;
@@ -46,16 +46,15 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
         // Act
         orderManageService.confirm(orderDto);
 
         // Assert
         assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
-        verify(customerRepository, times(1)).save(any(Customer.class));
+        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
     }
 
     /**
@@ -73,10 +72,9 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", source, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
 
         // Act
         orderManageService.confirm(orderDto);
@@ -84,7 +82,7 @@ class PaymentOrderManageServiceTest {
         // Assert
         assertThat(customer.getAmountReserved()).isEqualByComparingTo(amountReserved);
         assertThat(customer.getAmountAvailable()).isEqualByComparingTo(amountAvailable);
-        verify(customerRepository, times(1)).save(any(Customer.class));
+        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
     }
 
     @Test
@@ -105,10 +103,9 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
         // Act
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
@@ -117,7 +114,7 @@ class PaymentOrderManageServiceTest {
         assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(900));
         assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
         assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
-        verify(customerRepository, times(1)).save(any(Customer.class));
+        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
     }
 
     /** Verifies an unaffordable order is rejected without changing either customer balance. */
@@ -127,10 +124,9 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 1000, BigDecimal.TEN);
         OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
         // Act
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
 
@@ -139,7 +135,7 @@ class PaymentOrderManageServiceTest {
         assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(1000));
         assertThat(reservedOrder.status()).isEqualTo("REJECT");
         assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
-        verify(customerRepository, times(1)).save(any(Customer.class));
+        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
     }
 
     /**
@@ -152,13 +148,12 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         BigDecimal initialAvailable = customer.getAmountAvailable();
         BigDecimal initialReserved = customer.getAmountReserved();
 
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
 
         // Reserve
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
@@ -183,13 +178,12 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         BigDecimal initialAvailable = customer.getAmountAvailable();
         BigDecimal initialReserved = customer.getAmountReserved();
 
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
 
         // Reserve
         OrderDto reservedOrder = orderManageService.reserve(orderDto);
@@ -210,15 +204,14 @@ class PaymentOrderManageServiceTest {
         OrderDto.OrderItemDto orderItemDto =
                 new OrderDto.OrderItemDto(1L, "productId", 1, largePrice);
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        Customer customer = TestData.getCustomer();
+        CustomersRecord customer = TestData.getCustomersRecord();
         // Give customer enough funds
         customer.setAmountAvailable(BigDecimal.valueOf(6000000000.00));
         BigDecimal initialAvailable = customer.getAmountAvailable();
         BigDecimal initialReserved = customer.getAmountReserved();
 
         given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.save(any(Customer.class)))
-                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
+        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
 
         // Reserve
         OrderDto reservedOrder = orderManageService.reserve(orderDto);

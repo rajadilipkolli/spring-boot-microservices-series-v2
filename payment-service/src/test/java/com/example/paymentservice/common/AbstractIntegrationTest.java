@@ -4,7 +4,10 @@ package com.example.paymentservice.common;
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import com.example.paymentservice.PaymentApplication;
+import com.example.paymentservice.config.JooqConfig;
 import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.services.OrderServiceProxy;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
@@ -22,7 +25,12 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false", "eureka.client.enabled=false"},
-        classes = {SQLContainerConfig.class, NonSQLContainerConfig.class})
+        classes = {
+            PaymentApplication.class,
+            SQLContainerConfig.class,
+            NonSQLContainerConfig.class,
+            JooqConfig.class
+        })
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
@@ -35,6 +43,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     @Autowired protected CustomerRepository customerRepository;
+
+    @Autowired protected CustomerDAO customerDAO;
 
     @Autowired protected KafkaListenerConfig kafkaListenerConfig;
 

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import net.datafaker.Faker;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
-    private Customer customer;
+    private CustomersRecord customer;
 
     /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
     @BeforeEach
@@ -33,23 +34,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         String uniqueName = "Customer_" + faker.number().randomNumber();
         String uniqueEmail = "email_" + faker.number().randomNumber() + "@example.com";
 
-        customer =
-                this.customerRepository.save(
-                        new Customer()
-                                .setName(uniqueName)
-                                .setEmail(uniqueEmail)
-                                .setPhone("1234567890")
-                                .setAddressLine1("First Address")
-                                .setAddressLine2("Second Address")
-                                .setCity("City")
-                                .setState("State")
-                                .setZipCode("12345")
-                                .setCountry("Country")
-                                .setAmountAvailable(BigDecimal.valueOf(100))
-                                .setAmountReserved(BigDecimal.TEN));
+        CustomersRecord newCustomer = createCustomersRecord(uniqueName, uniqueEmail);
+
+        customer = this.customerRepository.saveCustomer(newCustomer);
         // Ensure the customer is saved before running tests
         assertThat(customer).isNotNull();
-        assertThat(this.customerRepository.findById(customer.getId()))
+        assertThat(this.customerDAO.findById(customer.getId()))
                 .isPresent()
                 .get()
                 .satisfies(
@@ -58,6 +48,21 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             assertThat(customer.getEmail()).isEqualTo(uniqueEmail);
                             assertThat(customer.getId()).isNotEqualTo(1);
                         });
+    }
+
+    private @NonNull CustomersRecord createCustomersRecord(String uniqueName, String uniqueEmail) {
+        return new CustomersRecord()
+                .setName(uniqueName)
+                .setEmail(uniqueEmail)
+                .setPhone("1234567890")
+                .setAddressLine1("First Address")
+                .setAddressLine2("Second Address")
+                .setCity("City")
+                .setState("State")
+                .setZipCode("12345")
+                .setCountry("Country")
+                .setAmountAvailable(BigDecimal.valueOf(100))
+                .setAmountReserved(BigDecimal.TEN);
     }
 
     /** Verifies a new order event transfers its decimal total from available to reserved funds. */
@@ -78,8 +83,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualByComparingTo(amountReserved.add(BigDecimal.TEN));
                             assertThat(persistedCustomer.getAmountAvailable())
@@ -130,8 +135,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualByComparingTo(amountReserved.subtract(BigDecimal.TEN));
                             assertThat(persistedCustomer.getAmountAvailable())
@@ -155,8 +160,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualByComparingTo(BigDecimal.TEN);
                             assertThat(persistedCustomer.getAmountAvailable())

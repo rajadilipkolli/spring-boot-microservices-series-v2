@@ -2,8 +2,9 @@
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.config.logging.Loggable;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.mapper.CustomerMapper;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
@@ -11,13 +12,11 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import org.jooq.OrderField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,76 +37,94 @@ public class CustomerService {
     }
 
     public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
+
+        int pageNo = findCustomersQuery.pageNo();
+        int pageSize = findCustomersQuery.pageSize();
+
+        if (pageNo < 1) {
+            throw new IllegalArgumentException("Page number must be at least 1");
+        }
+
+        if (pageSize < 1) {
+            throw new IllegalArgumentException("Page size must be at least 1");
+        }
+
         log.info(
-                "Fetching findAllCustomers for pageNo {} with pageSize {}, sorting By {} {}",
-                findCustomersQuery.pageNo() - 1,
-                findCustomersQuery.pageSize(),
+                "Fetching customers for pageNo {}, pageSize {}, sortBy {}, sortDir {}",
+                pageNo,
+                pageSize,
                 findCustomersQuery.sortBy(),
                 findCustomersQuery.sortDir());
 
-        Pageable pageable = createPageable(findCustomersQuery);
-        Page<Customer> page = customerRepository.findAll(pageable);
+        int offset = (pageNo - 1) * pageSize;
 
-        List<CustomerResponse> customerResponseList =
-                customerMapper.toListResponse(page.getContent());
-        return new PagedResult<>(customerResponseList, page);
-    }
+        List<OrderField<?>> orderFields =
+                customerMapper.toOrderFields(
+                        findCustomersQuery.sortBy(), findCustomersQuery.sortDir());
 
-    private Pageable createPageable(FindCustomersQuery findCustomersQuery) {
-        int pageNo = Math.max(findCustomersQuery.pageNo() - 1, 0);
-        Sort sort =
-                Sort.by(
-                        findCustomersQuery.sortDir().equalsIgnoreCase(Sort.Direction.ASC.name())
-                                ? Sort.Order.asc(findCustomersQuery.sortBy())
-                                : Sort.Order.desc(findCustomersQuery.sortBy()));
-        return PageRequest.of(pageNo, findCustomersQuery.pageSize(), sort);
+        long totalElements = customerRepository.count();
+
+        List<CustomersRecord> records = customerRepository.findAll(offset, pageSize, orderFields);
+
+        List<CustomerResponse> data = customerMapper.toListResponse(records);
+
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+
+        boolean isFirst = pageNo == 1;
+        boolean isLast = pageNo >= totalPages;
+        boolean hasNext = pageNo < totalPages;
+        boolean hasPrevious = pageNo > 1 && totalElements > 0;
+
+        return new PagedResult<>(
+                data, totalElements, pageNo, totalPages, isFirst, isLast, hasNext, hasPrevious);
     }
 
     public Optional<CustomerResponse> findCustomerById(Long id) {
-        return customerRepository.findById(id).map(customerMapper::toResponse);
+        return customerRepository.findById(id).map(CustomerResponse::toResponse);
     }
 
     public Optional<CustomerResponse> findCustomerByName(String name) {
-        return customerRepository.findByName(name);
+        return customerRepository.findByName(name).map(CustomerResponse::toResponse);
     }
 
     public Optional<CustomerResponse> findCustomerByEmail(String email) {
-        return customerRepository.findByEmail(email).map(customerMapper::toResponse);
+        String normalizedEmail = email == null ? null : email.toLowerCase(Locale.ROOT);
+        return customerRepository.findByEmail(normalizedEmail).map(CustomerResponse::toResponse);
     }
 
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
-        Optional<Customer> customerByEmail =
-                customerRepository.findByEmail(customerRequest.email());
-        Customer customer;
-        if (customerByEmail.isPresent()) {
-            customer = customerByEmail.get();
-        } else {
-            Customer requestCustomer = customerMapper.toEntity(customerRequest);
-            customer = customerRepository.save(requestCustomer);
+        String normalizedEmail = customerRequest.email().toLowerCase(Locale.ROOT);
+
+        if (customerRepository.existsByEmail(normalizedEmail)) {
+            log.warn("Customer with email {} already exists.", normalizedEmail);
+            throw new CustomerExistsException(
+                    "Customer with email " + normalizedEmail + " already exists.");
         }
-        return customerMapper.toResponse(customer);
+
+        CustomersRecord savedCustomer =
+                customerRepository.saveCustomer(customerRequest.toCustomersRecord());
+        return CustomerResponse.toResponse(savedCustomer);
     }
 
     @Transactional
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
-        Customer customer =
+        CustomersRecord customersRecord =
                 customerRepository
                         .findById(id)
                         .orElseThrow(() -> new CustomerNotFoundException(id));
 
-        // Update the customer object with data from customerRequest
-        customerMapper.mapCustomerWithRequest(customer, customerRequest);
+        // Update the customersRecord object with data from customerRequest
+        customerMapper.mapCustomerWithRequest(customersRecord, customerRequest);
 
-        // Save the updated customer object
-        Customer updatedCustomer = customerRepository.save(customer);
-
-        // Map the updated customer to a response object and return it
-        return customerMapper.toResponse(updatedCustomer);
+        // Save the updated customersRecord object using customerRepository with optimistic locking
+        CustomersRecord updatedCustomer = customerRepository.saveCustomer(customersRecord);
+        log.info("Customer with ID {} updated successfully.", id);
+        return CustomerResponse.toResponse(updatedCustomer);
     }
 
     @Transactional
-    public void deleteCustomerById(Long id) {
-        customerRepository.deleteById(id);
+    public int deleteCustomerById(Long id) {
+        return customerRepository.deleteById(id);
     }
 }

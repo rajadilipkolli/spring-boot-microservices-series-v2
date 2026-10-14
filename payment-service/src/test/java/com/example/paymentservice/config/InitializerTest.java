@@ -10,9 +10,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.repositories.CustomerRepository;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,8 +35,7 @@ class InitializerTest {
     @BeforeEach
     void setUp() {
         initializer = new Initializer(customerRepository);
-        when(customerRepository.findByEmail("retailstore@gmail.com"))
-                .thenReturn(Optional.of(new Customer()));
+        when(customerRepository.existsByEmail("retailstore@gmail.com")).thenReturn(true);
     }
 
     /**
@@ -45,23 +43,23 @@ class InitializerTest {
      */
     @Test
     void skipsExistingRajaCustomer() {
-        when(customerRepository.findByEmail("rajakolli@gmail.com"))
-                .thenReturn(Optional.of(new Customer()));
+        when(customerRepository.existsByEmail("rajakolli@gmail.com")).thenReturn(true);
 
         initializer.run();
 
-        verify(customerRepository, never()).save(any(Customer.class));
+        verify(customerRepository, never()).saveCustomer(any(CustomersRecord.class));
     }
 
     /** Verifies that startup inserts the Raja customer when the email lookup finds no match. */
     @Test
     void createsMissingRajaCustomer() {
-        when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
+        when(customerRepository.existsByEmail("rajakolli@gmail.com")).thenReturn(false);
 
         initializer.run();
 
         verify(customerRepository)
-                .save(argThat(customer -> "rajakolli@gmail.com".equals(customer.getEmail())));
+                .saveCustomer(
+                        argThat(customer -> "rajakolli@gmail.com".equals(customer.getEmail())));
     }
 
     /**
@@ -69,21 +67,20 @@ class InitializerTest {
      */
     @Test
     void acceptsDuplicateKeyOnlyWhenRajaCustomerNowExists() {
-        when(customerRepository.findByEmail("rajakolli@gmail.com"))
-                .thenReturn(Optional.empty(), Optional.of(new Customer()));
-        when(customerRepository.save(any(Customer.class)))
+        when(customerRepository.existsByEmail("rajakolli@gmail.com")).thenReturn(false, true);
+        when(customerRepository.saveCustomer(any(CustomersRecord.class)))
                 .thenThrow(new DuplicateKeyException("duplicate customer"));
 
         assertThatCode(() -> initializer.run()).doesNotThrowAnyException();
-        verify(customerRepository, times(2)).findByEmail("rajakolli@gmail.com");
+        verify(customerRepository, times(2)).existsByEmail("rajakolli@gmail.com");
     }
 
     /** Verifies that a duplicate-key failure propagates when the Raja customer remains absent. */
     @Test
     void propagatesDuplicateKeyWhenRajaCustomerIsStillMissing() {
-        when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
+        when(customerRepository.existsByEmail("rajakolli@gmail.com")).thenReturn(false);
         DuplicateKeyException failure = new DuplicateKeyException("unrelated duplicate key");
-        when(customerRepository.save(any(Customer.class))).thenThrow(failure);
+        when(customerRepository.saveCustomer(any(CustomersRecord.class))).thenThrow(failure);
 
         assertThatThrownBy(() -> initializer.run()).isSameAs(failure);
     }
@@ -107,10 +104,10 @@ class InitializerTest {
      * @param failure the repository save failure to simulate
      */
     private void assertSaveFailurePropagates(RuntimeException failure) {
-        when(customerRepository.findByEmail("rajakolli@gmail.com")).thenReturn(Optional.empty());
-        when(customerRepository.save(any(Customer.class))).thenThrow(failure);
+        when(customerRepository.existsByEmail("rajakolli@gmail.com")).thenReturn(false);
+        when(customerRepository.saveCustomer(any(CustomersRecord.class))).thenThrow(failure);
 
         assertThatThrownBy(() -> initializer.run()).isSameAs(failure);
-        verify(customerRepository).findByEmail("rajakolli@gmail.com");
+        verify(customerRepository).existsByEmail("rajakolli@gmail.com");
     }
 }
