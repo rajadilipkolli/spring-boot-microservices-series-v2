@@ -80,6 +80,10 @@ class CustomerServiceTest {
         assertThat(response.customerId()).isEqualTo(1L);
         assertThat(response.email()).isEqualTo("customer@example.com");
         verify(customerRepository).existsByEmail("customer@example.com");
+        verify(customerRepository)
+                .saveCustomer(
+                        org.mockito.ArgumentMatchers.argThat(
+                                record -> "customer@example.com".equals(record.getEmail())));
     }
 
     /** Verifies that a concurrent email-constraint violation becomes a customer conflict. */

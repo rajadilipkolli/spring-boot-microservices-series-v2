@@ -140,7 +140,9 @@ public class CustomerService {
 
         CustomersRecord savedCustomer;
         try {
-            savedCustomer = customerRepository.saveCustomer(customerRequest.toCustomersRecord());
+            CustomersRecord customerRecord = customerRequest.toCustomersRecord();
+            customerRecord.setEmail(normalizedEmail);
+            savedCustomer = customerRepository.saveCustomer(customerRecord);
         } catch (DataIntegrityViolationException e) {
             if (isEmailUniqueConstraintViolation(e)) {
                 throw new CustomerExistsException(

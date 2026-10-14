@@ -96,4 +96,108 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                 .isInstanceOf(OptimisticLockingFailureException.class)
                 .hasMessageContaining("Customer was updated or deleted by another transaction");
     }
+
+    /**
+     * Verifies that inserting a duplicate customer with identical name and email fails with
+     * DataIntegrityViolationException (specifically DuplicateKeyException) and wraps a
+     * PSQLException for the uc_customers_name_email_key constraint.
+     */
+    @Test
+    void saveCustomerDuplicateNameAndEmailThrowsDataIntegrityViolationException() {
+        CustomersRecord customer1 =
+                new CustomersRecord()
+                        .setName("Duplicate User")
+                        .setEmail("duplicate@example.com")
+                        .setPhone("123-456-7890")
+                        .setAddressLine1("123 Test St")
+                        .setCity("Testville")
+                        .setState("TS")
+                        .setZipCode("12345")
+                        .setCountry("Testland")
+                        .setAmountAvailable(BigDecimal.valueOf(100.0))
+                        .setAmountReserved(BigDecimal.ZERO);
+        customerRepository.saveCustomer(customer1);
+
+        CustomersRecord customer2 =
+                new CustomersRecord()
+                        .setName("Duplicate User")
+                        .setEmail("duplicate@example.com")
+                        .setPhone("987-654-3210")
+                        .setAddressLine1("456 Other St")
+                        .setCity("Otherville")
+                        .setState("OS")
+                        .setZipCode("54321")
+                        .setCountry("Otherland")
+                        .setAmountAvailable(BigDecimal.valueOf(50.0))
+                        .setAmountReserved(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> customerRepository.saveCustomer(customer2))
+                .isInstanceOf(org.springframework.dao.DuplicateKeyException.class)
+                .satisfies(
+                        ex -> {
+                            org.postgresql.util.PSQLException psqlEx =
+                                    findCause(ex, org.postgresql.util.PSQLException.class);
+                            assertThat((Throwable) psqlEx).isNotNull();
+                            assertThat(psqlEx.getSQLState()).isEqualTo("23505");
+                            assertThat(psqlEx.getServerErrorMessage()).isNotNull();
+                            assertThat(psqlEx.getServerErrorMessage().getConstraint())
+                                    .isEqualTo("uc_customers_name_email_key");
+                        });
+
+        assertThat(customerDAO.findByEmail("duplicate@example.com")).isPresent();
+        assertThat(
+                        customerDAO.findAll(
+                                com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.EMAIL.eq(
+                                        "duplicate@example.com")))
+                .hasSize(1);
+    }
+
+    /**
+     * Verifies that inserting a record with a null name violates the not-null constraint and throws
+     * DataIntegrityViolationException wrapping a PSQLException with SQLSTATE 23502.
+     */
+    @Test
+    void saveCustomerNullNameThrowsDataIntegrityViolationException() {
+        CustomersRecord customer =
+                new CustomersRecord()
+                        .setName(null)
+                        .setEmail("nullname@example.com")
+                        .setPhone("123-456-7890")
+                        .setAddressLine1("123 Test St")
+                        .setCity("Testville")
+                        .setState("TS")
+                        .setZipCode("12345")
+                        .setCountry("Testland")
+                        .setAmountAvailable(BigDecimal.valueOf(100.0))
+                        .setAmountReserved(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> customerRepository.saveCustomer(customer))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+                .satisfies(
+                        ex -> {
+                            org.postgresql.util.PSQLException psqlEx =
+                                    findCause(ex, org.postgresql.util.PSQLException.class);
+                            assertThat((Throwable) psqlEx).isNotNull();
+                            assertThat(psqlEx.getSQLState()).isEqualTo("23502");
+                        });
+
+        assertThat(customerDAO.findByEmail("nullname@example.com")).isEmpty();
+    }
+
+    /**
+     * Finds the first exception of the expected type, including the supplied exception itself.
+     *
+     * @param <T> the expected exception type
+     * @param throwable the exception whose cause chain to inspect
+     * @param expectedType the exception class to match
+     * @return the first matching exception, or null if none is found
+     */
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> expectedType) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (expectedType.isInstance(current)) {
+                return expectedType.cast(current);
+            }
+        }
+        return null;
+    }
 }
