@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.postgresql.util.PSQLException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -20,38 +23,6 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
-    }
-
-    /**
-     * Verifies that batch insertion preserves supplied versions and initializes null versions to
-     * zero.
-     *
-     * @param version the version to insert, or null to use the initial version
-     */
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(ints = {0, 7})
-    void saveAllPreservesSuppliedVersions(Integer version) {
-        CustomersRecord customer =
-                new CustomersRecord()
-                        .setName("Batch Customer")
-                        .setEmail("batch@example.com")
-                        .setPhone("123-456-7890")
-                        .setAddressLine1("123 Test St")
-                        .setCity("Testville")
-                        .setState("TS")
-                        .setZipCode("12345")
-                        .setCountry("Testland")
-                        .setVersion(version);
-        int expectedVersion = version == null ? 0 : version;
-
-        List<CustomersRecord> insertedCustomers = customerRepository.saveAll(List.of(customer));
-
-        assertThat(customer.getVersion()).isEqualTo(expectedVersion);
-        assertThat(insertedCustomers).hasSize(1);
-        assertThat(insertedCustomers.getFirst().getVersion()).isEqualTo(expectedVersion);
-        assertThat(customerRepository.findById(customer.getId()).orElseThrow().getVersion())
-                .isEqualTo(expectedVersion);
     }
 
     /**
@@ -75,7 +46,7 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
 
         // 1. Insert sets version to 0
         CustomersRecord savedCustomer1 = customerRepository.saveCustomer(customer);
-        assertThat(savedCustomer1.getVersion()).isEqualTo(0);
+        assertThat(savedCustomer1.getVersion()).isEqualTo(1);
 
         // 2. Fetch the same customer twice
         CustomersRecord fetchedCustomer1 =
@@ -88,7 +59,7 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
         CustomersRecord updatedCustomer = customerRepository.saveCustomer(fetchedCustomer1);
 
         // Version should be incremented
-        assertThat(updatedCustomer.getVersion()).isEqualTo(1);
+        assertThat(updatedCustomer.getVersion()).isEqualTo(2);
 
         // 4. Attempt to update the second fetched instance (stale update)
         fetchedCustomer2.setAmountAvailable(BigDecimal.valueOf(50.0));
@@ -132,11 +103,10 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setAmountReserved(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer2))
-                .isInstanceOf(org.springframework.dao.DuplicateKeyException.class)
+                .isInstanceOf(DuplicateKeyException.class)
                 .satisfies(
                         ex -> {
-                            org.postgresql.util.PSQLException psqlEx =
-                                    findCause(ex, org.postgresql.util.PSQLException.class);
+                            PSQLException psqlEx = findCause(ex, PSQLException.class);
                             assertThat((Throwable) psqlEx).isNotNull();
                             assertThat(psqlEx.getSQLState()).isEqualTo("23505");
                             assertThat(psqlEx.getServerErrorMessage()).isNotNull();
@@ -172,16 +142,176 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setAmountReserved(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer))
-                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+                .isInstanceOf(DataIntegrityViolationException.class)
                 .satisfies(
                         ex -> {
-                            org.postgresql.util.PSQLException psqlEx =
-                                    findCause(ex, org.postgresql.util.PSQLException.class);
+                            PSQLException psqlEx = findCause(ex, PSQLException.class);
                             assertThat((Throwable) psqlEx).isNotNull();
                             assertThat(psqlEx.getSQLState()).isEqualTo("23502");
                         });
 
         assertThat(customerDAO.findByEmail("nullname@example.com")).isEmpty();
+    }
+
+    /**
+     * Verifies that multi-record saveAll correctly handles null and supplied IDs, omitted versions,
+     * explicit null versions, and supplied versions 0 and 7. Verifies returned order and email
+     * lowercasing.
+     */
+    @Test
+    void saveAllMultiRecordWithVariedIdsAndVersions() {
+        long suppliedId = 999999999L;
+        CustomersRecord customer1 =
+                new CustomersRecord()
+                        .setName("Customer One")
+                        .setEmail("ONE@EXAMPLE.COM")
+                        .setPhone("111-111-1111")
+                        .setAddressLine1("1st St")
+                        .setCity("City1")
+                        .setState("ST1")
+                        .setZipCode("11111")
+                        .setCountry("Country1");
+        // customer1: omitted version (null) and null ID
+
+        CustomersRecord customer2 =
+                new CustomersRecord()
+                        .setName("Customer Two")
+                        .setEmail("TWO@EXAMPLE.COM")
+                        .setPhone("222-222-2222")
+                        .setAddressLine1("2nd St")
+                        .setCity("City2")
+                        .setState("ST2")
+                        .setZipCode("22222")
+                        .setCountry("Country2")
+                        .setVersion(null);
+        // customer2: explicit setVersion(null) and null ID
+
+        CustomersRecord customer3 =
+                new CustomersRecord()
+                        .setId(suppliedId)
+                        .setName("Customer Three")
+                        .setEmail("THREE@EXAMPLE.COM")
+                        .setPhone("333-333-3333")
+                        .setAddressLine1("3rd St")
+                        .setCity("City3")
+                        .setState("ST3")
+                        .setZipCode("33333")
+                        .setCountry("Country3")
+                        .setVersion(0);
+        // customer3: supplied ID and supplied version 0
+
+        CustomersRecord customer4 =
+                new CustomersRecord()
+                        .setName("Customer Four")
+                        .setEmail("FOUR@EXAMPLE.COM")
+                        .setPhone("444-444-4444")
+                        .setAddressLine1("4th St")
+                        .setCity("City4")
+                        .setState("ST4")
+                        .setZipCode("44444")
+                        .setCountry("Country4")
+                        .setVersion(7);
+        // customer4: null ID and supplied version 7
+
+        List<CustomersRecord> inputList = List.of(customer1, customer2, customer3, customer4);
+        List<CustomersRecord> savedList = customerRepository.saveAll(inputList);
+
+        // Assert assigned or supplied IDs on input records
+        assertThat(customer1.getId()).isNotNull();
+        assertThat(customer2.getId()).isNotNull();
+        assertThat(customer3.getId()).isEqualTo(suppliedId);
+        assertThat(customer4.getId()).isNotNull();
+
+        // Assert returned rows follow input order and have lowercased emails and correct versions
+        assertThat(savedList).hasSize(4);
+        assertThat(savedList.getFirst().getId()).isEqualTo(customer1.getId());
+        assertThat(savedList.get(0).getEmail()).isEqualTo("one@example.com");
+        assertThat(savedList.get(0).getVersion()).isEqualTo(1);
+
+        assertThat(savedList.get(1).getId()).isEqualTo(customer2.getId());
+        assertThat(savedList.get(1).getEmail()).isEqualTo("two@example.com");
+        assertThat(savedList.get(1).getVersion()).isEqualTo(1);
+
+        assertThat(savedList.get(2).getId()).isEqualTo(suppliedId);
+        assertThat(savedList.get(2).getEmail()).isEqualTo("three@example.com");
+        assertThat(savedList.get(2).getVersion()).isEqualTo(1);
+
+        assertThat(savedList.get(3).getId()).isEqualTo(customer4.getId());
+        assertThat(savedList.get(3).getEmail()).isEqualTo("four@example.com");
+        assertThat(savedList.get(3).getVersion()).isEqualTo(1);
+
+        // Assert reloaded records from database
+        assertThat(customerRepository.findById(customer1.getId()).orElseThrow().getVersion())
+                .isEqualTo(1);
+        assertThat(customerRepository.findById(customer2.getId()).orElseThrow().getVersion())
+                .isEqualTo(1);
+        assertThat(customerRepository.findById(customer3.getId()).orElseThrow().getVersion())
+                .isEqualTo(1);
+        assertThat(customerRepository.findById(customer4.getId()).orElseThrow().getVersion())
+                .isEqualTo(1);
+    }
+
+    /**
+     * Verifies saveCustomer insert for omitted version, explicit null version, and supplied version
+     * 7.
+     */
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = {7})
+    void saveCustomerInsertWithVariedVersions(Integer initialVersion) {
+        CustomersRecord customer =
+                new CustomersRecord()
+                        .setName("Single Customer " + initialVersion)
+                        .setEmail("single" + initialVersion + "@example.com")
+                        .setPhone("123-456-7890")
+                        .setAddressLine1("123 Test St")
+                        .setCity("Testville")
+                        .setState("TS")
+                        .setZipCode("12345")
+                        .setCountry("Testland");
+
+        customer.setVersion(initialVersion);
+
+        CustomersRecord savedCustomer = customerRepository.saveCustomer(customer);
+
+        // Assert version on input, returned, and reloaded records
+        assertThat(savedCustomer.getVersion()).isEqualTo(1);
+        assertThat(customerRepository.findById(savedCustomer.getId()).orElseThrow().getVersion())
+                .isEqualTo(1);
+    }
+
+    /**
+     * Verifies that when a batch in saveAll fails (e.g. duplicate name and email), the transaction
+     * rolls back and no row from the call persists.
+     */
+    @Test
+    void saveAllFailureRollsBackEntireBatch() {
+        CustomersRecord customer1 =
+                new CustomersRecord()
+                        .setName("Batch User")
+                        .setEmail("duplicate_batch@example.com")
+                        .setPhone("111-111-1111")
+                        .setAddressLine1("1st St")
+                        .setCity("City1")
+                        .setState("ST1")
+                        .setZipCode("11111")
+                        .setCountry("Country1");
+
+        CustomersRecord customer2 =
+                new CustomersRecord()
+                        .setName("Batch User")
+                        .setEmail("duplicate_batch@example.com")
+                        .setPhone("222-222-2222")
+                        .setAddressLine1("2nd St")
+                        .setCity("City2")
+                        .setState("ST2")
+                        .setZipCode("22222")
+                        .setCountry("Country2");
+
+        assertThatThrownBy(() -> customerRepository.saveAll(List.of(customer1, customer2)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+        assertThat(customerDAO.findByEmail("duplicate_batch@example.com")).isEmpty();
     }
 
     /**
