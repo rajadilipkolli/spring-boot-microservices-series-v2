@@ -30,9 +30,8 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     private final CustomerMapper customerMapper;
 
     /**
-     * Creates the repository with database access and record mapping, deriving an insert-specific
-     * DSLContext that enables insert record versioning while disabling optimistic locking on
-     * inserts.
+     * Creates the repository with database access and record mapping, deriving an insert context
+     * with optimistic locking disabled.
      *
      * @param dslContext the context for database operations
      * @param customerDAO the DAO for customer lookups and versioned updates
@@ -90,16 +89,17 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     /**
      * Inserts a new customer when ID is null or updates an existing customer whose ID and version
-     * match. For inserts, lowercases non-null emails, lets jOOQ assign the initial version when the
-     * input version is null, stores supplied non-null versions unchanged, and mutates the input
-     * record with the persisted ID and version. For updates, checks that the stored version matches
-     * the input version, increments the stored version, and leaves the supplied instance's version
-     * unchanged.
+     * match. Lowercases a non-null email on the supplied record. Inserts generate a TSID and
+     * initialize the persisted version to one regardless of the supplied version. Updates require a
+     * non-null version and increment the stored version. The supplied record's ID and version
+     * remain unchanged. Database failures propagate to the caller.
      *
      * @param requestCustomer the customer details to insert or update
      * @return the persisted CustomersRecord returned by the database
-     * @throws OptimisticLockingFailureException if an update finds no row matching the supplied ID
-     *     and version
+     * @throws OptimisticLockingFailureException if an update finds no matching ID and version,
+     *     detects a concurrent change, or an insert affects no rows
+     * @throws NullPointerException if the supplied record is null or an existing customer's input
+     *     version is null
      */
     @Override
     @Transactional
@@ -113,6 +113,16 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         }
     }
 
+    /**
+     * Updates the stored customer only when its version matches the supplied version, returning the
+     * updated record with an incremented version. The supplied record is unchanged. Database
+     * failures propagate, except that jOOQ concurrent-change failures become optimistic locking
+     * failures.
+     *
+     * @throws OptimisticLockingFailureException if the customer is missing, the version differs, no
+     *     rows are updated, or jOOQ detects a concurrent change
+     * @throws NullPointerException if the input version is null for an existing customer
+     */
     private CustomersRecord getUpdatedCustomersRecord(CustomersRecord requestCustomer) {
         CustomersRecord existingRecord =
                 customerDAO
@@ -143,6 +153,13 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         }
     }
 
+    /**
+     * Inserts a copy of the supplied customer, generating a missing ID and initializing the
+     * persisted version to one regardless of the supplied version. Returns the persisted record
+     * without changing the supplied record. Database failures propagate to the caller.
+     *
+     * @throws OptimisticLockingFailureException if the insert affects no rows
+     */
     private CustomersRecord getInsertedCustomersRecord(CustomersRecord requestCustomer) {
         CustomersRecord customersRecord = insertDsl.newRecord(CUSTOMERS, requestCustomer);
         customersRecord.reset(CUSTOMERS.VERSION);
@@ -156,12 +173,13 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     /**
      * Inserts all supplied customers in a batch transaction. Returns an empty list if the input is
-     * empty. Lowercases non-null emails, preserves supplied IDs while assigning TSIDs to records
-     * with missing IDs, stores supplied non-null versions unchanged while letting jOOQ assign the
-     * initial version for null versions, and mutates the input records with the persisted versions.
+     * null or empty. Lowercases non-null emails on the input records, preserves supplied IDs, and
+     * copies generated TSIDs back to inputs with missing IDs. Persisted versions start at one
+     * regardless of supplied versions; input versions remain unchanged. Database failures propagate
+     * and roll back the transaction.
      *
      * @param customerList the list of customers to insert
-     * @return the list of persisted CustomersRecord rows in input order
+     * @return the reloaded rows in input order, with null entries for IDs absent from the reload
      */
     @Override
     @Transactional

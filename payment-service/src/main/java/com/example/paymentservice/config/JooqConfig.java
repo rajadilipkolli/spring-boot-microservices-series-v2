@@ -30,6 +30,18 @@ public class JooqConfig {
         };
     }
 
+    /**
+     * Builds the customer ID factory, parsing a nonblank {@code tsid.node} system property or, when
+     * the property is absent, {@code TSID_NODE} environment variable as a decimal integer. The
+     * value is parsed without trimming; absent or blank values leave node selection to the TSID
+     * builder.
+     *
+     * @return the configured TSID factory
+     * @throws NumberFormatException if the nonblank node value is not a decimal integer in the
+     *     {@code int} range
+     * @throws IllegalArgumentException if the builder's node count configuration requires a node
+     *     bit length outside the supported range
+     */
     @Bean
     TSID.Factory tsidFactory() {
         String nodeStr = System.getProperty("tsid.node", System.getenv("TSID_NODE"));
