@@ -187,10 +187,12 @@ public class CustomerRepositoryImpl implements CustomerRepository {
             assignedIds.add(assignedId);
         }
 
-        return insertDsl
-                .selectFrom(CUSTOMERS)
-                .where(CUSTOMERS.ID.in(assignedIds))
-                .fetchInto(CustomersRecord.class);
+        Map<Long, CustomersRecord> byId =
+                insertDsl
+                        .selectFrom(CUSTOMERS)
+                        .where(CUSTOMERS.ID.in(assignedIds))
+                        .fetchMap(CUSTOMERS.ID, CustomersRecord.class);
+        return assignedIds.stream().map(byId::get).toList();
     }
 
     /** Deletes the customer by ID and returns the number of affected rows. */
