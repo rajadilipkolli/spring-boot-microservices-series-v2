@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -55,6 +56,7 @@ public class PaymentReconciler {
     }
 
     @Scheduled(fixedDelayString = "${application.reconciler.delay:1s}")
+    @SchedulerLock(name = "payment_reconcile", lockAtMostFor = "1m", lockAtLeastFor = "500ms")
     public void scheduledReconcile() {
         if (!properties.getReconciler().isEnabled()) {
             return;
@@ -117,11 +119,10 @@ public class PaymentReconciler {
 
         // Definitive NOT_FOUND
         if (op.getAttemptCount() >= properties.getOperation().getMaxAttempts()) {
-            log.error(
-                    "Operation {} exhausted attempts and definitive NOT_FOUND, marking FAILED",
+            log.warn(
+                    "Operation {} exhausted attempts while provider returned NOT_FOUND, keeping UNKNOWN with backoff",
                     op.getId());
-            markFailed(op, fencingToken);
-            failedCounter.increment();
+            backoffOperation(op);
             return;
         }
 

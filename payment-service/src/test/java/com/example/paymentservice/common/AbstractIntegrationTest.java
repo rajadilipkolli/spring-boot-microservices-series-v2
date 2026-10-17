@@ -5,13 +5,17 @@ import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.paymentservice.PaymentApplication;
-import com.example.paymentservice.config.JooqConfig;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
+import com.example.paymentservice.repositories.LedgerRepository;
+import com.example.paymentservice.repositories.OutboxEventRepository;
+import com.example.paymentservice.repositories.PaymentOperationRepository;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderServiceProxy;
+import com.example.paymentservice.services.PaymentOperationEngine;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
+import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -27,12 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(
         webEnvironment = RANDOM_PORT,
         properties = {"spring.cloud.config.enabled=false", "eureka.client.enabled=false"},
-        classes = {
-            PaymentApplication.class,
-            SQLContainerConfig.class,
-            NonSQLContainerConfig.class,
-            JooqConfig.class
-        })
+        classes = {PaymentApplication.class, SQLContainerConfig.class, NonSQLContainerConfig.class})
 @AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
@@ -54,17 +53,13 @@ public abstract class AbstractIntegrationTest {
 
     @MockitoBean protected OrderServiceProxy orderServiceProxy;
 
-    @Autowired
-    protected com.example.paymentservice.repositories.PaymentOperationRepository
-            paymentOperationRepository;
+    @Autowired protected PaymentOperationRepository paymentOperationRepository;
 
-    @Autowired protected com.example.paymentservice.repositories.LedgerRepository ledgerRepository;
+    @Autowired protected LedgerRepository ledgerRepository;
 
-    @Autowired
-    protected com.example.paymentservice.repositories.OutboxEventRepository outboxEventRepository;
+    @Autowired protected OutboxEventRepository outboxEventRepository;
 
-    @Autowired
-    protected com.example.paymentservice.services.PaymentOperationEngine paymentOperationEngine;
+    @Autowired protected PaymentOperationEngine paymentOperationEngine;
 
-    @Autowired protected org.jooq.DSLContext dslContext;
+    @Autowired protected DSLContext dslContext;
 }

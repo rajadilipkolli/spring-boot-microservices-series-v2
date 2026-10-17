@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -50,6 +51,7 @@ public class OutboxPublisher {
     }
 
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:500ms}")
+    @SchedulerLock(name = "payment_outbox_publish", lockAtMostFor = "1m", lockAtLeastFor = "100ms")
     public void scheduledPublish() {
         if (!properties.getOutbox().isEnabled()) {
             return;
@@ -140,6 +142,7 @@ public class OutboxPublisher {
     }
 
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
+    @SchedulerLock(name = "payment_outbox_reap", lockAtMostFor = "10m", lockAtLeastFor = "10s")
     public void scheduledReap() {
         if (!properties.getOutbox().isEnabled()) {
             return;
