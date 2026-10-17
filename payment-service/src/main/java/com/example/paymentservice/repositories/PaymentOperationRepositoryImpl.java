@@ -41,11 +41,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
         if (record.getId() == null) {
             record.setId(tsidFactory.generate().toLong());
         }
-        try {
-            dslContext.insertInto(PAYMENT_OPERATIONS).set(record).onDuplicateKeyIgnore().execute();
-        } catch (DuplicateKeyException | DataAccessException ignored) {
-            // Suppress race condition duplicate key on secondary indexes
-        }
+        dslContext.insertInto(PAYMENT_OPERATIONS).set(record).onDuplicateKeyIgnore().execute();
 
         return dslContext
                 .selectFrom(PAYMENT_OPERATIONS)
