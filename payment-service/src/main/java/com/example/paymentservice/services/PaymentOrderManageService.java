@@ -2,72 +2,49 @@
 package com.example.paymentservice.services;
 
 import com.example.paymentservice.config.logging.Loggable;
-import com.example.paymentservice.exception.CustomerNotFoundException;
-import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.utils.LogSanitizer;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 @Loggable
 public class PaymentOrderManageService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentOrderManageService.class);
 
-    private final CustomerRepository customerRepository;
-    private final KafkaTemplate<String, OrderDto> kafkaTemplate;
+    private final PaymentOperationEngine operationEngine;
     private final Counter paymentsStartedCounter;
     private final Counter paymentsSuccessfulCounter;
     private final Counter paymentsFailedCounter;
 
+    /**
+     * Creates the order payment service with its operation engine and registers payment outcome
+     * counters.
+     */
     public PaymentOrderManageService(
-            MeterRegistry meterRegistry,
-            CustomerRepository customerRepository,
-            KafkaTemplate<String, OrderDto> kafkaTemplate) {
-        this.customerRepository = customerRepository;
-        this.kafkaTemplate = kafkaTemplate;
+            MeterRegistry meterRegistry, PaymentOperationEngine operationEngine) {
+        this.operationEngine = operationEngine;
         this.paymentsStartedCounter = meterRegistry.counter("payments_started");
         this.paymentsSuccessfulCounter = meterRegistry.counter("payments_successful");
         this.paymentsFailedCounter = meterRegistry.counter("payments_failed");
     }
 
     /**
-     * Sums line totals after each is rounded to two decimal places using HALF_UP.
-     *
-     * @return the total with scale two, or 0.00 for an empty item list
-     * @throws NullPointerException if the order, item list, an item, its price, or its quantity is
-     *     null
-     */
-    private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
-        return orderDto.items().stream()
-                .map(OrderDto.OrderItemDto::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * Moves the sum of individually rounded line totals from available to reserved balance when
-     * sufficient funds exist, including an exact balance match. Otherwise, rejects the order
-     * without changing balances. Saves the customer and sends the outcome to Kafka in either case.
-     * Database, optimistic locking, and synchronous send failures propagate; asynchronous delivery
-     * is not awaited.
+     * Reserves payment through the operation engine and records payment outcome metrics. Provider
+     * failures can defer the result; engine persistence and serialization failures propagate.
      *
      * @param orderDto order whose payment should be reserved
-     * @return the order with status ACCEPT or REJECT and source PAYMENT
-     * @throws CustomerNotFoundException if the order's customer does not exist
+     * @return the order with source PAYMENT and status ACCEPT, REJECT, or PENDING
+     * @throws com.example.paymentservice.exception.CustomerNotFoundException if the customer ID is
+     *     null or absent
+     * @throws com.example.paymentservice.exception.OperationConflictException if a retry changes
+     *     the stored reservation fingerprint
      */
     @Timed(percentiles = 1.0)
     public OrderDto reserve(OrderDto orderDto) {
@@ -76,50 +53,28 @@ public class PaymentOrderManageService {
                 "Reserving Order with Id :{} in payment service with payload {}",
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
-        Optional<CustomersRecord> optionalCustomer =
-                customerRepository.findById(orderDto.customerId());
-        if (optionalCustomer.isPresent()) {
-            CustomersRecord customersRecord = optionalCustomer.get();
-            log.info("Found Customer: {}", customersRecord.getId());
-            var totalOrderPrice = calculateTotalOrderPrice(orderDto);
 
-            if (totalOrderPrice.compareTo(customersRecord.getAmountAvailable()) <= 0) {
-                orderDto = orderDto.withStatus("ACCEPT");
-                this.paymentsSuccessfulCounter.increment();
-                customersRecord.setAmountReserved(
-                        customersRecord.getAmountReserved().add(totalOrderPrice));
-                customersRecord.setAmountAvailable(
-                        customersRecord.getAmountAvailable().subtract(totalOrderPrice));
-            } else {
-                orderDto = orderDto.withStatus("REJECT");
-                this.paymentsFailedCounter.increment();
-            }
-            log.info("Saving customersRecord: {} after reserving", customersRecord);
-            updateCustomer(customersRecord);
-            orderDto = orderDto.withSource(AppConstants.SOURCE);
-            kafkaTemplate.send(
-                    AppConstants.PAYMENT_ORDERS_TOPIC,
-                    String.valueOf(orderDto.orderId()),
-                    orderDto);
-            log.info(
-                    "Sent Reserved Order: {} to topic :{}",
-                    LogSanitizer.sanitizeForLog(String.valueOf(orderDto)),
-                    AppConstants.PAYMENT_ORDERS_TOPIC);
-        } else {
-            log.error("Customer not found for id: {}", orderDto.customerId());
-            throw new CustomerNotFoundException(orderDto.customerId());
+        OrderDto result = operationEngine.processReserve(orderDto);
+        if ("ACCEPT".equals(result.status())) {
+            this.paymentsSuccessfulCounter.increment();
+        } else if ("REJECT".equals(result.status())) {
+            this.paymentsFailedCounter.increment();
         }
-        return orderDto;
+        return result;
     }
 
     /**
-     * Deducts the sum of individually rounded line totals from reserved balance for CONFIRMED
-     * orders. For ROLLBACK orders from a source other than PAYMENT, also restores that amount to
-     * available balance. Other status/source combinations leave balances unchanged. Saves the
-     * customer in every case; database and optimistic locking failures propagate.
+     * Captures a CONFIRMED order or releases a ROLLBACK order, regardless of source; other statuses
+     * have no effect. Settlement uses the stored reservation amount. Provider failures defer
+     * completion; engine persistence failures propagate.
      *
-     * @param orderDto the order outcome and items used to calculate the amount
-     * @throws CustomerNotFoundException if the order's customer does not exist
+     * @param orderDto the order outcome
+     * @throws com.example.paymentservice.exception.CustomerNotFoundException if settlement is
+     *     requested with a null or absent customer ID
+     * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement is
+     *     requested before a completed reservation exists
+     * @throws com.example.paymentservice.exception.OperationConflictException if an applicable
+     *     settlement conflicts with the stored fingerprint
      */
     @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {
@@ -127,32 +82,11 @@ public class PaymentOrderManageService {
                 "Confirming Order with Id :{} in payment service with payload {}",
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto.orderId())),
                 LogSanitizer.sanitizeForLog(String.valueOf(orderDto)));
-        CustomersRecord customersRecord =
-                customerRepository
-                        .findById(orderDto.customerId())
-                        .orElseThrow(() -> new CustomerNotFoundException(orderDto.customerId()));
-        log.info(
-                "Found Customer: {}", LogSanitizer.sanitizeForLog(String.valueOf(customersRecord)));
-        var orderPrice = calculateTotalOrderPrice(orderDto);
-        if (orderDto.status().equals("CONFIRMED")) {
-            customersRecord.setAmountReserved(
-                    customersRecord.getAmountReserved().subtract(orderPrice));
-        } else if (orderDto.status().equals(AppConstants.ROLLBACK)
-                && !AppConstants.SOURCE.equals(orderDto.source())) {
-            customersRecord.setAmountReserved(
-                    customersRecord.getAmountReserved().subtract(orderPrice));
-            customersRecord.setAmountAvailable(
-                    customersRecord.getAmountAvailable().add(orderPrice));
-        }
-        log.info(
-                "Saving customersRecord :{} After Confirmation",
-                LogSanitizer.sanitizeForLog(String.valueOf(customersRecord)));
-        updateCustomer(customersRecord);
-    }
 
-    /** Persists updated customer balances with optimistic locking and logs the saved version. */
-    private void updateCustomer(CustomersRecord customersRecord) {
-        CustomersRecord saved = customerRepository.saveCustomer(customersRecord);
-        log.debug("Customer save :{} version : {}", saved.getId(), saved.getVersion());
+        if ("CONFIRMED".equals(orderDto.status())) {
+            operationEngine.processSettlement(orderDto, "CAPTURE");
+        } else if (AppConstants.ROLLBACK.equals(orderDto.status())) {
+            operationEngine.processSettlement(orderDto, "RELEASE");
+        }
     }
 }

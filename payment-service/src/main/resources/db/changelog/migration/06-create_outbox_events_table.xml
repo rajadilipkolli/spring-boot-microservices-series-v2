@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <property name="string.type" value="varchar(255)" dbms="!postgresql"/>
+    <property name="string.type" value="text" dbms="postgresql"/>
+
+    <changeSet author="rajakolli" id="createTable-outbox_events">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="outbox_events" schemaName="payment"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="outbox_events" schemaName="payment">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="outbox_events_pkey"/>
+            </column>
+            <column name="aggregate_type" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="aggregate_id" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="${string.type}"/>
+            <column name="status" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="topic" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message_key" type="${string.type}"/>
+            <column name="retry_count" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error_message" type="${string.type}"/>
+            <column name="locked_at" type="timestamp with time zone"/>
+            <column name="locked_by" type="${string.type}"/>
+            <column name="version" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="outbox_events" columnNames="aggregate_id, event_type"
+                             constraintName="uc_outbox_events_aggregate_event" schemaName="payment"/>
+
+        <createIndex tableName="outbox_events" indexName="idx_outbox_events_status_created" schemaName="payment">
+            <column name="status"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="outbox_events" indexName="idx_outbox_events_locked_at" schemaName="payment">
+            <column name="locked_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="outbox_events" schemaName="payment"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -309,7 +309,7 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setCountry("Country2");
 
         assertThatThrownBy(() -> customerRepository.saveAll(List.of(customer1, customer2)))
-                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+                .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(customerDAO.findByEmail("duplicate_batch@example.com")).isEmpty();
     }

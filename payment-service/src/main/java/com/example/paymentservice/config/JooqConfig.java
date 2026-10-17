@@ -11,22 +11,22 @@ import org.springframework.context.annotation.Configuration;
 public class JooqConfig {
 
     /**
-     * Enables jOOQ optimistic locking, automatic record-version updates, and customer record
-     * listener.
+     * Enables jOOQ optimistic locking, automatic record-version updates, and TSID assignment for
+     * customer, payment operation, ledger, and outbox records.
      *
-     * @param tsidFactory the factory used to generate TSIDs for new customer records
+     * @param tsidFactory the factory used to generate missing record IDs
      * @return the customizer applied to the jOOQ configuration
      */
     @Bean
     DefaultConfigurationCustomizer jooqCustomizer(TSID.Factory tsidFactory) {
-        CustomerRecordListener customerRecordListener = new CustomerRecordListener(tsidFactory);
+        TsidRecordListener tsidRecordListener = new TsidRecordListener(tsidFactory);
         return configuration -> {
             configuration.set(
                     configuration
                             .settings()
                             .withExecuteWithOptimisticLocking(true)
                             .withUpdateRecordVersion(true));
-            configuration.set(new DefaultRecordListenerProvider(customerRecordListener));
+            configuration.set(new DefaultRecordListenerProvider(tsidRecordListener));
         };
     }
 

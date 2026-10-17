@@ -20,16 +20,16 @@ public class CustomerMapper {
      * @param customerRequest replacement customer details
      */
     public void mapCustomerWithRequest(CustomersRecord customer, CustomerRequest customerRequest) {
-        customer.setAmountAvailable(customerRequest.amountAvailable());
-        customer.setName(customerRequest.name());
-        customer.setAddressLine1(customerRequest.addressLine1());
-        customer.setAddressLine2(customerRequest.addressLine2());
-        customer.setCity(customerRequest.city());
-        customer.setState(customerRequest.state());
-        customer.setZipCode(customerRequest.zipCode());
-        customer.setCountry(customerRequest.country());
-        customer.setEmail(customerRequest.email());
-        customer.setPhone(customerRequest.phone());
+        customer.setAmountAvailable(customerRequest.amountAvailable())
+                .setName(customerRequest.name())
+                .setAddressLine1(customerRequest.addressLine1())
+                .setAddressLine2(customerRequest.addressLine2())
+                .setCity(customerRequest.city())
+                .setState(customerRequest.state())
+                .setZipCode(customerRequest.zipCode())
+                .setCountry(customerRequest.country())
+                .setEmail(customerRequest.email())
+                .setPhone(customerRequest.phone());
     }
 
     /**
@@ -74,16 +74,17 @@ public class CustomerMapper {
      */
     public void mapCustomerWithRecord(
             CustomersRecord existingRecord, CustomersRecord requestCustomer) {
-        existingRecord.setAmountAvailable(requestCustomer.getAmountAvailable());
-        existingRecord.setAmountReserved(requestCustomer.getAmountReserved());
-        existingRecord.setName(requestCustomer.getName());
-        existingRecord.setAddressLine1(requestCustomer.getAddressLine1());
-        existingRecord.setAddressLine2(requestCustomer.getAddressLine2());
-        existingRecord.setCity(requestCustomer.getCity());
-        existingRecord.setState(requestCustomer.getState());
-        existingRecord.setZipCode(requestCustomer.getZipCode());
-        existingRecord.setCountry(requestCustomer.getCountry());
-        existingRecord.setEmail(requestCustomer.getEmail());
-        existingRecord.setPhone(requestCustomer.getPhone());
+        existingRecord
+                .setAmountAvailable(requestCustomer.getAmountAvailable())
+                .setAmountReserved(requestCustomer.getAmountReserved())
+                .setName(requestCustomer.getName())
+                .setAddressLine1(requestCustomer.getAddressLine1())
+                .setAddressLine2(requestCustomer.getAddressLine2())
+                .setCity(requestCustomer.getCity())
+                .setState(requestCustomer.getState())
+                .setZipCode(requestCustomer.getZipCode())
+                .setCountry(requestCustomer.getCountry())
+                .setEmail(requestCustomer.getEmail())
+                .setPhone(requestCustomer.getPhone());
     }
 }

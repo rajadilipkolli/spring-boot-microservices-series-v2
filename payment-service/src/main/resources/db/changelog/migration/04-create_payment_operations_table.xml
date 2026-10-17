@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <property name="string.type" value="varchar(255)" dbms="!postgresql"/>
+    <property name="string.type" value="text" dbms="postgresql"/>
+
+    <changeSet author="rajakolli" id="createTable-payment_operations">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_operations" schemaName="payment"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment_operations" schemaName="payment">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="payment_operations_pkey"/>
+            </column>
+            <column name="operation_key" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="customer_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_type" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="numeric(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fingerprint" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="downstream_key" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="result" type="${string.type}"/>
+            <column name="fencing_token" type="bigint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lease_until" type="timestamp with time zone"/>
+            <column name="owner_id" type="${string.type}"/>
+            <column name="attempt_count" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_reconcile_at" type="timestamp with time zone"/>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="payment_operations" columnNames="operation_key"
+                             constraintName="uc_payment_operations_operation_key" schemaName="payment"/>
+
+        <addUniqueConstraint tableName="payment_operations" columnNames="downstream_key"
+                             constraintName="uc_payment_operations_downstream_key" schemaName="payment"/>
+
+        <createIndex tableName="payment_operations" indexName="idx_payment_ops_order_id" schemaName="payment">
+            <column name="order_id"/>
+        </createIndex>
+
+        <createIndex tableName="payment_operations" indexName="idx_payment_ops_status_lease" schemaName="payment">
+            <column name="status"/>
+            <column name="lease_until"/>
+        </createIndex>
+
+        <createIndex tableName="payment_operations" indexName="idx_payment_ops_reconcile" schemaName="payment">
+            <column name="status"/>
+            <column name="next_reconcile_at"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="payment_operations" schemaName="payment"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

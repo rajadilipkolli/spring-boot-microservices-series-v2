@@ -129,25 +129,41 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
-        BigDecimal amountReserved = customer.getAmountReserved();
-        BigDecimal amountAvailable = customer.getAmountAvailable();
+        // Seed completed reservation first
+        OrderDto reserveDto =
+                new OrderDto(
+                        orderDto.orderId(),
+                        orderDto.customerId(),
+                        "NEW",
+                        "INVENTORY",
+                        orderDto.items(),
+                        "att-res-" + orderDto.orderId());
+        kafkaTemplate.send("orders", String.valueOf(reserveDto.orderId()), reserveDto);
 
-        // When
-        log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
-
-        // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        await().pollInterval(Duration.ofMillis(500))
+                .atMost(Duration.ofSeconds(10))
                 .untilAsserted(
                         () -> {
                             CustomersRecord persistedCustomer =
                                     customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(amountReserved.subtract(BigDecimal.TEN));
+                                    .isEqualByComparingTo(BigDecimal.valueOf(20));
+                        });
+
+        // When rollback is received
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
+
+        // Then funds are released back to available
+        await().pollInterval(Duration.ofMillis(500))
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(
+                        () -> {
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualByComparingTo(BigDecimal.TEN);
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(amountAvailable.add(BigDecimal.TEN));
+                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
                         });
     }
 
@@ -162,8 +178,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 "orders", String.valueOf(orderDto.orderId()), orderDto.withSource("PAYMENT"));
 
         // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
+        await().pollDelay(1, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofMillis(500))
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
@@ -193,6 +209,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 this.customer.getId(),
                 status,
                 "INVENTORY",
-                List.of(orderItemDto));
+                List.of(orderItemDto),
+                "att-" + faker.internet().uuid());
     }
 }
