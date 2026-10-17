@@ -39,6 +39,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
 
     private CustomersRecord customer;
 
+    /** Clears payment state and creates a customer with 100 available and no reserved funds. */
     @BeforeEach
     void setUp() {
         dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
@@ -171,10 +172,18 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         assertThat(updated.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(10.00));
     }
 
+    /**
+     * Creates a test engine whose provider signals entry and waits on a latch before reserving
+     * funds.
+     */
     private @NonNull PaymentOperationEngine getPaymentOperationEngine(
             CountDownLatch inProviderLatch, CountDownLatch blockLatch) {
         PaymentProviderPort blockingProvider =
                 new PaymentProviderPort() {
+                    /**
+                     * Signals provider entry, waits for release, reserves funds, and returns
+                     * ACCEPT.
+                     */
                     @Override
                     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
                         inProviderLatch.countDown();
@@ -186,6 +195,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         return ProviderResult.accept();
                     }
 
+                    /** Returns NOT_FOUND for this blocking test provider. */
                     @Override
                     public ProviderResult lookup(String downstreamKey) {
                         return ProviderResult.notFound();
@@ -268,6 +278,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
 
         PaymentProviderPort delayedProvider =
                 new PaymentProviderPort() {
+                    /**
+                     * Simulates a timeout after the first balance reservation and returns ACCEPT on
+                     * later calls.
+                     */
                     @Override
                     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
                         if (callCount.incrementAndGet() == 1) {
@@ -278,6 +292,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         return ProviderResult.accept();
                     }
 
+                    /** Returns ACCEPT to simulate recovery of the timed-out payment. */
                     @Override
                     public ProviderResult lookup(String downstreamKey) {
                         return ProviderResult.accept();
@@ -351,6 +366,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         assertThat(updated.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(10.00));
     }
 
+    /**
+     * Verifies that reply insertion failure rolls back operation arrival without changing customer
+     * funds.
+     */
     @Test
     void arrivalRollsBackWhenReplyInsertFails() {
         OrderDto order = order(1010L, "arrival-failure");
@@ -366,6 +385,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 .isEqualByComparingTo("100");
     }
 
+    /**
+     * Verifies that reply promotion failure rolls back completion and leaves the operation in
+     * flight with an awaiting reply.
+     */
     @Test
     void completionRollsBackWhenReplyPromotionFails() {
         OrderDto order = order(1011L, "completion-failure");
@@ -389,6 +412,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo("AWAITING_RESULT");
     }
 
+    /**
+     * Verifies that direct claims cannot reopen completed or unknown operations even with a
+     * matching token.
+     */
     @Test
     void claimCannotReopenCompletedOrUnknownOperation() {
         paymentOperationEngine.processReserve(order(1012L, "terminal"));
@@ -415,6 +442,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 .isFalse();
     }
 
+    /**
+     * Verifies that concurrent executions for one downstream key wait for the first transaction and
+     * replay its result with one balance mutation.
+     */
     @Test
     void concurrentLedgerExecutionsWaitAndReplayCommittedResult() throws Exception {
         Long orderId = 1013L;
@@ -478,6 +509,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 .isEqualByComparingTo("90");
     }
 
+    /**
+     * Creates a new test order for the fixture customer with one ten-unit item and the supplied
+     * attempt ID.
+     */
     private OrderDto order(Long orderId, String attemptId) {
         return new OrderDto(
                 orderId,
@@ -488,6 +523,10 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 attemptId);
     }
 
+    /**
+     * Asserts that the attempt reply is pending or published and contains the expected attempt ID
+     * and outcome.
+     */
     private void assertReplyReady(Long orderId, String attemptId, String outcome) {
         OutboxEventsRecord reply =
                 outboxEventRepository

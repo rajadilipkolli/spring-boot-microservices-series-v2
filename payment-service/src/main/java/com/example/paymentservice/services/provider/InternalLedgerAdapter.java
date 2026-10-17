@@ -29,6 +29,10 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
     private final DSLContext dslContext;
     private final ApplicationProperties properties;
 
+    /**
+     * Creates the ledger provider with ledger storage, customer balances, database access, and
+     * timeout configuration.
+     */
     public InternalLedgerAdapter(
             LedgerRepository ledgerRepository,
             CustomerRepository customerRepository,

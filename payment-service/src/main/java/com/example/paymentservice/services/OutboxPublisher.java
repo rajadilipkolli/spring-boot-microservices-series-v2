@@ -34,6 +34,10 @@ public class OutboxPublisher {
     private final Counter publicationMismatchCounter;
     private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
+    /**
+     * Creates the outbox publisher with event storage, Kafka delivery, configuration, JSON mapping,
+     * and publication counters.
+     */
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
             KafkaTemplate<String, OrderDto> kafkaTemplate,

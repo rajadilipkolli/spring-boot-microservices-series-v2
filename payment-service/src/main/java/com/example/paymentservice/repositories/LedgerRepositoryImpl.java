@@ -26,11 +26,13 @@ public class LedgerRepositoryImpl implements LedgerRepository {
     private final DSLContext dslContext;
     private final TSID.Factory tsidFactory;
 
+    /** Creates a ledger repository with database access and a factory for missing record IDs. */
     public LedgerRepositoryImpl(DSLContext dslContext, TSID.Factory tsidFactory) {
         this.dslContext = dslContext;
         this.tsidFactory = tsidFactory;
     }
 
+    /** Returns the ledger entry for the stable downstream key, or empty if none exists. */
     @Override
     public Optional<LedgerEntriesRecord> findByDownstreamKey(String downstreamKey) {
         return dslContext
@@ -39,6 +41,10 @@ public class LedgerRepositoryImpl implements LedgerRepository {
                 .fetchOptional();
     }
 
+    /**
+     * Assigns a missing TSID and inserts the ledger entry, preserving an existing entry with the
+     * same downstream key. Returns the stored entry for that key.
+     */
     @Override
     @Transactional
     public LedgerEntriesRecord save(LedgerEntriesRecord record) {

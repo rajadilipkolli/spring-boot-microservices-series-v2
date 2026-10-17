@@ -23,6 +23,10 @@ public class PaymentOrderManageService {
     private final Counter paymentsSuccessfulCounter;
     private final Counter paymentsFailedCounter;
 
+    /**
+     * Creates the order payment service with its operation engine and registers payment outcome
+     * counters.
+     */
     public PaymentOrderManageService(
             MeterRegistry meterRegistry, PaymentOperationEngine operationEngine) {
         this.operationEngine = operationEngine;

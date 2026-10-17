@@ -38,6 +38,10 @@ public class PaymentReconciler {
     private final Counter failedCounter;
     private final AtomicBoolean isReconciling = new AtomicBoolean(false);
 
+    /**
+     * Creates the reconciler with operation storage, completion handling, provider access,
+     * configuration, and reconciliation counters.
+     */
     public PaymentReconciler(
             PaymentOperationRepository operationRepository,
             PaymentOperationEngine operationEngine,

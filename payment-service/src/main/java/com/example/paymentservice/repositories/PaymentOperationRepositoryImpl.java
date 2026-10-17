@@ -28,11 +28,18 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
     private final DSLContext dslContext;
     private final TSID.Factory tsidFactory;
 
+    /**
+     * Creates an operation repository with database access and a factory for missing operation IDs.
+     */
     public PaymentOperationRepositoryImpl(DSLContext dslContext, TSID.Factory tsidFactory) {
         this.dslContext = dslContext;
         this.tsidFactory = tsidFactory;
     }
 
+    /**
+     * Assigns a missing TSID and inserts an operation, ignoring unique-key conflicts. Returns the
+     * stored operation for its operation key, or null if absent.
+     */
     @Override
     @Transactional
     public PaymentOperationsRecord insertOrGet(PaymentOperationsRecord record) {
@@ -47,6 +54,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                 .fetchOne();
     }
 
+    /** Returns the record matching the ID, or empty if none exists. */
     @Override
     public Optional<PaymentOperationsRecord> findById(Long id) {
         return dslContext
@@ -55,6 +63,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                 .fetchOptional();
     }
 
+    /** Returns the operation for the stable operation key, or empty if absent. */
     @Override
     public Optional<PaymentOperationsRecord> findByOperationKey(String operationKey) {
         return dslContext
@@ -63,6 +72,10 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                 .fetchOptional();
     }
 
+    /**
+     * Returns the operation matching the order and type, or empty if absent. Multiple matches cause
+     * a jOOQ TooManyRowsException.
+     */
     @Override
     public Optional<PaymentOperationsRecord> findByOrderIdAndOperationType(
             Long orderId, String operationType) {
@@ -73,6 +86,10 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                 .fetchOptional();
     }
 
+    /**
+     * Returns the operation matching the ID, or empty if absent, holding a row lock until the
+     * transaction ends.
+     */
     @Override
     @Transactional
     public Optional<PaymentOperationsRecord> findByIdForUpdate(Long id) {
@@ -83,6 +100,11 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                 .fetchOptional();
     }
 
+    /**
+     * Claims a received or in-flight operation only when its fencing token matches, setting owner
+     * and lease and incrementing token and attempts. Returns whether a row was updated; lease
+     * expiration is not checked.
+     */
     @Override
     @Transactional
     public boolean claim(
@@ -107,6 +129,10 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
         return updated > 0;
     }
 
+    /**
+     * Stores the supplied status and result when the fencing token matches. Returns whether a row
+     * was updated.
+     */
     @Override
     @Transactional
     public boolean complete(Long id, long expectedFencingToken, String status, String result) {
@@ -122,6 +148,10 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
         return updated > 0;
     }
 
+    /**
+     * Stores the status and next reconciliation time when the fencing token matches. Returns
+     * whether a row was updated.
+     */
     @Override
     @Transactional
     public boolean updateStatus(
@@ -138,6 +168,11 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
         return updated > 0;
     }
 
+    /**
+     * Claims the oldest received, expired in-flight, or due unknown operations, skipping locked
+     * rows. Sets owner and lease and increments fencing tokens and attempts in one transaction.
+     * Returns the updated records.
+     */
     @Override
     @Transactional
     public List<PaymentOperationsRecord> claimBatchForReconciliation(

@@ -231,16 +231,23 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         return customerDAO.deleteAll();
     }
 
+    /**
+     * Delegates the conditional transfer from available to reserved customer balance to the DAO.
+     */
     @Override
     public boolean reserveFunds(Long customerId, BigDecimal amount) {
         return customerDAO.reserveFunds(customerId, amount);
     }
 
+    /** Delegates the conditional deduction from reserved customer balance to the DAO. */
     @Override
     public boolean captureFunds(Long customerId, BigDecimal amount) {
         return customerDAO.captureFunds(customerId, amount);
     }
 
+    /**
+     * Delegates the conditional transfer from reserved to available customer balance to the DAO.
+     */
     @Override
     public boolean releaseFunds(Long customerId, BigDecimal amount) {
         return customerDAO.releaseFunds(customerId, amount);

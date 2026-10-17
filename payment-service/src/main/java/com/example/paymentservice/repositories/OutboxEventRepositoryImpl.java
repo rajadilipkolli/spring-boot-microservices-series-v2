@@ -29,11 +29,16 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
     private final DSLContext dslContext;
     private final TSID.Factory tsidFactory;
 
+    /** Creates an outbox repository with database access and a factory for missing event IDs. */
     public OutboxEventRepositoryImpl(DSLContext dslContext, TSID.Factory tsidFactory) {
         this.dslContext = dslContext;
         this.tsidFactory = tsidFactory;
     }
 
+    /**
+     * Assigns a missing TSID and inserts the event unless its aggregate ID and event type already
+     * exist. Returns the stored event for that pair.
+     */
     @Override
     @Transactional
     public OutboxEventsRecord insert(OutboxEventsRecord event) {
@@ -54,11 +59,13 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                 .fetchOne();
     }
 
+    /** Returns the record matching the ID, or empty if none exists. */
     @Override
     public Optional<OutboxEventsRecord> findById(Long id) {
         return dslContext.selectFrom(OUTBOX_EVENTS).where(OUTBOX_EVENTS.ID.eq(id)).fetchOptional();
     }
 
+    /** Returns the event matching both aggregate ID and event type, or empty if absent. */
     @Override
     public Optional<OutboxEventsRecord> findByAggregateIdAndEventType(
             String aggregateId, String eventType) {
@@ -69,6 +76,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                 .fetchOptional();
     }
 
+    /** Returns reserve replies for the aggregate that are still awaiting an operation result. */
     @Override
     public List<OutboxEventsRecord> findAwaitingReserveReplies(String aggregateId) {
         return dslContext
@@ -79,6 +87,11 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                 .fetch();
     }
 
+    /**
+     * Claims up to the limit of oldest pending events in one transaction, skipping locked rows and
+     * incrementing versions. Returns the claimed records; a nonpositive limit returns an empty
+     * list.
+     */
     @Override
     @Transactional
     public List<OutboxEventsRecord> claimPendingEvents(int limit, String lockedBy) {
@@ -114,6 +127,10 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return dslContext.selectFrom(OUTBOX_EVENTS).where(OUTBOX_EVENTS.ID.in(claimedIds)).fetch();
     }
 
+    /**
+     * Marks an event published and clears its lock when its version matches, incrementing the
+     * version. Returns whether a row was updated.
+     */
     @Override
     @Transactional
     public boolean markPublished(Long id, int expectedVersion) {
@@ -131,6 +148,10 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return updated > 0;
     }
 
+    /**
+     * Marks an event failed, stores the error, and clears its lock when its version matches,
+     * incrementing the version. Returns whether a row was updated.
+     */
     @Override
     @Transactional
     public boolean markFailed(Long id, int expectedVersion, String errorMessage) {
@@ -149,6 +170,10 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return updated > 0;
     }
 
+    /**
+     * Requeues an event and clears its lock when its version matches, storing the error and
+     * incrementing retries and version. Returns whether a row was updated.
+     */
     @Override
     @Transactional
     public boolean returnToPending(Long id, int expectedVersion, String errorMessage) {
@@ -168,6 +193,10 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return updated > 0;
     }
 
+    /**
+     * Sets the payload and marks a matching awaiting event pending, incrementing its version.
+     * Returns whether a row was updated.
+     */
     @Override
     @Transactional
     public boolean promoteToPending(String aggregateId, String eventType, String payload) {
@@ -185,6 +214,10 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return updated > 0;
     }
 
+    /**
+     * Clears expired processing locks and increments retries and versions, failing events at the
+     * retry limit and requeuing the rest. Returns the number of updated rows.
+     */
     @Override
     @Transactional
     public int reapStaleProcessing(OffsetDateTime threshold, int maxRetries) {

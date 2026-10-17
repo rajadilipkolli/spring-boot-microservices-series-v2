@@ -31,6 +31,7 @@ class OutboxPublisherTest {
             new OutboxPublisher(
                     repository, kafkaTemplate, new ApplicationProperties(), jsonMapper, meters);
 
+    /** Stubs a two-event batch with successful Kafka sends and publication of the second event. */
     @BeforeEach
     void setUp() {
         when(repository.claimPendingEvents(anyInt(), anyString()))
@@ -40,6 +41,10 @@ class OutboxPublisherTest {
         when(repository.markPublished(2L, 1)).thenReturn(true);
     }
 
+    /**
+     * Verifies that a status persistence failure after delivery requeues the event and increments
+     * the publication mismatch counter.
+     */
     @Test
     void statusUpdateFailureIsCountedSeparatelyAndRequeued() {
         when(repository.markPublished(1L, 1)).thenThrow(new IllegalStateException("status failed"));
@@ -50,6 +55,7 @@ class OutboxPublisherTest {
         assertCounts(1, 0, 1);
     }
 
+    /** Verifies that requeue failure after delivery allows subsequent events to publish. */
     @Test
     void failedRequeueAfterDeliveryDoesNotStopBatch() {
         when(repository.markPublished(1L, 1)).thenThrow(new IllegalStateException("status failed"));
@@ -62,6 +68,7 @@ class OutboxPublisherTest {
         assertCounts(1, 0, 1);
     }
 
+    /** Verifies that failure to persist a send failure allows subsequent events to publish. */
     @Test
     void failedFailureHandlingDoesNotStopBatch() {
         when(kafkaTemplate.send(anyString(), anyString(), any(OrderDto.class)))
@@ -77,6 +84,10 @@ class OutboxPublisherTest {
         assertCounts(1, 1, 0);
     }
 
+    /**
+     * Verifies that a publication version mismatch increments its counter without counting a send
+     * failure.
+     */
     @Test
     void versionMismatchIsCountedSeparately() {
         when(repository.markPublished(1L, 1)).thenReturn(false);
@@ -86,6 +97,10 @@ class OutboxPublisherTest {
         assertCounts(1, 0, 1);
     }
 
+    /**
+     * Creates a version-one outbox fixture with no retries and a serialized ACCEPT reply for the
+     * supplied ID.
+     */
     private OutboxEventsRecord event(Long id) {
         OutboxEventsRecord event = new OutboxEventsRecord();
         event.setId(id);
@@ -99,6 +114,7 @@ class OutboxPublisherTest {
         return event;
     }
 
+    /** Asserts the expected publication, send failure, and publication mismatch counter values. */
     private void assertCounts(double published, double failed, double mismatches) {
         assertThat(meters.counter("payment.outbox.events.published.count").count())
                 .isEqualTo(published);

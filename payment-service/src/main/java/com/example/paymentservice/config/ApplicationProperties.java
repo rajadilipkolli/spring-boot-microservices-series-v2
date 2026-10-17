@@ -64,26 +64,32 @@ public class ApplicationProperties {
         this.cors = cors;
     }
 
+    /** Returns the payment operation settings. */
     public Operation getOperation() {
         return operation;
     }
 
+    /** Sets the payment operation settings. */
     public void setOperation(Operation operation) {
         this.operation = operation;
     }
 
+    /** Returns the outbox publication settings. */
     public Outbox getOutbox() {
         return outbox;
     }
 
+    /** Sets the outbox publication settings. */
     public void setOutbox(Outbox outbox) {
         this.outbox = outbox;
     }
 
+    /** Returns the reconciliation settings. */
     public Reconciler getReconciler() {
         return reconciler;
     }
 
+    /** Sets the reconciliation settings. */
     public void setReconciler(Reconciler reconciler) {
         this.reconciler = reconciler;
     }
@@ -101,6 +107,7 @@ public class ApplicationProperties {
             return this.pathPattern;
         }
 
+        /** Sets the URL pattern to which CORS settings apply. */
         public void setPathPattern(final String pathPattern) {
             this.pathPattern = pathPattern;
         }
@@ -109,6 +116,7 @@ public class ApplicationProperties {
             return this.allowedMethods;
         }
 
+        /** Sets the allowed CORS methods. */
         public void setAllowedMethods(final String allowedMethods) {
             this.allowedMethods = allowedMethods;
         }
@@ -117,6 +125,7 @@ public class ApplicationProperties {
             return this.allowedHeaders;
         }
 
+        /** Sets the allowed CORS headers. */
         public void setAllowedHeaders(final String allowedHeaders) {
             this.allowedHeaders = allowedHeaders;
         }
@@ -125,6 +134,7 @@ public class ApplicationProperties {
             return this.allowedOriginPatterns;
         }
 
+        /** Sets the allowed CORS origin patterns. */
         public void setAllowedOriginPatterns(final String allowedOriginPatterns) {
             this.allowedOriginPatterns = allowedOriginPatterns;
         }
@@ -133,6 +143,7 @@ public class ApplicationProperties {
             return this.allowCredentials;
         }
 
+        /** Sets whether CORS requests may include credentials. */
         public void setAllowCredentials(final boolean allowCredentials) {
             this.allowCredentials = allowCredentials;
         }
@@ -145,42 +156,52 @@ public class ApplicationProperties {
         private Duration lockTimeout = Duration.ofSeconds(2);
         private int maxAttempts = 3;
 
+        /** Returns the duration of an operation ownership lease. */
         public Duration getLeaseDuration() {
             return leaseDuration;
         }
 
+        /** Sets the duration of an operation ownership lease. */
         public void setLeaseDuration(Duration leaseDuration) {
             this.leaseDuration = leaseDuration;
         }
 
+        /** Returns the maximum wait for provider execution or lookup. */
         public Duration getProviderTimeout() {
             return providerTimeout;
         }
 
+        /** Sets the maximum wait for provider execution or lookup. */
         public void setProviderTimeout(Duration providerTimeout) {
             this.providerTimeout = providerTimeout;
         }
 
+        /** Returns the PostgreSQL statement timeout for provider transactions. */
         public Duration getStatementTimeout() {
             return statementTimeout;
         }
 
+        /** Sets the PostgreSQL statement timeout for provider transactions. */
         public void setStatementTimeout(Duration statementTimeout) {
             this.statementTimeout = statementTimeout;
         }
 
+        /** Returns the timeout for acquiring a PostgreSQL lock. */
         public Duration getLockTimeout() {
             return lockTimeout;
         }
 
+        /** Sets the timeout for acquiring a PostgreSQL lock. */
         public void setLockTimeout(Duration lockTimeout) {
             this.lockTimeout = lockTimeout;
         }
 
+        /** Returns the attempt limit checked before reconciliation re-executes an operation. */
         public int getMaxAttempts() {
             return maxAttempts;
         }
 
+        /** Sets the attempt limit checked before reconciliation re-executes an operation. */
         public void setMaxAttempts(int maxAttempts) {
             this.maxAttempts = maxAttempts;
         }
@@ -194,50 +215,62 @@ public class ApplicationProperties {
         private int batchSize = 100;
         private Duration sendTimeout = Duration.ofSeconds(5);
 
+        /** Returns whether scheduled outbox publication and reaping are enabled. */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** Sets whether scheduled outbox publication and reaping are enabled. */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
+        /** Returns the delay between scheduled outbox publication batches. */
         public Duration getPublishDelay() {
             return publishDelay;
         }
 
+        /** Sets the delay between scheduled outbox publication batches. */
         public void setPublishDelay(Duration publishDelay) {
             this.publishDelay = publishDelay;
         }
 
+        /** Returns the age after which a processing outbox event can be reclaimed. */
         public Duration getLockTimeout() {
             return lockTimeout;
         }
 
+        /** Sets the age after which a processing outbox event can be reclaimed. */
         public void setLockTimeout(Duration lockTimeout) {
             this.lockTimeout = lockTimeout;
         }
 
+        /** Returns the retry limit for outbox publication. */
         public int getMaxRetries() {
             return maxRetries;
         }
 
+        /** Sets the retry limit for outbox publication. */
         public void setMaxRetries(int maxRetries) {
             this.maxRetries = maxRetries;
         }
 
+        /** Returns the maximum number of outbox events to claim per publication batch. */
         public int getBatchSize() {
             return batchSize;
         }
 
+        /** Sets the maximum number of outbox events to claim per publication batch. */
         public void setBatchSize(int batchSize) {
             this.batchSize = batchSize;
         }
 
+        /** Returns the maximum wait for a Kafka send to complete. */
         public Duration getSendTimeout() {
             return sendTimeout;
         }
 
+        /** Sets the maximum wait for a Kafka send to complete. */
         public void setSendTimeout(Duration sendTimeout) {
             this.sendTimeout = sendTimeout;
         }
@@ -250,42 +283,52 @@ public class ApplicationProperties {
         private Duration initialBackoff = Duration.ofSeconds(1);
         private Duration maxBackoff = Duration.ofSeconds(10);
 
+        /** Returns whether scheduled reconciliation is enabled. */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** Sets whether scheduled reconciliation is enabled. */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
+        /** Returns the delay between scheduled reconciliation batches. */
         public Duration getDelay() {
             return delay;
         }
 
+        /** Sets the delay between scheduled reconciliation batches. */
         public void setDelay(Duration delay) {
             this.delay = delay;
         }
 
+        /** Returns the maximum number of operations to claim per reconciliation batch. */
         public int getBatchSize() {
             return batchSize;
         }
 
+        /** Sets the maximum number of operations to claim per reconciliation batch. */
         public void setBatchSize(int batchSize) {
             this.batchSize = batchSize;
         }
 
+        /** Returns the initial delay used when deferring reconciliation. */
         public Duration getInitialBackoff() {
             return initialBackoff;
         }
 
+        /** Sets the initial delay used when deferring reconciliation. */
         public void setInitialBackoff(Duration initialBackoff) {
             this.initialBackoff = initialBackoff;
         }
 
+        /** Returns the maximum reconciliation backoff duration. */
         public Duration getMaxBackoff() {
             return maxBackoff;
         }
 
+        /** Sets the maximum reconciliation backoff duration. */
         public void setMaxBackoff(Duration maxBackoff) {
             this.maxBackoff = maxBackoff;
         }

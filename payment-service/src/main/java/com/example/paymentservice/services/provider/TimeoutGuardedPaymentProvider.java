@@ -22,6 +22,7 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
     private final ApplicationProperties properties;
     private final ExecutorService executorService = Executors.newFixedThreadPool(16);
 
+    /** Creates a provider wrapper using the ledger adapter and configured provider timeout. */
     public TimeoutGuardedPaymentProvider(
             InternalLedgerAdapter delegate, ApplicationProperties properties) {
         this.delegate = delegate;

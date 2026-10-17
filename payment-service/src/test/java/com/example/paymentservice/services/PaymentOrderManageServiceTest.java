@@ -28,6 +28,7 @@ class PaymentOrderManageServiceTest {
 
     @InjectMocks private PaymentOrderManageService orderManageService;
 
+    /** Verifies that confirming an order delegates a CAPTURE settlement to the engine. */
     @Test
     void confirmDelegatesToEngineCapture() {
         OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);
@@ -38,6 +39,7 @@ class PaymentOrderManageServiceTest {
         verify(operationEngine, times(1)).processSettlement(orderDto, "CAPTURE");
     }
 
+    /** Verifies that rolling back an order delegates a RELEASE settlement to the engine. */
     @Test
     void rollbackDelegatesToEngineRelease() {
         OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);
@@ -48,6 +50,7 @@ class PaymentOrderManageServiceTest {
         verify(operationEngine, times(1)).processSettlement(orderDto, "RELEASE");
     }
 
+    /** Verifies that reservation delegates to the engine and returns its payment outcome. */
     @Test
     void reserveDelegatesToEngine() {
         OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);

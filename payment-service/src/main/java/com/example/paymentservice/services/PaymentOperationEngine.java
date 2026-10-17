@@ -46,6 +46,10 @@ public class PaymentOperationEngine {
 
     private final Counter zombieRejectionsCounter;
 
+    /**
+     * Creates the operation engine with persistence, provider execution, configuration, reply
+     * serialization, metrics, and transaction management.
+     */
     public PaymentOperationEngine(
             PaymentOperationRepository operationRepository,
             OutboxEventRepository outboxEventRepository,

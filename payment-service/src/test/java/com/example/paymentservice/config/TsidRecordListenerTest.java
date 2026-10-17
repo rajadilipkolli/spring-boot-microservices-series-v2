@@ -20,6 +20,7 @@ class TsidRecordListenerTest {
     private TsidRecordListener listener;
     private RecordContext recordContext;
 
+    /** Creates a TSID listener with node one and a mocked record context for each test. */
     @BeforeEach
     void setUp() {
         TSID.Factory tsidFactory = TSID.Factory.builder().withNode(1).build();
@@ -27,6 +28,7 @@ class TsidRecordListenerTest {
         recordContext = mock(RecordContext.class);
     }
 
+    /** Verifies that a customer without an ID receives a TSID before insertion. */
     @Test
     void assignsTsidWhenCustomerRecordIdIsNull() {
         CustomersRecord record = new CustomersRecord();
@@ -39,6 +41,7 @@ class TsidRecordListenerTest {
         assertThat(record.getId()).isNotNull();
     }
 
+    /** Verifies that a payment operation without an ID receives a TSID before insertion. */
     @Test
     void assignsTsidWhenPaymentOperationsRecordIdIsNull() {
         PaymentOperationsRecord record = new PaymentOperationsRecord();
@@ -50,6 +53,7 @@ class TsidRecordListenerTest {
         assertThat(record.getId()).isNotNull();
     }
 
+    /** Verifies that a ledger entry without an ID receives a TSID before insertion. */
     @Test
     void assignsTsidWhenLedgerEntriesRecordIdIsNull() {
         LedgerEntriesRecord record = new LedgerEntriesRecord();
@@ -61,6 +65,7 @@ class TsidRecordListenerTest {
         assertThat(record.getId()).isNotNull();
     }
 
+    /** Verifies that an outbox event without an ID receives a TSID before insertion. */
     @Test
     void assignsTsidWhenOutboxEventsRecordIdIsNull() {
         OutboxEventsRecord record = new OutboxEventsRecord();
@@ -72,6 +77,7 @@ class TsidRecordListenerTest {
         assertThat(record.getId()).isNotNull();
     }
 
+    /** Verifies that insertion preserves an explicitly supplied customer ID. */
     @Test
     void preservesSuppliedId() {
         long suppliedId = 123456789L;
@@ -85,6 +91,7 @@ class TsidRecordListenerTest {
         assertThat(record.getId()).isEqualTo(suppliedId);
     }
 
+    /** Verifies that ID assignment leaves both null and explicit customer versions unchanged. */
     @Test
     void preservesNullAndSuppliedVersions() {
         CustomersRecord recordWithNullVersion = new CustomersRecord();
@@ -103,6 +110,7 @@ class TsidRecordListenerTest {
         assertThat(recordWithSuppliedVersion.getVersion()).isEqualTo(7);
     }
 
+    /** Verifies that insertion leaves unsupported record types unchanged. */
     @Test
     void ignoresUnsupportedRecords() {
         Record otherRecord = mock(Record.class);
