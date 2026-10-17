@@ -15,6 +15,8 @@ public interface OutboxEventRepository {
     Optional<OutboxEventsRecord> findByAggregateIdAndEventType(
             String aggregateId, String eventType);
 
+    List<OutboxEventsRecord> findAwaitingReserveReplies(String aggregateId);
+
     List<OutboxEventsRecord> claimPendingEvents(int limit, String lockedBy);
 
     boolean markPublished(Long id, int expectedVersion);

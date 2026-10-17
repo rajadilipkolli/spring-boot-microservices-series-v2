@@ -150,12 +150,7 @@ public class PaymentReconciler {
         if ("RESERVE".equalsIgnoreCase(op.getOperationType())) {
             OrderDto dummyOrder =
                     new OrderDto(
-                            op.getOrderId(),
-                            op.getCustomerId(),
-                            outcome,
-                            null,
-                            List.of(),
-                            "reconcile");
+                            op.getOrderId(), op.getCustomerId(), outcome, null, List.of(), null);
             operationEngine.executeCompletion(op.getId(), fencingToken, dummyOrder, outcome);
         } else {
             operationEngine.executeSettlementCompletion(op.getId(), fencingToken, outcome);
@@ -166,12 +161,7 @@ public class PaymentReconciler {
         if ("RESERVE".equalsIgnoreCase(op.getOperationType())) {
             OrderDto dummyOrder =
                     new OrderDto(
-                            op.getOrderId(),
-                            op.getCustomerId(),
-                            "REJECT",
-                            null,
-                            List.of(),
-                            "reconcile");
+                            op.getOrderId(), op.getCustomerId(), "REJECT", null, List.of(), null);
             operationEngine.executeCompletion(op.getId(), fencingToken, dummyOrder, "REJECT");
         } else {
             operationRepository.complete(op.getId(), fencingToken, "FAILED", null);

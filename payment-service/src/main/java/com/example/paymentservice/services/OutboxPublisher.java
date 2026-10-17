@@ -30,6 +30,7 @@ public class OutboxPublisher {
     private final JsonMapper jsonMapper;
     private final Counter publishedCounter;
     private final Counter failedCounter;
+    private final Counter publicationMismatchCounter;
     private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
     public OutboxPublisher(
@@ -44,6 +45,8 @@ public class OutboxPublisher {
         this.jsonMapper = jsonMapper;
         this.publishedCounter = meterRegistry.counter("payment.outbox.events.published.count");
         this.failedCounter = meterRegistry.counter("payment.outbox.events.failed.count");
+        this.publicationMismatchCounter =
+                meterRegistry.counter("payment.outbox.events.publication.mismatch.count");
     }
 
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:500ms}")
@@ -67,7 +70,11 @@ public class OutboxPublisher {
                         properties.getOutbox().getBatchSize(), instanceId);
 
         for (OutboxEventsRecord event : events) {
-            publishEvent(event);
+            try {
+                publishEvent(event);
+            } catch (RuntimeException e) {
+                log.error("Failed to finish publishing outbox event {}", event.getId(), e);
+            }
         }
     }
 
@@ -79,18 +86,46 @@ public class OutboxPublisher {
                     .send(event.getTopic(), event.getMessageKey(), dto)
                     .get(timeoutMs, TimeUnit.MILLISECONDS);
 
-            boolean marked = outboxEventRepository.markPublished(event.getId(), event.getVersion());
-            if (marked) {
+        } catch (Exception e) {
+            log.error("Failed to publish outbox event {}", event.getId(), e);
+            try {
+                handleFailure(event, e.getMessage());
+            } catch (RuntimeException failure) {
+                log.error(
+                        "Failed to record publication failure for outbox event {}",
+                        event.getId(),
+                        failure);
+            }
+            return;
+        }
+
+        try {
+            if (outboxEventRepository.markPublished(event.getId(), event.getVersion())) {
                 publishedCounter.increment();
                 log.debug("Successfully published outbox event {}", event.getId());
             } else {
+                publicationMismatchCounter.increment();
                 log.warn(
-                        "Version mismatch marking event {} published (likely concurrent modification)",
+                        "Outbox event {} delivered to Kafka but publication status did not match",
                         event.getId());
             }
-        } catch (Exception e) {
-            log.error("Failed to publish outbox event {}", event.getId(), e);
-            handleFailure(event, e.getMessage());
+        } catch (RuntimeException e) {
+            publicationMismatchCounter.increment();
+            log.error(
+                    "Outbox event {} delivered to Kafka but publication status update failed",
+                    event.getId(),
+                    e);
+            try {
+                outboxEventRepository.returnToPending(
+                        event.getId(), event.getVersion(), e.getMessage());
+            } catch (RuntimeException requeueFailure) {
+                e.addSuppressed(requeueFailure);
+                log.error(
+                        "Failed to requeue delivered outbox event {}",
+                        event.getId(),
+                        requeueFailure);
+            }
+            throw e;
         }
     }
 

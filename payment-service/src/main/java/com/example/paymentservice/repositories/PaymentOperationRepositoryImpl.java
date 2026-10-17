@@ -9,8 +9,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
-import org.jooq.exception.DataAccessException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,6 +102,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                         .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now())
                         .where(PAYMENT_OPERATIONS.ID.eq(id))
                         .and(PAYMENT_OPERATIONS.FENCING_TOKEN.eq(expectedFencingToken))
+                        .and(PAYMENT_OPERATIONS.STATUS.in("RECEIVED", "IN_FLIGHT"))
                         .execute();
         return updated > 0;
     }

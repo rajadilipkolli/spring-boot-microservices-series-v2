@@ -2,6 +2,12 @@
 package com.example.paymentservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
@@ -9,10 +15,13 @@ import com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
 import com.example.paymentservice.model.payload.OrderDto;
+import com.example.paymentservice.repositories.OutboxEventRepository;
+import com.example.paymentservice.services.provider.InternalLedgerAdapter;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
 import com.example.paymentservice.services.provider.ProviderResult;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,11 +33,17 @@ import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
 
 class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private OutboxPublisher outboxPublisher;
     @Autowired private PaymentReconciler paymentReconciler;
+
+    @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private InternalLedgerAdapter ledgerAdapter;
+    @MockitoSpyBean private OutboxEventRepository outboxRepositorySpy;
 
     private CustomersRecord customer;
 
@@ -116,6 +131,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         String.valueOf(orderId), "RESERVE_REPLY:att-thread-2");
         assertThat(reply1).isPresent();
         assertThat(reply2).isPresent();
+        assertReplyReady(orderId, "att-thread-1", "ACCEPT");
+        assertReplyReady(orderId, "att-thread-2", "ACCEPT");
     }
 
     /**
@@ -157,7 +174,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         blockingProvider,
                         new com.example.paymentservice.config.ApplicationProperties(),
                         jsonMapper,
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                        transactionManager);
 
         OrderDto order1 =
                 new OrderDto(
@@ -179,7 +197,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         CompletableFuture<OrderDto> f1 =
                 CompletableFuture.supplyAsync(() -> customEngine.processReserve(order1));
 
-        inProviderLatch.await(5, TimeUnit.SECONDS);
+        assertThat(inProviderLatch.await(5, TimeUnit.SECONDS)).isTrue();
 
         OrderDto r2 = customEngine.processReserve(order2);
         assertThat(r2.status()).isEqualTo("PENDING");
@@ -187,6 +205,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         blockLatch.countDown();
         OrderDto r1 = f1.get(5, TimeUnit.SECONDS);
         assertThat(r1.status()).isEqualTo("ACCEPT");
+        assertReplyReady(orderId, "att-block-1", "ACCEPT");
+        assertReplyReady(orderId, "att-block-2", "ACCEPT");
 
         CustomersRecord updated = customerDAO.findById(customer.getId()).get();
         assertThat(updated.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(90.00));
@@ -280,7 +300,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         delayedProvider,
                         new com.example.paymentservice.config.ApplicationProperties(),
                         jsonMapper,
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                        transactionManager);
 
         OrderDto initial = customEngine.processReserve(order);
         assertThat(initial.status()).isEqualTo("PENDING");
@@ -290,6 +311,16 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         .findByOperationKey("payment:" + orderId + ":RESERVE")
                         .get();
         assertThat(op.getStatus()).isEqualTo("UNKNOWN");
+
+        OrderDto retry =
+                new OrderDto(
+                        orderId,
+                        customer.getId(),
+                        "NEW",
+                        "INVENTORY",
+                        List.of(item),
+                        "att-timeout-2");
+        assertThat(customEngine.processReserve(retry).status()).isEqualTo("PENDING");
 
         // Make UNKNOWN operation due immediately for reconciliation in test
         dslContext
@@ -316,9 +347,164 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         PaymentOperationsRecord recoveredOp = paymentOperationRepository.findById(op.getId()).get();
         assertThat(recoveredOp.getStatus()).isEqualTo("COMPLETED");
         assertThat(recoveredOp.getResult()).isEqualTo("ACCEPT");
+        assertReplyReady(orderId, "att-timeout", "ACCEPT");
+        assertReplyReady(orderId, "att-timeout-2", "ACCEPT");
+        assertThat(
+                        outboxEventRepository.findByAggregateIdAndEventType(
+                                String.valueOf(orderId), "RESERVE_REPLY:reconcile"))
+                .isEmpty();
 
         CustomersRecord updated = customerDAO.findById(customer.getId()).get();
         assertThat(updated.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(90.00));
         assertThat(updated.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(10.00));
+    }
+
+    @Test
+    void arrivalRollsBackWhenReplyInsertFails() {
+        OrderDto order = order(1010L, "arrival-failure");
+        doThrow(new IllegalStateException("reply insert failed"))
+                .when(outboxRepositorySpy)
+                .insert(any());
+
+        assertThatThrownBy(() -> paymentOperationEngine.processReserve(order))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(paymentOperationRepository.findByOperationKey("payment:1010:RESERVE")).isEmpty();
+        assertThat(customerDAO.findById(customer.getId()).orElseThrow().getAmountAvailable())
+                .isEqualByComparingTo("100");
+    }
+
+    @Test
+    void completionRollsBackWhenReplyPromotionFails() {
+        OrderDto order = order(1011L, "completion-failure");
+        doThrow(new IllegalStateException("reply promotion failed"))
+                .when(outboxRepositorySpy)
+                .promoteToPending(anyString(), anyString(), anyString());
+
+        assertThatThrownBy(() -> paymentOperationEngine.processReserve(order))
+                .isInstanceOf(IllegalStateException.class);
+
+        PaymentOperationsRecord operation =
+                paymentOperationRepository.findByOperationKey("payment:1011:RESERVE").orElseThrow();
+        assertThat(operation.getStatus()).isEqualTo("IN_FLIGHT");
+        assertThat(operation.getResult()).isNull();
+        assertThat(
+                        outboxEventRepository
+                                .findByAggregateIdAndEventType(
+                                        "1011", "RESERVE_REPLY:completion-failure")
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("AWAITING_RESULT");
+    }
+
+    @Test
+    void claimCannotReopenCompletedOrUnknownOperation() {
+        paymentOperationEngine.processReserve(order(1012L, "terminal"));
+        PaymentOperationsRecord operation =
+                paymentOperationRepository.findByOperationKey("payment:1012:RESERVE").orElseThrow();
+        assertThat(
+                        paymentOperationRepository.claim(
+                                operation.getId(),
+                                operation.getFencingToken(),
+                                "new-owner",
+                                OffsetDateTime.now().plusSeconds(10)))
+                .isFalse();
+        assertThat(paymentOperationRepository.findById(operation.getId()).orElseThrow().getStatus())
+                .isEqualTo("COMPLETED");
+
+        paymentOperationRepository.updateStatus(
+                operation.getId(), operation.getFencingToken(), "UNKNOWN", OffsetDateTime.now());
+        assertThat(
+                        paymentOperationRepository.claim(
+                                operation.getId(),
+                                operation.getFencingToken(),
+                                "new-owner",
+                                OffsetDateTime.now().plusSeconds(10)))
+                .isFalse();
+    }
+
+    @Test
+    void concurrentLedgerExecutionsWaitAndReplayCommittedResult() throws Exception {
+        Long orderId = 1013L;
+        PaymentOperationEngine.ArrivalResult arrival =
+                paymentOperationEngine.executeArrival(
+                        "payment:" + orderId + ":RESERVE",
+                        orderId,
+                        customer.getId(),
+                        "RESERVE",
+                        BigDecimal.TEN,
+                        paymentOperationEngine.generateFingerprint(
+                                customer.getId(), "RESERVE", BigDecimal.TEN),
+                        "ledger",
+                        "owner",
+                        OffsetDateTime.now().plusSeconds(15));
+        PaymentOperationsRecord operation = arrival.operation();
+        ProviderCommand command =
+                new ProviderCommand(
+                        operation.getId(), orderId, customer.getId(), "RESERVE", BigDecimal.TEN);
+        CountDownLatch firstMutated = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        AtomicInteger mutations = new AtomicInteger();
+        doAnswer(
+                        invocation -> {
+                            Object result = invocation.callRealMethod();
+                            mutations.incrementAndGet();
+                            firstMutated.countDown();
+                            assertThat(releaseFirst.await(5, TimeUnit.SECONDS)).isTrue();
+                            return result;
+                        })
+                .when(customerRepository)
+                .reserveFunds(customer.getId(), BigDecimal.TEN);
+
+        CompletableFuture<ProviderResult> first =
+                CompletableFuture.supplyAsync(
+                        () -> ledgerAdapter.execute(operation.getDownstreamKey(), command));
+        CompletableFuture<ProviderResult> second = null;
+        try {
+            assertThat(firstMutated.await(5, TimeUnit.SECONDS)).isTrue();
+            second =
+                    CompletableFuture.supplyAsync(
+                            () -> ledgerAdapter.execute(operation.getDownstreamKey(), command));
+            await().atMost(Duration.ofSeconds(1))
+                    .untilAsserted(
+                            () ->
+                                    assertThat(
+                                                    dslContext.fetchCount(
+                                                            dslContext
+                                                                    .selectFrom("pg_locks")
+                                                                    .where(
+                                                                            "locktype = 'advisory' and not granted")))
+                                            .isPositive());
+        } finally {
+            releaseFirst.countDown();
+        }
+        assertThat(first.get(5, TimeUnit.SECONDS).outcome()).isEqualTo("ACCEPT");
+        assertThat(second).isNotNull();
+        assertThat(second.get(5, TimeUnit.SECONDS).outcome()).isEqualTo("ACCEPT");
+        assertThat(mutations).hasValue(1);
+        assertThat(customerDAO.findById(customer.getId()).orElseThrow().getAmountAvailable())
+                .isEqualByComparingTo("90");
+    }
+
+    private OrderDto order(Long orderId, String attemptId) {
+        return new OrderDto(
+                orderId,
+                customer.getId(),
+                "NEW",
+                "INVENTORY",
+                List.of(new OrderDto.OrderItemDto(1L, "p1", 1, BigDecimal.TEN)),
+                attemptId);
+    }
+
+    private void assertReplyReady(Long orderId, String attemptId, String outcome) {
+        OutboxEventsRecord reply =
+                outboxEventRepository
+                        .findByAggregateIdAndEventType(
+                                String.valueOf(orderId), "RESERVE_REPLY:" + attemptId)
+                        .orElseThrow();
+        assertThat(reply.getStatus()).isIn("PENDING", "PUBLISHED");
+        OrderDto payload = jsonMapper.readValue(reply.getPayload(), OrderDto.class);
+        assertThat(payload.attemptId()).isEqualTo(attemptId);
+        assertThat(payload.status()).isEqualTo(outcome);
     }
 }

@@ -26,7 +26,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
@@ -40,6 +42,7 @@ public class PaymentOperationEngine {
     private final PaymentProviderPort provider;
     private final ApplicationProperties properties;
     private final JsonMapper jsonMapper;
+    private final TransactionTemplate transactionTemplate;
 
     private final Counter zombieRejectionsCounter;
 
@@ -50,13 +53,15 @@ public class PaymentOperationEngine {
             PaymentProviderPort provider,
             ApplicationProperties properties,
             JsonMapper jsonMapper,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            PlatformTransactionManager transactionManager) {
         this.operationRepository = operationRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.customerRepository = customerRepository;
         this.provider = provider;
         this.properties = properties;
         this.jsonMapper = jsonMapper;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.zombieRejectionsCounter =
                 meterRegistry.counter("payment.operations.zombie.rejections");
     }
@@ -210,7 +215,6 @@ public class PaymentOperationEngine {
         }
     }
 
-    @Transactional
     public ArrivalResult executeArrival(
             String operationKey,
             Long orderId,
@@ -221,76 +225,92 @@ public class PaymentOperationEngine {
             String attemptId,
             String ownerId,
             OffsetDateTime leaseUntil) {
+        return transactionTemplate.execute(
+                status -> {
+                    PaymentOperationsRecord record = new PaymentOperationsRecord();
+                    record.setOperationKey(operationKey);
+                    record.setOrderId(orderId);
+                    record.setCustomerId(customerId);
+                    record.setOperationType(operationType);
+                    record.setAmount(amount);
+                    record.setFingerprint(fingerprint);
+                    record.setDownstreamKey("downstream:" + operationKey);
+                    record.setStatus("RECEIVED");
+                    record.setFencingToken(0L);
 
-        PaymentOperationsRecord record = new PaymentOperationsRecord();
-        record.setOperationKey(operationKey);
-        record.setOrderId(orderId);
-        record.setCustomerId(customerId);
-        record.setOperationType(operationType);
-        record.setAmount(amount);
-        record.setFingerprint(fingerprint);
-        record.setDownstreamKey("downstream:" + operationKey);
-        record.setStatus("RECEIVED");
-        record.setFencingToken(0L);
+                    PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
 
-        PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
+                    PaymentOperationsRecord locked =
+                            operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
 
-        PaymentOperationsRecord locked =
-                operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
+                    if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
+                        throw new OperationConflictException(
+                                "Operation fingerprint mismatch for key: " + operationKey);
+                    }
 
-        if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
-            throw new OperationConflictException(
-                    "Operation fingerprint mismatch for key: " + operationKey);
-        }
+                    if ("COMPLETED".equals(locked.getStatus())) {
+                        if (attemptId != null && "RESERVE".equals(operationType)) {
+                            insertPendingReply(orderId, attemptId, locked.getResult());
+                        }
+                        return new ArrivalResult(locked, true, false, locked.getResult());
+                    }
 
-        if ("COMPLETED".equals(locked.getStatus())) {
-            if (attemptId != null && "RESERVE".equals(operationType)) {
-                insertPendingReply(orderId, attemptId, locked.getResult());
-            }
-            return new ArrivalResult(locked, true, false, locked.getResult());
-        }
+                    if (attemptId != null && "RESERVE".equals(operationType)) {
+                        insertAwaitingReply(orderId, attemptId);
+                    }
 
-        if (attemptId != null && "RESERVE".equals(operationType)) {
-            insertAwaitingReply(orderId, attemptId);
-        }
+                    boolean claimed = false;
+                    long currentToken = locked.getFencingToken();
+                    if ("RECEIVED".equals(locked.getStatus())) {
+                        claimed =
+                                operationRepository.claim(
+                                        locked.getId(), currentToken, ownerId, leaseUntil);
+                    } else if ("IN_FLIGHT".equals(locked.getStatus())
+                            && locked.getLeaseUntil() != null
+                            && locked.getLeaseUntil().isBefore(OffsetDateTime.now())) {
+                        claimed =
+                                operationRepository.claim(
+                                        locked.getId(), currentToken, ownerId, leaseUntil);
+                    }
 
-        boolean claimed = false;
-        long currentToken = locked.getFencingToken();
-        if ("RECEIVED".equals(locked.getStatus())) {
-            claimed = operationRepository.claim(locked.getId(), currentToken, ownerId, leaseUntil);
-        } else if ("IN_FLIGHT".equals(locked.getStatus())
-                && locked.getLeaseUntil() != null
-                && locked.getLeaseUntil().isBefore(OffsetDateTime.now())) {
-            claimed = operationRepository.claim(locked.getId(), currentToken, ownerId, leaseUntil);
-        }
-
-        PaymentOperationsRecord updatedRecord =
-                operationRepository.findById(locked.getId()).orElse(locked);
-        return new ArrivalResult(updatedRecord, false, claimed, null);
+                    PaymentOperationsRecord updatedRecord =
+                            operationRepository.findById(locked.getId()).orElse(locked);
+                    return new ArrivalResult(updatedRecord, false, claimed, null);
+                });
     }
 
-    @Transactional
     public boolean executeCompletion(
             Long operationId, long fencingToken, OrderDto orderDto, String outcome) {
-        boolean completed =
-                operationRepository.complete(operationId, fencingToken, "COMPLETED", outcome);
-        if (!completed) {
-            return false;
-        }
+        return transactionTemplate.execute(
+                status -> {
+                    boolean completed =
+                            operationRepository.complete(
+                                    operationId, fencingToken, "COMPLETED", outcome);
+                    if (!completed) {
+                        return false;
+                    }
 
-        OrderDto replyDto = orderDto.withStatus(outcome).withSource(AppConstants.SOURCE);
-        String payloadJson = serialize(replyDto);
-
-        if (orderDto.attemptId() != null) {
-            String eventType = "RESERVE_REPLY:" + orderDto.attemptId();
-            boolean promoted =
-                    outboxEventRepository.promoteToPending(
-                            String.valueOf(orderDto.orderId()), eventType, payloadJson);
-            if (!promoted) {
-                insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
-            }
-        }
-        return true;
+                    for (OutboxEventsRecord reply :
+                            outboxEventRepository.findAwaitingReserveReplies(
+                                    String.valueOf(orderDto.orderId()))) {
+                        String attemptId =
+                                reply.getEventType().substring("RESERVE_REPLY:".length());
+                        OrderDto replyDto =
+                                new OrderDto(
+                                        orderDto.orderId(),
+                                        orderDto.customerId(),
+                                        outcome,
+                                        AppConstants.SOURCE,
+                                        orderDto.items(),
+                                        attemptId);
+                        outboxEventRepository.promoteToPending(
+                                reply.getAggregateId(), reply.getEventType(), serialize(replyDto));
+                    }
+                    if (orderDto.attemptId() != null) {
+                        insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
+                    }
+                    return true;
+                });
     }
 
     @Transactional

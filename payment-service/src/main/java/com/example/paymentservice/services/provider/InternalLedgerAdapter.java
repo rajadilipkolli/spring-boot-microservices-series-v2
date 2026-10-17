@@ -44,6 +44,7 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
         setTimeouts();
+        dslContext.fetch("select pg_advisory_xact_lock(hashtextextended(?, 0))", downstreamKey);
 
         Optional<LedgerEntriesRecord> existing =
                 ledgerRepository.findByDownstreamKey(downstreamKey);

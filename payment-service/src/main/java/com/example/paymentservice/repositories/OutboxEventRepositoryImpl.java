@@ -70,6 +70,16 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
     }
 
     @Override
+    public List<OutboxEventsRecord> findAwaitingReserveReplies(String aggregateId) {
+        return dslContext
+                .selectFrom(OUTBOX_EVENTS)
+                .where(OUTBOX_EVENTS.AGGREGATE_ID.eq(aggregateId))
+                .and(OUTBOX_EVENTS.EVENT_TYPE.startsWith("RESERVE_REPLY:"))
+                .and(OUTBOX_EVENTS.STATUS.eq("AWAITING_RESULT"))
+                .fetch();
+    }
+
+    @Override
     @Transactional
     public List<OutboxEventsRecord> claimPendingEvents(int limit, String lockedBy) {
         if (limit <= 0) {
