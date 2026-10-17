@@ -80,7 +80,7 @@ services:
       - inventory-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.162.0
+    image: otel/opentelemetry-collector-contrib:0.163.1
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
