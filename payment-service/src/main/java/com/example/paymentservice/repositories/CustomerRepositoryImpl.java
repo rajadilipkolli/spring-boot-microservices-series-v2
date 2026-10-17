@@ -221,9 +221,10 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     /**
-     * Deletes all customer rows in the current transaction.
+     * Deletes all ledger entries, payment operations, outbox events, and customers through the DAO
+     * in one transaction. Database failures propagate.
      *
-     * @return the number of rows affected
+     * @return the number of deleted customer rows
      */
     @Override
     public int deleteAll() {

@@ -50,6 +50,7 @@ public class OutboxPublisher {
                 meterRegistry.counter("payment.outbox.events.publication.mismatch.count");
     }
 
+    /** Publishes one batch when the outbox is enabled and no local publication is active. */
     @Scheduled(fixedDelayString = "${application.outbox.publish-delay:500ms}")
     @SchedulerLock(name = "payment_outbox_publish", lockAtMostFor = "1m", lockAtLeastFor = "100ms")
     public void scheduledPublish() {
@@ -65,6 +66,12 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Claims one configured batch and sends its replies to Kafka, awaiting each send up to the
+     * configured timeout. Per-event runtime failures are caught so later events can proceed; claim
+     * failures propagate. Runs even when scheduled publication is disabled. Delivery can repeat if
+     * Kafka accepts a message but its publication status cannot be persisted.
+     */
     public void publishPendingEvents() {
         String instanceId = UUID.randomUUID().toString();
         List<OutboxEventsRecord> events =
@@ -80,6 +87,12 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Sends a stored reply and marks it published using the claimed version. Decode or send
+     * failures attempt requeue or failure marking and are caught. Publication status exceptions
+     * after delivery trigger a requeue attempt and are rethrown; a version mismatch leaves the
+     * event unchanged.
+     */
     private void publishEvent(OutboxEventsRecord event) {
         try {
             OrderDto dto = jsonMapper.readValue(event.getPayload(), OrderDto.class);
@@ -131,6 +144,10 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Marks FAILED when one more retry would reach the limit; otherwise requeues and increments
+     * retries. Both updates require the claimed version; persistence exceptions propagate.
+     */
     private void handleFailure(OutboxEventsRecord event, String error) {
         failedCounter.increment();
         if (event.getRetryCount() + 1 >= properties.getOutbox().getMaxRetries()) {
@@ -141,6 +158,11 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Reclaims PROCESSING events locked longer than the configured lock timeout when enabled.
+     * Events reaching the retry limit become FAILED; the rest return to PENDING. Database failures
+     * propagate.
+     */
     @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
     @SchedulerLock(name = "payment_outbox_reap", lockAtMostFor = "10m", lockAtLeastFor = "10s")
     public void scheduledReap() {

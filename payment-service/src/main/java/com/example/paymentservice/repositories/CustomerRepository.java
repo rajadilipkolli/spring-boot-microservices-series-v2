@@ -72,6 +72,11 @@ public interface CustomerRepository {
      */
     CustomersRecord saveCustomer(CustomersRecord requestCustomer);
 
+    /**
+     * Deletes all customers along with all ledger entries, payment operations, and outbox events.
+     *
+     * @return the number of deleted customer rows
+     */
     int deleteAll();
 
     /**

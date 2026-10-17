@@ -40,6 +40,19 @@ public class KafkaListenerConfig {
         this.jsonMapper = jsonMapper;
     }
 
+    /**
+     * Deserializes an order event and reserves NEW orders or forwards other statuses for
+     * settlement. Missing-customer, illegal-argument, and operation-conflict errors bypass retries;
+     * other propagated errors, including a missing completed reservation, remain retryable.
+     *
+     * @param orderDtoStr the JSON order event
+     * @throws JacksonException if the event cannot be deserialized
+     * @throws IllegalArgumentException if a NEW order's attempt ID is null or blank after trimming
+     * @throws CustomerNotFoundException if the requested operation's customer ID is null or absent
+     * @throws OperationConflictException if the operation conflicts with its stored fingerprint
+     * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement
+     *     requires a reservation that is absent or incomplete
+     */
     // retries if processing of event fails
     // Exclude CustomerNotFoundException, IllegalArgumentException (for missing attemptId), and
     // OperationConflictException
@@ -74,8 +87,9 @@ public class KafkaListenerConfig {
     }
 
     /**
-     * Dead Letter Topic (DLT) handler for processing messages that have failed processing after all
-     * retries.
+     * Handles a dead-letter message and counts down the dead-letter latch. Parsing failures are
+     * caught so malformed messages still release the latch. Messages can reach the DLT after
+     * retries are exhausted or when their failure is excluded from retries.
      *
      * @param orderDtoStr The failed order message that reached the DLT
      * @param topic The Kafka topic from which the dead letter message was received

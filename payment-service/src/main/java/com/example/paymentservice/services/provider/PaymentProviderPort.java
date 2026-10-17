@@ -17,6 +17,9 @@ public interface PaymentProviderPort {
      * @param downstreamKey the idempotent key derived once from the operation
      * @param command the command containing operation details
      * @return the provider result (ACCEPT or REJECT)
+     * @throws ProviderTimeoutException if provider execution exceeds its timeout; the outcome may
+     *     still be unknown and should be looked up using the same key
+     * @throws RuntimeException if execution fails rather than producing a payment outcome
      */
     ProviderResult execute(String downstreamKey, ProviderCommand command);
 
@@ -24,7 +27,10 @@ public interface PaymentProviderPort {
      * Looks up the status of a previously submitted command by its downstream key.
      *
      * @param downstreamKey the idempotent key
-     * @return the provider result, or definitive NOT_FOUND if the provider has never seen the key
+     * @return the stored provider result, or NOT_FOUND with a null outcome if no stored result is
+     *     found
+     * @throws ProviderTimeoutException if lookup exceeds its timeout
+     * @throws RuntimeException if lookup fails; a failed lookup is not a NOT_FOUND result
      */
     ProviderResult lookup(String downstreamKey);
 }

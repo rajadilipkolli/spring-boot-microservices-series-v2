@@ -32,10 +32,15 @@ public class PaymentOrderManageService {
     }
 
     /**
-     * Delegates order payment reservation to the short-transaction operation engine.
+     * Reserves payment through the operation engine and records payment outcome metrics. Provider
+     * failures can defer the result; engine persistence and serialization failures propagate.
      *
      * @param orderDto order whose payment should be reserved
-     * @return the order outcome
+     * @return the order with source PAYMENT and status ACCEPT, REJECT, or PENDING
+     * @throws com.example.paymentservice.exception.CustomerNotFoundException if the customer ID is
+     *     null or absent
+     * @throws com.example.paymentservice.exception.OperationConflictException if a retry changes
+     *     the stored reservation fingerprint
      */
     @Timed(percentiles = 1.0)
     public OrderDto reserve(OrderDto orderDto) {
@@ -55,9 +60,17 @@ public class PaymentOrderManageService {
     }
 
     /**
-     * Delegates order confirmation or rollback to the short-transaction operation engine.
+     * Captures a CONFIRMED order or releases a ROLLBACK order, regardless of source; other statuses
+     * have no effect. Settlement uses the stored reservation amount. Provider failures defer
+     * completion; engine persistence failures propagate.
      *
      * @param orderDto the order outcome
+     * @throws com.example.paymentservice.exception.CustomerNotFoundException if settlement is
+     *     requested with a null or absent customer ID
+     * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement is
+     *     requested before a completed reservation exists
+     * @throws com.example.paymentservice.exception.OperationConflictException if an applicable
+     *     settlement conflicts with the stored fingerprint
      */
     @Timed(percentiles = 1.0)
     public void confirm(OrderDto orderDto) {

@@ -19,6 +19,11 @@ public class ApplicationProperties {
 
     public ApplicationProperties() {}
 
+    /**
+     * Checks that the operation lease exceeds the combined provider and statement timeouts.
+     *
+     * @throws IllegalStateException if the lease is less than or equal to that sum
+     */
     @PostConstruct
     public void validate() {
         Duration totalTimeout =

@@ -55,6 +55,7 @@ public class PaymentReconciler {
         this.failedCounter = meterRegistry.counter("payment.reconciler.failed.count");
     }
 
+    /** Runs one reconciliation batch when enabled and no local reconciliation is active. */
     @Scheduled(fixedDelayString = "${application.reconciler.delay:1s}")
     @SchedulerLock(name = "payment_reconcile", lockAtMostFor = "1m", lockAtLeastFor = "500ms")
     public void scheduledReconcile() {
@@ -70,6 +71,11 @@ public class PaymentReconciler {
         }
     }
 
+    /**
+     * Claims one configured batch of received, expired, or due unknown operations and reconciles
+     * each. This entry point runs even when scheduled reconciliation is disabled. Claim failures
+     * and unhandled completion or backoff persistence failures propagate and stop the batch.
+     */
     public void reconcileBatch() {
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
@@ -84,6 +90,12 @@ public class PaymentReconciler {
         }
     }
 
+    /**
+     * Looks up a claimed operation before retrying execution with its persisted downstream key.
+     * Known outcomes complete the operation; lookup failures or exhausted attempts defer it with
+     * backoff. Execution and subsequent completion exceptions also trigger backoff; failures to
+     * persist backoff propagate.
+     */
     private void reconcileOperation(PaymentOperationsRecord op) {
         String downstreamKey = op.getDownstreamKey();
         long fencingToken = op.getFencingToken();
@@ -147,6 +159,7 @@ public class PaymentReconciler {
         }
     }
 
+    /** Completes with the claim token, promoting awaiting replies only for reserve operations. */
     private void completeOperation(PaymentOperationsRecord op, long fencingToken, String outcome) {
         if ("RESERVE".equalsIgnoreCase(op.getOperationType())) {
             OrderDto dummyOrder =
@@ -158,6 +171,9 @@ public class PaymentReconciler {
         }
     }
 
+    /**
+     * Rejects a reservation and readies its replies, or marks a settlement FAILED with no result.
+     */
     private void markFailed(PaymentOperationsRecord op, long fencingToken) {
         if ("RESERVE".equalsIgnoreCase(op.getOperationType())) {
             OrderDto dummyOrder =
@@ -169,6 +185,11 @@ public class PaymentReconciler {
         }
     }
 
+    /**
+     * Defers the matching token as UNKNOWN using initial backoff times two to the attempt count,
+     * with the exponent capped at four and the duration capped at maximum backoff. Database
+     * failures propagate.
+     */
     private void backoffOperation(PaymentOperationsRecord op) {
         int attempt = op.getAttemptCount();
         Duration backoff =

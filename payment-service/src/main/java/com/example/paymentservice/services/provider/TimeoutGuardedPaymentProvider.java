@@ -28,6 +28,15 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
         this.properties = properties;
     }
 
+    /**
+     * Executes through the ledger adapter, waiting up to the configured provider timeout. A timeout
+     * does not cancel the submitted work, so balance effects may finish after this call fails.
+     *
+     * @return the adapter's payment outcome
+     * @throws ProviderTimeoutException if the wait times out
+     * @throws RuntimeException if the adapter fails or waiting is interrupted; runtime causes from
+     *     the adapter are rethrown and other failures are wrapped
+     */
     @Override
     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
         long timeoutMs = properties.getOperation().getProviderTimeout().toMillis();
@@ -48,6 +57,15 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
         }
     }
 
+    /**
+     * Looks up the ledger outcome, waiting up to the configured provider timeout without cancelling
+     * submitted work on timeout.
+     *
+     * @return the stored payment outcome, or NOT_FOUND with a null outcome if absent
+     * @throws ProviderTimeoutException if the wait times out
+     * @throws RuntimeException if the adapter fails or waiting is interrupted; runtime causes from
+     *     the adapter are rethrown and other failures are wrapped
+     */
     @Override
     public ProviderResult lookup(String downstreamKey) {
         long timeoutMs = properties.getOperation().getProviderTimeout().toMillis();

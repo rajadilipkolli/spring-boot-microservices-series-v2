@@ -61,6 +61,12 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
         return dslContext.fetchExists(table, CUSTOMERS.EMAIL.eq(email));
     }
 
+    /**
+     * Deletes all ledger entries, payment operations, outbox events, and customers in one
+     * transaction. Database failures propagate and roll back the deletions.
+     *
+     * @return the number of deleted customer rows, excluding the other deleted rows
+     */
     @Transactional
     public int deleteAll() {
         dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
@@ -69,6 +75,12 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
         return dslContext.deleteFrom(table).execute();
     }
 
+    /**
+     * Atomically moves the amount from available to reserved balance and increments the customer
+     * version. An exact available balance match is sufficient; database failures propagate.
+     *
+     * @return true if the customer was updated, false if absent or available funds are insufficient
+     */
     @Transactional
     public boolean reserveFunds(Long customerId, BigDecimal amount) {
         int updated =
@@ -87,6 +99,12 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
         return updated > 0;
     }
 
+    /**
+     * Atomically deducts the amount from reserved balance and increments the customer version. An
+     * exact reserved balance match is sufficient; database failures propagate.
+     *
+     * @return true if the customer was updated, false if absent or reserved funds are insufficient
+     */
     @Transactional
     public boolean captureFunds(Long customerId, BigDecimal amount) {
         int updated =
@@ -102,6 +120,12 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
         return updated > 0;
     }
 
+    /**
+     * Atomically moves the amount from reserved to available balance and increments the customer
+     * version. An exact reserved balance match is sufficient; database failures propagate.
+     *
+     * @return true if the customer was updated, false if absent or reserved funds are insufficient
+     */
     @Transactional
     public boolean releaseFunds(Long customerId, BigDecimal amount) {
         int updated =

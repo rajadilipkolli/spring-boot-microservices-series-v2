@@ -66,6 +66,19 @@ public class PaymentOperationEngine {
                 meterRegistry.counter("payment.operations.zombie.rejections");
     }
 
+    /**
+     * Reserves the sum of individually rounded line totals, reusing the operation for the order
+     * across attempts. Non-null attempt IDs register outbox replies for eventual publication.
+     * Provider exceptions return PENDING after attempting to mark the operation UNKNOWN. Arrival,
+     * completion, status persistence, and reply serialization failures propagate.
+     *
+     * @return the order with source PAYMENT and its stored or provider outcome, or PENDING when
+     *     unclaimed or provider execution fails; a provider outcome is returned even if fenced
+     *     completion loses ownership
+     * @throws CustomerNotFoundException if the customer ID is null or absent
+     * @throws OperationConflictException if an existing operation has a different fingerprint
+     * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
+     */
     public OrderDto processReserve(OrderDto orderDto) {
         validateCustomerExists(orderDto.customerId());
         BigDecimal amount = calculateTotalOrderPrice(orderDto);
@@ -138,6 +151,18 @@ public class PaymentOperationEngine {
         return orderDto.withStatus(result.outcome()).withSource(AppConstants.SOURCE);
     }
 
+    /**
+     * Settles using the completed reservation's stored amount, regardless of the incoming items.
+     * Capture and release share one settlement key per order. A rejected reservation records a
+     * NOT_APPLICABLE settlement without invoking the provider. Completed or unclaimed operations
+     * return without execution; provider exceptions attempt to defer completion as UNKNOWN.
+     * Arrival, completion, and status persistence failures propagate.
+     *
+     * @param settlementType CAPTURE to consume reserved funds or RELEASE to restore available funds
+     * @throws CustomerNotFoundException if the customer ID is null or absent
+     * @throws ReservationNotFoundException if the reservation is absent or not COMPLETED
+     * @throws OperationConflictException if an applicable existing settlement's fingerprint differs
+     */
     public void processSettlement(OrderDto orderDto, String settlementType) {
         validateCustomerExists(orderDto.customerId());
         String reserveOpKey = "payment:" + orderDto.orderId() + ":RESERVE";
@@ -215,6 +240,21 @@ public class PaymentOperationEngine {
         }
     }
 
+    /**
+     * Registers an operation and any reserve reply in one transaction, replaying completed results
+     * or claiming RECEIVED and expired IN_FLIGHT operations. UNKNOWN operations remain unclaimed.
+     * Persistence and reply serialization failures propagate and roll back arrival changes.
+     *
+     * @param operationKey stable identity shared by retries; also determines the downstream key
+     * @param fingerprint customer, operation type, and amount identity checked against stored input
+     * @param attemptId identifies a reserve reply; null suppresses reply registration
+     * @param ownerId owner assigned when a claim succeeds
+     * @param leaseUntil absolute lease expiration for a successful claim
+     * @return the stored operation, completion status, claim status, and any completed outcome
+     * @throws OperationConflictException if the stored fingerprint differs
+     * @throws java.util.NoSuchElementException if the inserted or existing operation cannot be
+     *     locked
+     */
     public ArrivalResult executeArrival(
             String operationKey,
             Long orderId,
@@ -279,6 +319,16 @@ public class PaymentOperationEngine {
                 });
     }
 
+    /**
+     * Completes a reservation and makes all awaiting attempt replies publishable in one
+     * transaction. Registers the supplied attempt's reply when non-null. Persistence and JSON
+     * serialization failures propagate and roll back these changes.
+     *
+     * @param fencingToken the ownership token obtained when the operation was claimed
+     * @param orderDto supplies the order identity and reply contents
+     * @return false if the operation is absent or its token differs, leaving replies unchanged;
+     *     true after completion and reply updates
+     */
     public boolean executeCompletion(
             Long operationId, long fencingToken, OrderDto orderDto, String outcome) {
         return transactionTemplate.execute(
@@ -313,12 +363,23 @@ public class PaymentOperationEngine {
                 });
     }
 
+    /**
+     * Stores a settlement outcome as COMPLETED only when its ownership token still matches.
+     * Database failures propagate.
+     *
+     * @return true if updated, false if the operation is absent or its token differs
+     */
     @Transactional
     public boolean executeSettlementCompletion(
             Long operationId, long fencingToken, String outcome) {
         return operationRepository.complete(operationId, fencingToken, "COMPLETED", outcome);
     }
 
+    /**
+     * Marks a matching ownership token UNKNOWN and schedules reconciliation after the initial
+     * backoff. Missing operations and stale tokens leave state unchanged; database failures
+     * propagate.
+     */
     @Transactional
     public void transitionToUnknown(Long operationId, long fencingToken) {
         OffsetDateTime nextReconcileAt =
@@ -326,6 +387,11 @@ public class PaymentOperationEngine {
         operationRepository.updateStatus(operationId, fencingToken, "UNKNOWN", nextReconcileAt);
     }
 
+    /**
+     * Records a zero-amount, COMPLETED settlement with result NOT_APPLICABLE without changing
+     * balances. Preserves any existing operation on a unique-key conflict without comparing its
+     * fingerprint; other database failures propagate.
+     */
     @Transactional
     public void recordNotApplicableSettlement(OrderDto orderDto, String settlementType) {
         String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
@@ -345,6 +411,7 @@ public class PaymentOperationEngine {
         operationRepository.insertOrGet(record);
     }
 
+    /** Registers a payload-free reply awaiting the reserve result, preserving an existing reply. */
     private void insertAwaitingReply(Long orderId, String attemptId) {
         OutboxEventsRecord outbox = new OutboxEventsRecord();
         outbox.setAggregateType("PAYMENT_ORDER");
@@ -357,6 +424,10 @@ public class PaymentOperationEngine {
         outboxEventRepository.insert(outbox);
     }
 
+    /**
+     * Registers a publishable outcome reply with no customer or items. An existing reply for the
+     * order and attempt is preserved; serialization and database failures propagate.
+     */
     private void insertPendingReply(Long orderId, String attemptId, String outcome) {
         OrderDto replyDto =
                 new OrderDto(
@@ -379,12 +450,23 @@ public class PaymentOperationEngine {
         outboxEventRepository.insert(outbox);
     }
 
+    /**
+     * Checks that the customer exists; database lookup failures propagate.
+     *
+     * @throws CustomerNotFoundException if the ID is null or absent
+     */
     private void validateCustomerExists(Long customerId) {
         if (customerId == null || customerRepository.findById(customerId).isEmpty()) {
             throw new CustomerNotFoundException(customerId);
         }
     }
 
+    /**
+     * Sums line totals individually rounded to two decimal places using HALF_UP.
+     *
+     * @return the total with scale two, or 0.00 for an empty item list
+     * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
+     */
     private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
         return orderDto.items().stream()
                 .map(OrderDto.OrderItemDto::getPrice)
@@ -392,11 +474,23 @@ public class PaymentOperationEngine {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Builds a colon-separated customer, operation type, and amount identity for replay checks. The
+     * amount is rounded to scale two using HALF_UP; operation type casing is preserved.
+     *
+     * @throws NullPointerException if the amount is null
+     */
     public String generateFingerprint(Long customerId, String operationType, BigDecimal amount) {
         BigDecimal normalizedAmount = amount.setScale(2, RoundingMode.HALF_UP);
         return customerId + ":" + operationType + ":" + normalizedAmount;
     }
 
+    /**
+     * Serializes a reply payload as JSON.
+     *
+     * @throws RuntimeException if serialization fails, retaining the original exception as its
+     *     cause
+     */
     private String serialize(Object obj) {
         try {
             return jsonMapper.writeValueAsString(obj);

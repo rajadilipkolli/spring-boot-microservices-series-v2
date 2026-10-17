@@ -40,6 +40,15 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         this.properties = properties;
     }
 
+    /**
+     * Reserves, captures, or releases funds and records the outcome in an independent transaction.
+     * Serializes concurrent executions by downstream key and replays its stored result without
+     * further balance changes. Insufficient funds and unknown operation types yield REJECT;
+     * database failures propagate and roll back balance and ledger changes.
+     *
+     * @param downstreamKey stable identity reused for every retry of the same operation
+     * @return ACCEPT on a successful balance update, REJECT otherwise, or the stored replay result
+     */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
@@ -83,6 +92,10 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         return success ? ProviderResult.accept() : ProviderResult.reject();
     }
 
+    /**
+     * Returns the stored ACCEPT or REJECT outcome for the downstream key, or NOT_FOUND with a null
+     * outcome when no ledger entry exists. Database lookup failures propagate.
+     */
     @Override
     @Transactional(readOnly = true)
     public ProviderResult lookup(String downstreamKey) {
@@ -97,6 +110,10 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         return ProviderResult.notFound();
     }
 
+    /**
+     * Applies configured statement and lock timeouts in milliseconds to the current PostgreSQL
+     * transaction. Configuration failures are caught and execution continues.
+     */
     private void setTimeouts() {
         try {
             long statementMs = properties.getOperation().getStatementTimeout().toMillis();
