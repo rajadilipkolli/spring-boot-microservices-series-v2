@@ -10,6 +10,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
+import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.LedgerEntries;
 import com.example.paymentservice.jooq.tables.OutboxEvents;
 import com.example.paymentservice.jooq.tables.PaymentOperations;
@@ -21,6 +22,7 @@ import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
 import com.example.paymentservice.services.provider.ProviderResult;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -252,17 +254,15 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                     }
                 };
 
-        PaymentOperationEngine customEngine =
-                new PaymentOperationEngine(
-                        paymentOperationRepository,
-                        outboxEventRepository,
-                        customerRepository,
-                        blockingProvider,
-                        new com.example.paymentservice.config.ApplicationProperties(),
-                        jsonMapper,
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
-                        transactionManager);
-        return customEngine;
+        return new PaymentOperationEngine(
+                paymentOperationRepository,
+                outboxEventRepository,
+                customerRepository,
+                blockingProvider,
+                new ApplicationProperties(),
+                jsonMapper,
+                new SimpleMeterRegistry(),
+                transactionManager);
     }
 
     /**
@@ -355,9 +355,9 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         outboxEventRepository,
                         customerRepository,
                         delayedProvider,
-                        new com.example.paymentservice.config.ApplicationProperties(),
+                        new ApplicationProperties(),
                         jsonMapper,
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                        new SimpleMeterRegistry(),
                         transactionManager);
 
         OrderDto initial = customEngine.processReserve(order);
@@ -396,8 +396,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         paymentOperationRepository,
                         customEngine,
                         delayedProvider,
-                        new com.example.paymentservice.config.ApplicationProperties(),
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+                        new ApplicationProperties(),
+                        new SimpleMeterRegistry());
 
         customReconciler.reconcileBatch();
 

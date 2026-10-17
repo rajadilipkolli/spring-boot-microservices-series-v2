@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.example.paymentservice.clients.OrderServiceProxy;
 import com.example.paymentservice.model.response.OrderResponse;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;

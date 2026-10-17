@@ -1,3 +1,4 @@
+name: payment-service
 services:
 
   postgresql:
@@ -17,6 +18,29 @@ services:
     networks:
       - payment-network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "5050:80"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ./docker_pgadmin_servers.json:/pgadmin4/servers.json
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - "/bin/echo 'postgresql:5432:*:appuser:secret' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+    restart: unless-stopped
+    networks:
+      - payment-network
+
   grafana-lgtm:
     image: grafana/otel-lgtm:0.37.0
     extra_hosts: ['host.docker.internal:host-gateway']
@@ -30,6 +54,15 @@ services:
       - "4317:4317" # OTLP gRPC receiver
       - "4318:4318" # OTLP HTTP receiver
       - "9090:9090" # Prometheus metrics endpoint
+    networks:
+      - payment-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.163.1
+    container_name: otel-collector
+    command: [ "--config=/etc/otel-collector-config.yml" ]
+    volumes:
+      - ../../deployment/config/otel-collector-config.yml:/etc/otel-collector-config.yml
     networks:
       - payment-network
 
@@ -64,7 +97,7 @@ services:
 
   config-server:
     container_name: config-server
-    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:
