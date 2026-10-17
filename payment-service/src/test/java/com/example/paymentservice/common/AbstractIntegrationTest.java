@@ -53,4 +53,18 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected CustomerService customerService;
 
     @MockitoBean protected OrderServiceProxy orderServiceProxy;
+
+    @Autowired
+    protected com.example.paymentservice.repositories.PaymentOperationRepository
+            paymentOperationRepository;
+
+    @Autowired protected com.example.paymentservice.repositories.LedgerRepository ledgerRepository;
+
+    @Autowired
+    protected com.example.paymentservice.repositories.OutboxEventRepository outboxEventRepository;
+
+    @Autowired
+    protected com.example.paymentservice.services.PaymentOperationEngine paymentOperationEngine;
+
+    @Autowired protected org.jooq.DSLContext dslContext;
 }

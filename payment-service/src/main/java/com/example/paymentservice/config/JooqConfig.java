@@ -19,14 +19,14 @@ public class JooqConfig {
      */
     @Bean
     DefaultConfigurationCustomizer jooqCustomizer(TSID.Factory tsidFactory) {
-        CustomerRecordListener customerRecordListener = new CustomerRecordListener(tsidFactory);
+        TsidRecordListener tsidRecordListener = new TsidRecordListener(tsidFactory);
         return configuration -> {
             configuration.set(
                     configuration
                             .settings()
                             .withExecuteWithOptimisticLocking(true)
                             .withUpdateRecordVersion(true));
-            configuration.set(new DefaultRecordListenerProvider(customerRecordListener));
+            configuration.set(new DefaultRecordListenerProvider(tsidRecordListener));
         };
     }
 

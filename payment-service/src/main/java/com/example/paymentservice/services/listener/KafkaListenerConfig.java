@@ -3,6 +3,7 @@ package com.example.paymentservice.services.listener;
 
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
@@ -40,17 +41,16 @@ public class KafkaListenerConfig {
     }
 
     // retries if processing of event fails
-    // @RetryableTopic annotation configures retry behavior for failed message processing:
-    // - Initial retry delay of 1000ms that doubles with each attempt (multiplier=2.0)
-    // - Excludes CustomerNotFoundException from retries since it's a permanent failure
-    // - Creates retry topics with indexed suffixes (e.g. topic-retry-0, topic-retry-1)
-    // @KafkaListener configures the Kafka consumer:
-    // - Consumer group ID "payment" for load balancing across instances
-    // - Listens to the ORDERS_TOPIC defined in AppConstants
-    // - Unique listener ID "orders" to identify this consumer
+    // Exclude CustomerNotFoundException, IllegalArgumentException (for missing attemptId), and
+    // OperationConflictException
+    // Keep ReservationNotFoundException retryable
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
-            exclude = {CustomerNotFoundException.class},
+            exclude = {
+                CustomerNotFoundException.class,
+                OperationConflictException.class,
+                IllegalArgumentException.class
+            },
             retryTopicSuffix = "-retry-payment",
             dltTopicSuffix = "-dlt-payment",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
@@ -63,6 +63,10 @@ public class KafkaListenerConfig {
                 AppConstants.ORDERS_TOPIC,
                 orderDto.source());
         if ("NEW".equals(orderDto.status())) {
+            if (orderDto.attemptId() == null || orderDto.attemptId().trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "attemptId must not be null or blank for NEW orders");
+            }
             paymentOrderManageService.reserve(orderDto);
         } else {
             paymentOrderManageService.confirm(orderDto);
@@ -71,18 +75,30 @@ public class KafkaListenerConfig {
 
     /**
      * Dead Letter Topic (DLT) handler for processing messages that have failed processing after all
-     * retries This method is invoked when a message reaches the dead letter topic after exhausting
-     * retry attempts
+     * retries.
      *
      * @param orderDtoStr The failed order message that reached the DLT
      * @param topic The Kafka topic from which the dead letter message was received
      */
     @DltHandler
     public void dlt(String orderDtoStr, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        // Log the failed message and topic at error level for monitoring/debugging
-        log.error("Received dead-letter message : {} from topic {}", orderDtoStr, topic);
-        // Decrement latch to signal that a DLT message was processed
-        // This is useful for testing and monitoring DLT handling
+        String operationKey = "unknown";
+        try {
+            OrderDto dto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
+            if (dto.orderId() != null) {
+                operationKey =
+                        "payment:"
+                                + dto.orderId()
+                                + ":"
+                                + ("NEW".equals(dto.status()) ? "RESERVE" : "SETTLE");
+            }
+        } catch (Exception ignored) {
+        }
+        log.error(
+                "Received dead-letter message for operation {} from topic {}: {}",
+                operationKey,
+                topic,
+                orderDtoStr);
         deadLetterLatch.countDown();
     }
 

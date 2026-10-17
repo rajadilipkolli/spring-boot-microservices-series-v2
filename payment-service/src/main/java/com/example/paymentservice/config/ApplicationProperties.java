@@ -1,6 +1,8 @@
-/*** Licensed under MIT License Copyright (c) 2022-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
+import jakarta.annotation.PostConstruct;
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -11,25 +13,40 @@ public class ApplicationProperties {
     private boolean byPassCircuitBreaker;
 
     @NestedConfigurationProperty private Cors cors = new Cors();
+    @NestedConfigurationProperty private Operation operation = new Operation();
+    @NestedConfigurationProperty private Outbox outbox = new Outbox();
+    @NestedConfigurationProperty private Reconciler reconciler = new Reconciler();
 
     public ApplicationProperties() {}
 
-    /** Returns the base URL used by the order service HTTP client. */
+    @PostConstruct
+    public void validate() {
+        Duration totalTimeout =
+                operation.getProviderTimeout().plus(operation.getStatementTimeout());
+        if (operation.getLeaseDuration().compareTo(totalTimeout) <= 0) {
+            throw new IllegalStateException(
+                    "Operation leaseDuration ("
+                            + operation.getLeaseDuration()
+                            + ") must exceed providerTimeout ("
+                            + operation.getProviderTimeout()
+                            + ") + statementTimeout ("
+                            + operation.getStatementTimeout()
+                            + ")");
+        }
+    }
+
     public String getOrderServiceUrl() {
         return this.orderServiceUrl;
     }
 
-    /** Sets the order service base URL, including any service context path. */
     public void setOrderServiceUrl(String orderServiceUrl) {
         this.orderServiceUrl = orderServiceUrl;
     }
 
-    /** Returns the configured bypass flag, which the order proxy currently does not use. */
     public boolean isByPassCircuitBreaker() {
         return this.byPassCircuitBreaker;
     }
 
-    /** Stores the bypass flag; changing it currently has no effect on the order proxy. */
     public void setByPassCircuitBreaker(boolean byPassCircuitBreaker) {
         this.byPassCircuitBreaker = byPassCircuitBreaker;
     }
@@ -40,6 +57,30 @@ public class ApplicationProperties {
 
     public void setCors(final Cors cors) {
         this.cors = cors;
+    }
+
+    public Operation getOperation() {
+        return operation;
+    }
+
+    public void setOperation(Operation operation) {
+        this.operation = operation;
+    }
+
+    public Outbox getOutbox() {
+        return outbox;
+    }
+
+    public void setOutbox(Outbox outbox) {
+        this.outbox = outbox;
+    }
+
+    public Reconciler getReconciler() {
+        return reconciler;
+    }
+
+    public void setReconciler(Reconciler reconciler) {
+        this.reconciler = reconciler;
     }
 
     public static class Cors {
@@ -55,54 +96,193 @@ public class ApplicationProperties {
             return this.pathPattern;
         }
 
-        public String getAllowedMethods() {
-            return this.allowedMethods;
-        }
-
-        public String getAllowedHeaders() {
-            return this.allowedHeaders;
-        }
-
-        public String getAllowedOriginPatterns() {
-            return this.allowedOriginPatterns;
-        }
-
-        public boolean isAllowCredentials() {
-            return this.allowCredentials;
-        }
-
         public void setPathPattern(final String pathPattern) {
             this.pathPattern = pathPattern;
+        }
+
+        public String getAllowedMethods() {
+            return this.allowedMethods;
         }
 
         public void setAllowedMethods(final String allowedMethods) {
             this.allowedMethods = allowedMethods;
         }
 
+        public String getAllowedHeaders() {
+            return this.allowedHeaders;
+        }
+
         public void setAllowedHeaders(final String allowedHeaders) {
             this.allowedHeaders = allowedHeaders;
+        }
+
+        public String getAllowedOriginPatterns() {
+            return this.allowedOriginPatterns;
         }
 
         public void setAllowedOriginPatterns(final String allowedOriginPatterns) {
             this.allowedOriginPatterns = allowedOriginPatterns;
         }
 
+        public boolean isAllowCredentials() {
+            return this.allowCredentials;
+        }
+
         public void setAllowCredentials(final boolean allowCredentials) {
             this.allowCredentials = allowCredentials;
         }
+    }
 
-        public String toString() {
-            return "ApplicationProperties.Cors(pathPattern="
-                    + this.getPathPattern()
-                    + ", allowedMethods="
-                    + this.getAllowedMethods()
-                    + ", allowedHeaders="
-                    + this.getAllowedHeaders()
-                    + ", allowedOriginPatterns="
-                    + this.getAllowedOriginPatterns()
-                    + ", allowCredentials="
-                    + this.isAllowCredentials()
-                    + ")";
+    public static class Operation {
+        private Duration leaseDuration = Duration.ofSeconds(10);
+        private Duration providerTimeout = Duration.ofSeconds(3);
+        private Duration statementTimeout = Duration.ofSeconds(2);
+        private Duration lockTimeout = Duration.ofSeconds(2);
+        private int maxAttempts = 3;
+
+        public Duration getLeaseDuration() {
+            return leaseDuration;
+        }
+
+        public void setLeaseDuration(Duration leaseDuration) {
+            this.leaseDuration = leaseDuration;
+        }
+
+        public Duration getProviderTimeout() {
+            return providerTimeout;
+        }
+
+        public void setProviderTimeout(Duration providerTimeout) {
+            this.providerTimeout = providerTimeout;
+        }
+
+        public Duration getStatementTimeout() {
+            return statementTimeout;
+        }
+
+        public void setStatementTimeout(Duration statementTimeout) {
+            this.statementTimeout = statementTimeout;
+        }
+
+        public Duration getLockTimeout() {
+            return lockTimeout;
+        }
+
+        public void setLockTimeout(Duration lockTimeout) {
+            this.lockTimeout = lockTimeout;
+        }
+
+        public int getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(int maxAttempts) {
+            this.maxAttempts = maxAttempts;
+        }
+    }
+
+    public static class Outbox {
+        private boolean enabled = true;
+        private Duration publishDelay = Duration.ofMillis(500);
+        private Duration lockTimeout = Duration.ofSeconds(30);
+        private int maxRetries = 3;
+        private int batchSize = 100;
+        private Duration sendTimeout = Duration.ofSeconds(5);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getPublishDelay() {
+            return publishDelay;
+        }
+
+        public void setPublishDelay(Duration publishDelay) {
+            this.publishDelay = publishDelay;
+        }
+
+        public Duration getLockTimeout() {
+            return lockTimeout;
+        }
+
+        public void setLockTimeout(Duration lockTimeout) {
+            this.lockTimeout = lockTimeout;
+        }
+
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        public void setMaxRetries(int maxRetries) {
+            this.maxRetries = maxRetries;
+        }
+
+        public int getBatchSize() {
+            return batchSize;
+        }
+
+        public void setBatchSize(int batchSize) {
+            this.batchSize = batchSize;
+        }
+
+        public Duration getSendTimeout() {
+            return sendTimeout;
+        }
+
+        public void setSendTimeout(Duration sendTimeout) {
+            this.sendTimeout = sendTimeout;
+        }
+    }
+
+    public static class Reconciler {
+        private boolean enabled = true;
+        private Duration delay = Duration.ofSeconds(1);
+        private int batchSize = 50;
+        private Duration initialBackoff = Duration.ofSeconds(1);
+        private Duration maxBackoff = Duration.ofSeconds(10);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getDelay() {
+            return delay;
+        }
+
+        public void setDelay(Duration delay) {
+            this.delay = delay;
+        }
+
+        public int getBatchSize() {
+            return batchSize;
+        }
+
+        public void setBatchSize(int batchSize) {
+            this.batchSize = batchSize;
+        }
+
+        public Duration getInitialBackoff() {
+            return initialBackoff;
+        }
+
+        public void setInitialBackoff(Duration initialBackoff) {
+            this.initialBackoff = initialBackoff;
+        }
+
+        public Duration getMaxBackoff() {
+            return maxBackoff;
+        }
+
+        public void setMaxBackoff(Duration maxBackoff) {
+            this.maxBackoff = maxBackoff;
         }
     }
 }

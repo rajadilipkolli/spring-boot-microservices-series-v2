@@ -2,223 +2,64 @@
 package com.example.paymentservice.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.example.paymentservice.exception.CustomerNotFoundException;
-import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.repositories.CustomerRepository;
-import com.example.paymentservice.util.TestData;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentOrderManageServiceTest {
 
-    @Mock private CustomerRepository customerRepository;
-
-    @Mock private KafkaTemplate<String, OrderDto> kafkaTemplate;
+    @Mock private PaymentOperationEngine operationEngine;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private MeterRegistry meterRegistry;
 
     @InjectMocks private PaymentOrderManageService orderManageService;
 
-    /** Verifies confirmation deducts the order total from reserved funds and saves the customer. */
     @Test
-    void confirmWithValidOrder() {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-        // Act
+    void confirmDelegatesToEngineCapture() {
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(item), "att1");
+
         orderManageService.confirm(orderDto);
 
-        // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
-        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
+        verify(operationEngine, times(1)).processSettlement(orderDto, "CAPTURE");
     }
 
-    /**
-     * Verifies inventory rollback restores funds while payment rollback leaves balances unchanged.
-     *
-     * @param source service that initiated the rollback
-     * @param amountAvailable expected available balance after rollback
-     * @param amountReserved expected reserved balance after rollback
-     */
-    @ParameterizedTest
-    @CsvSource({"INVENTORY,1100, 0", "PAYMENT,1000, 100"})
-    void confirmWithRejectedOrder(
-            String source, BigDecimal amountAvailable, BigDecimal amountReserved) {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", source, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
+    @Test
+    void rollbackDelegatesToEngineRelease() {
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "INVENTORY", List.of(item), "att1");
 
-        // Act
         orderManageService.confirm(orderDto);
 
-        // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(amountReserved);
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(amountAvailable);
-        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
+        verify(operationEngine, times(1)).processSettlement(orderDto, "RELEASE");
     }
 
     @Test
-    void confirmWithInvalidCustomer() {
-        // Arrange
-        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, null);
-        given(customerRepository.findById(1L)).willReturn(Optional.empty());
+    void reserveDelegatesToEngine() {
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "p1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(item), "att1");
+        OrderDto acceptedDto = orderDto.withStatus("ACCEPT").withSource("PAYMENT");
 
-        // Assert
-        assertThatExceptionOfType(CustomerNotFoundException.class)
-                .isThrownBy(() -> orderManageService.confirm(orderDto));
-    }
+        given(operationEngine.processReserve(any(OrderDto.class))).willReturn(acceptedDto);
 
-    /** Verifies a funded order transfers its total to reserved funds and is accepted by payment. */
-    @Test
-    void reserveWithValidOrderAccepted() {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 10, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-        // Act
-        OrderDto reservedOrder = orderManageService.reserve(orderDto);
+        OrderDto result = orderManageService.reserve(orderDto);
 
-        // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(200));
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(900));
-        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
-        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
-        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
-    }
-
-    /** Verifies an unaffordable order is rejected without changing either customer balance. */
-    @Test
-    void reserveWithValidOrderRejected() {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1000, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-        // Act
-        OrderDto reservedOrder = orderManageService.reserve(orderDto);
-
-        // Assert
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(100));
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(1000));
-        assertThat(reservedOrder.status()).isEqualTo("REJECT");
-        assertThat(reservedOrder.source()).isEqualTo("PAYMENT");
-        verify(customerRepository, times(1)).saveCustomer(any(CustomersRecord.class));
-    }
-
-    /**
-     * Verifies reservation and confirmation preserve the exact balance changes for a fractional
-     * price.
-     */
-    @Test
-    void fractionalOrderTest() {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
-        OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        BigDecimal initialAvailable = customer.getAmountAvailable();
-        BigDecimal initialReserved = customer.getAmountReserved();
-
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-
-        // Reserve
-        OrderDto reservedOrder = orderManageService.reserve(orderDto);
-        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
-        assertThat(customer.getAmountReserved())
-                .isEqualByComparingTo(initialReserved.add(BigDecimal.valueOf(19.99)));
-        assertThat(customer.getAmountAvailable())
-                .isEqualByComparingTo(initialAvailable.subtract(BigDecimal.valueOf(19.99)));
-
-        // Confirm
-        OrderDto confirmDto = new OrderDto(1L, 1L, "CONFIRMED", null, List.of(orderItemDto));
-        orderManageService.confirm(confirmDto);
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(initialReserved);
-        assertThat(customer.getAmountAvailable())
-                .isEqualByComparingTo(initialAvailable.subtract(BigDecimal.valueOf(19.99)));
-    }
-
-    /** Verifies rolling back a fractional-price reservation restores both original balances. */
-    @Test
-    void rollbackFractionalOrderTest() {
-        // Arrange
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1, BigDecimal.valueOf(19.99));
-        OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        BigDecimal initialAvailable = customer.getAmountAvailable();
-        BigDecimal initialReserved = customer.getAmountReserved();
-
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-
-        // Reserve
-        OrderDto reservedOrder = orderManageService.reserve(orderDto);
-        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
-
-        // Rollback
-        OrderDto rollbackDto = new OrderDto(1L, 1L, "ROLLBACK", "INVENTORY", List.of(orderItemDto));
-        orderManageService.confirm(rollbackDto);
-        assertThat(customer.getAmountReserved()).isEqualByComparingTo(initialReserved);
-        assertThat(customer.getAmountAvailable()).isEqualByComparingTo(initialAvailable);
-    }
-
-    /** Verifies reservation handles order totals larger than the maximum integer value. */
-    @Test
-    void largeValueOrderTest() {
-        // Arrange
-        BigDecimal largePrice = BigDecimal.valueOf(5000000000.00); // > Integer.MAX_VALUE
-        OrderDto.OrderItemDto orderItemDto =
-                new OrderDto.OrderItemDto(1L, "productId", 1, largePrice);
-        OrderDto orderDto = new OrderDto(1L, 1L, "NEW", null, List.of(orderItemDto));
-        CustomersRecord customer = TestData.getCustomersRecord();
-        // Give customer enough funds
-        customer.setAmountAvailable(BigDecimal.valueOf(6000000000.00));
-        BigDecimal initialAvailable = customer.getAmountAvailable();
-        BigDecimal initialReserved = customer.getAmountReserved();
-
-        given(customerRepository.findById(orderDto.customerId())).willReturn(Optional.of(customer));
-        given(customerRepository.saveCustomer(any(CustomersRecord.class))).willReturn(customer);
-
-        // Reserve
-        OrderDto reservedOrder = orderManageService.reserve(orderDto);
-        assertThat(reservedOrder.status()).isEqualTo("ACCEPT");
-        assertThat(customer.getAmountReserved())
-                .isEqualByComparingTo(initialReserved.add(largePrice));
-        assertThat(customer.getAmountAvailable())
-                .isEqualByComparingTo(initialAvailable.subtract(largePrice));
+        assertThat(result.status()).isEqualTo("ACCEPT");
+        assertThat(result.source()).isEqualTo("PAYMENT");
+        verify(operationEngine, times(1)).processReserve(orderDto);
     }
 }

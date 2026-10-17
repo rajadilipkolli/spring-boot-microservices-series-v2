@@ -5,6 +5,7 @@ import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.mapper.CustomerMapper;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -25,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public class CustomerRepositoryImpl implements CustomerRepository {
 
-    private final DSLContext dslContext;
     private final DSLContext insertDsl;
     private final CustomerDAO customerDAO;
     private final CustomerMapper customerMapper;
@@ -40,7 +40,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
      */
     public CustomerRepositoryImpl(
             DSLContext dslContext, CustomerDAO customerDAO, CustomerMapper customerMapper) {
-        this.dslContext = dslContext;
         this.customerDAO = customerDAO;
         this.customerMapper = customerMapper;
 
@@ -142,7 +141,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         customerMapper.mapCustomerWithRecord(existingRecord, requestCustomer);
 
         try {
-            int updatedRows = customerDAO.save(existingRecord);
+            int updatedRows = existingRecord.update();
             if (updatedRows == 0) {
                 throw new OptimisticLockingFailureException(
                         "Customer was updated or deleted by another transaction");
@@ -221,11 +220,29 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         return customerDAO.deleteById(id);
     }
 
-    /** Deletes all customer rows in the current transaction. */
+    /**
+     * Deletes all customer rows in the current transaction.
+     *
+     * @return the number of rows affected
+     */
     @Override
-    @Transactional
-    public void deleteAll() {
-        dslContext.deleteFrom(CUSTOMERS).execute();
+    public int deleteAll() {
+        return customerDAO.deleteAll();
+    }
+
+    @Override
+    public boolean reserveFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.reserveFunds(customerId, amount);
+    }
+
+    @Override
+    public boolean captureFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.captureFunds(customerId, amount);
+    }
+
+    @Override
+    public boolean releaseFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.releaseFunds(customerId, amount);
     }
 
     /** Lowercases a non-null email on the supplied record using the root locale. */

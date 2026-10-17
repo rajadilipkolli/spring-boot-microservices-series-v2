@@ -70,42 +70,38 @@ sequenceDiagram
     Note over Client, DLT: 🎧 Event-Driven Payment Processing
     
     rect rgba(236, 72, 153, 0.3)
-        Note over Kafka, PaymentAPI: <span style="color: white">Order Payment Reservation Flow</span>
+        Note over Kafka, PaymentAPI: <span style="color: white">Order Payment Reservation Flow (Operation Engine & Outbox)</span>
         
-        Kafka->>OrdersTopic: OrderDto published<br/>(from Order Service)
+        Kafka->>OrdersTopic: OrderDto published (status="NEW", attemptId="...")
         OrdersTopic->>KafkaListener: @KafkaListener(topics="orders")<br/>groupId="payment"
-        KafkaListener->>KafkaListener: Check orderDto.status == "NEW"
+        KafkaListener->>KafkaListener: Check orderDto.status == "NEW" & validate attemptId
         
         KafkaListener->>PaymentAPI: paymentOrderManageService.reserve()
-        PaymentAPI->>PaymentAPI: @Timed + @Transactional<br/>Calculate total order price
+        PaymentAPI->>PaymentAPI: PaymentOperationEngine.processReserve()
         
-        PaymentAPI->>PaymentDB: SELECT * FROM customers<br/>WHERE id = ?
-        PaymentDB-->>PaymentAPI: Optional<Customer>
+        Note over PaymentAPI, PaymentDB: Phase 1: Arrival Transaction (@Transactional)
+        PaymentAPI->>PaymentDB: Verify customer exists
+        PaymentAPI->>PaymentDB: INSERT ON CONFLICT DO NOTHING (payment_operations)
+        PaymentAPI->>PaymentDB: SELECT FOR UPDATE (operation row lock)
+        PaymentAPI->>PaymentDB: Verify fingerprint & register AWAITING_RESULT outbox reply
+        PaymentAPI->>PaymentDB: Attempt conditional claim (increment fencing_token)
         
-        alt Customer found
-            PaymentAPI->>PaymentAPI: Calculate totalOrderPrice<br/>(sum of OrderItemDto.getPrice())
+        alt Claim Succeeded
+            Note over PaymentAPI: Phase 2: Provider Execution (Non-Transactional Boundary)
+            PaymentAPI->>PaymentDB: InternalLedgerAdapter (@Transactional REQUIRES_NEW)
+            PaymentAPI->>PaymentDB: Atomic reserveFunds & insert ledger_entries
             
-            alt Sufficient funds (totalPrice <= amountAvailable)
-                PaymentAPI->>PaymentAPI: orderDto.withStatus("ACCEPT")
-                PaymentAPI->>PaymentAPI: Reserve funds:<br/>amountReserved += totalPrice<br/>amountAvailable -= totalPrice
-                PaymentAPI->>PaymentDB: UPDATE customers SET<br/>amount_reserved = ?, amount_available = ?
-                PaymentDB-->>PaymentAPI: Update confirmation
-                
-                PaymentAPI->>PaymentAPI: orderDto.withSource("PAYMENT")
-                PaymentAPI->>Kafka: Send to payment-orders topic<br/>(OrderDto with ACCEPT status)
-                Kafka-->>PaymentAPI: Kafka send confirmation
-                
-            else Insufficient funds
-                PaymentAPI->>PaymentAPI: orderDto.withStatus("REJECT")
-                PaymentAPI->>PaymentAPI: orderDto.withSource("PAYMENT")
-                PaymentAPI->>Kafka: Send to payment-orders topic<br/>(OrderDto with REJECT status)
-                Kafka-->>PaymentAPI: Kafka send confirmation
-            end
-            
-        else Customer not found
-            PaymentAPI-->>KafkaListener: CustomerNotFoundException
-            KafkaListener-->>RetryTopic: @RetryableTopic<br/>(excluded exception)
+            Note over PaymentAPI, PaymentDB: Phase 3: Completion Transaction (@Transactional)
+            PaymentAPI->>PaymentDB: Fenced complete (status="COMPLETED", outcome)
+            PaymentAPI->>PaymentDB: Promote AWAITING_RESULT reply to PENDING
+        else Already Terminal or In-Flight
+            PaymentAPI-->>KafkaListener: Replay terminal reply or await background completion
         end
+        
+        Note over PaymentAPI, Kafka: Asynchronous Outbox Delivery
+        PaymentAPI->>PaymentDB: OutboxPublisher claims PENDING (SKIP LOCKED)
+        PaymentAPI->>PaymentTopic: Send outcome to payment-orders topic
+        PaymentAPI->>PaymentDB: Mark PUBLISHED with version guard
     end
 
     rect rgba(251, 146, 60, 0.3)
@@ -140,21 +136,33 @@ sequenceDiagram
     rect rgba(239, 68, 68, 0.3)
         Note over KafkaListener, DLT: <span style="color: white">Retry & Dead Letter Processing</span>
         
-        alt Processing fails (non-excluded exception)
+        alt Scheduled Active Reconciliation
+            PaymentAPI->>PaymentDB: PaymentReconciler claims UNKNOWN/Expired IN_FLIGHT (SKIP LOCKED)
+            PaymentAPI->>PaymentDB: Provider lookup(downstreamKey)
+            alt Definitive Outcome Found
+                PaymentAPI->>PaymentDB: Complete & promote outbox reply
+            else NOT_FOUND & attempts remain
+                PaymentAPI->>PaymentDB: Execute with persisted downstreamKey
+            else NOT_FOUND & attempts exhausted
+                PaymentAPI->>PaymentDB: Mark FAILED (publish REJECT for reservation)
+            end
+        end
+
+        alt Processing fails (transient error)
             KafkaListener-->>RetryTopic: @RetryableTopic<br/>@Backoff(delay=1000, multiplier=2.0)
-            RetryTopic->>RetryTopic: orders-retry-0 (1s delay)
-            RetryTopic->>RetryTopic: orders-retry-1 (2s delay)
-            RetryTopic->>RetryTopic: orders-retry-2 (4s delay)
+            RetryTopic->>RetryTopic: orders-retry-payment-0 (1s delay)
+            RetryTopic->>RetryTopic: orders-retry-payment-1 (2s delay)
+            RetryTopic->>RetryTopic: orders-retry-payment-2 (4s delay)
             
             alt All retries exhausted
-                RetryTopic->>DLT: @DltHandler<br/>orders-dlt topic
+                RetryTopic->>DLT: @DltHandler<br/>orders-dlt-payment topic
                 DLT->>KafkaListener: dlt(OrderDto, topic)
-                KafkaListener->>KafkaListener: Log error + CountDownLatch
+                KafkaListener->>KafkaListener: Log error with operationKey + CountDownLatch
             end
         end
         
-        alt CustomerNotFoundException (excluded)
-            KafkaListener-->>DLT: Direct to DLT<br/>(no retries for excluded exceptions)
+        alt Non-retryable (CustomerNotFoundException, OperationConflictException, Blank attemptId)
+            KafkaListener-->>DLT: Direct to orders-dlt-payment<br/>(bypasses retries)
         end
     end
 
