@@ -5,6 +5,7 @@ import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.example.paymentservice.PaymentApplication;
+import com.example.paymentservice.clients.OrderServiceProxy;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
@@ -12,7 +13,6 @@ import com.example.paymentservice.repositories.LedgerRepository;
 import com.example.paymentservice.repositories.OutboxEventRepository;
 import com.example.paymentservice.repositories.PaymentOperationRepository;
 import com.example.paymentservice.services.CustomerService;
-import com.example.paymentservice.services.OrderServiceProxy;
 import com.example.paymentservice.services.OutboxPublisher;
 import com.example.paymentservice.services.PaymentOperationEngine;
 import com.example.paymentservice.services.PaymentReconciler;

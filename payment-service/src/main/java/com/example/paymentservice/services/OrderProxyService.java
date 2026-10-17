@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.paymentservice.clients.OrderServiceProxy;
 import com.example.paymentservice.model.response.OrderResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;

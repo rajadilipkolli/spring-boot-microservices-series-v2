@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -377,50 +376,66 @@ public class PaymentOperationEngine {
      *
      * @return true if updated, false if the operation is absent or its token differs
      */
-    @Transactional
     public boolean executeSettlementCompletion(
             Long operationId, long fencingToken, String outcome) {
-        return operationRepository.complete(operationId, fencingToken, "COMPLETED", outcome);
+        return Boolean.TRUE.equals(
+                transactionTemplate.execute(
+                        status ->
+                                operationRepository.complete(
+                                        operationId, fencingToken, "COMPLETED", outcome)));
     }
 
     /**
      * Marks a matching ownership token UNKNOWN and schedules reconciliation after the initial
      * backoff. Missing operations and stale tokens leave state unchanged; database failures
      * propagate.
+     *
+     * @return true if updated, false if the operation is absent or its token differs
      */
-    @Transactional
-    public void transitionToUnknown(Long operationId, long fencingToken) {
-        OffsetDateTime nextReconcileAt =
-                OffsetDateTime.now().plus(properties.getReconciler().getInitialBackoff());
-        operationRepository.updateStatus(operationId, fencingToken, "UNKNOWN", nextReconcileAt);
+    public boolean transitionToUnknown(Long operationId, long fencingToken) {
+        return Boolean.TRUE.equals(
+                transactionTemplate.execute(
+                        status -> {
+                            OffsetDateTime nextReconcileAt =
+                                    OffsetDateTime.now()
+                                            .plus(properties.getReconciler().getInitialBackoff());
+                            return operationRepository.updateStatus(
+                                    operationId, fencingToken, "UNKNOWN", nextReconcileAt);
+                        }));
     }
 
     /**
      * Records a zero-amount, COMPLETED settlement with result NOT_APPLICABLE without changing
      * balances. Preserves any existing operation on a unique-key conflict without comparing its
      * fingerprint; other database failures propagate.
+     *
+     * @return the inserted or existing PaymentOperationsRecord
      */
-    @Transactional
-    public void recordNotApplicableSettlement(OrderDto orderDto, String settlementType) {
-        String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
-        String fingerprint =
-                generateFingerprint(orderDto.customerId(), settlementType, BigDecimal.ZERO);
-        PaymentOperationsRecord record = new PaymentOperationsRecord();
-        record.setOperationKey(operationKey);
-        record.setOrderId(orderDto.orderId());
-        record.setCustomerId(orderDto.customerId());
-        record.setOperationType(settlementType);
-        record.setAmount(BigDecimal.ZERO);
-        record.setFingerprint(fingerprint);
-        record.setDownstreamKey("downstream:" + operationKey);
-        record.setStatus("COMPLETED");
-        record.setResult("NOT_APPLICABLE");
-        record.setFencingToken(0L);
-        operationRepository.insertOrGet(record);
+    public PaymentOperationsRecord recordNotApplicableSettlement(
+            OrderDto orderDto, String settlementType) {
+        return transactionTemplate.execute(
+                status -> {
+                    String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
+                    String fingerprint =
+                            generateFingerprint(
+                                    orderDto.customerId(), settlementType, BigDecimal.ZERO);
+                    PaymentOperationsRecord record = new PaymentOperationsRecord();
+                    record.setOperationKey(operationKey);
+                    record.setOrderId(orderDto.orderId());
+                    record.setCustomerId(orderDto.customerId());
+                    record.setOperationType(settlementType);
+                    record.setAmount(BigDecimal.ZERO);
+                    record.setFingerprint(fingerprint);
+                    record.setDownstreamKey("downstream:" + operationKey);
+                    record.setStatus("COMPLETED");
+                    record.setResult("NOT_APPLICABLE");
+                    record.setFencingToken(0L);
+                    return operationRepository.insertOrGet(record);
+                });
     }
 
     /** Registers a payload-free reply awaiting the reserve result, preserving an existing reply. */
-    private void insertAwaitingReply(Long orderId, String attemptId) {
+    private OutboxEventsRecord insertAwaitingReply(Long orderId, String attemptId) {
         OutboxEventsRecord outbox = new OutboxEventsRecord();
         outbox.setAggregateType("PAYMENT_ORDER");
         outbox.setAggregateId(String.valueOf(orderId));
@@ -429,14 +444,14 @@ public class PaymentOperationEngine {
         outbox.setTopic(AppConstants.PAYMENT_ORDERS_TOPIC);
         outbox.setMessageKey(String.valueOf(orderId));
         outbox.setPayload(null);
-        outboxEventRepository.insert(outbox);
+        return outboxEventRepository.insert(outbox);
     }
 
     /**
      * Registers a publishable outcome reply with no customer or items. An existing reply for the
      * order and attempt is preserved; serialization and database failures propagate.
      */
-    private void insertPendingReply(Long orderId, String attemptId, String outcome) {
+    private OutboxEventsRecord insertPendingReply(Long orderId, String attemptId, String outcome) {
         OrderDto replyDto =
                 new OrderDto(
                         orderId,
@@ -455,7 +470,7 @@ public class PaymentOperationEngine {
         outbox.setTopic(AppConstants.PAYMENT_ORDERS_TOPIC);
         outbox.setMessageKey(String.valueOf(orderId));
         outbox.setPayload(payloadJson);
-        outboxEventRepository.insert(outbox);
+        return outboxEventRepository.insert(outbox);
     }
 
     /**

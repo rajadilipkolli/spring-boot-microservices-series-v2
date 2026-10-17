@@ -4,7 +4,6 @@ package com.example.paymentservice.repositories;
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
-import com.example.paymentservice.mapper.CustomerMapper;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +27,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
     private final DSLContext insertDsl;
     private final CustomerDAO customerDAO;
-    private final CustomerMapper customerMapper;
 
     /**
      * Creates the repository with database access and record mapping, deriving an insert context
@@ -36,12 +34,9 @@ public class CustomerRepositoryImpl implements CustomerRepository {
      *
      * @param dslContext the context for database operations
      * @param customerDAO the DAO for customer lookups and versioned updates
-     * @param customerMapper the mapper for updating persisted customer details
      */
-    public CustomerRepositoryImpl(
-            DSLContext dslContext, CustomerDAO customerDAO, CustomerMapper customerMapper) {
+    public CustomerRepositoryImpl(DSLContext dslContext, CustomerDAO customerDAO) {
         this.customerDAO = customerDAO;
-        this.customerMapper = customerMapper;
 
         Settings insertSettings =
                 SettingsTools.clone(dslContext.configuration().settings())
@@ -111,64 +106,6 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         } else {
             return getUpdatedCustomersRecord(requestCustomer);
         }
-    }
-
-    /**
-     * Updates the stored customer only when its version matches the supplied version, returning the
-     * updated record with an incremented version. The supplied record is unchanged. Database
-     * failures propagate, except that jOOQ concurrent-change failures become optimistic locking
-     * failures.
-     *
-     * @throws OptimisticLockingFailureException if the customer is missing, the version differs, no
-     *     rows are updated, or jOOQ detects a concurrent change
-     * @throws NullPointerException if the input version is null for an existing customer
-     */
-    private CustomersRecord getUpdatedCustomersRecord(CustomersRecord requestCustomer) {
-        CustomersRecord existingRecord =
-                customerDAO
-                        .findById(requestCustomer.getId())
-                        .orElseThrow(
-                                () ->
-                                        new OptimisticLockingFailureException(
-                                                "Customer was updated or deleted by another transaction"));
-
-        int expectedVersion = requestCustomer.getVersion();
-        if (!existingRecord.getVersion().equals(expectedVersion)) {
-            throw new OptimisticLockingFailureException(
-                    "Customer was updated or deleted by another transaction");
-        }
-
-        customerMapper.mapCustomerWithRecord(existingRecord, requestCustomer);
-
-        try {
-            int updatedRows = existingRecord.update();
-            if (updatedRows == 0) {
-                throw new OptimisticLockingFailureException(
-                        "Customer was updated or deleted by another transaction");
-            }
-            return existingRecord.into(CustomersRecord.class);
-        } catch (DataChangedException e) {
-            throw new OptimisticLockingFailureException(
-                    "Customer was updated or deleted by another transaction", e);
-        }
-    }
-
-    /**
-     * Inserts a copy of the supplied customer, generating a missing ID and initializing the
-     * persisted version to one regardless of the supplied version. Returns the persisted record
-     * without changing the supplied record. Database failures propagate to the caller.
-     *
-     * @throws OptimisticLockingFailureException if the insert affects no rows
-     */
-    private CustomersRecord getInsertedCustomersRecord(CustomersRecord requestCustomer) {
-        CustomersRecord customersRecord = insertDsl.newRecord(CUSTOMERS, requestCustomer);
-        customersRecord.reset(CUSTOMERS.VERSION);
-        int inserted = customersRecord.insert();
-        if (inserted == 0) {
-            throw new OptimisticLockingFailureException(
-                    "Customer was inserted by another transaction");
-        }
-        return customersRecord.into(CustomersRecord.class);
     }
 
     /**
@@ -258,5 +195,85 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         if (customer.getEmail() != null) {
             customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
         }
+    }
+
+    /**
+     * Updates the stored customer only when its version matches the supplied version, returning the
+     * updated record with an incremented version. The supplied record is unchanged. Database
+     * failures propagate, except that jOOQ concurrent-change failures become optimistic locking
+     * failures.
+     *
+     * @throws OptimisticLockingFailureException if the customer is missing, the version differs, no
+     *     rows are updated, or jOOQ detects a concurrent change
+     * @throws NullPointerException if the input version is null for an existing customer
+     */
+    private CustomersRecord getUpdatedCustomersRecord(CustomersRecord requestCustomer) {
+        CustomersRecord existingRecord =
+                customerDAO
+                        .findById(requestCustomer.getId())
+                        .orElseThrow(
+                                () ->
+                                        new OptimisticLockingFailureException(
+                                                "Customer was updated or deleted by another transaction"));
+
+        int expectedVersion = requestCustomer.getVersion();
+        if (!existingRecord.getVersion().equals(expectedVersion)) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was updated or deleted by another transaction");
+        }
+
+        mapCustomerWithRecord(existingRecord, requestCustomer);
+
+        try {
+            int updatedRows = existingRecord.update();
+            if (updatedRows == 0) {
+                throw new OptimisticLockingFailureException(
+                        "Customer was updated or deleted by another transaction");
+            }
+            return existingRecord.into(CustomersRecord.class);
+        } catch (DataChangedException e) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was updated or deleted by another transaction", e);
+        }
+    }
+
+    /**
+     * Copies customer details and balances while preserving the target record's ID and version.
+     *
+     * @param existingRecord the persisted record to update
+     * @param requestCustomer the replacement details and balances
+     */
+    private void mapCustomerWithRecord(
+            CustomersRecord existingRecord, CustomersRecord requestCustomer) {
+        existingRecord
+                .setAmountAvailable(requestCustomer.getAmountAvailable())
+                .setAmountReserved(requestCustomer.getAmountReserved())
+                .setName(requestCustomer.getName())
+                .setAddressLine1(requestCustomer.getAddressLine1())
+                .setAddressLine2(requestCustomer.getAddressLine2())
+                .setCity(requestCustomer.getCity())
+                .setState(requestCustomer.getState())
+                .setZipCode(requestCustomer.getZipCode())
+                .setCountry(requestCustomer.getCountry())
+                .setEmail(requestCustomer.getEmail())
+                .setPhone(requestCustomer.getPhone());
+    }
+
+    /**
+     * Inserts a copy of the supplied customer, generating a missing ID and initializing the
+     * persisted version to one regardless of the supplied version. Returns the persisted record
+     * without changing the supplied record. Database failures propagate to the caller.
+     *
+     * @throws OptimisticLockingFailureException if the insert affects no rows
+     */
+    private CustomersRecord getInsertedCustomersRecord(CustomersRecord requestCustomer) {
+        CustomersRecord customersRecord = insertDsl.newRecord(CUSTOMERS, requestCustomer);
+        customersRecord.reset(CUSTOMERS.VERSION);
+        int inserted = customersRecord.insert();
+        if (inserted == 0) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was inserted by another transaction");
+        }
+        return customersRecord.into(CustomersRecord.class);
     }
 }

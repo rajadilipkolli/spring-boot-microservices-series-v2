@@ -1,7 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
-import com.example.paymentservice.services.OrderServiceProxy;
+import com.example.paymentservice.clients.OrderServiceProxy;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

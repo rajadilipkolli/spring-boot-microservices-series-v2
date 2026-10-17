@@ -14,13 +14,15 @@ import org.springframework.stereotype.Service;
 public class CustomerMapper {
 
     /**
-     * Updates a customer's contact details, available balance, and address fields.
+     * Updates a customersRecord's contact details, available balance, and address fields.
      *
-     * @param customer the entity to update
-     * @param customerRequest replacement customer details
+     * @param customersRecord the entity to update
+     * @param customerRequest replacement customersRecord details
      */
-    public void mapCustomerWithRequest(CustomersRecord customer, CustomerRequest customerRequest) {
-        customer.setAmountAvailable(customerRequest.amountAvailable())
+    public void mapCustomerWithRequest(
+            CustomersRecord customersRecord, CustomerRequest customerRequest) {
+        customersRecord
+                .setAmountAvailable(customerRequest.amountAvailable())
                 .setName(customerRequest.name())
                 .setAddressLine1(customerRequest.addressLine1())
                 .setAddressLine2(customerRequest.addressLine2())
@@ -64,27 +66,5 @@ public class CustomerMapper {
             default -> orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.ID;
         }
         return List.of(ascending ? orderField.asc() : orderField.desc());
-    }
-
-    /**
-     * Copies customer details and balances while preserving the target record's ID and version.
-     *
-     * @param existingRecord the persisted record to update
-     * @param requestCustomer the replacement details and balances
-     */
-    public void mapCustomerWithRecord(
-            CustomersRecord existingRecord, CustomersRecord requestCustomer) {
-        existingRecord
-                .setAmountAvailable(requestCustomer.getAmountAvailable())
-                .setAmountReserved(requestCustomer.getAmountReserved())
-                .setName(requestCustomer.getName())
-                .setAddressLine1(requestCustomer.getAddressLine1())
-                .setAddressLine2(requestCustomer.getAddressLine2())
-                .setCity(requestCustomer.getCity())
-                .setState(requestCustomer.getState())
-                .setZipCode(requestCustomer.getZipCode())
-                .setCountry(requestCustomer.getCountry())
-                .setEmail(requestCustomer.getEmail())
-                .setPhone(requestCustomer.getPhone());
     }
 }

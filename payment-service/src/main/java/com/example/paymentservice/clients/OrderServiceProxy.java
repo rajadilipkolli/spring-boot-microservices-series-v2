@@ -1,5 +1,5 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
-package com.example.paymentservice.services;
+package com.example.paymentservice.clients;
 
 import com.example.paymentservice.model.response.OrderResponse;
 import com.example.paymentservice.model.response.PagedResult;

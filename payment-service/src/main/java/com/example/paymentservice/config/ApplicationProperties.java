@@ -1,67 +1,81 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.config;
 
-import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties("application")
-public class ApplicationProperties {
+public record ApplicationProperties(
+        String orderServiceUrl,
+        boolean byPassCircuitBreaker,
+        @NestedConfigurationProperty Cors cors,
+        @NestedConfigurationProperty Operation operation,
+        @NestedConfigurationProperty Outbox outbox,
+        @NestedConfigurationProperty Reconciler reconciler) {
 
-    private String orderServiceUrl;
-    private boolean byPassCircuitBreaker;
+    /**
+     * Creates application settings, replacing null nested settings with defaults and validating
+     * that the operation lease exceeds the combined provider and statement timeouts.
+     *
+     * @throws IllegalStateException if the operation lease is too short
+     */
+    @ConstructorBinding
+    public ApplicationProperties(
+            String orderServiceUrl,
+            boolean byPassCircuitBreaker,
+            @DefaultValue Cors cors,
+            @DefaultValue Operation operation,
+            @DefaultValue Outbox outbox,
+            @DefaultValue Reconciler reconciler) {
+        this.orderServiceUrl = orderServiceUrl;
+        this.byPassCircuitBreaker = byPassCircuitBreaker;
+        this.cors = cors != null ? cors : new Cors();
+        this.operation = operation != null ? operation : new Operation();
+        this.outbox = outbox != null ? outbox : new Outbox();
+        this.reconciler = reconciler != null ? reconciler : new Reconciler();
+        validate();
+    }
 
-    @NestedConfigurationProperty private Cors cors = new Cors();
-    @NestedConfigurationProperty private Operation operation = new Operation();
-    @NestedConfigurationProperty private Outbox outbox = new Outbox();
-    @NestedConfigurationProperty private Reconciler reconciler = new Reconciler();
-
-    public ApplicationProperties() {}
+    /** Creates default settings with no order service URL and circuit breaker bypass disabled. */
+    public ApplicationProperties() {
+        this(null, false, new Cors(), new Operation(), new Outbox(), new Reconciler());
+    }
 
     /**
      * Checks that the operation lease exceeds the combined provider and statement timeouts.
      *
      * @throws IllegalStateException if the lease is less than or equal to that sum
      */
-    @PostConstruct
-    public void validate() {
-        Duration totalTimeout =
-                operation.getProviderTimeout().plus(operation.getStatementTimeout());
-        if (operation.getLeaseDuration().compareTo(totalTimeout) <= 0) {
+    private void validate() {
+        Duration totalTimeout = operation.providerTimeout().plus(operation.statementTimeout());
+        if (operation.leaseDuration().compareTo(totalTimeout) <= 0) {
             throw new IllegalStateException(
                     "Operation leaseDuration ("
-                            + operation.getLeaseDuration()
+                            + operation.leaseDuration()
                             + ") must exceed providerTimeout ("
-                            + operation.getProviderTimeout()
+                            + operation.providerTimeout()
                             + ") + statementTimeout ("
-                            + operation.getStatementTimeout()
+                            + operation.statementTimeout()
                             + ")");
         }
     }
 
+    /** Returns the base URL of the order service. */
     public String getOrderServiceUrl() {
-        return this.orderServiceUrl;
+        return orderServiceUrl;
     }
 
-    public void setOrderServiceUrl(String orderServiceUrl) {
-        this.orderServiceUrl = orderServiceUrl;
-    }
-
+    /** Returns whether order lookups bypass the circuit breaker. */
     public boolean isByPassCircuitBreaker() {
-        return this.byPassCircuitBreaker;
+        return byPassCircuitBreaker;
     }
 
-    public void setByPassCircuitBreaker(boolean byPassCircuitBreaker) {
-        this.byPassCircuitBreaker = byPassCircuitBreaker;
-    }
-
+    /** Returns the CORS settings. */
     public Cors getCors() {
-        return this.cors;
-    }
-
-    public void setCors(final Cors cors) {
-        this.cors = cors;
+        return cors;
     }
 
     /** Returns the payment operation settings. */
@@ -69,19 +83,9 @@ public class ApplicationProperties {
         return operation;
     }
 
-    /** Sets the payment operation settings. */
-    public void setOperation(Operation operation) {
-        this.operation = operation;
-    }
-
     /** Returns the outbox publication settings. */
     public Outbox getOutbox() {
         return outbox;
-    }
-
-    /** Sets the outbox publication settings. */
-    public void setOutbox(Outbox outbox) {
-        this.outbox = outbox;
     }
 
     /** Returns the reconciliation settings. */
@@ -89,81 +93,105 @@ public class ApplicationProperties {
         return reconciler;
     }
 
-    /** Sets the reconciliation settings. */
-    public void setReconciler(Reconciler reconciler) {
-        this.reconciler = reconciler;
-    }
+    public record Cors(
+            String pathPattern,
+            String allowedMethods,
+            String allowedHeaders,
+            String allowedOriginPatterns,
+            boolean allowCredentials) {
 
-    public static class Cors {
-        private String pathPattern = "/api/**";
-        private String allowedMethods = "*";
-        private String allowedHeaders = "*";
-        private String allowedOriginPatterns = "*";
-        private boolean allowCredentials = true;
-
-        public Cors() {}
-
-        public String getPathPattern() {
-            return this.pathPattern;
-        }
-
-        /** Sets the URL pattern to which CORS settings apply. */
-        public void setPathPattern(final String pathPattern) {
-            this.pathPattern = pathPattern;
-        }
-
-        public String getAllowedMethods() {
-            return this.allowedMethods;
-        }
-
-        /** Sets the allowed CORS methods. */
-        public void setAllowedMethods(final String allowedMethods) {
-            this.allowedMethods = allowedMethods;
-        }
-
-        public String getAllowedHeaders() {
-            return this.allowedHeaders;
-        }
-
-        /** Sets the allowed CORS headers. */
-        public void setAllowedHeaders(final String allowedHeaders) {
-            this.allowedHeaders = allowedHeaders;
-        }
-
-        public String getAllowedOriginPatterns() {
-            return this.allowedOriginPatterns;
-        }
-
-        /** Sets the allowed CORS origin patterns. */
-        public void setAllowedOriginPatterns(final String allowedOriginPatterns) {
-            this.allowedOriginPatterns = allowedOriginPatterns;
-        }
-
-        public boolean isAllowCredentials() {
-            return this.allowCredentials;
-        }
-
-        /** Sets whether CORS requests may include credentials. */
-        public void setAllowCredentials(final boolean allowCredentials) {
+        /**
+         * Creates CORS settings, using default patterns, methods, and headers for null arguments.
+         */
+        @ConstructorBinding
+        public Cors(
+                @DefaultValue("/api/**") String pathPattern,
+                @DefaultValue("*") String allowedMethods,
+                @DefaultValue("*") String allowedHeaders,
+                @DefaultValue("*") String allowedOriginPatterns,
+                @DefaultValue("true") boolean allowCredentials) {
+            this.pathPattern = pathPattern != null ? pathPattern : "/api/**";
+            this.allowedMethods = allowedMethods != null ? allowedMethods : "*";
+            this.allowedHeaders = allowedHeaders != null ? allowedHeaders : "*";
+            this.allowedOriginPatterns =
+                    allowedOriginPatterns != null ? allowedOriginPatterns : "*";
             this.allowCredentials = allowCredentials;
         }
+
+        /**
+         * Creates CORS settings for {@code /api/**} with wildcard methods, headers, and origins,
+         * allowing credentials.
+         */
+        public Cors() {
+            this("/api/**", "*", "*", "*", true);
+        }
+
+        /** Returns the URL pattern to which CORS settings apply. */
+        public String getPathPattern() {
+            return pathPattern;
+        }
+
+        /** Returns the allowed CORS methods. */
+        public String getAllowedMethods() {
+            return allowedMethods;
+        }
+
+        /** Returns the allowed CORS headers. */
+        public String getAllowedHeaders() {
+            return allowedHeaders;
+        }
+
+        /** Returns the allowed CORS origin patterns. */
+        public String getAllowedOriginPatterns() {
+            return allowedOriginPatterns;
+        }
+
+        /** Returns whether CORS requests may include credentials. */
+        public boolean isAllowCredentials() {
+            return allowCredentials;
+        }
     }
 
-    public static class Operation {
-        private Duration leaseDuration = Duration.ofSeconds(10);
-        private Duration providerTimeout = Duration.ofSeconds(3);
-        private Duration statementTimeout = Duration.ofSeconds(2);
-        private Duration lockTimeout = Duration.ofSeconds(2);
-        private int maxAttempts = 3;
+    public record Operation(
+            Duration leaseDuration,
+            Duration providerTimeout,
+            Duration statementTimeout,
+            Duration lockTimeout,
+            int maxAttempts) {
+
+        /** Creates operation settings, using default durations for null arguments. */
+        @ConstructorBinding
+        public Operation(
+                @DefaultValue("10s") Duration leaseDuration,
+                @DefaultValue("3s") Duration providerTimeout,
+                @DefaultValue("2s") Duration statementTimeout,
+                @DefaultValue("2s") Duration lockTimeout,
+                @DefaultValue("3") int maxAttempts) {
+            this.leaseDuration = leaseDuration != null ? leaseDuration : Duration.ofSeconds(10);
+            this.providerTimeout =
+                    providerTimeout != null ? providerTimeout : Duration.ofSeconds(3);
+            this.statementTimeout =
+                    statementTimeout != null ? statementTimeout : Duration.ofSeconds(2);
+            this.lockTimeout = lockTimeout != null ? lockTimeout : Duration.ofSeconds(2);
+            this.maxAttempts = maxAttempts;
+        }
+
+        /**
+         * Creates operation settings with a 10-second lease, a 3-second provider timeout, 2-second
+         * statement and lock timeouts, and a three-attempt limit.
+         */
+        public Operation() {
+            this(
+                    Duration.ofSeconds(10),
+                    Duration.ofSeconds(3),
+                    Duration.ofSeconds(2),
+                    Duration.ofSeconds(2),
+                    3);
+        }
 
         /** Returns the duration of an operation ownership lease. */
         public Duration getLeaseDuration() {
             return leaseDuration;
-        }
-
-        /** Sets the duration of an operation ownership lease. */
-        public void setLeaseDuration(Duration leaseDuration) {
-            this.leaseDuration = leaseDuration;
         }
 
         /** Returns the maximum wait for provider execution or lookup. */
@@ -171,19 +199,9 @@ public class ApplicationProperties {
             return providerTimeout;
         }
 
-        /** Sets the maximum wait for provider execution or lookup. */
-        public void setProviderTimeout(Duration providerTimeout) {
-            this.providerTimeout = providerTimeout;
-        }
-
         /** Returns the PostgreSQL statement timeout for provider transactions. */
         public Duration getStatementTimeout() {
             return statementTimeout;
-        }
-
-        /** Sets the PostgreSQL statement timeout for provider transactions. */
-        public void setStatementTimeout(Duration statementTimeout) {
-            this.statementTimeout = statementTimeout;
         }
 
         /** Returns the timeout for acquiring a PostgreSQL lock. */
@@ -191,38 +209,54 @@ public class ApplicationProperties {
             return lockTimeout;
         }
 
-        /** Sets the timeout for acquiring a PostgreSQL lock. */
-        public void setLockTimeout(Duration lockTimeout) {
-            this.lockTimeout = lockTimeout;
-        }
-
         /** Returns the attempt limit checked before reconciliation re-executes an operation. */
         public int getMaxAttempts() {
             return maxAttempts;
         }
-
-        /** Sets the attempt limit checked before reconciliation re-executes an operation. */
-        public void setMaxAttempts(int maxAttempts) {
-            this.maxAttempts = maxAttempts;
-        }
     }
 
-    public static class Outbox {
-        private boolean enabled = true;
-        private Duration publishDelay = Duration.ofMillis(500);
-        private Duration lockTimeout = Duration.ofSeconds(30);
-        private int maxRetries = 3;
-        private int batchSize = 100;
-        private Duration sendTimeout = Duration.ofSeconds(5);
+    public record Outbox(
+            boolean enabled,
+            Duration publishDelay,
+            Duration lockTimeout,
+            int maxRetries,
+            int batchSize,
+            Duration sendTimeout) {
+
+        /** Creates outbox settings, using default durations for null arguments. */
+        @ConstructorBinding
+        public Outbox(
+                @DefaultValue("true") boolean enabled,
+                @DefaultValue("500ms") Duration publishDelay,
+                @DefaultValue("30s") Duration lockTimeout,
+                @DefaultValue("3") int maxRetries,
+                @DefaultValue("100") int batchSize,
+                @DefaultValue("5s") Duration sendTimeout) {
+            this.enabled = enabled;
+            this.publishDelay = publishDelay != null ? publishDelay : Duration.ofMillis(500);
+            this.lockTimeout = lockTimeout != null ? lockTimeout : Duration.ofSeconds(30);
+            this.maxRetries = maxRetries;
+            this.batchSize = batchSize;
+            this.sendTimeout = sendTimeout != null ? sendTimeout : Duration.ofSeconds(5);
+        }
+
+        /**
+         * Creates enabled outbox settings with a 500-millisecond publish delay, a 30-second lock
+         * timeout, three retries, batches of 100, and a 5-second send timeout.
+         */
+        public Outbox() {
+            this(
+                    true,
+                    Duration.ofMillis(500),
+                    Duration.ofSeconds(30),
+                    3,
+                    100,
+                    Duration.ofSeconds(5));
+        }
 
         /** Returns whether scheduled outbox publication and reaping are enabled. */
         public boolean isEnabled() {
             return enabled;
-        }
-
-        /** Sets whether scheduled outbox publication and reaping are enabled. */
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
         }
 
         /** Returns the delay between scheduled outbox publication batches. */
@@ -230,19 +264,9 @@ public class ApplicationProperties {
             return publishDelay;
         }
 
-        /** Sets the delay between scheduled outbox publication batches. */
-        public void setPublishDelay(Duration publishDelay) {
-            this.publishDelay = publishDelay;
-        }
-
         /** Returns the age after which a processing outbox event can be reclaimed. */
         public Duration getLockTimeout() {
             return lockTimeout;
-        }
-
-        /** Sets the age after which a processing outbox event can be reclaimed. */
-        public void setLockTimeout(Duration lockTimeout) {
-            this.lockTimeout = lockTimeout;
         }
 
         /** Returns the retry limit for outbox publication. */
@@ -250,47 +274,50 @@ public class ApplicationProperties {
             return maxRetries;
         }
 
-        /** Sets the retry limit for outbox publication. */
-        public void setMaxRetries(int maxRetries) {
-            this.maxRetries = maxRetries;
-        }
-
         /** Returns the maximum number of outbox events to claim per publication batch. */
         public int getBatchSize() {
             return batchSize;
-        }
-
-        /** Sets the maximum number of outbox events to claim per publication batch. */
-        public void setBatchSize(int batchSize) {
-            this.batchSize = batchSize;
         }
 
         /** Returns the maximum wait for a Kafka send to complete. */
         public Duration getSendTimeout() {
             return sendTimeout;
         }
-
-        /** Sets the maximum wait for a Kafka send to complete. */
-        public void setSendTimeout(Duration sendTimeout) {
-            this.sendTimeout = sendTimeout;
-        }
     }
 
-    public static class Reconciler {
-        private boolean enabled = true;
-        private Duration delay = Duration.ofSeconds(1);
-        private int batchSize = 50;
-        private Duration initialBackoff = Duration.ofSeconds(1);
-        private Duration maxBackoff = Duration.ofSeconds(10);
+    public record Reconciler(
+            boolean enabled,
+            Duration delay,
+            int batchSize,
+            Duration initialBackoff,
+            Duration maxBackoff) {
+
+        /** Creates reconciliation settings, using default durations for null arguments. */
+        @ConstructorBinding
+        public Reconciler(
+                @DefaultValue("true") boolean enabled,
+                @DefaultValue("1s") Duration delay,
+                @DefaultValue("50") int batchSize,
+                @DefaultValue("1s") Duration initialBackoff,
+                @DefaultValue("10s") Duration maxBackoff) {
+            this.enabled = enabled;
+            this.delay = delay != null ? delay : Duration.ofSeconds(1);
+            this.batchSize = batchSize;
+            this.initialBackoff = initialBackoff != null ? initialBackoff : Duration.ofSeconds(1);
+            this.maxBackoff = maxBackoff != null ? maxBackoff : Duration.ofSeconds(10);
+        }
+
+        /**
+         * Creates enabled reconciliation settings with a 1-second delay, batches of 50, and backoff
+         * ranging from 1 to 10 seconds.
+         */
+        public Reconciler() {
+            this(true, Duration.ofSeconds(1), 50, Duration.ofSeconds(1), Duration.ofSeconds(10));
+        }
 
         /** Returns whether scheduled reconciliation is enabled. */
         public boolean isEnabled() {
             return enabled;
-        }
-
-        /** Sets whether scheduled reconciliation is enabled. */
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
         }
 
         /** Returns the delay between scheduled reconciliation batches. */
@@ -298,19 +325,9 @@ public class ApplicationProperties {
             return delay;
         }
 
-        /** Sets the delay between scheduled reconciliation batches. */
-        public void setDelay(Duration delay) {
-            this.delay = delay;
-        }
-
         /** Returns the maximum number of operations to claim per reconciliation batch. */
         public int getBatchSize() {
             return batchSize;
-        }
-
-        /** Sets the maximum number of operations to claim per reconciliation batch. */
-        public void setBatchSize(int batchSize) {
-            this.batchSize = batchSize;
         }
 
         /** Returns the initial delay used when deferring reconciliation. */
@@ -318,19 +335,9 @@ public class ApplicationProperties {
             return initialBackoff;
         }
 
-        /** Sets the initial delay used when deferring reconciliation. */
-        public void setInitialBackoff(Duration initialBackoff) {
-            this.initialBackoff = initialBackoff;
-        }
-
         /** Returns the maximum reconciliation backoff duration. */
         public Duration getMaxBackoff() {
             return maxBackoff;
-        }
-
-        /** Sets the maximum reconciliation backoff duration. */
-        public void setMaxBackoff(Duration maxBackoff) {
-            this.maxBackoff = maxBackoff;
         }
     }
 }
