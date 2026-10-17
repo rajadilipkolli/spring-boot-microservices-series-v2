@@ -13,8 +13,11 @@ import com.example.paymentservice.repositories.OutboxEventRepository;
 import com.example.paymentservice.repositories.PaymentOperationRepository;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderServiceProxy;
+import com.example.paymentservice.services.OutboxPublisher;
 import com.example.paymentservice.services.PaymentOperationEngine;
+import com.example.paymentservice.services.PaymentReconciler;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
+import com.example.paymentservice.services.provider.InternalLedgerAdapter;
 import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.transaction.PlatformTransactionManager;
 import tools.jackson.databind.json.JsonMapper;
 
 @ActiveProfiles({PROFILE_TEST})
@@ -62,4 +66,14 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected PaymentOperationEngine paymentOperationEngine;
 
     @Autowired protected DSLContext dslContext;
+
+    @Autowired protected OutboxPublisher outboxPublisher;
+
+    @Autowired protected PaymentReconciler paymentReconciler;
+
+    @Autowired protected PlatformTransactionManager transactionManager;
+
+    @Autowired protected InternalLedgerAdapter ledgerAdapter;
+
+    @MockitoSpyBean protected OutboxEventRepository outboxRepositorySpy;
 }

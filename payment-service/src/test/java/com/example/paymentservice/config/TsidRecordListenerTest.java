@@ -17,13 +17,12 @@ import org.junit.jupiter.api.Test;
 
 class TsidRecordListenerTest {
 
-    private TSID.Factory tsidFactory;
     private TsidRecordListener listener;
     private RecordContext recordContext;
 
     @BeforeEach
     void setUp() {
-        tsidFactory = TSID.Factory.builder().withNode(1).build();
+        TSID.Factory tsidFactory = TSID.Factory.builder().withNode(1).build();
         listener = new TsidRecordListener(tsidFactory);
         recordContext = mock(RecordContext.class);
     }

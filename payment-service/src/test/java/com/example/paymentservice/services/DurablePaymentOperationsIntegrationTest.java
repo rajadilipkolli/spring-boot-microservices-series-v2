@@ -10,13 +10,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
+import com.example.paymentservice.jooq.tables.LedgerEntries;
+import com.example.paymentservice.jooq.tables.OutboxEvents;
+import com.example.paymentservice.jooq.tables.PaymentOperations;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.repositories.OutboxEventRepository;
-import com.example.paymentservice.services.provider.InternalLedgerAdapter;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
 import com.example.paymentservice.services.provider.ProviderResult;
@@ -30,35 +31,19 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.datafaker.Faker;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.transaction.PlatformTransactionManager;
 
 class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
-
-    @Autowired private OutboxPublisher outboxPublisher;
-    @Autowired private PaymentReconciler paymentReconciler;
-
-    @Autowired private PlatformTransactionManager transactionManager;
-    @Autowired private InternalLedgerAdapter ledgerAdapter;
-    @MockitoSpyBean private OutboxEventRepository outboxRepositorySpy;
 
     private CustomersRecord customer;
 
     @BeforeEach
     void setUp() {
-        dslContext
-                .deleteFrom(com.example.paymentservice.jooq.tables.LedgerEntries.LEDGER_ENTRIES)
-                .execute();
-        dslContext
-                .deleteFrom(
-                        com.example.paymentservice.jooq.tables.PaymentOperations.PAYMENT_OPERATIONS)
-                .execute();
-        dslContext
-                .deleteFrom(com.example.paymentservice.jooq.tables.OutboxEvents.OUTBOX_EVENTS)
-                .execute();
+        dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
+        dslContext.deleteFrom(PaymentOperations.PAYMENT_OPERATIONS).execute();
+        dslContext.deleteFrom(OutboxEvents.OUTBOX_EVENTS).execute();
         customerRepository.deleteAll();
         Faker faker = new Faker();
         CustomersRecord record = new CustomersRecord();
@@ -147,35 +132,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         CountDownLatch blockLatch = new CountDownLatch(1);
         CountDownLatch inProviderLatch = new CountDownLatch(1);
 
-        PaymentProviderPort blockingProvider =
-                new PaymentProviderPort() {
-                    @Override
-                    public ProviderResult execute(String downstreamKey, ProviderCommand command) {
-                        inProviderLatch.countDown();
-                        try {
-                            blockLatch.await(10, TimeUnit.SECONDS);
-                        } catch (InterruptedException ignored) {
-                        }
-                        customerRepository.reserveFunds(command.customerId(), command.amount());
-                        return ProviderResult.accept();
-                    }
-
-                    @Override
-                    public ProviderResult lookup(String downstreamKey) {
-                        return ProviderResult.notFound();
-                    }
-                };
-
         PaymentOperationEngine customEngine =
-                new PaymentOperationEngine(
-                        paymentOperationRepository,
-                        outboxEventRepository,
-                        customerRepository,
-                        blockingProvider,
-                        new com.example.paymentservice.config.ApplicationProperties(),
-                        jsonMapper,
-                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
-                        transactionManager);
+                getPaymentOperationEngine(inProviderLatch, blockLatch);
 
         OrderDto order1 =
                 new OrderDto(
@@ -211,6 +169,40 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         CustomersRecord updated = customerDAO.findById(customer.getId()).get();
         assertThat(updated.getAmountAvailable()).isEqualByComparingTo(BigDecimal.valueOf(90.00));
         assertThat(updated.getAmountReserved()).isEqualByComparingTo(BigDecimal.valueOf(10.00));
+    }
+
+    private @NonNull PaymentOperationEngine getPaymentOperationEngine(
+            CountDownLatch inProviderLatch, CountDownLatch blockLatch) {
+        PaymentProviderPort blockingProvider =
+                new PaymentProviderPort() {
+                    @Override
+                    public ProviderResult execute(String downstreamKey, ProviderCommand command) {
+                        inProviderLatch.countDown();
+                        try {
+                            blockLatch.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException ignored) {
+                        }
+                        customerRepository.reserveFunds(command.customerId(), command.amount());
+                        return ProviderResult.accept();
+                    }
+
+                    @Override
+                    public ProviderResult lookup(String downstreamKey) {
+                        return ProviderResult.notFound();
+                    }
+                };
+
+        PaymentOperationEngine customEngine =
+                new PaymentOperationEngine(
+                        paymentOperationRepository,
+                        outboxEventRepository,
+                        customerRepository,
+                        blockingProvider,
+                        new com.example.paymentservice.config.ApplicationProperties(),
+                        jsonMapper,
+                        new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                        transactionManager);
+        return customEngine;
     }
 
     /**

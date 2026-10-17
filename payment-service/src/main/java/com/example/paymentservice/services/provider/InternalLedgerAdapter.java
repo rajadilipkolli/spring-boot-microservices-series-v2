@@ -102,12 +102,12 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         setTimeouts();
         Optional<LedgerEntriesRecord> existing =
                 ledgerRepository.findByDownstreamKey(downstreamKey);
-        if (existing.isPresent()) {
-            return "ACCEPT".equals(existing.get().getStatus())
-                    ? ProviderResult.accept()
-                    : ProviderResult.reject();
-        }
-        return ProviderResult.notFound();
+        return existing.map(
+                        ledgerEntriesRecord ->
+                                "ACCEPT".equals(ledgerEntriesRecord.getStatus())
+                                        ? ProviderResult.accept()
+                                        : ProviderResult.reject())
+                .orElseGet(ProviderResult::notFound);
     }
 
     /**
