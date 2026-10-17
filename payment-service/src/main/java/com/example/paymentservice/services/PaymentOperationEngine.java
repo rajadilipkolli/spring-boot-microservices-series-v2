@@ -81,11 +81,15 @@ public class PaymentOperationEngine {
      *     completion loses ownership
      * @throws CustomerNotFoundException if the customer ID is null or absent
      * @throws OperationConflictException if an existing operation has a different fingerprint
+     * @throws IllegalArgumentException if the calculated total is negative
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     public OrderDto processReserve(OrderDto orderDto) {
         validateCustomerExists(orderDto.customerId());
         BigDecimal amount = calculateTotalOrderPrice(orderDto);
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException("Order total must not be negative");
+        }
         String operationKey = "payment:" + orderDto.orderId() + ":RESERVE";
         String fingerprint = generateFingerprint(orderDto.customerId(), "RESERVE", amount);
 

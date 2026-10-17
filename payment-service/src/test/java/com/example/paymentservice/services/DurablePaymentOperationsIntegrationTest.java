@@ -34,6 +34,8 @@ import net.datafaker.Faker;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
 
@@ -59,6 +61,54 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         record.setAmountAvailable(BigDecimal.valueOf(100.00));
         record.setAmountReserved(BigDecimal.ZERO);
         customer = customerRepository.saveCustomer(record);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-0.01", "-10.00"})
+    void negativeReserveTotalIsRejectedWithoutSideEffects(BigDecimal amount) {
+        OrderDto order =
+                new OrderDto(
+                        1014L,
+                        customer.getId(),
+                        "NEW",
+                        "INVENTORY",
+                        List.of(new OrderDto.OrderItemDto(1L, "p1", 1, amount)),
+                        "negative-total");
+
+        assertThatThrownBy(() -> paymentOperationEngine.processReserve(order))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Order total must not be negative");
+
+        assertThat(dslContext.fetchCount(PaymentOperations.PAYMENT_OPERATIONS)).isZero();
+        assertThat(dslContext.fetchCount(LedgerEntries.LEDGER_ENTRIES)).isZero();
+        assertThat(dslContext.fetchCount(OutboxEvents.OUTBOX_EVENTS)).isZero();
+        CustomersRecord unchanged = customerDAO.findById(customer.getId()).orElseThrow();
+        assertThat(unchanged.getAmountAvailable()).isEqualByComparingTo("100");
+        assertThat(unchanged.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0.00", "10.00"})
+    void nonNegativeReserveTotalIsAccepted(BigDecimal amount) {
+        OrderDto order =
+                new OrderDto(
+                        1015L,
+                        customer.getId(),
+                        "NEW",
+                        "INVENTORY",
+                        List.of(new OrderDto.OrderItemDto(1L, "p1", 1, amount)),
+                        "non-negative-total");
+
+        assertThat(paymentOperationEngine.processReserve(order).status()).isEqualTo("ACCEPT");
+
+        PaymentOperationsRecord operation =
+                paymentOperationRepository.findByOperationKey("payment:1015:RESERVE").orElseThrow();
+        assertThat(operation.getAmount()).isEqualByComparingTo(amount);
+        CustomersRecord updated = customerDAO.findById(customer.getId()).orElseThrow();
+        assertThat(updated.getAmountAvailable())
+                .isEqualByComparingTo(new BigDecimal("100").subtract(amount));
+        assertThat(updated.getAmountReserved()).isEqualByComparingTo(amount);
+        assertReplyReady(order.orderId(), order.attemptId(), "ACCEPT");
     }
 
     /**
