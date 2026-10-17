@@ -16,6 +16,12 @@ public record ApplicationProperties(
         @NestedConfigurationProperty Outbox outbox,
         @NestedConfigurationProperty Reconciler reconciler) {
 
+    /**
+     * Creates application settings, replacing null nested settings with defaults and validating
+     * that the operation lease exceeds the combined provider and statement timeouts.
+     *
+     * @throws IllegalStateException if the operation lease is too short
+     */
     @ConstructorBinding
     public ApplicationProperties(
             String orderServiceUrl,
@@ -33,6 +39,7 @@ public record ApplicationProperties(
         validate();
     }
 
+    /** Creates default settings with no order service URL and circuit breaker bypass disabled. */
     public ApplicationProperties() {
         this(null, false, new Cors(), new Operation(), new Outbox(), new Reconciler());
     }
@@ -56,26 +63,32 @@ public record ApplicationProperties(
         }
     }
 
+    /** Returns the base URL of the order service. */
     public String getOrderServiceUrl() {
         return orderServiceUrl;
     }
 
+    /** Returns whether order lookups bypass the circuit breaker. */
     public boolean isByPassCircuitBreaker() {
         return byPassCircuitBreaker;
     }
 
+    /** Returns the CORS settings. */
     public Cors getCors() {
         return cors;
     }
 
+    /** Returns the payment operation settings. */
     public Operation getOperation() {
         return operation;
     }
 
+    /** Returns the outbox publication settings. */
     public Outbox getOutbox() {
         return outbox;
     }
 
+    /** Returns the reconciliation settings. */
     public Reconciler getReconciler() {
         return reconciler;
     }
@@ -87,6 +100,9 @@ public record ApplicationProperties(
             String allowedOriginPatterns,
             boolean allowCredentials) {
 
+        /**
+         * Creates CORS settings, using default patterns, methods, and headers for null arguments.
+         */
         @ConstructorBinding
         public Cors(
                 @DefaultValue("/api/**") String pathPattern,
@@ -102,26 +118,35 @@ public record ApplicationProperties(
             this.allowCredentials = allowCredentials;
         }
 
+        /**
+         * Creates CORS settings for {@code /api/**} with wildcard methods, headers, and origins,
+         * allowing credentials.
+         */
         public Cors() {
             this("/api/**", "*", "*", "*", true);
         }
 
+        /** Returns the URL pattern to which CORS settings apply. */
         public String getPathPattern() {
             return pathPattern;
         }
 
+        /** Returns the allowed CORS methods. */
         public String getAllowedMethods() {
             return allowedMethods;
         }
 
+        /** Returns the allowed CORS headers. */
         public String getAllowedHeaders() {
             return allowedHeaders;
         }
 
+        /** Returns the allowed CORS origin patterns. */
         public String getAllowedOriginPatterns() {
             return allowedOriginPatterns;
         }
 
+        /** Returns whether CORS requests may include credentials. */
         public boolean isAllowCredentials() {
             return allowCredentials;
         }
@@ -134,6 +159,7 @@ public record ApplicationProperties(
             Duration lockTimeout,
             int maxAttempts) {
 
+        /** Creates operation settings, using default durations for null arguments. */
         @ConstructorBinding
         public Operation(
                 @DefaultValue("10s") Duration leaseDuration,
@@ -150,6 +176,10 @@ public record ApplicationProperties(
             this.maxAttempts = maxAttempts;
         }
 
+        /**
+         * Creates operation settings with a 10-second lease, a 3-second provider timeout, 2-second
+         * statement and lock timeouts, and a three-attempt limit.
+         */
         public Operation() {
             this(
                     Duration.ofSeconds(10),
@@ -159,22 +189,27 @@ public record ApplicationProperties(
                     3);
         }
 
+        /** Returns the duration of an operation ownership lease. */
         public Duration getLeaseDuration() {
             return leaseDuration;
         }
 
+        /** Returns the maximum wait for provider execution or lookup. */
         public Duration getProviderTimeout() {
             return providerTimeout;
         }
 
+        /** Returns the PostgreSQL statement timeout for provider transactions. */
         public Duration getStatementTimeout() {
             return statementTimeout;
         }
 
+        /** Returns the timeout for acquiring a PostgreSQL lock. */
         public Duration getLockTimeout() {
             return lockTimeout;
         }
 
+        /** Returns the attempt limit checked before reconciliation re-executes an operation. */
         public int getMaxAttempts() {
             return maxAttempts;
         }
@@ -188,6 +223,7 @@ public record ApplicationProperties(
             int batchSize,
             Duration sendTimeout) {
 
+        /** Creates outbox settings, using default durations for null arguments. */
         @ConstructorBinding
         public Outbox(
                 @DefaultValue("true") boolean enabled,
@@ -204,6 +240,10 @@ public record ApplicationProperties(
             this.sendTimeout = sendTimeout != null ? sendTimeout : Duration.ofSeconds(5);
         }
 
+        /**
+         * Creates enabled outbox settings with a 500-millisecond publish delay, a 30-second lock
+         * timeout, three retries, batches of 100, and a 5-second send timeout.
+         */
         public Outbox() {
             this(
                     true,
@@ -214,26 +254,32 @@ public record ApplicationProperties(
                     Duration.ofSeconds(5));
         }
 
+        /** Returns whether scheduled outbox publication and reaping are enabled. */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** Returns the delay between scheduled outbox publication batches. */
         public Duration getPublishDelay() {
             return publishDelay;
         }
 
+        /** Returns the age after which a processing outbox event can be reclaimed. */
         public Duration getLockTimeout() {
             return lockTimeout;
         }
 
+        /** Returns the retry limit for outbox publication. */
         public int getMaxRetries() {
             return maxRetries;
         }
 
+        /** Returns the maximum number of outbox events to claim per publication batch. */
         public int getBatchSize() {
             return batchSize;
         }
 
+        /** Returns the maximum wait for a Kafka send to complete. */
         public Duration getSendTimeout() {
             return sendTimeout;
         }
@@ -246,6 +292,7 @@ public record ApplicationProperties(
             Duration initialBackoff,
             Duration maxBackoff) {
 
+        /** Creates reconciliation settings, using default durations for null arguments. */
         @ConstructorBinding
         public Reconciler(
                 @DefaultValue("true") boolean enabled,
@@ -260,26 +307,35 @@ public record ApplicationProperties(
             this.maxBackoff = maxBackoff != null ? maxBackoff : Duration.ofSeconds(10);
         }
 
+        /**
+         * Creates enabled reconciliation settings with a 1-second delay, batches of 50, and backoff
+         * ranging from 1 to 10 seconds.
+         */
         public Reconciler() {
             this(true, Duration.ofSeconds(1), 50, Duration.ofSeconds(1), Duration.ofSeconds(10));
         }
 
+        /** Returns whether scheduled reconciliation is enabled. */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** Returns the delay between scheduled reconciliation batches. */
         public Duration getDelay() {
             return delay;
         }
 
+        /** Returns the maximum number of operations to claim per reconciliation batch. */
         public int getBatchSize() {
             return batchSize;
         }
 
+        /** Returns the initial delay used when deferring reconciliation. */
         public Duration getInitialBackoff() {
             return initialBackoff;
         }
 
+        /** Returns the maximum reconciliation backoff duration. */
         public Duration getMaxBackoff() {
             return maxBackoff;
         }
