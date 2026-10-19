@@ -18,11 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -38,18 +36,22 @@ public class OutboxPublisher {
     private final Counter failedEventCounter;
     private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
-    private final OutboxPublisher self;
-
+    /**
+     * Creates the outbox publisher and registers its published and failed event counters.
+     *
+     * @param outboxEventRepository repository used to claim and update outbox events
+     * @param catalogKafkaProducer producer used to send event payloads to Kafka
+     * @param properties configuration for retries and processing lock timeouts
+     * @param meterRegistry registry for publishing outcome counters
+     */
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
             CatalogKafkaProducer catalogKafkaProducer,
             ApplicationProperties properties,
-            MeterRegistry meterRegistry,
-            @Lazy OutboxPublisher self) {
+            MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
         this.catalogKafkaProducer = catalogKafkaProducer;
         this.properties = properties;
-        this.self = self;
 
         this.publishedEventCounter =
                 Counter.builder("outbox.events.published.count")
@@ -86,11 +88,20 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Claims up to 100 pending events and sends them to Kafka when the returned flux is subscribed.
+     *
+     * @return the saved events after recording publishing success or failure
+     */
     public Flux<OutboxEvent> publishEvents() {
-        return this.self.claimEvents().flatMap(this::publishEvent);
+        return this.claimEvents().flatMap(this::publishEvent);
     }
 
-    @Transactional
+    /**
+     * Claims up to 100 pending events for processing when the returned flux is subscribed.
+     *
+     * @return the events atomically marked as processing by the repository
+     */
     public Flux<OutboxEvent> claimEvents() {
         return outboxEventRepository.claimPendingEvents(100);
     }

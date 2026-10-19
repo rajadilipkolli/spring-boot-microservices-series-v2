@@ -15,10 +15,16 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
+    /**
+     * Provides a reusable Redis container for integration tests through a Spring service
+     * connection.
+     *
+     * @return the Redis test container configured for reuse
+     */
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.1-alpine"))
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"))
                 .withReuse(true);
     }
 }

@@ -32,7 +32,7 @@ spec:
           value: redis
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: service.name=redis,service.version=0.0.1-SNAPSHOT
-        image: redis:8.10.1-alpine
+        image: redis:8.10.2-alpine
         name: redis
         ports:
         - containerPort: 6379

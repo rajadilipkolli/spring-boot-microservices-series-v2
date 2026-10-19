@@ -37,27 +37,36 @@ class OutboxScheduledJobsTest {
     private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
+    /**
+     * Verifies that publishing waits for completion and releases its guard so the next run can
+     * claim events.
+     *
+     * @throws Exception if waiting for the scheduled job fails
+     */
     @Test
     void publishWaitsForCompletionAndAllowsTheNextRun() throws Exception {
-        OutboxPublisher self = mock(OutboxPublisher.class);
         Sinks.Many<OutboxEvent> work = Sinks.many().unicast().onBackpressureBuffer();
         CountDownLatch subscribed = new CountDownLatch(1);
-        when(self.claimEvents())
+        when(repository.claimPendingEvents(anyInt()))
                 .thenReturn(work.asFlux().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxPublisher publisher =
                 new OutboxPublisher(
                         repository,
                         mock(CatalogKafkaProducer.class),
                         mock(ApplicationProperties.class),
-                        registry,
-                        self);
+                        registry);
 
         assertWaits(publisher::scheduledPublish, subscribed, () -> work.tryEmitComplete());
-        when(self.claimEvents()).thenReturn(Flux.empty());
+        when(repository.claimPendingEvents(anyInt())).thenReturn(Flux.empty());
         publisher.scheduledPublish();
-        verify(self, times(2)).claimEvents();
+        verify(repository, times(2)).claimPendingEvents(100);
     }
 
+    /**
+     * Verifies that the scheduled reaper waits for the repository operation to complete.
+     *
+     * @throws Exception if waiting for the scheduled job fails
+     */
     @Test
     void reaperWaitsForCompletion() throws Exception {
         ApplicationProperties properties = mock(ApplicationProperties.class, RETURNS_DEEP_STUBS);
@@ -68,7 +77,7 @@ class OutboxScheduledJobsTest {
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxPublisher publisher =
                 new OutboxPublisher(
-                        repository, mock(CatalogKafkaProducer.class), properties, registry, null);
+                        repository, mock(CatalogKafkaProducer.class), properties, registry);
         assertWaits(publisher::scheduledReap, subscribed, () -> work.tryEmitValue(1L));
     }
 
