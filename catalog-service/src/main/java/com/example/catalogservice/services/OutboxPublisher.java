@@ -36,6 +36,14 @@ public class OutboxPublisher {
     private final Counter failedEventCounter;
     private final AtomicBoolean isPublishing = new AtomicBoolean(false);
 
+    /**
+     * Creates the outbox publisher and registers its published and failed event counters.
+     *
+     * @param outboxEventRepository repository used to claim and update outbox events
+     * @param catalogKafkaProducer producer used to send event payloads to Kafka
+     * @param properties configuration for retries and processing lock timeouts
+     * @param meterRegistry registry for publishing outcome counters
+     */
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
             CatalogKafkaProducer catalogKafkaProducer,
@@ -80,10 +88,20 @@ public class OutboxPublisher {
         }
     }
 
+    /**
+     * Claims up to 100 pending events and sends them to Kafka when the returned flux is subscribed.
+     *
+     * @return the saved events after recording publishing success or failure
+     */
     public Flux<OutboxEvent> publishEvents() {
         return this.claimEvents().flatMap(this::publishEvent);
     }
 
+    /**
+     * Claims up to 100 pending events for processing when the returned flux is subscribed.
+     *
+     * @return the events atomically marked as processing by the repository
+     */
     public Flux<OutboxEvent> claimEvents() {
         return outboxEventRepository.claimPendingEvents(100);
     }

@@ -37,6 +37,12 @@ class OutboxScheduledJobsTest {
     private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
+    /**
+     * Verifies that publishing waits for completion and releases its guard so the next run can claim
+     * events.
+     *
+     * @throws Exception if waiting for the scheduled job fails
+     */
     @Test
     void publishWaitsForCompletionAndAllowsTheNextRun() throws Exception {
         Sinks.Many<OutboxEvent> work = Sinks.many().unicast().onBackpressureBuffer();
@@ -56,6 +62,11 @@ class OutboxScheduledJobsTest {
         verify(repository, times(2)).claimPendingEvents(100);
     }
 
+    /**
+     * Verifies that the scheduled reaper waits for the repository operation to complete.
+     *
+     * @throws Exception if waiting for the scheduled job fails
+     */
     @Test
     void reaperWaitsForCompletion() throws Exception {
         ApplicationProperties properties = mock(ApplicationProperties.class, RETURNS_DEEP_STUBS);

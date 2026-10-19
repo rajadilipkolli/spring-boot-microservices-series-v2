@@ -15,6 +15,11 @@ public class ContainerConfig {
     private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 
+    /**
+     * Provides the Keycloak test container with admin credentials and the retail store realm import.
+     *
+     * @return the configured Keycloak test container
+     */
     @Bean
     KeycloakContainer keycloak() {
         return new KeycloakContainer(KEYCLOAK_IMAGE)
