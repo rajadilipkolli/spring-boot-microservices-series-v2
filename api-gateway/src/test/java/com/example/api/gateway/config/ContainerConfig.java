@@ -16,7 +16,8 @@ import org.testcontainers.utility.DockerImageName;
 public class ContainerConfig {
 
     /**
-     * Provides a reusable Redis container for integration tests through a Spring service connection.
+     * Provides a reusable Redis container for integration tests through a Spring service
+     * connection.
      *
      * @return the Redis test container configured for reuse
      */

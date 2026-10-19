@@ -38,8 +38,8 @@ class OutboxScheduledJobsTest {
     private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     /**
-     * Verifies that publishing waits for completion and releases its guard so the next run can claim
-     * events.
+     * Verifies that publishing waits for completion and releases its guard so the next run can
+     * claim events.
      *
      * @throws Exception if waiting for the scheduled job fails
      */
