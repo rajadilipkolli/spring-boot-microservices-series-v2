@@ -23,7 +23,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spotless.version>3.10.4</spotless.version>
         <rest-assured.version>6.2.0</rest-assured.version>
-        <skipE2E>false</skipE2E>
+        <skipE2E>true</skipE2E>
     </properties>
 
     <dependencies>

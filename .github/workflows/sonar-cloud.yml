@@ -54,71 +54,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=rajadilipkolli_spring-boot-microservices-series-v2
+        run: ./mvnw -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=rajadilipkolli_spring-boot-microservices-series-v2 -DskipE2E=true
 
   e2e-tests:
     name: End-to-End Tests
     needs: build
-    runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v6
-        with:
-          java-version: 25
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Start Services via Docker Compose
-        run: |
-          docker compose -f deployment/docker-compose.yml --profile terraform up -d
-
-      - name: Wait for Services to be Ready
-        run: |
-          echo "Waiting for API Gateway..."
-          timeout=240
-          elapsed=0
-          until curl -s http://localhost:8765/actuator/health | grep -q "UP"; do
-            if [ $elapsed -ge $timeout ]; then
-              echo "Timeout waiting for API Gateway"
-              docker compose -f deployment/docker-compose.yml logs api-gateway
-              exit 1
-            fi
-            sleep 5
-            elapsed=$((elapsed + 5))
-          done
-          sleep 15
-
-      - name: Run End to End Tests
-        run: |
-          TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}}"
-          KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-${RETAIL_PASSWORD:-demo-throwaway-retail-pass}}"
-          ./mvnw test -pl e2e-tests -DskipE2E=false \
-            "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
-            "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
-
-      - name: Stop Services via Docker Compose
-        if: always()
-        run: |
-          docker compose -f deployment/docker-compose.yml --profile terraform down -v --remove-orphans
-
-      - name: Collect Diagnostics
-        if: failure()
-        run: |
-          set +e
-          mkdir -p diagnostics
-          docker ps -a > diagnostics/docker-ps.txt
-          docker compose logs > diagnostics/docker-compose.log
-          for container in $(docker ps -a --format '{{.Names}}'); do
-            docker logs $container > diagnostics/${container}.log 2>&1 || true
-          done
-
-      - name: Upload Diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: e2e-diagnostics
-          path: diagnostics
-          retention-days: 5
+    uses: ./.github/workflows/end-to-end-tests.yml
+    with:
+      compose_file: 'deployment/docker-compose.yml'
+    secrets: inherit
