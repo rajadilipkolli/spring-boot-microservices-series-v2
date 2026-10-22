@@ -895,6 +895,7 @@ cd -- "$PROJECT_ROOT"
 
 TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
 KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+export TF_VAR_webapp_client_secret KEYCLOAK_RETAIL_PASSWORD
 
 E2E_LOG="k8s-diagnostics/e2e-test-output.log"
 
@@ -928,9 +929,7 @@ set +e
 
 "$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false \
   -Dbase.url=https://api.retailstore.local \
-  -Dkeycloak.url=https://keycloak.local \
-  "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
-  "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}" 2>&1 |
+  -Dkeycloak.url=https://keycloak.local 2>&1 |
   tee "$E2E_LOG"
 
 test_exit=${PIPESTATUS[0]}

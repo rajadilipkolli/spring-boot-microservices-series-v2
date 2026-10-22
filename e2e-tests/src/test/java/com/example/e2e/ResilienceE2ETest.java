@@ -39,8 +39,8 @@ class ResilienceE2ETest {
     }
 
     @Test
-    @DisplayName("Catalog slow-call delay parameter should be accepted by gateway")
-    void catalogSlowCallShouldHandleTimeoutGracefully() {
+    @DisplayName("Catalog delay below the gateway timeout should succeed")
+    void catalogDelayBelowGatewayTimeoutShouldSucceed() {
         String productCode = "SLOW-" + UUID.randomUUID();
         ProductRequest product =
                 new ProductRequest(
@@ -67,7 +67,7 @@ class ResilienceE2ETest {
                         .extract()
                         .response();
 
-        // Expect either successful delayed 200, fallback 200, or gateway timeout 504/500
-        assertThat(response.statusCode()).isIn(200, 500, 502, 503, 504);
+        // The 4-second delay is below the configured 5-second gateway response timeout.
+        assertThat(response.statusCode()).isEqualTo(200);
     }
 }

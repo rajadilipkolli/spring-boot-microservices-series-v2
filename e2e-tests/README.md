@@ -58,3 +58,18 @@ Override target URLs using system properties:
 | `keycloak.client.secret` | `TF_VAR_webapp_client_secret` | `demo-throwaway-oauth-secret` | Keycloak OAuth2 client secret |
 | `keycloak.password` | `KEYCLOAK_RETAIL_PASSWORD` | `retail1234` | Keycloak retail user password |
 | `skipE2E` | `SKIP_E2E` | `false` (in module) | Set to `true` to skip test execution |
+
+The Bash Kubernetes runners load credentials from Kubernetes Secrets when no
+environment override is set, then export `TF_VAR_webapp_client_secret` and
+`KEYCLOAK_RETAIL_PASSWORD` for the test JVM. Keep credentials out of Maven command
+arguments.
+
+`deployment/k8s/run-k8s-e2e-local.sh` uses the prod overlay's local CA issuer to
+issue an ingress certificate for the `.local` hosts. It creates a temporary PKCS12
+trust store and passes `e2e.trustStore`, `e2e.trustStoreType`,
+and `e2e.trustStorePassword` to Maven. `E2EConfig` applies that trust to
+both request specifications and direct REST Assured requests, with certificate
+and hostname validation enabled. Curl uses the same CA via `--cacert`; the
+temporary trust files are removed on exit. Maven retains its normal repository
+TLS trust. This does not install the CA into the operating system or browser
+trust store.

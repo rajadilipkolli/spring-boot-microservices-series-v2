@@ -8,6 +8,8 @@ package com.example.e2e.config;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.slf4j.Logger;
@@ -88,15 +90,31 @@ public final class E2EConfig {
     public static RequestSpecification defaultRequestSpec() {
         return new RequestSpecBuilder()
                 .setBaseUri(getBaseUrl())
+                .setConfig(restAssuredConfig())
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)
                 .build();
+    }
+
+    private static RestAssuredConfig restAssuredConfig() {
+        SSLConfig sslConfig = SSLConfig.sslConfig().strictHostnames();
+        String trustStore = System.getProperty("e2e.trustStore");
+        if (trustStore != null && !trustStore.isBlank()) {
+            sslConfig =
+                    sslConfig
+                            .trustStoreType(System.getProperty("e2e.trustStoreType", "PKCS12"))
+                            .trustStore(
+                                    trustStore,
+                                    System.getProperty("e2e.trustStorePassword", "changeit"));
+        }
+        return RestAssuredConfig.config().sslConfig(sslConfig);
     }
 
     public static void initRestAssured() {
         String baseUrl = getBaseUrl();
         log.info("Configuring REST-Assured with target Base URL: {}", baseUrl);
         RestAssured.baseURI = baseUrl;
+        RestAssured.config = restAssuredConfig();
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     }
 }
