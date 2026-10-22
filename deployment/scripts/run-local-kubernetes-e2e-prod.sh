@@ -435,19 +435,6 @@ collect_e2e_diagnostics() {
     printf 'Bash version: %s\n' "${BASH_VERSION:-unknown}"
     printf 'Bash executable: %s\n' "$(command -v bash || true)"
     printf 'Project root: %s\n' "$PROJECT_ROOT"
-    printf 'E2E script: %s\n' "$E2E_SCRIPT"
-    printf '\n'
-
-    printf '%s\n' "E2E script file:"
-    ls -la "$E2E_SCRIPT" 2>&1 || true
-    printf '\n'
-
-    printf '%s\n' "File type:"
-    file "$E2E_SCRIPT" 2>&1 || true
-    printf '\n'
-
-    printf '%s\n' "E2E script first 10 lines:"
-    sed -n '1,10p' "$E2E_SCRIPT" 2>&1 || true
     printf '\n'
 
     printf '%s\n' "Environment:"
@@ -901,29 +888,9 @@ E2E_LOG="k8s-diagnostics/e2e-test-output.log"
 
 mkdir -p k8s-diagnostics
 
-printf '  E2E source:   %s\n' "$E2E_SCRIPT"
-printf '  E2E prepared: %s\n' "$E2E_PREPARED_SCRIPT"
 printf '  E2E log:      %s\n' "$E2E_LOG"
 printf '  Bash:         %s\n' "$(command -v bash)"
 printf '  Bash version: %s\n' "${BASH_VERSION:-unknown}"
-
-###############################################################################
-# IMPORTANT WINDOWS/GIT-BASH FIX
-#
-# Do NOT do this:
-#
-#   HOST=api.retailstore.local PORT=80 "$E2E_SCRIPT" --no-cb-strict
-#
-# Direct execution can invoke the Windows Bash service layer and result in:
-#
-#   Catastrophic failure
-#   Error code: Bash/Service/E_UNEXPECTED
-#
-# Instead, explicitly invoke Bash:
-#
-#   bash "$E2E_PREPARED_SCRIPT"
-#
-###############################################################################
 
 set +e
 
