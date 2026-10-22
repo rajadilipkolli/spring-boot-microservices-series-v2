@@ -8,6 +8,8 @@ package com.example.orderservice.config;
 
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.utils.AppConstants;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +37,10 @@ public class TestKafkaListenerConfig {
 
     public OrderDto pollPayload(long timeout, TimeUnit unit) throws InterruptedException {
         return messages.poll(timeout, unit);
+    }
+
+    public Optional<OrderDto> getMessageByOrderId(Long orderId) {
+        return messages.stream().filter(m -> Objects.equals(m.orderId(), orderId)).findFirst();
     }
 
     public void reset() {
