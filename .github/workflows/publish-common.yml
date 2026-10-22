@@ -1,0 +1,80 @@
+name: Publish Common Library
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'common/**'
+      - '.github/workflows/publish-common.yml'
+    tags:
+      - 'common-v*'
+  pull_request:
+    paths:
+      - 'common/**'
+      - '.github/workflows/publish-common.yml'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (leave blank to publish current POM version)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-test:
+    name: Build & Verify Common
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Verify Spotless & Compile
+        run: ./mvnw -pl common clean test spotless:check
+
+  publish:
+    name: Publish to GitHub Packages
+    needs: build-and-test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25 & Maven Settings
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          server-id: github
+          cache: 'maven'
+
+      - name: Set Release Version (if tagged or dispatched)
+        if: startsWith(github.ref, 'refs/tags/common-v') || inputs.release_version != ''
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          if [ -z "$VERSION" ]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#common-v}"
+          fi
+          echo "Setting common version to $VERSION"
+          ./mvnw -pl common versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+
+      - name: Deploy Common to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./mvnw -B -pl common deploy -DskipTests
