@@ -214,7 +214,7 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 set +e
-"$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
+"$PROJECT_ROOT/mvnw" -f "$PROJECT_ROOT/pom.xml" test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 test_exit=$?
 set -e
 
