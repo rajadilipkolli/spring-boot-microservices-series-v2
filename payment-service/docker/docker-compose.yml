@@ -67,7 +67,7 @@ services:
       - payment-network
 
   kafka:
-    image: apache/kafka-native:4.3.2
+    image: apache/kafka-native:4.4.0
     ports:
       - "9092:9092"
     healthcheck:

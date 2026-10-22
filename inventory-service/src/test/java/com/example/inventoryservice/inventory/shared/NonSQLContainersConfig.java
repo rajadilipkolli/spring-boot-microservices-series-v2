@@ -18,7 +18,7 @@ public class NonSQLContainersConfig {
     @Bean
     @ServiceConnection
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.3.1"))
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.4.0"))
                 .withReuse(true);
     }
 }
