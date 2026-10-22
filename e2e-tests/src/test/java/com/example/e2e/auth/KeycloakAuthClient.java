@@ -15,9 +15,7 @@ public final class KeycloakAuthClient {
 
     private static final String DEFAULT_REALM = "retailstore";
     private static final String DEFAULT_CLIENT_ID = "retailstore-webapp";
-    private static final String DEFAULT_CLIENT_SECRET = "demo-throwaway-oauth-secret";
     private static final String DEFAULT_USERNAME = "retail";
-    private static final String DEFAULT_PASSWORD = "retail1234";
 
     private static String cachedToken;
     private static Instant tokenExpiry = Instant.MIN;
@@ -39,10 +37,10 @@ public final class KeycloakAuthClient {
             Response response =
                     given().contentType(ContentType.URLENC)
                             .formParam("client_id", DEFAULT_CLIENT_ID)
-                            .formParam("client_secret", DEFAULT_CLIENT_SECRET)
+                            .formParam("client_secret", E2EConfig.getKeycloakClientSecret())
                             .formParam("grant_type", "password")
                             .formParam("username", DEFAULT_USERNAME)
-                            .formParam("password", DEFAULT_PASSWORD)
+                            .formParam("password", E2EConfig.getKeycloakPassword())
                             .when()
                             .post(tokenEndpoint)
                             .then()

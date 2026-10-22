@@ -122,7 +122,11 @@ fi
 export PROTOCOL=https
 export HOST=api.retailstore.local
 export PORT=443
-./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=https://api.retailstore.local -Dkeycloak.url=https://keycloak.local || echo "E2E Tests had failures"
+TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n retailstore -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
+KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n retailstore -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=https://api.retailstore.local -Dkeycloak.url=https://keycloak.local \
+  "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
+  "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}" || echo "E2E Tests had failures"
 
 if curl -s -k -f https://retailstore.local > /dev/null; then
   echo "Webapp reachable via ingress."
@@ -130,10 +134,8 @@ else
   echo "::warning::Webapp smoke check via https://retailstore.local failed (non-fatal)."
 fi
 
-webapp_client_secret=$(kubectl get secret webapp-oauth2-credentials -n retailstore \
-  -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)
-retail_password=$(kubectl get secret keycloak-user-passwords -n retailstore \
-  -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)
+webapp_client_secret="$TF_VAR_webapp_client_secret"
+retail_password="$KEYCLOAK_RETAIL_PASSWORD"
 
 if curl -s -k -f -X POST https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d "client_id=retailstore-webapp" \

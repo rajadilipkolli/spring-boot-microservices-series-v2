@@ -4,7 +4,10 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.e2e.config.E2EConfig;
+import com.example.e2e.models.ProductRequest;
 import io.restassured.response.Response;
+import java.math.BigDecimal;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -38,12 +41,28 @@ class ResilienceE2ETest {
     @Test
     @DisplayName("Catalog slow-call delay parameter should be accepted by gateway")
     void catalogSlowCallShouldHandleTimeoutGracefully() {
-        // Querying with ?delay=4 triggers delay logic in controller
+        String productCode = "SLOW-" + UUID.randomUUID();
+        ProductRequest product =
+                new ProductRequest(
+                        productCode,
+                        "Slow call test product",
+                        "Product for catalog delay verification",
+                        "https://example.com/item.png",
+                        new BigDecimal("19.99"));
+
+        given().spec(E2EConfig.defaultRequestSpec())
+                .body(product)
+                .when()
+                .post("/catalog-service/api/catalog")
+                .then()
+                .statusCode(201);
+
+        // Querying an existing product with ?delay=4 triggers delay logic in controller
         Response response =
                 given().spec(E2EConfig.defaultRequestSpec())
                         .queryParam("delay", 4)
                         .when()
-                        .get("/catalog-service/api/catalog/product-code/P0001")
+                        .get("/catalog-service/api/catalog/product-code/" + productCode)
                         .then()
                         .extract()
                         .response();

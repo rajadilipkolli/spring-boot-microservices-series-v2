@@ -891,6 +891,11 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 
+cd -- "$PROJECT_ROOT"
+
+TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
+KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+
 E2E_LOG="k8s-diagnostics/e2e-test-output.log"
 
 mkdir -p k8s-diagnostics
@@ -923,7 +928,9 @@ set +e
 
 "$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false \
   -Dbase.url=https://api.retailstore.local \
-  -Dkeycloak.url=https://keycloak.local 2>&1 |
+  -Dkeycloak.url=https://keycloak.local \
+  "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
+  "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}" 2>&1 |
   tee "$E2E_LOG"
 
 test_exit=${PIPESTATUS[0]}
@@ -994,25 +1001,8 @@ fi
 # KEYCLOAK TOKEN ENDPOINT
 ###############################################################################
 
-client_secret="$(
-  kubectl get secret webapp-oauth2-credentials \
-    -n "$NAMESPACE" \
-    -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' \
-    2>/dev/null |
-    base64 -d \
-    2>/dev/null ||
-    true
-)"
-
-retail_password="$(
-  kubectl get secret keycloak-user-passwords \
-    -n "$NAMESPACE" \
-    -o jsonpath='{.data.RETAIL_PASSWORD}' \
-    2>/dev/null |
-    base64 -d \
-    2>/dev/null ||
-    true
-)"
+client_secret="$TF_VAR_webapp_client_secret"
+retail_password="$KEYCLOAK_RETAIL_PASSWORD"
 
 if [[ -z "$client_secret" || -z "$retail_password" ]]; then
 

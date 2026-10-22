@@ -52,6 +52,27 @@ public final class E2EConfig {
         return DEFAULT_KEYCLOAK_URL;
     }
 
+    public static String getKeycloakClientSecret() {
+        return getCredential(
+                "keycloak.client.secret",
+                "TF_VAR_webapp_client_secret",
+                "demo-throwaway-oauth-secret");
+    }
+
+    public static String getKeycloakPassword() {
+        return getCredential("keycloak.password", "KEYCLOAK_RETAIL_PASSWORD", "retail1234");
+    }
+
+    private static String getCredential(
+            String property, String environmentVariable, String fallback) {
+        String sysProp = System.getProperty(property);
+        if (sysProp != null && !sysProp.isBlank()) {
+            return sysProp;
+        }
+        String env = System.getenv(environmentVariable);
+        return env != null && !env.isBlank() ? env : fallback;
+    }
+
     public static String getWebappUrl() {
         String sysProp = System.getProperty("webapp.url");
         if (sysProp != null && !sysProp.isBlank()) {

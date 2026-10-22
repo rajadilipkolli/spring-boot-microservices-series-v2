@@ -213,8 +213,13 @@ step "Adding local host entries"
 add_hosts_entry
 
 step "Running end-to-end test suite"
+TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
+KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+
 set +e
-"$PROJECT_ROOT/mvnw" -f "$PROJECT_ROOT/pom.xml" test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
+"$PROJECT_ROOT/mvnw" -f "$PROJECT_ROOT/pom.xml" test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local \
+  "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
+  "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 test_exit=$?
 set -e
 

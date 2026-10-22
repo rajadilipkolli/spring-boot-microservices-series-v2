@@ -287,7 +287,20 @@ Add-HostsEntry
 
 # ── step 10 – run E2E test suite ──────────────────────────────────────────────
 Step "Running end-to-end test suite (e2e-tests)"
-./mvnw.cmd test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
+$clientSecret = $env:TF_VAR_webapp_client_secret
+if ([string]::IsNullOrWhiteSpace($clientSecret)) {
+    $encodedSecret = kubectl get secret webapp-oauth2-credentials -n $NAMESPACE -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}'
+    if ($LASTEXITCODE -ne 0) { Fail "Could not retrieve the Keycloak client secret." }
+    $clientSecret = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encodedSecret))
+}
+$retailPassword = $env:KEYCLOAK_RETAIL_PASSWORD
+if ([string]::IsNullOrWhiteSpace($retailPassword)) {
+    $encodedPassword = kubectl get secret keycloak-user-passwords -n $NAMESPACE -o jsonpath='{.data.RETAIL_PASSWORD}'
+    if ($LASTEXITCODE -ne 0) { Fail "Could not retrieve the Keycloak retail password." }
+    $retailPassword = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encodedPassword))
+}
+./mvnw.cmd test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local `
+    "-Dkeycloak.client.secret=$clientSecret" "-Dkeycloak.password=$retailPassword"
 $testExit = $LASTEXITCODE
 
 # ── step 11 – optional smoke checks ──────────────────────────────────────────

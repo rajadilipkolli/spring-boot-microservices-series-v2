@@ -55,4 +55,6 @@ Override target URLs using system properties:
 | `base.url` | `BASE_URL` | `http://localhost:8765` | Target URL of API Gateway / Ingress |
 | `keycloak.url` | `KEYCLOAK_URL` | `http://localhost:9191` | Keycloak server URL |
 | `webapp.url` | `WEBAPP_URL` | `http://localhost:8080` | Retail Store WebApp URL |
+| `keycloak.client.secret` | `TF_VAR_webapp_client_secret` | `demo-throwaway-oauth-secret` | Keycloak OAuth2 client secret |
+| `keycloak.password` | `KEYCLOAK_RETAIL_PASSWORD` | `retail1234` | Keycloak retail user password |
 | `skipE2E` | `SKIP_E2E` | `false` (in module) | Set to `true` to skip test execution |

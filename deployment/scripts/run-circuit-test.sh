@@ -14,4 +14,6 @@ echo "Running circuit breaker checks against http://${HOST}:${PORT}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 cd -- "$PROJECT_ROOT" || exit 1
-"$PROJECT_ROOT/mvnw" test -pl e2e-tests -Dtest=ResilienceE2ETest -DskipE2E=false -Dbase.url=http://${HOST}:${PORT}
+"$PROJECT_ROOT/mvnw" test -pl e2e-tests -Dtest=ResilienceE2ETest -DskipE2E=false -Dbase.url=http://${HOST}:${PORT} \
+  "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
+  "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"

@@ -85,7 +85,12 @@ jobs:
           sleep 15
 
       - name: Run End to End Tests
-        run: ./mvnw test -pl e2e-tests -DskipE2E=false ${{ inputs.extra_maven_args || '' }}
+        run: |
+          TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-${OAUTH2_CLIENT_SECRET:-demo-throwaway-oauth-secret}}"
+          KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-${RETAIL_PASSWORD:-demo-throwaway-retail-pass}}"
+          ./mvnw test -pl e2e-tests -DskipE2E=false ${{ inputs.extra_maven_args || '' }} \
+            "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
+            "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 
       - name: Publish E2E Test Reports
         if: always()
