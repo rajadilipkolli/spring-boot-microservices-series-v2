@@ -64,8 +64,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: 25
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Start Services via Docker Compose
+        run: |
+          docker compose -f deployment/docker-compose.yml --profile terraform up -d
+
+      - name: Wait for Services to be Ready
+        run: |
+          echo "Waiting for API Gateway..."
+          timeout=240
+          elapsed=0
+          until curl -s http://localhost:8765/actuator/health | grep -q "UP"; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Timeout waiting for API Gateway"
+              docker compose -f deployment/docker-compose.yml logs api-gateway
+              exit 1
+            fi
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+          sleep 15
+
       - name: Run End to End Tests
-        run: ./test-em-all.sh --detailed-logs start
+        run: ./mvnw test -pl e2e-tests -DskipE2E=false
+
+      - name: Stop Services via Docker Compose
+        if: always()
+        run: |
+          docker compose -f deployment/docker-compose.yml --profile terraform down -v --remove-orphans
 
       - name: Collect Diagnostics
         if: failure()

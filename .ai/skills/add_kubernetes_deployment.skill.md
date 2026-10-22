@@ -72,7 +72,7 @@ path and does not include this Job.
 Map `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the ingress address. Run:
 
 ```bash
-HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 ```
 
 Then verify webapp access and a seeded Keycloak Direct Access Grant token request. The E2E flow indirectly validates config-server, Eureka, gateway routing, and the distributed catalog/inventory/order/payment path.

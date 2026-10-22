@@ -226,7 +226,7 @@ sequence locally as follows:
 7. Run the same E2E and external-access checks as CI:
 
 ```bash
-HOST=api.retailstore.local PORT=80 ./test-em-all.sh --no-cb-strict
+./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 curl --fail http://retailstore.local
 CLIENT_SECRET=$(kubectl get secret webapp-oauth2-credentials -n retailstore -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 -d)
 curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \

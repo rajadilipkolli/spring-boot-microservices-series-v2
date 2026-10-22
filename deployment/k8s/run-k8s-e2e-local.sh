@@ -122,7 +122,7 @@ fi
 export PROTOCOL=https
 export HOST=api.retailstore.local
 export PORT=443
-./test-em-all.sh --no-cb-strict || echo "E2E Tests had failures"
+./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=https://api.retailstore.local -Dkeycloak.url=https://keycloak.local || echo "E2E Tests had failures"
 
 if curl -s -k -f https://retailstore.local > /dev/null; then
   echo "Webapp reachable via ingress."

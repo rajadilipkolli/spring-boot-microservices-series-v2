@@ -1,25 +1,49 @@
 name: End-to-End Tests (Manual)
 on:
-  workflow_dispatch: # Allow manual triggering of the workflow
+  workflow_dispatch:
     inputs:
-      command_args:
-        description: 'Arguments to pass to test-em-all.sh'
+      compose_file:
+        description: 'Docker compose file to use'
         required: false
-        default: 'start stop'
+        default: 'deployment/docker-compose.yml'
         type: string
-  workflow_call: # Allow other workflows to trigger this workflow
-    inputs:
-      command_args:
-        description: 'Arguments to pass to test-em-all.sh'
+      extra_maven_args:
+        description: 'Additional Maven arguments for e2e-tests'
         required: false
-        default: 'start stop'
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      compose_file:
+        description: 'Docker compose file to use'
+        required: false
+        default: 'deployment/docker-compose.yml'
+        type: string
+      command_args:
+        description: 'Legacy argument (maps setup/teardown to docker-compose-tools.yml)'
+        required: false
+        default: ''
+        type: string
+      extra_maven_args:
+        description: 'Additional Maven arguments for e2e-tests'
+        required: false
+        default: ''
         type: string
 jobs:
   e2e-tests:
     name: Run End-to-End Tests
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: ${{ (contains(inputs.command_args, 'setup') || inputs.compose_file == 'deployment/docker-compose-tools.yml') && 'deployment/docker-compose-tools.yml' || inputs.compose_file || 'deployment/docker-compose.yml' }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: 25
+          distribution: 'temurin'
+          cache: 'maven'
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -38,8 +62,43 @@ jobs:
             echo "latency_analyzer.py not found at .github/workflows/latency_analyzer.py"
           fi
 
+      - name: Start Services via Docker Compose
+        run: |
+          echo "Starting services using compose file: $COMPOSE_FILE"
+          docker compose -f "$COMPOSE_FILE" --profile terraform up -d
+
+      - name: Wait for Services to be Ready
+        run: |
+          echo "Waiting for API Gateway to be healthy..."
+          timeout=240
+          elapsed=0
+          until curl -s http://localhost:8765/actuator/health | grep -q "UP"; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Timeout waiting for API Gateway to be healthy."
+              docker compose -f "$COMPOSE_FILE" logs api-gateway
+              exit 1
+            fi
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+          echo "API Gateway is UP."
+          sleep 15
+
       - name: Run End to End Tests
-        run: ./test-em-all.sh --detailed-logs ${{ inputs.command_args || 'start stop' }}
+        run: ./mvnw test -pl e2e-tests -DskipE2E=false ${{ inputs.extra_maven_args || '' }}
+
+      - name: Publish E2E Test Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-reports
+          path: e2e-tests/target/surefire-reports/
+
+      - name: Stop Services via Docker Compose
+        if: always()
+        run: |
+          echo "Stopping services for compose file: $COMPOSE_FILE"
+          docker compose -f "$COMPOSE_FILE" --profile terraform down -v --remove-orphans
 
       - name: Collect Diagnostics
         if: failure()
@@ -47,7 +106,7 @@ jobs:
           set +e
           mkdir -p diagnostics
           docker ps -a > diagnostics/docker-ps.txt
-          docker compose logs > diagnostics/docker-compose.log
+          docker compose -f "$COMPOSE_FILE" logs > diagnostics/docker-compose.log
           for container in $(docker ps -a --format '{{.Names}}'); do
             docker logs $container > diagnostics/${container}.log 2>&1 || true
           done

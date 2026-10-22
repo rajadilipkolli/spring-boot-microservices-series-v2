@@ -5,7 +5,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/ci"
-E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
@@ -215,7 +214,7 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 set +e
-HOST=api.retailstore.local PORT=80 KEYCLOAK_URL=http://keycloak.local "$E2E_SCRIPT" --no-cb-strict
+"$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 test_exit=$?
 set -e
 

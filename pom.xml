@@ -16,6 +16,7 @@
 		<sonar.organization>rajadilipkolli</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.exclusions>**/.github/workflows/latency_analyzer.py</sonar.exclusions>
+		<skipE2E>true</skipE2E>
 	</properties>
 
 	<modules>
@@ -27,6 +28,7 @@
 		<module>service-registry</module>
 		<module>api-gateway</module>
 		<module>retail-store-webapp</module>
+		<module>e2e-tests</module>
 	</modules>
 
 </project>

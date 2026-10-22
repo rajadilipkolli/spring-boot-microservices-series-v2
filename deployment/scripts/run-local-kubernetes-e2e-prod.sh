@@ -15,7 +15,6 @@ fi
 
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/prod"
-E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
@@ -512,34 +511,13 @@ ok "All tools found."
 # Verify E2E script
 ###############################################################################
 
-step "Validating end-to-end test script"
+step "Validating end-to-end test module"
 
-if [[ ! -f "$E2E_SCRIPT" ]]; then
-  fail "E2E test script not found: $E2E_SCRIPT"
+if [[ ! -d "$PROJECT_ROOT/e2e-tests" ]]; then
+  fail "e2e-tests module not found at: $PROJECT_ROOT/e2e-tests"
 fi
 
-if [[ ! -r "$E2E_SCRIPT" ]]; then
-  fail "E2E test script is not readable: $E2E_SCRIPT"
-fi
-
-printf '  E2E script: %s\n' "$E2E_SCRIPT"
-
-E2E_WORK_DIR="$(mktemp -d ./.retailstore-e2e.XXXXXX)"
-
-# Always clean up the temporary E2E script.
-cleanup_e2e_temp() {
-  rm -rf "$E2E_WORK_DIR" 2>/dev/null || true
-}
-
-trap cleanup_e2e_temp EXIT
-
-E2E_PREPARED_SCRIPT="$E2E_WORK_DIR/test-em-all.sh"
-
-prepare_e2e_script \
-  "$E2E_SCRIPT" \
-  "$E2E_PREPARED_SCRIPT"
-
-ok "E2E script is present and Bash syntax is valid."
+ok "e2e-tests module is present."
 
 ###############################################################################
 # KIND CLUSTER
@@ -943,19 +921,9 @@ printf '  Bash version: %s\n' "${BASH_VERSION:-unknown}"
 
 set +e
 
-(
-  export HOST="api.retailstore.local"
-  export PORT="443"
-  export PROTOCOL="https"
-  export KEYCLOAK_URL="https://keycloak.local"
-  export OAUTH2_CLIENT_SECRET="$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 -d)"
-  export RAJA_PASSWORD="$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RAJA_PASSWORD}' | base64 -d)"
-
-  # Explicitly invoke sh to avoid accidentally calling Windows Subsystem for Linux (WSL) bash.exe
-  exec sh \
-    "$E2E_PREPARED_SCRIPT" \
-    --no-cb-strict
-) 2>&1 |
+"$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false \
+  -Dbase.url=https://api.retailstore.local \
+  -Dkeycloak.url=https://keycloak.local 2>&1 |
   tee "$E2E_LOG"
 
 test_exit=${PIPESTATUS[0]}

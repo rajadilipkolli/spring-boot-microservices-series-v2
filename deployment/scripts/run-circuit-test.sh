@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Simple runner to execute only the circuit breaker checks in test-em-all.sh
+# Simple runner to execute circuit breaker checks in e2e-tests
 # Usage: ./run-circuit-test.sh
 
 # Default host/port (can be overridden via env)
@@ -10,5 +10,5 @@
 : ${CB_STRICT:=true}
 export CB_STRICT
 
-echo "Running circuit breaker checks (CB_STRICT=${CB_STRICT}) against http://${HOST}:${PORT}"
-bash test-em-all.sh circuit-test
+echo "Running circuit breaker checks against http://${HOST}:${PORT}"
+./mvnw test -pl e2e-tests -Dtest=ResilienceE2ETest -DskipE2E=false -Dbase.url=http://${HOST}:${PORT}

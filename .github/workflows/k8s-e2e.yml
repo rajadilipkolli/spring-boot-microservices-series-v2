@@ -24,6 +24,13 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: 25
+          distribution: 'temurin'
+          cache: 'maven'
+
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.15.1
         with:
@@ -183,8 +190,10 @@ jobs:
             echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts
           fi
           
-          # E2E Script Validation
-          HOST=api.retailstore.local PORT=80 KEYCLOAK_URL=http://keycloak.local ./test-em-all.sh --no-cb-strict
+          # E2E Java Module Validation
+          ./mvnw test -pl e2e-tests -DskipE2E=false \
+            -Dbase.url=http://api.retailstore.local \
+            -Dkeycloak.url=http://keycloak.local
 
           # Request webapp via Ingress (best-effort smoke check; does not fail the job)
           if curl -s -f http://retailstore.local > /dev/null; then
@@ -204,6 +213,13 @@ jobs:
           else
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
+
+      - name: Publish E2E Test Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-reports
+          path: e2e-tests/target/surefire-reports/
 
 
       - name: Validate Network Policies

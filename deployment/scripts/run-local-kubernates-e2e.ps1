@@ -14,7 +14,7 @@ $HOSTS_MARKER = "# run-local-kubernates-e2e.ps1"
 $HOSTS_ENTRY  = "127.0.0.1 retailstore.local api.retailstore.local keycloak.local jobrunr.local $HOSTS_MARKER"
 
 # Script now lives in deployment/scripts/, so resolve repo root and run from there
-# so relative paths (deployment/k8s/..., test-em-all.sh) keep working.
+# so relative paths (deployment/k8s/..., e2e-tests) keep working.
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $RepoRoot
 
@@ -90,7 +90,7 @@ function Remove-HostsEntry {
 
 function Add-WslHostsEntry {
     # WSL auto-generates its own /etc/hosts (separate from Windows), and
-    # test-em-all.sh runs inside bash/WSL, so it needs its own entry too.
+    # e2e-tests runs inside bash/WSL, so it needs its own entry too.
     # Matched by marker (not the hostname) so unrelated aliases are untouched.
     if (bash -lc "grep -qF '$HOSTS_MARKER' /etc/hosts" 2>$null) {
         Warn "WSL hosts entries already present - skipping."
@@ -98,7 +98,7 @@ function Add-WslHostsEntry {
     }
     bash -lc "echo '$HOSTS_ENTRY' | sudo tee -a /etc/hosts > /dev/null"
     if ($LASTEXITCODE -ne 0) {
-        Warn "Could not add hosts entries inside WSL (sudo required). test-em-all.sh may fail to resolve retailstore.local."
+        Warn "Could not add hosts entries inside WSL (sudo required). e2e-tests may fail to resolve retailstore.local."
         return $false
     }
     OK "Added hosts entries inside WSL."
@@ -136,14 +136,14 @@ if ($Teardown) {
 
 function Ensure-Jq-InBash {
     if (bash -lc "command -v jq" 2>$null) {
-        OK "jq is available inside bash (used by test-em-all.sh)."
+        OK "jq is available inside bash (used by e2e-tests)."
         return
     }
 
     Step "Installing jq inside bash environment"
     bash -lc "sudo -n apt-get update -qq && sudo -n apt-get install -y -qq jq" 2>$null
     if ($LASTEXITCODE -ne 0 -or -not (bash -lc "command -v jq" 2>$null)) {
-        Fail "jq is missing inside the bash environment that runs test-em-all.sh, and passwordless sudo is unavailable to install it automatically. Run 'sudo apt-get install -y jq' inside bash/WSL manually, then rerun this script."
+        Fail "jq is missing inside the bash environment that runs e2e-tests, and passwordless sudo is unavailable to install it automatically. Run 'sudo apt-get install -y jq' inside bash/WSL manually, then rerun this script."
     }
     OK "jq installed inside bash."
 }
@@ -168,7 +168,7 @@ function Assert-KindContext {
 
 if ($TestOnly) {
     # Skip cluster create/pull/load/apply/rollout - reuse what's already deployed
-    # so iterating on test-em-all.sh doesn't pay the ~full setup cost each time.
+    # so iterating on e2e-tests doesn't pay the ~full setup cost each time.
     Step "Test-only mode: reusing existing cluster and deployments"
     Assert-KindContext
     kubectl get namespace $NAMESPACE 2>$null | Out-Null
@@ -286,10 +286,8 @@ Step "Adding hosts file entries (requires UAC prompt)"
 Add-HostsEntry
 
 # ── step 10 – run E2E test suite ──────────────────────────────────────────────
-Step "Running end-to-end test suite (test-em-all.sh)"
-# Pass HOST and PORT inline inside bash so they are guaranteed to be set
-# regardless of how PowerShell exports env vars to child processes.
-bash -c "export HOST='api.retailstore.local'; export PORT='80'; ./test-em-all.sh --no-cb-strict"
+Step "Running end-to-end test suite (e2e-tests)"
+./mvnw.cmd test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 $testExit = $LASTEXITCODE
 
 # ── step 11 – optional smoke checks ──────────────────────────────────────────
