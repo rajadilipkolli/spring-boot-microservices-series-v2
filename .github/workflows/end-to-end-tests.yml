@@ -99,19 +99,15 @@ jobs:
           name: e2e-test-reports
           path: e2e-tests/target/surefire-reports/
 
-      - name: Stop Services via Docker Compose
-        if: always()
-        run: |
-          echo "Stopping services for compose file: $COMPOSE_FILE"
-          docker compose -f "$COMPOSE_FILE" --profile terraform down -v --remove-orphans
-
       - name: Collect Diagnostics
         if: failure()
         run: |
           set +e
           mkdir -p diagnostics
           docker ps -a > diagnostics/docker-ps.txt
-          docker compose -f "$COMPOSE_FILE" logs > diagnostics/docker-compose.log
+          COMPOSE_BASENAME=$(basename "${COMPOSE_FILE%.*}")
+          docker compose -f "$COMPOSE_FILE" logs > "diagnostics/${COMPOSE_BASENAME}.log"
+          cp "$COMPOSE_FILE" diagnostics/ 2>/dev/null || true
           for container in $(docker ps -a --format '{{.Names}}'); do
             docker logs $container > diagnostics/${container}.log 2>&1 || true
           done
@@ -123,6 +119,12 @@ jobs:
           name: e2e-diagnostics
           path: diagnostics
           retention-days: 5
+
+      - name: Stop Services via Docker Compose
+        if: always()
+        run: |
+          echo "Stopping services for compose file: $COMPOSE_FILE"
+          docker compose -f "$COMPOSE_FILE" --profile terraform down -v --remove-orphans
 
       - name: Stop latency_analyzer.py and collect logs
         if: always()

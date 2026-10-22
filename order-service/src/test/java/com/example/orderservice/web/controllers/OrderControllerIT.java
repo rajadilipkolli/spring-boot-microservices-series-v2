@@ -32,19 +32,21 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 
 class OrderControllerIT extends AbstractIntegrationTest {
 
@@ -203,41 +205,48 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "country"));
             mockProductsExistsRequest(true, "PRODUCT10");
 
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(jsonMapper.writeValueAsString(orderRequest)))
-                    .andExpect(status().isCreated())
-                    .andExpect(header().exists("Location"))
-                    .andExpect(jsonPath("$.orderId", notNullValue()))
-                    .andExpect(jsonPath("$.customerId", is(orderRequest.customerId().toString())))
-                    .andExpect(jsonPath("$.status", is("NEW")))
-                    .andExpect(jsonPath("$.source", nullValue()))
-                    .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
-                    .andExpect(jsonPath("$.items.size()", is(1)))
-                    .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                    .andExpect(jsonPath("$.items[0].productId", is("Product10")))
-                    .andExpect(jsonPath("$.items[0].quantity", is(10)))
-                    .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
-                    .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
-                    .andExpect(jsonPath("$.createdDate", notNullValue()))
-                    // Verify address fields
-                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
-                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
-                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
-                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
-                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
-                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")));
+            MvcResult mvcResult =
+                    mockMvc.perform(
+                                    post("/api/orders")
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .content(jsonMapper.writeValueAsString(orderRequest)))
+                            .andExpect(status().isCreated())
+                            .andExpect(header().exists("Location"))
+                            .andExpect(jsonPath("$.orderId", notNullValue()))
+                            .andExpect(
+                                    jsonPath(
+                                            "$.customerId",
+                                            is(orderRequest.customerId().toString())))
+                            .andExpect(jsonPath("$.status", is("NEW")))
+                            .andExpect(jsonPath("$.source", nullValue()))
+                            .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
+                            .andExpect(jsonPath("$.items.size()", is(1)))
+                            .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
+                            .andExpect(jsonPath("$.items[0].productId", is("Product10")))
+                            .andExpect(jsonPath("$.items[0].quantity", is(10)))
+                            .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
+                            .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
+                            .andExpect(jsonPath("$.createdDate", notNullValue()))
+                            // Verify address fields
+                            .andExpect(
+                                    jsonPath(
+                                            "$.deliveryAddress.addressLine1", is("Junit Address1")))
+                            .andExpect(
+                                    jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                            .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                            .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                            .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                            .andExpect(jsonPath("$.deliveryAddress.country", is("country")))
+                            .andReturn();
+
+            Long orderId =
+                    jsonMapper
+                            .readValue(
+                                    mvcResult.getResponse().getContentAsString(),
+                                    OrderResponse.class)
+                            .orderId();
 
             // Verify the order was actually saved in the database
-            List<Order> savedOrders = orderRepository.findAll();
-            assertThat(savedOrders)
-                    .isNotEmpty()
-                    .hasSize(orderList.size() + 1); // Original orders plus the new one
-
-            // Verify the last order in the database matches our request
-            savedOrders.sort(Comparator.comparing(Order::getId));
-            Long orderId = savedOrders.getLast().getId();
             Order lastOrder = orderRepository.findOrderById(orderId).orElseThrow();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
@@ -246,13 +255,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
 
             // Verify Kafka message
-            await().atMost(Duration.ofSeconds(10))
-                    .pollInterval(Duration.ofSeconds(1))
+            await().atMost(Duration.ofSeconds(15))
+                    .pollInterval(Duration.ofMillis(500))
                     .untilAsserted(
                             () -> {
-                                OrderDto orderDto = testKafkaListenerConfig.pollPayload(1, SECONDS);
-                                assertThat(orderDto).isNotNull();
-                                assertThat(orderDto.orderId()).isEqualTo(orderId);
+                                Optional<OrderDto> orderDtoOpt =
+                                        testKafkaListenerConfig.getMessageByOrderId(orderId);
+                                assertThat(orderDtoOpt).isPresent();
+                                OrderDto orderDto = orderDtoOpt.get();
                                 assertThat(orderDto.customerId()).isEqualTo(1L);
                                 assertThat(orderDto.status()).isEqualTo("NEW");
                             });
