@@ -177,6 +177,9 @@ jobs:
           else
             echo "Kafka persistence test passed."
           fi
+
+          echo "Allowing application consumers to reconnect and rebalance after Kafka restart..."
+          sleep 10
       - name: Run E2E Validations
         run: |
           set -Eeuo pipefail

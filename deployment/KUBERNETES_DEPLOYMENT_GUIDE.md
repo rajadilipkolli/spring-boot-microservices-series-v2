@@ -235,8 +235,7 @@ curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-con
   -d 'username=retail' -d 'password=retail1234' | grep access_token
 ```
 
-`--no-cb-strict` skips the Docker Compose container-stop circuit-breaker path;
-the Kubernetes workflow validates the deployed services through ingress instead.
+The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through ingress instead.
 
 ## Troubleshooting
 

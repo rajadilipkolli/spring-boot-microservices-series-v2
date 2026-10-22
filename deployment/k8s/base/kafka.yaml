@@ -5,6 +5,7 @@ metadata:
   namespace: retailstore
 spec:
   clusterIP: None
+  publishNotReadyAddresses: true
   ports:
   - port: 9092
     targetPort: 9092

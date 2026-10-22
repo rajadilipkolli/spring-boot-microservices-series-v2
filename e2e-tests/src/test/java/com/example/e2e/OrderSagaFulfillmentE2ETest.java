@@ -2,6 +2,7 @@ package com.example.e2e;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 
 import com.example.e2e.config.E2EConfig;
@@ -16,7 +17,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -60,12 +60,26 @@ class OrderSagaFulfillmentE2ETest {
                 .statusCode(201);
 
         // 2. Ensure initial stock in Inventory
+        // Wait for inventory record to be created asynchronously via Kafka from catalog service
+        await("Inventory should be created for product " + TEST_PRODUCT_CODE)
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(500))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .when()
+                                        .get(
+                                                "/inventory-service/api/inventory/"
+                                                        + TEST_PRODUCT_CODE)
+                                        .then()
+                                        .statusCode(200));
+
         InventoryRequest inventory = new InventoryRequest(TEST_PRODUCT_CODE, 100);
         log.info("Provisioning inventory for product: {}", TEST_PRODUCT_CODE);
         given().spec(E2EConfig.defaultRequestSpec())
                 .body(inventory)
                 .when()
-                .put("/inventory-service/api/inventory/" + TEST_PRODUCT_CODE)
+                .put("/inventory-service/api/inventory/product/" + TEST_PRODUCT_CODE)
                 .then()
                 .statusCode(200);
 
@@ -124,7 +138,7 @@ class OrderSagaFulfillmentE2ETest {
         log.info("Submitted order ID: {}. Awaiting Kafka Streams saga completion...", orderId);
 
         // Await asynchronous Saga confirmation
-        Awaitility.await("Order " + orderId + " should transition to CONFIRMED")
+        await("Order " + orderId + " should transition to CONFIRMED")
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
@@ -177,7 +191,7 @@ class OrderSagaFulfillmentE2ETest {
         assertThat(orderId).isNotNull().isPositive();
 
         // Await Saga rollback
-        Awaitility.await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
+        await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
@@ -249,7 +263,7 @@ class OrderSagaFulfillmentE2ETest {
         Long orderId = createOrderResponse.jsonPath().getLong("orderId");
         assertThat(orderId).isNotNull().isPositive();
 
-        Awaitility.await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
+        await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(

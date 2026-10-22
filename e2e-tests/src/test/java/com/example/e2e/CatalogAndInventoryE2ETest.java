@@ -1,6 +1,7 @@
 package com.example.e2e;
 
 import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
@@ -8,6 +9,7 @@ import com.example.e2e.config.E2EConfig;
 import com.example.e2e.models.InventoryRequest;
 import com.example.e2e.models.ProductRequest;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -55,25 +57,44 @@ class CatalogAndInventoryE2ETest {
                 .body("productCode", is(PRODUCT_CODE))
                 .body("productName", is("Catalog & Inventory Test"));
 
-        // 3. Update inventory in Inventory Service
+        // 3. Await inventory creation via Kafka, then update inventory in Inventory Service
+        await("Inventory should be initialized for product " + PRODUCT_CODE)
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(500))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .when()
+                                        .get("/inventory-service/api/inventory/" + PRODUCT_CODE)
+                                        .then()
+                                        .statusCode(200)
+                                        .body("productCode", is(PRODUCT_CODE)));
+
         InventoryRequest inventory = new InventoryRequest(PRODUCT_CODE, 75);
         given().spec(E2EConfig.defaultRequestSpec())
                 .body(inventory)
                 .when()
-                .put("/inventory-service/api/inventory/" + PRODUCT_CODE)
+                .put("/inventory-service/api/inventory/product/" + PRODUCT_CODE)
                 .then()
                 .statusCode(200)
                 .body("productCode", is(PRODUCT_CODE))
                 .body("availableQuantity", equalTo(75));
 
         // 4. Verify catalog-service fetches inStock from inventory-service
-        given().spec(E2EConfig.defaultRequestSpec())
-                .queryParam("fetchInStock", true)
-                .when()
-                .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
-                .then()
-                .statusCode(200)
-                .body("productCode", is(PRODUCT_CODE))
-                .body("inStock", is(true));
+        await("Catalog should reflect inStock status for product " + PRODUCT_CODE)
+                .atMost(Duration.ofSeconds(10))
+                .pollInterval(Duration.ofMillis(500))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .queryParam("fetchInStock", true)
+                                        .when()
+                                        .get(
+                                                "/catalog-service/api/catalog/product-code/"
+                                                        + PRODUCT_CODE)
+                                        .then()
+                                        .statusCode(200)
+                                        .body("productCode", is(PRODUCT_CODE))
+                                        .body("inStock", is(true)));
     }
 }
