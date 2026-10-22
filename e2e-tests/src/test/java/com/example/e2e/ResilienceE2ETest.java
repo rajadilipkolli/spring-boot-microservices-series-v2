@@ -31,7 +31,8 @@ class ResilienceE2ETest {
                         .response();
 
         // Gateway fallback returns 200 with fallback message or status
-        assertThat(response.statusCode()).isIn(200, 503);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.asString()).isEqualTo("Hello TEST_PRODUCT");
     }
 
     @Test
