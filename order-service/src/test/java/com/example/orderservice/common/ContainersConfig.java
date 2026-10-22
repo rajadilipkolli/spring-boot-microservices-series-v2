@@ -21,7 +21,7 @@ public class ContainersConfig {
     @RestartScope
     KafkaContainer kafkaContainer() {
         // Use the JVM broker to avoid native-image startup crashes in CI.
-        return new KafkaContainer(DockerImageName.parse("apache/kafka").withTag("4.3.1"))
+        return new KafkaContainer(DockerImageName.parse("apache/kafka").withTag("4.4.0"))
                 .withReuse(true);
     }
 }
