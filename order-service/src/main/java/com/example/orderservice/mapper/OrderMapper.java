@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -9,7 +9,6 @@ package com.example.orderservice.mapper;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.model.dtos.OrderDto;
-import com.example.orderservice.model.dtos.OrderItemDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -30,12 +29,20 @@ import org.mapstruct.NullValueCheckStrategy;
 @DecoratedWith(OrderMapperDecorator.class)
 public interface OrderMapper {
 
+    /** Maps an order to a DTO, leaving the attempt ID null for the publisher to assign. */
     @Mapping(source = "id", target = "orderId")
+    @Mapping(target = "attemptId", ignore = true)
     OrderDto toDto(Order order);
 
+    /**
+     * Maps an order item to the nested DTO, using its ID and product code as identifiers.
+     *
+     * @param orderItem the persisted order item
+     * @return the item details included in an order event
+     */
     @Mapping(target = "itemId", source = "id")
     @Mapping(target = "productId", source = "productCode")
-    OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
+    OrderDto.OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
 
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)

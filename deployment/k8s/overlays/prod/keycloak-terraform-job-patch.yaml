@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-terraform-runner
+  namespace: retailstore
+spec:
+  template:
+    spec:
+      containers:
+        - name: terraform-runner
+          env:
+            - name: TF_VAR_keycloak_url
+              value: "https://keycloak:8443"
+            - name: TF_VAR_keycloak_root_ca_certificate
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-internal-ca
+                  key: tls.crt
+            - name: CURL_CA_BUNDLE
+              value: "/etc/keycloak-ca/ca.crt"
+          volumeMounts:
+            - name: keycloak-ca
+              mountPath: /etc/keycloak-ca
+              readOnly: true
+      volumes:
+        - name: keycloak-ca
+          secret:
+            secretName: keycloak-internal-ca
+            items:
+              - key: tls.crt
+                path: ca.crt

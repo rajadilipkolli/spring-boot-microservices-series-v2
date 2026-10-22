@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <property name="string.type" value="varchar(255)" dbms="!postgresql"/>
+    <property name="string.type" value="text" dbms="postgresql"/>
+
+    <changeSet author="rajakolli" id="createTable-ledger_entries">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="ledger_entries" schemaName="payment"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="ledger_entries" schemaName="payment">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="ledger_entries_pkey"/>
+            </column>
+            <column name="customer_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_ledger_entries_customer" references="payment.customers(id)"/>
+            </column>
+            <column name="operation_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_ledger_entries_operation" references="payment.payment_operations(id)"/>
+            </column>
+            <column name="downstream_key" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entry_type" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="numeric(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="${string.type}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="ledger_entries" columnNames="downstream_key"
+                             constraintName="uc_ledger_entries_downstream_key" schemaName="payment"/>
+
+        <createIndex tableName="ledger_entries" indexName="idx_ledger_entries_customer_id" schemaName="payment">
+            <column name="customer_id"/>
+        </createIndex>
+
+        <createIndex tableName="ledger_entries" indexName="idx_ledger_entries_operation_id" schemaName="payment">
+            <column name="operation_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="ledger_entries" schemaName="payment"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

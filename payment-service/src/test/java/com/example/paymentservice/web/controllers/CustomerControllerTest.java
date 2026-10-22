@@ -1,13 +1,15 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,28 +18,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
+import com.example.paymentservice.services.OrderProxyService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = CustomerController.class)
@@ -46,42 +54,68 @@ class CustomerControllerTest {
 
     @Autowired private MockMvc mockMvc;
 
+    @Autowired private MockMvcTester mockMvcTester;
+
     @MockitoBean private CustomerService customerService;
+
+    @MockitoBean private OrderProxyService orderProxyService;
 
     @Autowired private JsonMapper jsonMapper;
 
-    private List<Customer> customerList;
+    private List<CustomersRecord> customerList;
 
+    /** Creates three customer fixtures with separate address fields for controller tests. */
     @BeforeEach
     void setUp() {
-        this.customerList =
-                List.of(
-                        new Customer()
-                                .setId(1L)
-                                .setName("First Customer")
-                                .setEmail("first@customer.email")
-                                .setAddress("First Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
-                        new Customer()
-                                .setId(2L)
-                                .setName("Second Customer")
-                                .setEmail("second@customer.email")
-                                .setAddress("Second Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
-                        new Customer()
-                                .setId(3L)
-                                .setName("Third Customer")
-                                .setEmail("third@customer.email")
-                                .setAddress("Third Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0));
+        CustomersRecord customer1 = new CustomersRecord();
+        customer1.setId(1L);
+        customer1.setName("First Customer");
+        customer1.setEmail("first@customer.email");
+        customer1.setAddressLine1("First Address");
+        customer1.setAddressLine2("Second Address");
+        customer1.setCity("City");
+        customer1.setState("State");
+        customer1.setZipCode("12345");
+        customer1.setCountry("Country");
+        customer1.setAmountAvailable(BigDecimal.valueOf(100));
+        customer1.setAmountReserved(BigDecimal.ZERO);
+
+        CustomersRecord customer2 = new CustomersRecord();
+        customer2.setId(2L);
+        customer2.setName("Second Customer");
+        customer2.setEmail("second@customer.email");
+        customer2.setAddressLine1("Second Address");
+        customer2.setAddressLine2("Second Address");
+        customer2.setCity("City");
+        customer2.setState("State");
+        customer2.setZipCode("12345");
+        customer2.setCountry("Country");
+        customer2.setAmountAvailable(BigDecimal.valueOf(100));
+        customer2.setAmountReserved(BigDecimal.ZERO);
+
+        CustomersRecord customer3 = new CustomersRecord();
+        customer3.setId(3L);
+        customer3.setName("Third Customer");
+        customer3.setEmail("third@customer.email");
+        customer3.setAddressLine1("Third Address");
+        customer3.setAddressLine2("Third Address");
+        customer3.setCity("City");
+        customer3.setState("State");
+        customer3.setZipCode("12345");
+        customer3.setCountry("Country");
+        customer3.setAmountAvailable(BigDecimal.valueOf(100));
+        customer3.setAmountReserved(BigDecimal.ZERO);
+
+        this.customerList = List.of(customer1, customer2, customer3);
     }
 
+    /**
+     * Verifies that listing customers returns the page data and pagination metadata from the
+     * service.
+     */
     @Test
     void shouldFetchAllCustomers() throws Exception {
-        Page<Customer> page = new PageImpl<>(customerList);
+        Page<CustomersRecord> page = new PageImpl<>(customerList);
         PagedResult<CustomerResponse> postPagedResult =
                 new PagedResult<>(getCustomerResponseList(), page);
         FindCustomersQuery findCustomersQuery = new FindCustomersQuery(0, 10, "id", "desc");
@@ -101,6 +135,11 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /**
+     * Maps the customer fixtures to responses while preserving their separate address fields.
+     *
+     * @return responses in fixture order
+     */
     private List<CustomerResponse> getCustomerResponseList() {
         return customerList.stream()
                 .map(
@@ -110,14 +149,53 @@ class CustomerControllerTest {
                                         customer.getName(),
                                         customer.getEmail(),
                                         customer.getPhone(),
-                                        customer.getAddress(),
+                                        customer.getAddressLine1(),
+                                        customer.getAddressLine2(),
+                                        customer.getCity(),
+                                        customer.getState(),
+                                        customer.getZipCode(),
+                                        customer.getCountry(),
                                         customer.getAmountAvailable()))
                 .toList();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "pageNo,0,pageNo must be greater than or equal to 1",
+        "pageNo,-1,pageNo must be greater than or equal to 1",
+        "pageSize,0,pageSize must be greater than 0",
+        "pageSize,-1,pageSize must be greater than 0"
+    })
+    void shouldRejectInvalidOrderPagination(String parameter, String value, String detail)
+            throws Exception {
+        mockMvc.perform(get("/api/customers/1/orders").param(parameter, value))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(detail));
+
+        verifyNoInteractions(customerService, orderProxyService);
+    }
+
+    @Test
+    void shouldUseDefaultOrderPagination() throws Exception {
+        given(customerService.findCustomerById(1L))
+                .willReturn(Optional.of(getCustomerResponseList().getFirst()));
+        given(orderProxyService.getOrdersByCustomerId(1L, 1, 10, "id", "asc"))
+                .willReturn(new PagedResult<>(List.of(), 0, 1, 0, true, true, false, false));
+
+        mockMvc.perform(get("/api/customers/1/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        verify(orderProxyService).getOrdersByCustomerId(1L, 1, 10, "id", "asc");
     }
 
     @Nested
     @DisplayName("find methods")
     class Find {
+        /**
+         * Verifies that lookup by ID returns HTTP 200 and the customer name supplied by the
+         * service.
+         */
         @Test
         void shouldFindCustomerById() throws Exception {
             Long customerId = 1L;
@@ -128,7 +206,12 @@ class CustomerControllerTest {
                             "junit@email.com",
                             "9876543210",
                             "junitAddress",
-                            100);
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.valueOf(100));
             given(customerService.findCustomerById(customerId))
                     .willReturn(Optional.of(customerResponse));
 
@@ -177,20 +260,104 @@ class CustomerControllerTest {
                             jsonPath("$.detail")
                                     .value("Customer with Name 'junitCustomer' not found"));
         }
+
+        /**
+         * Verifies that email lookup returns HTTP 200 and the customer name supplied by the
+         * service.
+         */
+        @Test
+        void shouldFindCustomerByEmail() throws Exception {
+            String email = "junit@email.com";
+            CustomerResponse customerResponse =
+                    new CustomerResponse(
+                            1L,
+                            "text 1",
+                            email,
+                            "9876543210",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.valueOf(100));
+            given(customerService.findCustomerByEmail(email))
+                    .willReturn(Optional.of(customerResponse));
+
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.OK)
+                    .bodyJson()
+                    .extractingPath("$.name")
+                    .isEqualTo(customerResponse.name());
+        }
+
+        @Test
+        void shouldReturn404WhenFetchingNonExistingCustomerByEmail() throws Exception {
+            String email = "notfound@email.com";
+            given(customerService.findCustomerByEmail(email)).willReturn(Optional.empty());
+
+            mockMvcTester
+                    .get()
+                    .uri("/api/customers/by-email")
+                    .param("email", email)
+                    .assertThat()
+                    .hasStatus(HttpStatus.NOT_FOUND)
+                    .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                    .bodyJson()
+                    .satisfies(
+                            json -> {
+                                assertThat(json)
+                                        .extractingPath("$.type")
+                                        .isEqualTo(
+                                                "https://api.microservices.com/errors/not-found");
+                                assertThat(json)
+                                        .extractingPath("$.title")
+                                        .isEqualTo("Customer Not Found");
+                                assertThat(json).extractingPath("$.status").isEqualTo(404);
+                                assertThat(json)
+                                        .extractingPath("$.detail")
+                                        .isEqualTo(
+                                                "Customer with Email 'notfound@email.com' not found");
+                            });
+        }
     }
 
     @Nested
     @DisplayName("save methods")
     class Save {
+        /** Verifies that a valid customer request returns HTTP 201 and the customer name. */
         @Test
         void shouldCreateNewCustomer() throws Exception {
 
             CustomerRequest customerRequest =
                     new CustomerRequest(
-                            "junitName", "email@junit.com", "1234567890", "junitAddress", 10);
+                            "junitName",
+                            "email@junit.com",
+                            "1234567890",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.TEN);
             CustomerResponse customerResponse =
                     new CustomerResponse(
-                            1L, "junitName", "email@junit.com", "9876543210", "junitAddress", 10);
+                            1L,
+                            "junitName",
+                            "email@junit.com",
+                            "9876543210",
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.TEN);
             given(customerService.saveCustomer(any(CustomerRequest.class)))
                     .willReturn(customerResponse);
             mockMvc.perform(
@@ -201,9 +368,12 @@ class CustomerControllerTest {
                     .andExpect(jsonPath("$.name", is(customerRequest.name())));
         }
 
+        /** Verifies that missing required customer details produce HTTP 400 validation errors. */
         @Test
         void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-            CustomerRequest customerRequest = new CustomerRequest(null, null, null, null, 1);
+            CustomerRequest customerRequest =
+                    new CustomerRequest(
+                            null, null, null, null, null, null, null, null, null, BigDecimal.ONE);
 
             mockMvc.perform(
                             post("/api/customers")
@@ -220,11 +390,20 @@ class CustomerControllerTest {
                                     is("https://api.microservices.com/errors/validation-error")))
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
-                    .andExpect(jsonPath("$.violations", hasSize(3)))
-                    .andExpect(jsonPath("$.violations[0].field", is("email")))
-                    .andExpect(jsonPath("$.violations[0].message", is("Email cannot be Blank")))
-                    .andExpect(jsonPath("$.violations[1].field", is("name")))
-                    .andExpect(jsonPath("$.violations[1].message", is("Name cannot be Blank")))
+                    .andExpect(jsonPath("$.violations", hasSize(8)))
+                    .andExpect(jsonPath("$.violations[0].field", is("addressLine1")))
+                    .andExpect(
+                            jsonPath(
+                                    "$.violations[0].message",
+                                    is("Address Line 1 cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[1].field", is("city")))
+                    .andExpect(jsonPath("$.violations[1].message", is("City cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[2].field", is("country")))
+                    .andExpect(jsonPath("$.violations[2].message", is("Country cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[3].field", is("email")))
+                    .andExpect(jsonPath("$.violations[3].message", is("Email cannot be Blank")))
+                    .andExpect(jsonPath("$.violations[4].field", is("name")))
+                    .andExpect(jsonPath("$.violations[4].message", is("Name cannot be Blank")))
                     .andReturn();
         }
     }
@@ -232,6 +411,7 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("update methods")
     class Update {
+        /** Verifies that updating a customer returns the customer ID as a JSON string. */
         @Test
         void shouldUpdateCustomer() throws Exception {
 
@@ -240,8 +420,13 @@ class CustomerControllerTest {
                             "customerUpdatedName",
                             "junitEmail@email.com",
                             "1234567890",
-                            "junitAddress",
-                            100);
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.valueOf(100));
 
             given(customerService.updateCustomer(eq(1L), any(CustomerRequest.class)))
                     .willReturn(
@@ -250,17 +435,23 @@ class CustomerControllerTest {
                                     "customerUpdatedName",
                                     "junitEmail@email.com",
                                     "9876543210",
-                                    "junitAddress",
-                                    100));
+                                    "junitAddress1",
+                                    "junitAddress2",
+                                    "City",
+                                    "State",
+                                    "12345",
+                                    "Country",
+                                    BigDecimal.valueOf(100)));
 
             mockMvc.perform(
                             put("/api/customers/{id}", 1L)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(jsonMapper.writeValueAsString(customerRequest)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.customerId", is(1L), Long.class));
+                    .andExpect(jsonPath("$.customerId", is("1")));
         }
 
+        /** Verifies that updating an unknown customer returns HTTP 404. */
         @Test
         void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
             Long customerId = 1L;
@@ -269,8 +460,13 @@ class CustomerControllerTest {
                             "customerUpdatedName",
                             "junitEmail@email.com",
                             "1234567890",
-                            "junitAddress",
-                            100);
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.valueOf(100));
             given(customerService.updateCustomer(eq(customerId), any(CustomerRequest.class)))
                     .willThrow(new CustomerNotFoundException(customerId));
 
@@ -295,6 +491,7 @@ class CustomerControllerTest {
     @Nested
     @DisplayName("delete methods")
     class Delete {
+        /** Verifies that deleting an existing customer returns HTTP 200 and the customer name. */
         @Test
         void shouldDeleteCustomer() throws Exception {
             Long customerId = 1L;
@@ -304,10 +501,15 @@ class CustomerControllerTest {
                             "Some text",
                             "junit@email.com",
                             "9876543210",
-                            "junitAddress",
-                            0);
+                            "junitAddress1",
+                            "junitAddress2",
+                            "City",
+                            "State",
+                            "12345",
+                            "Country",
+                            BigDecimal.ZERO);
             given(customerService.findCustomerById(customerId)).willReturn(Optional.of(customer));
-            doNothing().when(customerService).deleteCustomerById(customerId);
+            given(customerService.deleteCustomerById(customerId)).willReturn(1);
 
             mockMvc.perform(delete("/api/customers/{id}", customerId))
                     .andExpect(status().isOk())

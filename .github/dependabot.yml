@@ -6,7 +6,51 @@
 
 version: 2
 updates:
- - package-ecosystem: "devcontainers"
-   directory: "/"
-   schedule:
-     interval: weekly
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/api-gateway"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/catalog-service"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/config-server"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/gatling-tests"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/inventory-service"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/order-service"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/payment-service"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/retail-store-webapp"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/service-registry"
+    schedule:
+      interval: "weekly"

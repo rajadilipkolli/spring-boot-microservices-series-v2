@@ -161,14 +161,22 @@ graph LR
 - **Customer-Order**: Linked by `customerId` (Long)
 - **Order-OrderItem**: JPA relationship with foreign key
 
+## 🔑 Primary Key Generation Strategy
+
+All microservices use **TSID (Time-Sorted Unique Identifiers)** for primary key generation.
+- **Order/Inventory Services (JPA)**: Use `@Tsid` annotation on the `id` field.
+- **Catalog/Payment Services (R2DBC/jOOQ)**: Programmatically generate TSIDs using `TSID.fast().toLong()`.
+
+TSID provides globally unique, time-sortable identifiers without relying on database sequences, enabling better distributed system performance.
+
 ## 🗄️ Database Schema Summary
 
-| Service | Tables | Key Fields | Relationships |
-|---------|--------|------------|---------------|
-| **Catalog** | `products` | `id`, `product_code`, `product_name`, `price` | None (referenced by others) |
-| **Inventory** | `inventory` | `id`, `product_code`, `quantity`, `reserved_items` | References Product via `product_code` |
-| **Order** | `orders`, `order_items` | `orders.id`, `order_items.product_code` | `order_items` → `orders` (FK) |
-| **Payment** | `customers` | `id`, `name`, `email`, `amount_available` | Referenced by Order via `customer_id` |
+| Service       | Tables                  | Key Fields                                         | Relationships                         |
+|---------------|-------------------------|----------------------------------------------------|---------------------------------------|
+| **Catalog**   | `products`              | `id`, `product_code`, `product_name`, `price`      | None (referenced by others)           |
+| **Inventory** | `inventory`             | `id`, `product_code`, `quantity`, `reserved_items` | References Product via `product_code` |
+| **Order**     | `orders`, `order_items` | `orders.id`, `order_items.product_code`            | `order_items` → `orders` (FK)         |
+| **Payment**   | `customers`             | `id`, `name`, `email`, `amount_available`          | Referenced by Order via `customer_id` |
 
 ## 🚀 Communication Patterns
 

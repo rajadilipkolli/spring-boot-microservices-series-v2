@@ -923,13 +923,13 @@
           "type": "prometheus",
           "uid": "prometheus-micro-service"
         },
-        "definition": "label_values(application)",
+        "definition": "label_values(job)",
         "includeAll": false,
         "label": "Application",
         "name": "application",
         "options": [],
         "query": {
-          "query": "label_values(application)",
+          "query": "label_values(job)",
           "refId": "Prometheus-application-Variable-Query"
         },
         "refresh": 1,

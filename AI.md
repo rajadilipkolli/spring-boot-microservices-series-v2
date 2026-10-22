@@ -4,7 +4,7 @@ Welcome, Agent. This file serves as your primary entry point for understanding t
 
 ## 🏗️ Project Architecture
 This is a microservices-based system built with:
-- **Core**: Java 25, Spring Boot 4.1.0, Spring Cloud 2025.
+- **Core**: Java 25, Spring Boot 4.1.1, Spring Cloud 2025.
 - **Service Mesh**: Eureka (Discovery), Config Server (Centralized Config), Spring Cloud Gateway (API Gateway).
 - **Persistence**: PostgreSQL managed by Liquibase.
 - **Messaging**: Apache Kafka for event-driven communication.
@@ -17,6 +17,7 @@ To ensure consistency and follow project-specific standards, specialized playboo
 2.  **New Microservice**: [add_new_microservice.md](./.ai/skills/add_new_microservice.skill.md) – Step-by-step scaffolding of a new service.
 3.  **Architecture**: [solve_modulith_violations.md](./.ai/skills/solve_modulith_violations.skill.md) – Resolving Spring Modulith violations.
 4.  **Database**: [manage_database_migration.md](./.ai/skills/manage_database_migration.skill.md) – Using Liquibase across XML/YAML/JSON formats.
+5.  **Kubernetes Deployment**: [add_kubernetes_deployment.skill.md](./.ai/skills/add_kubernetes_deployment.skill.md) – Deploying and validating the stack on Kind with the CI overlay.
 
 ## 🛠️ Global Constraints
 - **Formatting**: Use Google Java Format (AOSP style) enforced by Spotless.
@@ -25,3 +26,4 @@ To ensure consistency and follow project-specific standards, specialized playboo
 - **Modularity**: Respect package-private visibility where required by Spring Modulith.
 
 Please use these resources to provide accurate and idiomatic assistance.
+- **Imports**: Prefer imports over fully qualified class names (FQCNs) in Java code.

@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: retailstore
+spec:
+  ports:
+  - name: http
+    port: 18282
+    targetPort: 18282
+  - name: jobrunr
+    port: 28282
+    targetPort: 28282
+  selector:
+    app: order-service
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - env:
+        - name: CONFIG_SERVER_USR
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_USR
+              name: config-server-credentials
+        - name: CONFIG_SERVER_PWD
+          valueFrom:
+            secretKeyRef:
+              key: CONFIG_SERVER_PWD
+              name: config-server-credentials
+        - name: SPRING_CONFIG_IMPORT
+          value: optional:configserver:http://$(CONFIG_SERVER_USR):$(CONFIG_SERVER_PWD)@config-server:8888/
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://postgresql:5432/appdb
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_USER
+              name: postgres-credentials
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: postgres-credentials
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: kafka:9092
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: http://service-registry:8761/eureka/
+        - name: APPLICATION_CATALOG_SERVICE_URL
+          value: http://catalog-service:18080/catalog-service
+        - name: OTEL_SERVICE_NAME
+          value: order-service
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=order-service,service.version=0.0.1-SNAPSHOT
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-order-service:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /order-service/actuator/health/liveness
+            port: 18282
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: order-service
+        ports:
+        - containerPort: 18282
+        - containerPort: 28282
+        readinessProbe:
+          httpGet:
+            path: /order-service/actuator/health/readiness
+            port: 18282
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1400Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /order-service/actuator/health/liveness
+            port: 18282
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - 'until wget -q -O /dev/null http://config-server:8888/actuator/health/readiness
+          2>/dev/null; do echo waiting for config-server; sleep 3; done;
+
+          until nc -z service-registry 8761; do echo waiting for service-registry;
+          sleep 2; done;
+
+          until nc -z postgresql 5432; do echo waiting for postgresql; sleep 2; done;
+
+          until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done;
+
+          '
+        image: busybox:1.36
+        name: wait-for-dependencies
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: order-service
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume

@@ -1,9 +1,13 @@
-/*** Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,46 +17,87 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
+import com.example.paymentservice.model.response.CustomerResponse;
+import com.example.paymentservice.model.response.OrderResponse;
+import com.example.paymentservice.model.response.PagedResult;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpServerErrorException;
 
 class CustomerControllerIT extends AbstractIntegrationTest {
 
-    private List<Customer> customerList = null;
+    private List<CustomersRecord> customerList = null;
 
+    /** Replaces existing customers with three fixtures containing separate address fields. */
     @BeforeEach
     void setUp() {
         customerRepository.deleteAll();
 
-        customerList =
-                List.of(
-                        new Customer()
-                                .setName("First Customer")
-                                .setEmail("first@customer.email")
-                                .setPhone("9876543210")
-                                .setAddress("First Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
-                        new Customer()
-                                .setName("Second Customer")
-                                .setEmail("second@customer.email")
-                                .setPhone("9876543210")
-                                .setAddress("Second Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0),
-                        new Customer()
-                                .setName("Third Customer")
-                                .setEmail("third@customer.email")
-                                .setPhone("9876543210")
-                                .setAddress("Third Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(0));
-        customerList = customerRepository.saveAll(customerList);
+        CustomersRecord customer1 = createCustomersRecord();
+
+        CustomersRecord customer2 = createCustomer2();
+
+        CustomersRecord customer3 = new CustomersRecord();
+        customer3.setName("Third Customer");
+        customer3.setEmail("third@customer.email");
+        customer3.setPhone("9876543210");
+        customer3.setAddressLine1("Third Address");
+        customer3.setAddressLine2("Third Address Line 2");
+        customer3.setCity("Third City");
+        customer3.setState("Third State");
+        customer3.setZipCode("12345");
+        customer3.setCountry("Third Country");
+        customer3.setAmountAvailable(BigDecimal.valueOf(100));
+        customer3.setAmountReserved(BigDecimal.ZERO);
+
+        customerList = customerRepository.saveAll(List.of(customer1, customer2, customer3));
+    }
+
+    /** Creates the second unsaved customer fixture with 100 available and zero reserved. */
+    private @NonNull CustomersRecord createCustomer2() {
+        CustomersRecord customer2 = new CustomersRecord();
+        customer2.setName("Second Customer");
+        customer2.setEmail("second@customer.email");
+        customer2.setPhone("9876543210");
+        customer2.setAddressLine1("Second Address");
+        customer2.setAddressLine2("Second Address Line 2");
+        customer2.setCity("Second City");
+        customer2.setState("Second State");
+        customer2.setZipCode("12345");
+        customer2.setCountry("Second Country");
+        customer2.setAmountAvailable(BigDecimal.valueOf(100));
+        customer2.setAmountReserved(BigDecimal.ZERO);
+        return customer2;
+    }
+
+    /** Creates the first unsaved customer fixture with 100 available and zero reserved. */
+    private @NonNull CustomersRecord createCustomersRecord() {
+        CustomersRecord customer1 = new CustomersRecord();
+        customer1.setName("First Customer");
+        customer1.setEmail("first@customer.email");
+        customer1.setPhone("9876543210");
+        customer1.setAddressLine1("First Address");
+        customer1.setAddressLine2("First Address Line 2");
+        customer1.setCity("First City");
+        customer1.setState("First State");
+        customer1.setZipCode("12345");
+        customer1.setCountry("First Country");
+        customer1.setAmountAvailable(BigDecimal.valueOf(100));
+        customer1.setAmountReserved(BigDecimal.ZERO);
+        return customer1;
     }
 
     @Test
@@ -71,22 +116,32 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.hasPrevious", is(false)));
     }
 
+    /** Verifies that customer lookup by ID returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerById() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
         Long customerId = customer.getId();
 
         this.mockMvc
                 .perform(get("/api/customers/{id}", customerId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
+                .andExpect(jsonPath("$.customerId", is(customer.getId().toString())))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
+    /** Verifies that lookup of an unknown customer ID returns HTTP 404 with problem details. */
     @Test
     void shouldReturn404WhenFetchingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;
@@ -95,7 +150,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -105,22 +160,35 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /** Verifies that customer lookup by name returns customer details with a string customer ID. */
     @Test
     void shouldFindCustomerByName() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
         String customerName = customer.getName();
 
         this.mockMvc
                 .perform(get("/api/customers/name/{name}", customerName))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId", is(customer.getId()), Long.class))
+                .andExpect(jsonPath("$.customerId", is(customer.getId().toString())))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
+    /**
+     * Verifies that customer creation returns a location header, string ID, and the submitted
+     * details.
+     */
     @Test
     void shouldCreateNewCustomer() throws Exception {
         CustomerRequest customerRequest =
@@ -129,7 +197,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "firstnew@customerRequest.email",
                         "1234567890",
                         "First Address",
-                        10_000);
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
+                        BigDecimal.valueOf(10000));
         this.mockMvc
                 .perform(
                         post("/api/customers")
@@ -137,42 +210,93 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
+                .andExpect(jsonPath("$.customerId").isString())
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
-                .andExpect(jsonPath("$.email", is(customerRequest.email())))
+                .andExpect(jsonPath("$.email", is(customerRequest.email().toLowerCase())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(jsonPath("$.addressLine1", is("First Address")))
+                .andExpect(jsonPath("$.addressLine2", is(nullValue())))
+                .andExpect(jsonPath("$.city", is("Hyderabad")))
+                .andExpect(jsonPath("$.state", is("Telangana")))
+                .andExpect(jsonPath("$.zipCode", is("500081")))
+                .andExpect(jsonPath("$.country", is("India")))
+                .andExpect(jsonPath("$.amountAvailable", is(10000.0)));
     }
 
+    /**
+     * Verifies that email lookup ignores case and returns the persisted customer details.
+     *
+     * @param email a case variant of the stored customer email
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"first@customer.email", "FIRST@CUSTOMER.EMAIL", "FiRsT@CuStOmEr.EmAiL"})
+    void shouldFindCustomerByEmail(String email) {
+        CustomersRecord customer = customerList.getFirst(); // first@customer.email
+
+        this.mockMvcTester
+                .get()
+                .uri("/api/customers/by-email")
+                .param("email", email)
+                .assertThat()
+                .hasStatusOk()
+                .hasContentType(MediaType.APPLICATION_JSON)
+                .bodyJson()
+                .convertTo(CustomerResponse.class)
+                .satisfies(
+                        customerResponse -> {
+                            assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
+                            assertThat(customerResponse.name()).isEqualTo(customer.getName());
+                            assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
+                            assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
+                            assertThat(customerResponse.addressLine1())
+                                    .isEqualTo(customer.getAddressLine1());
+                            assertThat(customerResponse.amountAvailable())
+                                    .isEqualByComparingTo(customer.getAmountAvailable());
+                        });
+    }
+
+    /** Verifies that creating an existing customer returns a conflict error. */
     @Test
-    void shouldReturnWithNoErrorCreatingExistingCustomer() throws Exception {
-        Customer customer = customerList.getFirst();
+    void shouldReturnWithConflictErrorCreatingExistingCustomer() throws Exception {
+        CustomersRecord customer = customerList.getFirst();
         CustomerRequest customerRequest =
                 new CustomerRequest(
                         customer.getName(),
                         customer.getEmail(),
                         customer.getPhone(),
-                        customer.getAddress(),
+                        customer.getAddressLine1(),
+                        customer.getAddressLine2(),
+                        customer.getCity(),
+                        customer.getState(),
+                        customer.getZipCode(),
+                        customer.getCountry(),
                         customer.getAmountAvailable());
         this.mockMvc
                 .perform(
                         post("/api/customers")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(jsonPath("$.customerId", notNullValue(Long.class)))
-                .andExpect(jsonPath("$.name", is(customerRequest.name())))
-                .andExpect(jsonPath("$.email", is(customerRequest.email())))
-                .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(status().isConflict())
+                .andExpect(
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/conflict")))
+                .andExpect(jsonPath("$.title", is("Customer Already Exists")))
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(
+                        jsonPath("$.detail")
+                                .value(
+                                        "Customer with email %s already exists."
+                                                .formatted(customer.getEmail())));
     }
 
+    /** Verifies that missing required customer details produce HTTP 400 validation errors. */
     @Test
     void shouldReturn400WhenCreateNewCustomerWithoutNameAndEmail() throws Exception {
-        CustomerRequest customer = new CustomerRequest(null, null, null, null, 0);
+        CustomerRequest customer =
+                new CustomerRequest(
+                        null, null, null, null, null, null, null, null, null, BigDecimal.ZERO);
 
         this.mockMvc
                 .perform(
@@ -182,7 +306,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(
                         jsonPath(
@@ -190,25 +314,50 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.violations", hasSize(4)))
-                .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
+                .andExpect(jsonPath("$.violations", hasSize(9)))
+                .andExpect(jsonPath("$.violations[1].field", is("amountAvailable")))
                 .andExpect(
                         jsonPath(
-                                "$.violations[0].message",
+                                "$.violations[1].message",
                                 is("AmountAvailable must be greater than 0")))
-                .andExpect(jsonPath("$.violations[1].field", is("email")))
-                .andExpect(jsonPath("$.violations[1].message", is("Email cannot be Blank")))
-                .andExpect(jsonPath("$.violations[2].field", is("name")))
-                .andExpect(jsonPath("$.violations[2].message", is("Name cannot be Blank")))
+                .andExpect(jsonPath("$.violations[0].field", is("addressLine1")))
+                .andExpect(
+                        jsonPath("$.violations[0].message", is("Address Line 1 cannot be Blank")))
+                .andExpect(jsonPath("$.violations[2].field", is("city")))
+                .andExpect(jsonPath("$.violations[2].message", is("City cannot be Blank")))
+                .andExpect(jsonPath("$.violations[3].field", is("country")))
+                .andExpect(jsonPath("$.violations[3].message", is("Country cannot be Blank")))
+                .andExpect(jsonPath("$.violations[4].field", is("email")))
+                .andExpect(jsonPath("$.violations[4].message", is("Email cannot be Blank")))
+                .andExpect(jsonPath("$.violations[5].field", is("name")))
+                .andExpect(jsonPath("$.violations[5].message", is("Name cannot be Blank")))
+                .andExpect(jsonPath("$.violations[6].field", is("phone")))
+                .andExpect(
+                        jsonPath(
+                                "$.violations[6].message", is("Customer Phone number is required")))
+                .andExpect(jsonPath("$.violations[7].field", is("state")))
+                .andExpect(jsonPath("$.violations[7].message", is("State cannot be Blank")))
+                .andExpect(jsonPath("$.violations[8].field", is("zipCode")))
+                .andExpect(jsonPath("$.violations[8].message", is("Zip Code cannot be Blank")))
                 .andReturn();
     }
 
+    /** Verifies that updating a customer returns the customer ID as a JSON string. */
     @Test
     void shouldUpdateCustomer() throws Exception {
         Long customerId = customerList.getFirst().getId();
         CustomerRequest customerRequest =
                 new CustomerRequest(
-                        "Updated text", "first@customer.email", "1234567890", "First Address", 500);
+                        "Updated text",
+                        "first@customer.email",
+                        "1234567890",
+                        "First Address",
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
+                        BigDecimal.valueOf(500.99));
 
         this.mockMvc
                 .perform(
@@ -216,14 +365,23 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(customerRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId").value(customerId))
+                .andExpect(jsonPath("$.customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.name", is(customerRequest.name())))
                 .andExpect(jsonPath("$.email", is(customerRequest.email())))
-                .andExpect(jsonPath("$.address", is(customerRequest.address())))
+                .andExpect(jsonPath("$.addressLine1", is(customerRequest.addressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customerRequest.addressLine2())))
+                .andExpect(jsonPath("$.city", is(customerRequest.city())))
+                .andExpect(jsonPath("$.state", is(customerRequest.state())))
+                .andExpect(jsonPath("$.zipCode", is(customerRequest.zipCode())))
+                .andExpect(jsonPath("$.country", is(customerRequest.country())))
                 .andExpect(jsonPath("$.phone", is(customerRequest.phone())))
-                .andExpect(jsonPath("$.amountAvailable", is(customerRequest.amountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customerRequest.amountAvailable().doubleValue())));
     }
 
+    /** Verifies that updating an unknown customer returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;
@@ -233,7 +391,12 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "first@customer.email",
                         "1234567890",
                         "First Address",
-                        10_000);
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
+                        BigDecimal.valueOf(10000));
 
         this.mockMvc
                 .perform(
@@ -243,7 +406,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -253,21 +416,68 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
     }
 
+    /**
+     * Verifies customer creation rejects an available balance with more than two fractional digits.
+     */
+    @Test
+    void shouldReturn400WhenAmountHasTooManyDecimalPlaces() throws Exception {
+        CustomerRequest customerRequest =
+                new CustomerRequest(
+                        "New Customer",
+                        "firstnew@customerRequest.email",
+                        "1234567890",
+                        "First Address",
+                        null,
+                        "Hyderabad",
+                        "Telangana",
+                        "500081",
+                        "India",
+                        BigDecimal.valueOf(10.005));
+
+        this.mockMvc
+                .perform(
+                        post("/api/customers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        header().string(
+                                        HttpHeaders.CONTENT_TYPE,
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.violations[0].field", is("amountAvailable")))
+                .andExpect(
+                        jsonPath(
+                                "$.violations[0].message",
+                                is("AmountAvailable can have at most 2 decimal places")));
+    }
+
+    /** Verifies that deleting a customer returns the deleted details with a string customer ID. */
     @Test
     void shouldDeleteCustomer() throws Exception {
-        Customer customer = customerList.getFirst();
+        CustomersRecord customer = customerList.getFirst();
 
         this.mockMvc
                 .perform(delete("/api/customers/{id}", customer.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerId").value(customer.getId()))
+                .andExpect(jsonPath("$.customerId").value(customer.getId().toString()))
                 .andExpect(jsonPath("$.name", is(customer.getName())))
                 .andExpect(jsonPath("$.email", is(customer.getEmail())))
-                .andExpect(jsonPath("$.address", is(customer.getAddress())))
+                .andExpect(jsonPath("$.addressLine1", is(customer.getAddressLine1())))
+                .andExpect(jsonPath("$.addressLine2", is(customer.getAddressLine2())))
+                .andExpect(jsonPath("$.city", is(customer.getCity())))
+                .andExpect(jsonPath("$.state", is(customer.getState())))
+                .andExpect(jsonPath("$.zipCode", is(customer.getZipCode())))
+                .andExpect(jsonPath("$.country", is(customer.getCountry())))
                 .andExpect(jsonPath("$.phone", is(customer.getPhone())))
-                .andExpect(jsonPath("$.amountAvailable", is(customer.getAmountAvailable())));
+                .andExpect(
+                        jsonPath(
+                                "$.amountAvailable",
+                                is(customer.getAmountAvailable().doubleValue())));
     }
 
+    /** Verifies that deleting an unknown customer returns HTTP 404 with problem details. */
     @Test
     void shouldReturn404WhenDeletingNonExistingCustomer() throws Exception {
         long customerId = customerList.getFirst().getId() + 99_999;
@@ -276,7 +486,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(
                         header().string(
-                                        "Content-Type",
+                                        HttpHeaders.CONTENT_TYPE,
                                         is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
                 .andExpect(jsonPath("$.type", is("https://api.microservices.com/errors/not-found")))
                 .andExpect(jsonPath("$.title", is("Customer Not Found")))
@@ -284,5 +494,82 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(
                         jsonPath("$.detail")
                                 .value("Customer with Id '%d' not found".formatted(customerId)));
+    }
+
+    /**
+     * Verifies customer order responses include identifiers, address fields, and decimal monetary
+     * values.
+     */
+    @Test
+    void shouldGetOrdersByCustomerId() throws Exception {
+        CustomersRecord customer = customerList.getFirst();
+        Long customerId = customer.getId();
+
+        // Stub the proxy
+        OrderResponse.Address address =
+                new OrderResponse.Address("Street", "Suite", "City", "State", "Zip", "Country");
+        OrderResponse.OrderItemResponse item =
+                new OrderResponse.OrderItemResponse(
+                        100L, "P1", 2, BigDecimal.TEN, BigDecimal.valueOf(20.0));
+        OrderResponse orderResponse =
+                new OrderResponse(
+                        1L,
+                        customerId,
+                        "COMPLETED",
+                        "PAYMENT",
+                        address,
+                        LocalDateTime.now(),
+                        BigDecimal.valueOf(20.0),
+                        List.of(item));
+
+        PagedResult<OrderResponse> pagedResult =
+                new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+        given(orderServiceProxy.getOrdersByCustomerId(eq(customerId), eq(0), eq(10), eq("id,asc")))
+                .willReturn(pagedResult);
+
+        this.mockMvc
+                .perform(get("/api/customers/{id}/orders", customerId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.data[0].orderId", is("1")))
+                .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
+                .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
+                .andExpect(jsonPath("$.data[0].items[0].itemId", is("100")))
+                .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10)))
+                .andExpect(jsonPath("$.data[0].items[0].price", is(20.0)))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine1", is("Street")))
+                .andExpect(jsonPath("$.data[0].deliveryAddress.addressLine2", is("Suite")))
+                .andExpect(jsonPath("$.data[0].totalPrice", is(20.0)));
+    }
+
+    @Autowired private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Test
+    void shouldReturnErrorWhenOrderServiceFails() throws Exception {
+        Long customerId = customerList.getFirst().getId();
+        given(orderServiceProxy.getOrdersByCustomerId(eq(customerId), eq(0), eq(10), eq("id,asc")))
+                .willThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
+        try {
+            mockMvc.perform(get("/api/customers/{id}/orders", customerId))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+        } finally {
+            circuitBreakerRegistry.circuitBreaker("default").reset();
+        }
+    }
+
+    @Test
+    void shouldReturnErrorWhenOrderCircuitIsOpen() throws Exception {
+        var circuitBreaker = circuitBreakerRegistry.circuitBreaker("default");
+        circuitBreaker.transitionToOpenState();
+        try {
+            mockMvc.perform(get("/api/customers/{id}/orders", customerList.getFirst().getId()))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.data").doesNotExist());
+            verifyNoInteractions(orderServiceProxy);
+        } finally {
+            circuitBreaker.reset();
+        }
     }
 }

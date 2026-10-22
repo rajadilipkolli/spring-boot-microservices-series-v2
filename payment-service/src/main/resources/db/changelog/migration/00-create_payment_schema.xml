@@ -3,7 +3,7 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
 
     <changeSet author="rajakolli" id="createSchema-payment">
         <sql>CREATE SCHEMA IF NOT EXISTS payment</sql>

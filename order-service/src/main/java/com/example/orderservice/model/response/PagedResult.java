@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -19,9 +19,16 @@ public record PagedResult<T>(
         @JsonProperty("isLast") boolean isLast,
         @JsonProperty("hasNext") boolean hasNext,
         @JsonProperty("hasPrevious") boolean hasPrevious) {
-    public PagedResult(Page<T> page) {
+    /**
+     * Combines supplied data with the source page's metadata, using a one-based page number.
+     *
+     * @param <R> element type of the source page
+     * @param page source of pagination metadata
+     * @param data mapped content for this page
+     */
+    public <R> PagedResult(Page<R> page, List<T> data) {
         this(
-                page.getContent(),
+                data,
                 page.getTotalElements(),
                 page.getNumber() + 1,
                 page.getTotalPages(),

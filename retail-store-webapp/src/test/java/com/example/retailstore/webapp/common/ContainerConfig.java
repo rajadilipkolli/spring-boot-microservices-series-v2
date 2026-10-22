@@ -1,23 +1,42 @@
 package com.example.retailstore.webapp.common;
 
+import com.redis.testcontainers.RedisContainer;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
+import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
-    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.7.0";
+    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.8.1";
     private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 
+    /**
+     * Provides the Keycloak test container with admin credentials and the retail store realm import.
+     *
+     * @return the configured Keycloak test container
+     */
     @Bean
     KeycloakContainer keycloak() {
         return new KeycloakContainer(KEYCLOAK_IMAGE)
                 .withAdminUsername("junitAdmin")
                 .withAdminPassword("junitPasscode")
                 .withRealmImportFile(REALM_IMPORT_FILE);
+    }
+
+    /**
+     * Provides the Redis container used by integration tests through a Spring service connection.
+     *
+     * @return a Redis 8.10.2 Alpine container
+     */
+    @Bean
+    @ServiceConnection(name = "redis")
+    RedisContainer redisContainer() {
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"));
     }
 
     @Bean

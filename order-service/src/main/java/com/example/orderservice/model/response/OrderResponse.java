@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderResponse(
-        Long orderId,
-        Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
         String status,
         String source,
         Address deliveryAddress,

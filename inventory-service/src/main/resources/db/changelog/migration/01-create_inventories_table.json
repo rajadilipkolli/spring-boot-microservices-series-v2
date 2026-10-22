@@ -16,28 +16,18 @@
     },
     {
       "changeSet": {
-        "id": "create_inventory_sequence",
-        "author": "rajakolli",
-        "changes": [
-          {
-            "createSequence": {
-              "cacheSize": 1,
-              "cycle": false,
-              "dataType": "bigint",
-              "incrementBy": 50,
-              "maxValue": 9223372036854775807,
-              "minValue": 1,
-              "sequenceName": "inventory_seq",
-              "startValue": 1
-            }
-          }
-        ]
-      }
-    },
-    {
-      "changeSet": {
         "id": "create_inventory_table",
         "author": "rajakolli",
+        "preConditions": [
+          {
+            "onFail": "MARK_RAN",
+            "not": {
+              "tableExists": {
+                "tableName": "inventory"
+              }
+            }
+          }
+        ],
         "changes": [
           {
             "createTable": {
@@ -45,7 +35,6 @@
               "columns": [
                 {
                   "column": {
-                    "defaultValueSequenceNext": "inventory_seq",
                     "constraints": {
                       "nullable": false,
                       "primaryKey": true,
@@ -81,7 +70,8 @@
                 {
                   "column": {
                     "name": "version",
-                    "type": "smallint"
+                    "type": "smallint",
+                    "defaultValue": 0
                   }
                 }
               ]
@@ -94,6 +84,17 @@
       "changeSet": {
         "id": "add_unique_constraint",
         "author": "rajakolli",
+        "preConditions": [
+          {
+            "onFail": "MARK_RAN",
+            "not": {
+              "indexExists": {
+                "tableName": "inventory",
+                "columnNames": "product_code"
+              }
+            }
+          }
+        ],
         "changes": [
           {
             "addUniqueConstraint": {

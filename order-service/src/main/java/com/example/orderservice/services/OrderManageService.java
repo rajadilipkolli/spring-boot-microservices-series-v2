@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,9 +8,14 @@ package com.example.orderservice.services;
 
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,12 +27,38 @@ public class OrderManageService {
     private static final String REJECT = "REJECT";
     private static final Logger log = LoggerFactory.getLogger(OrderManageService.class);
     private final OrderRepository orderRepository;
+    private final Counter ordersCompletedCounter;
+    private final Counter ordersFailedCounter;
 
-    public OrderManageService(OrderRepository orderRepository) {
+    public OrderManageService(OrderRepository orderRepository, MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
+        this.ordersCompletedCounter = meterRegistry.counter("orders_completed");
+        this.ordersFailedCounter = meterRegistry.counter("orders_failed");
     }
 
-    public OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+    /**
+     * Reconciles payment and inventory outcomes for the same order and attempt, updating only NEW
+     * orders. Increments the completion or failure counter only after a successful status update.
+     * Persistence failures propagate to the caller.
+     *
+     * @param orderPayment payment reservation outcome
+     * @param orderStock inventory reservation outcome
+     * @return the reconciled outcome after an update; otherwise null for a persisted CONFIRMED,
+     *     REJECTED, ROLLBACK, or FAILED order, or the inventory response with the persisted status
+     *     and source for any other state
+     * @throws IllegalArgumentException if order IDs are missing or differ, attempt IDs are missing,
+     *     blank, or differ, or the derived status is not an {@link OrderStatus} constant
+     * @throws OrderNotFoundException if no order is updated and the order cannot be found
+     * @throws NullPointerException if either response or the derived status is null
+     */
+    public @Nullable OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+        if (orderPayment.orderId() == null
+                || !Objects.equals(orderPayment.orderId(), orderStock.orderId())
+                || orderPayment.attemptId() == null
+                || orderPayment.attemptId().isBlank()
+                || !Objects.equals(orderPayment.attemptId(), orderStock.attemptId())) {
+            throw new IllegalArgumentException("Order responses must belong to the same attempt");
+        }
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = getOrderDto(orderPayment, orderStock);
         int rows =
@@ -35,14 +66,41 @@ public class OrderManageService {
                         orderDto.orderId(),
                         OrderStatus.valueOf(orderDto.status()),
                         orderDto.source());
+        if (rows == 0) {
+            var persisted =
+                    orderRepository
+                            .findById(orderDto.orderId())
+                            .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
+            if (switch (persisted.getStatus()) {
+                case CONFIRMED, REJECTED, ROLLBACK, FAILED -> true;
+                default -> false;
+            }) {
+                return null;
+            }
+            return orderDto.withStatusAndSource(
+                    persisted.getStatus().name(), persisted.getSource());
+        }
         log.info(
                 "Updated Status as {} for orderId :{} in {} rows",
                 orderDto.status(),
                 orderDto.orderId(),
                 rows);
+        if ("CONFIRMED".equals(orderDto.status())) {
+            this.ordersCompletedCounter.increment();
+        } else if ("REJECTED".equals(orderDto.status())
+                || AppConstants.ROLLBACK.equals(orderDto.status())) {
+            this.ordersFailedCounter.increment();
+        }
         return orderDto;
     }
 
+    /**
+     * Derives the final order outcome from the payment and inventory reservation statuses.
+     *
+     * @param orderPayment payment reservation outcome
+     * @param orderStock inventory reservation outcome
+     * @return the order with its final status and rejection source, when applicable
+     */
     private OrderDto getOrderDto(OrderDto orderPayment, OrderDto orderStock) {
         OrderDto orderDto = orderStock;
         if (OrderStatus.ACCEPT.name().equals(orderPayment.status())

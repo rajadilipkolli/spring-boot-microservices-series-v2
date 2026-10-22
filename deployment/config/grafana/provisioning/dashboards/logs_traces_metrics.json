@@ -62,7 +62,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"payment-service\"} |= ``",
+          "expr": "{service_name=\"payment-service\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -106,7 +106,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"catalog-service\"} |= ``",
+          "expr": "{service_name=\"catalog-service\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -149,7 +149,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"order-service\"} |= ``",
+          "expr": "{service_name=\"order-service\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -193,7 +193,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"api-gateway\"} |= ``",
+          "expr": "{service_name=\"api-gateway\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -237,7 +237,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"inventory-service\"} |= ``",
+          "expr": "{service_name=\"inventory-service\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -280,7 +280,7 @@
             "uid": "loki-micro-service"
           },
           "editorMode": "builder",
-          "expr": "{container=\"config-server\"} |= ``",
+          "expr": "{service_name=\"config-server\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }

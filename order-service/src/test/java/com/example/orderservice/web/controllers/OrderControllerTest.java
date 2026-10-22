@@ -12,9 +12,11 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -33,7 +35,6 @@ import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
-import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
@@ -44,10 +45,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -65,10 +69,20 @@ class OrderControllerTest {
 
     @MockitoBean private OrderGeneratorService orderGeneratorService;
 
-    @MockitoBean private OrderKafkaStreamService orderKafkaStreamService;
-
     @Autowired private JsonMapper jsonMapper;
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) throws Exception {
+        mockMvc.perform(
+                        post("/api/orders/generate?batchSize=" + batchSize)
+                                .header("Idempotency-Key", "test-batch-123"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoMoreInteractions(orderGeneratorService);
+    }
+
+    /** Verifies that listing orders returns paginated order details with string customer IDs. */
     @Test
     void shouldFetchAllOrders() throws Exception {
 
@@ -122,7 +136,8 @@ class OrderControllerTest {
                         BigDecimal.TEN,
                         new ArrayList<>()));
         Page<OrderResponse> page = new PageImpl<>(orderResponseList);
-        PagedResult<OrderResponse> orderResponsePagedResult = new PagedResult<>(page);
+        PagedResult<OrderResponse> orderResponsePagedResult =
+                new PagedResult<>(page, orderResponseList);
 
         given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderResponsePagedResult);
 
@@ -139,7 +154,7 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.hasNext", is(false)))
                 .andExpect(jsonPath("$.hasPrevious", is(false)))
                 // Enhanced assertions for data structure verification
-                .andExpect(jsonPath("$.data[0].customerId", is(1)))
+                .andExpect(jsonPath("$.data[0].customerId", is("1")))
                 .andExpect(jsonPath("$.data[0].status", is("NEW")))
                 .andExpect(jsonPath("$.data[0].source", is("")))
                 .andExpect(jsonPath("$.data[0].deliveryAddress", notNullValue()))
@@ -153,6 +168,10 @@ class OrderControllerTest {
     @DisplayName("find methods")
     class Find {
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
@@ -172,8 +191,8 @@ class OrderControllerTest {
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(orderResponse.orderId()), Long.class))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is(orderResponse.orderId().toString())))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is(orderResponse.status())))
                     .andExpect(jsonPath("$.source", is(orderResponse.source())))
                     .andExpect(jsonPath("$.deliveryAddress", notNullValue()))
@@ -194,6 +213,7 @@ class OrderControllerTest {
                     "Junit Address1", "AddressLine2", "city", "state", "zipCode", "country");
         }
 
+        /** Verifies that delayed order lookup waits before returning an order with a string ID. */
         @Test
         void shouldRespectDelayParameter() throws Exception {
             Long orderId = 1L;
@@ -214,7 +234,7 @@ class OrderControllerTest {
             long startTime = System.nanoTime();
             mockMvc.perform(get("/api/orders/{id}", orderId).param("delay", "1"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(1)));
+                    .andExpect(jsonPath("$.orderId", is("1")));
             long duration = (System.nanoTime() - startTime) / 1_000_000; // Convert to milliseconds
 
             assertThat(duration).isGreaterThanOrEqualTo(900);
@@ -246,6 +266,9 @@ class OrderControllerTest {
     @Nested
     @DisplayName("save methods")
     class Save {
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
 
@@ -261,7 +284,8 @@ class OrderControllerTest {
                                     "zipCode",
                                     "country"));
             OrderItemResponse orderItemDto =
-                    new OrderItemResponse(2L, "Product1", 10, BigDecimal.TEN, new BigDecimal(100));
+                    new OrderItemResponse(
+                            2L, "Product1", 10, BigDecimal.TEN, BigDecimal.valueOf(100));
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -286,13 +310,13 @@ class OrderControllerTest {
                                     .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId", notNullValue()))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is("NEW")))
                     .andExpect(jsonPath("$.source", is("")))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
                     .andExpect(jsonPath("$.totalPrice").value(is(10)))
                     .andExpect(jsonPath("$.items.size()", is(1)))
-                    .andExpect(jsonPath("$.items[0].itemId", is(2)))
+                    .andExpect(jsonPath("$.items[0].itemId", is("2")))
                     .andExpect(jsonPath("$.items[0].productId", is("Product1")))
                     .andExpect(jsonPath("$.items[0].quantity", is(10)))
                     .andExpect(jsonPath("$.items[0].price").value(is(100)))
@@ -388,6 +412,7 @@ class OrderControllerTest {
     @Nested
     @DisplayName("update methods")
     class Update {
+        /** Verifies that updating an order returns its string ID and updated delivery address. */
         @Test
         void shouldUpdateOrder() throws Exception {
 
@@ -430,8 +455,8 @@ class OrderControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(jsonMapper.writeValueAsString(orderRequest)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(1)))
-                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is("1")))
+                    .andExpect(jsonPath("$.customerId", is(orderResponse.customerId().toString())))
                     .andExpect(jsonPath("$.status", is("NEW")))
                     .andExpect(jsonPath("$.source", is("")))
                     .andExpect(jsonPath("$.createdDate", notNullValue()))
@@ -517,6 +542,136 @@ class OrderControllerTest {
                     .andExpect(
                             jsonPath("$.detail")
                                     .value("Order with Id %d not found".formatted(orderId)));
+        }
+    }
+
+    @Nested
+    @DisplayName("search methods")
+    class Search {
+
+        /**
+         * Verifies that blank search terms return HTTP 400 without invoking the service.
+         *
+         * @param term empty or whitespace-only search text
+         * @throws Exception if the mock HTTP request fails
+         */
+        @ParameterizedTest
+        @ValueSource(strings = {"", " ", "\t\n"})
+        void shouldRejectBlankSearchTerms(String term) throws Exception {
+            mockMvc.perform(get("/api/orders/search").param("term", term))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(orderService);
+        }
+
+        /**
+         * Verifies that out-of-range similarity thresholds return HTTP 400 without invoking the
+         * service.
+         *
+         * @param threshold similarity cutoff outside the allowed range
+         * @throws Exception if the mock HTTP request fails
+         */
+        @ParameterizedTest
+        @ValueSource(strings = {"-0.1", "1.1"})
+        void shouldRejectInvalidSimilarityThresholds(String threshold) throws Exception {
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "web")
+                                    .param("mode", "similarity")
+                                    .param("threshold", threshold))
+                    .andExpect(status().isBadRequest());
+            verifyNoInteractions(orderService);
+        }
+
+        /**
+         * Verifies keyword search parameter binding and serialization of the service result.
+         *
+         * @throws Exception if the mock HTTP request fails
+         */
+        @Test
+        void shouldSearchOrders() throws Exception {
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "WEB",
+                            new Address(
+                                    "Address1", "Address2", "city", "state", "zipCode", "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            List.of());
+
+            PagedResult<OrderResponse> pagedResult =
+                    new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+            given(
+                            orderService.searchOrders(
+                                    eq("term"),
+                                    eq("keyword"),
+                                    isNull(),
+                                    isNull(),
+                                    isNull(),
+                                    any(Pageable.class)))
+                    .willReturn(pagedResult);
+
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "term")
+                                    .param("mode", "keyword")
+                                    .param("page", "0")
+                                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is("1")))
+                    .andExpect(jsonPath("$.data[0].source", is("WEB")))
+                    .andExpect(jsonPath("$.totalElements", is(1)));
+        }
+
+        /**
+         * Verifies similarity search parameter binding, including the threshold, and result
+         * serialization.
+         *
+         * @throws Exception if the mock HTTP request fails
+         */
+        @Test
+        void shouldSearchOrdersBySimilarity() throws Exception {
+            OrderResponse orderResponse =
+                    new OrderResponse(
+                            1L,
+                            1L,
+                            "NEW",
+                            "WEB",
+                            new Address(
+                                    "Address1", "Address2", "city", "state", "zipCode", "country"),
+                            LocalDateTime.now(),
+                            BigDecimal.TEN,
+                            List.of());
+
+            PagedResult<OrderResponse> pagedResult =
+                    new PagedResult<>(List.of(orderResponse), 1, 1, 1, true, true, false, false);
+
+            given(
+                            orderService.searchOrders(
+                                    eq("term"),
+                                    eq("similarity"),
+                                    isNull(),
+                                    isNull(),
+                                    eq(0.3),
+                                    any(Pageable.class)))
+                    .willReturn(pagedResult);
+
+            mockMvc.perform(
+                            get("/api/orders/search")
+                                    .param("term", "term")
+                                    .param("mode", "similarity")
+                                    .param("threshold", "0.3")
+                                    .param("page", "0")
+                                    .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.data[0].orderId", is("1")))
+                    .andExpect(jsonPath("$.data[0].source", is("WEB")))
+                    .andExpect(jsonPath("$.totalElements", is(1)));
         }
     }
 }

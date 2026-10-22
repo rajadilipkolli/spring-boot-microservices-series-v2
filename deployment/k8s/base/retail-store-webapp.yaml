@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: retail-store-webapp
+  namespace: retailstore
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: retail-store-webapp
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-store-webapp
+  namespace: retailstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retail-store-webapp
+  template:
+    metadata:
+      labels:
+        app: retail-store-webapp
+    spec:
+      containers:
+      - env:
+        - name: SERVER_FORWARD_HEADERS_STRATEGY
+          value: framework
+        - name: SPRING_CONFIG_IMPORT
+          value: ''
+        - name: OAUTH2_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: OAUTH2_CLIENT_SECRET
+              name: webapp-oauth2-credentials
+        - name: KEYCLOAK_ADMINUSERNAME
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN
+              name: keycloak-admin-credentials
+        - name: KEYCLOAK_ADMINPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: KEYCLOAK_ADMIN_PASSWORD
+              name: keycloak-admin-credentials
+        - name: RETAILSTORE_API_GATEWAY_URL
+          value: http://api-gateway:8765
+        - name: OAUTH2_SERVER_URL
+          value: http://keycloak.local
+        - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_RETAILSTORE_WEBAPP_ISSUER_URI
+          value: http://keycloak.local/realms/retailstore
+        - name: JAVA_TOOL_OPTIONS
+          value: -XX:MaxDirectMemorySize=64m -Xmx400m
+        - name: OTEL_SERVICE_NAME
+          value: retail-store-webapp
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: service.name=retail-store-webapp,service.version=0.0.1-SNAPSHOT
+        envFrom:
+        - configMapRef:
+            name: shared-config
+        image: dockertmt/mmv2-retail-store-webapp:0.0.1-SNAPSHOT
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: retail-store-webapp
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1400Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - 'until nc -z keycloak 80; do echo waiting for keycloak; sleep 3; done;
+
+          '
+        image: busybox:1.36
+        name: wait-for-keycloak
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: retail-store-webapp
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume

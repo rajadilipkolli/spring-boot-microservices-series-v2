@@ -11,9 +11,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 
 @Tag(
@@ -21,7 +24,9 @@ import reactor.core.publisher.Mono;
         description = "API for orchestrating data generation across services")
 public interface GenerateAPI {
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    int MAX_BATCH_SIZE = 10_000;
+
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Generate sample data across services",
             description =
@@ -48,5 +53,6 @@ public interface GenerateAPI {
                         responseCode = "503",
                         description = "One of the required services is temporarily unavailable")
             })
-    Mono<ResponseEntity<GenerationResponse>> generate();
+    Mono<ResponseEntity<GenerationResponse>> generate(
+            @RequestParam(required = false) @Min(1) @Max(MAX_BATCH_SIZE) Integer batchSize);
 }

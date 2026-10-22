@@ -13,26 +13,20 @@ import java.util.UUID;
 import org.springframework.data.r2dbc.repository.Modifying;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEvent, UUID> {
+public interface OutboxEventRepository
+        extends ReactiveCrudRepository<OutboxEvent, UUID>, CustomOutboxEventRepository {
 
-    @Query(
-            """
-            UPDATE outbox_events
-            SET status = 'PROCESSING', locked_at = NOW()
-            WHERE id IN (
-                SELECT id FROM outbox_events
-                WHERE status = 'PENDING'
-                ORDER BY created_at ASC
-                LIMIT :limit
-                FOR UPDATE SKIP LOCKED
-            )
-            RETURNING *
-            """)
-    Flux<OutboxEvent> claimPendingEvents(int limit);
-
+    /**
+     * Releases expired processing locks and increments retry counts and versions. Events whose new
+     * retry count reaches or exceeds the limit are marked failed with an error message; the rest
+     * become pending again.
+     *
+     * @param threshold the exclusive cutoff for the lock timestamp
+     * @param maxRetries the retry count at which an event is marked failed
+     * @return the number of updated events; database failures are emitted as errors
+     */
     @Modifying
     @Query(
             """
@@ -43,6 +37,7 @@ public interface OutboxEventRepository extends ReactiveCrudRepository<OutboxEven
             END,
             locked_at = NULL,
             retry_count = retry_count + 1,
+            version = version + 1,
             error_message = CASE
                 WHEN retry_count + 1 >= :maxRetries
                     THEN 'Exceeded max retries while reaping orphaned event'

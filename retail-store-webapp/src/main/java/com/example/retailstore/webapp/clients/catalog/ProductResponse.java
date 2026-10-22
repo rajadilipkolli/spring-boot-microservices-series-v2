@@ -8,10 +8,13 @@ package com.example.retailstore.webapp.clients.catalog;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 public record ProductResponse(
-        Long id,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long id,
         String productCode,
         String productName,
         String description,
         String imageUrl,
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00") Double price,
+
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
+        java.math.BigDecimal price,
+
         boolean inStock) {}

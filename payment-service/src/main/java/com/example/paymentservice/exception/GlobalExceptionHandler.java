@@ -1,7 +1,8 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.exception;
 
 import com.example.paymentservice.utils.LogSanitizer;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -20,6 +21,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
@@ -46,6 +48,33 @@ public class GlobalExceptionHandler {
         addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
+    }
+
+    /**
+     * Returns HTTP 409 problem details for a duplicate customer, including a correlation ID if
+     * present.
+     *
+     * @param ex the duplicate-customer failure
+     * @param request the request supplying the optional correlation ID
+     * @return the conflict response with a timestamp and sanitized error details
+     */
+    @ExceptionHandler(CustomerExistsException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(
+            CustomerExistsException ex, WebRequest request) {
+        log.warn("Customer already exists: {}", LogSanitizer.sanitizeException(ex));
+
+        // Use the ProblemDetail from the exception itself since it already has proper formatting
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT, LogSanitizer.sanitizeException(ex));
+        problemDetail.setTitle("Customer Already Exists");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/conflict"));
+        problemDetail.setProperty("errorCategory", "Generic");
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -109,6 +138,52 @@ public class GlobalExceptionHandler {
         addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    }
+
+    /**
+     * Converts an upstream HTTP server error to an HTTP 503 problem response with a generic order
+     * service unavailable message, a timestamp, and the request's correlation ID if present.
+     */
+    @ExceptionHandler(HttpServerErrorException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleOrderServiceError(
+            HttpServerErrorException ex, WebRequest request) {
+        log.warn("Order service error: {}", LogSanitizer.sanitizeException(ex));
+
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "The order service is currently unavailable.");
+        problemDetail.setTitle("Service Unavailable");
+        problemDetail.setType(
+                URI.create("https://api.microservices.com/errors/service-unavailable"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail);
+    }
+
+    /**
+     * Converts a rejected circuit breaker call to an HTTP 503 problem response reporting an open
+     * order service circuit, with a timestamp and the request's correlation ID if present.
+     */
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<@NonNull ProblemDetail> handleCircuitBreakerOpen(
+            CallNotPermittedException ex, WebRequest request) {
+        log.warn(
+                "Circuit breaker prevented access to order service: {}",
+                LogSanitizer.sanitizeException(ex));
+
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "The order service circuit breaker is currently open.");
+        problemDetail.setTitle("Service Unavailable");
+        problemDetail.setType(
+                URI.create("https://api.microservices.com/errors/service-unavailable"));
+        problemDetail.setProperty("timestamp", Instant.now());
+        addCorrelationId(problemDetail, request);
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)

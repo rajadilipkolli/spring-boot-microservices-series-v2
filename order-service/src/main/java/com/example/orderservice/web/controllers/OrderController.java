@@ -7,13 +7,12 @@
 package com.example.orderservice.web.controllers;
 
 import com.example.orderservice.config.logging.Loggable;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
-import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.example.orderservice.utils.LogSanitizer;
@@ -22,13 +21,16 @@ import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,15 +53,10 @@ class OrderController implements OrderApi {
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
-    private final OrderKafkaStreamService orderKafkaStreamService;
 
-    OrderController(
-            OrderService orderService,
-            OrderGeneratorService orderGeneratorService,
-            OrderKafkaStreamService orderKafkaStreamService) {
+    OrderController(OrderService orderService, OrderGeneratorService orderGeneratorService) {
         this.orderService = orderService;
         this.orderGeneratorService = orderGeneratorService;
-        this.orderKafkaStreamService = orderKafkaStreamService;
     }
 
     @GetMapping
@@ -104,7 +102,7 @@ class OrderController implements OrderApi {
                 .body(OrderResponse.emptyResponse(id));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
@@ -134,34 +132,53 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
-    @GetMapping("/generate")
-    GenericResponse createMockOrders() {
-        orderGeneratorService.generateOrders();
+    @PostMapping("/generate")
+    GenericResponse createMockOrders(
+            @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
+            @RequestParam(required = false)
+                    @Min(1)
+                    @Max(OrderGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize) {
+        orderGeneratorService.generateOrders(idempotencyKey, batchSize);
         return new GenericResponse(true);
     }
 
-    @GetMapping("/store")
-    @Override
-    public List<OrderDto> all(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
-                    int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
-                    int pageSize) {
-        return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
-    }
-
-    @GetMapping("/store/{id}")
-    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable String id) {
-        return orderKafkaStreamService
-                .getOrderFromStoreById(id)
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new OrderNotFoundException(Long.valueOf(id)));
-    }
-
     @GetMapping("/customer/{id}")
-    ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> ordersByCustomerId(
             @PathVariable Long id, Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrdersByCustomerId(id, pageable));
+    }
+
+    /**
+     * Validates the similarity threshold and delegates the order search to the service.
+     *
+     * @param term required search text
+     * @param mode search mode, defaulting to "keyword" when omitted
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when omitted; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return an HTTP 200 response containing matching orders and pagination metadata
+     * @throws IllegalArgumentException if a supplied similarity threshold is outside 0.0 to 1.0
+     */
+    @GetMapping("/search")
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> searchOrders(
+            @RequestParam @NotBlank String term,
+            @RequestParam(defaultValue = "keyword", required = false) String mode,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) Double threshold,
+            Pageable pageable) {
+        if ("similarity".equalsIgnoreCase(mode)
+                && threshold != null
+                && (threshold < 0.0 || threshold > 1.0)) {
+            throw new IllegalArgumentException("Threshold must be between 0.0 and 1.0");
+        }
+        return ResponseEntity.ok(
+                orderService.searchOrders(term, mode, customerId, status, threshold, pageable));
     }
 
     private record GenericResponse(boolean success) {}

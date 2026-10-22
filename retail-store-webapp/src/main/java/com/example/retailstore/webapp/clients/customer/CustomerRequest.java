@@ -3,10 +3,21 @@ package com.example.retailstore.webapp.clients.customer;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.math.BigDecimal;
 
 public record CustomerRequest(
         @NotBlank(message = "Name cannot be Blank") String name,
-        @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid") String email,
-        @NotBlank(message = "Customer Phone number is required") String phone,
-        String address,
-        int amountAvailable) {}
+
+        @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid")
+        String email,
+
+        @NotBlank(message = "Customer Phone number is required")
+        String phone,
+
+        String addressLine1,
+        String addressLine2,
+        String city,
+        String state,
+        String zipCode,
+        String country,
+        BigDecimal amountAvailable) {}

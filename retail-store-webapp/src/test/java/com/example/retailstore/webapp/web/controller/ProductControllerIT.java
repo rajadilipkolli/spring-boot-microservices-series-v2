@@ -12,6 +12,7 @@ import com.example.retailstore.webapp.clients.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
+import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -19,16 +20,17 @@ import org.springframework.http.MediaType;
 
 class ProductControllerIT extends AbstractIntegrationTest {
 
+    /**
+     * Verifies that a numeric catalog ID is exposed as a string while product and page details are
+     * preserved.
+     */
     @Test
     void testProducts() {
         // Example stub for catalog service
-        gatewayServiceMock.stubFor(
-                get(urlEqualTo("/catalog-service/api/catalog?pageNo=0"))
-                        .willReturn(
-                                aResponse()
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
+        gatewayServiceMock.stubFor(get(urlEqualTo("/catalog-service/api/catalog?pageNo=0"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
                             {
                               "data": [
                                 {
@@ -80,7 +82,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     @SuppressWarnings("unchecked") // Safe cast after isInstanceOf check
                     Map<String, Object> productMap = (Map<String, Object>) rawProductData;
 
-                    assertThat(productMap.get("id")).isEqualTo(1); // JSON '1' becomes Integer 1
+                    assertThat(productMap.get("id")).isEqualTo("1");
                     assertThat(productMap.get("productCode")).isEqualTo("TESTPROD001");
                     assertThat(productMap.get("productName")).isEqualTo("Test Product");
                     assertThat(productMap.get("description")).isEqualTo("A beautiful product");
@@ -90,16 +92,17 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 });
     }
 
+    /**
+     * Verifies an administrator can create a product and receive its decimal price from the
+     * catalog.
+     */
     @Test
     void testCreateProduct() {
         // Example stub for catalog service
-        gatewayServiceMock.stubFor(
-                post(urlEqualTo("/catalog-service/api/catalog"))
-                        .willReturn(
-                                aResponse()
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
+        gatewayServiceMock.stubFor(post(urlEqualTo("/catalog-service/api/catalog"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
                             {
                               "id": 100,
                               "productCode": "NEWPROD001",
@@ -110,8 +113,8 @@ class ProductControllerIT extends AbstractIntegrationTest {
                             }
                         """)));
 
-        ProductRequest productRequest =
-                new ProductRequest("NEWPROD001", "New Product", "A newly created product", null, 19.99);
+        ProductRequest productRequest = new ProductRequest(
+                "NEWPROD001", "New Product", "A newly created product", null, BigDecimal.valueOf(19.99));
 
         mockMvcTester
                 .post()
@@ -131,7 +134,7 @@ class ProductControllerIT extends AbstractIntegrationTest {
                     assertThat(response.productCode()).isEqualTo("NEWPROD001");
                     assertThat(response.productName()).isEqualTo("New Product");
                     assertThat(response.description()).isEqualTo("A newly created product");
-                    assertThat(response.price()).isEqualTo(19.99);
+                    assertThat(response.price()).isEqualByComparingTo(BigDecimal.valueOf(19.99));
                     assertThat(response.inStock()).isTrue();
                 });
     }

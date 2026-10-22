@@ -45,7 +45,8 @@ Ensure the service is configured to use:
 
 ### 3. Database & Liquibase
 - Add PostgreSQL and Liquibase dependencies.
-- Create `src/main/resources/db/changelog/db.changelog-master.xml` (or YAML/JSON).
+- Add `hypersistence-tsid` (for R2DBC/jOOQ) or `hypersistence-utils-hibernate-73` (for JPA) dependency for primary key generation (TSID).
+- Create `src/main/resources/db/changelog/db.changelog-master.xml` (or YAML/JSON). Do NOT use database sequences for IDs.
 
 ### 4. Integration & Deployment
 Include the new service in the root `pom.xml` modules list (if applicable).

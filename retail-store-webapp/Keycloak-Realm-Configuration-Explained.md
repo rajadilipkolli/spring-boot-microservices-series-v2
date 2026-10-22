@@ -95,7 +95,7 @@ sequenceDiagram
     
     Note over KC, Realm: Client Configuration
     KC->>Client: Set Client ID: retailstore-webapp
-    KC->>Client: Set Client Secret: P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+    KC->>Client: Set Client Secret: demo-throwaway-oauth-secret
     KC->>Client: Set Redirect URIs
     KC->>Client: Configure Scopes & Roles
     
@@ -112,7 +112,7 @@ sequenceDiagram
     {
       "clientId": "retailstore-webapp",
       "name": "retailstore",
-      "secret": "P1sibsIrELBhmvK18BOzw1bUl96DcP2z",
+      "secret": "demo-throwaway-oauth-secret",
       "redirectUris": [
         "http://localhost:8080/login/oauth2/code/retailstore-webapp"
       ],

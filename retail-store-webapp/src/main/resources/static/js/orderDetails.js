@@ -7,7 +7,6 @@ document.addEventListener('alpine:init', () => {
             deliveryAddress: {}
         },
         init() {
-            updateCartItemCount();
             this.getOrderDetails(this.orderNumber)
         },
         getOrderDetails(orderNumber) {

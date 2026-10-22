@@ -1,24 +1,26 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.catalogservice.model.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.List;
 import org.springframework.data.domain.Page;
 
 public record PagedResult<T>(
         List<T> data,
-        long totalElements,
-        int pageNumber,
-        int totalPages,
-        @JsonProperty("isFirst") boolean isFirst,
-        @JsonProperty("isLast") boolean isLast,
-        @JsonProperty("hasNext") boolean hasNext,
-        @JsonProperty("hasPrevious") boolean hasPrevious) {
+        Long totalElements,
+        Integer pageNumber,
+        Integer totalPages,
+        @JsonProperty("isFirst") Boolean isFirst,
+        @JsonProperty("isLast") Boolean isLast,
+        @JsonProperty("hasNext") Boolean hasNext,
+        @JsonProperty("hasPrevious") Boolean hasPrevious)
+        implements Serializable {
     public PagedResult(Page<T> page) {
         this(
                 page.getContent(),

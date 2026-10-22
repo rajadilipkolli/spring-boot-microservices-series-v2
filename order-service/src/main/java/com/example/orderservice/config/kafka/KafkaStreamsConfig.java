@@ -6,7 +6,6 @@
 
 package com.example.orderservice.config.kafka;
 
-import static com.example.orderservice.utils.AppConstants.ORDERS_STORE;
 import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.RECOVER_DLQ_TOPIC;
@@ -27,12 +26,9 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.StreamJoined;
-import org.apache.kafka.streams.state.Stores;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +58,13 @@ class KafkaStreamsConfig {
         this.orderManageService = orderManageService;
     }
 
+    /**
+     * Configures Kafka Streams state logging, deserialization recovery, exactly-once processing,
+     * timeouts, caching, and metrics.
+     *
+     * @param deadLetterPublishingRecoverer recoverer for records that fail deserialization
+     * @return customizer applied to the Kafka Streams factory bean
+     */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     StreamsBuilderFactoryBeanConfigurer configurer(
@@ -80,7 +83,7 @@ class KafkaStreamsConfig {
             // Enhanced error handling
             streamsConfiguration.put(
                     StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-                    RecoveringDeserializationExceptionHandler.class);
+                    RecoveringDeserializationExceptionHandler.class.getName());
             streamsConfiguration.put(
                     RecoveringDeserializationExceptionHandler.RECOVERER,
                     deadLetterPublishingRecoverer);
@@ -121,6 +124,13 @@ class KafkaStreamsConfig {
         return new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
     }
 
+    /**
+     * Registers a join of payment and inventory responses for the same order and attempt, with a
+     * maximum timestamp difference of 30 seconds and a 30-second grace period. Publishes non-null
+     * confirmation results to the orders topic keyed by order ID.
+     *
+     * @return the original payment stream, before correlation and joining
+     */
     @Bean
     KStream<String, OrderDto> stream(
             StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
@@ -133,13 +143,18 @@ class KafkaStreamsConfig {
                 kafkaStreamBuilder.stream(
                         PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
 
-        paymentStream
+        correlateByAttempt(paymentStream)
                 .join(
-                        kafkaStreamBuilder.stream(
-                                STOCK_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde)),
+                        correlateByAttempt(
+                                kafkaStreamBuilder.stream(
+                                        STOCK_ORDERS_TOPIC,
+                                        Consumed.with(Serdes.String(), orderSerde))),
                         orderManageService::confirm,
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        JoinWindows.ofTimeDifferenceAndGrace(
+                                Duration.ofSeconds(30), Duration.ofSeconds(30)),
                         StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+                .filter((key, order) -> order != null)
+                .selectKey((key, order) -> order.orderId().toString())
                 .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
                 .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
 
@@ -148,26 +163,18 @@ class KafkaStreamsConfig {
         return paymentStream;
     }
 
-    @Bean
-    KTable<String, OrderDto> kTable(
-            StreamsBuilder streamsBuilder, Serde<@NonNull OrderDto> orderSerde) {
-        log.info("Inside fetching KTable values");
-
-        // KTable naturally keeps only the latest value for each key
-        KTable<String, OrderDto> ordersTable =
-                streamsBuilder.table(
-                        ORDERS_TOPIC,
-                        Consumed.with(Serdes.String(), orderSerde),
-                        Materialized.<String, OrderDto>as(
-                                        Stores.persistentKeyValueStore(ORDERS_STORE))
-                                .withKeySerde(Serdes.String())
-                                .withValueSerde(orderSerde));
-
-        // Add logging for visibility
-        ordersTable
-                .toStream()
-                .peek((key, value) -> log.debug("KTable entry for key {}: {}", key, value));
-
-        return ordersTable;
+    /**
+     * Drops null orders, missing order IDs, and null or blank attempt IDs, then keys the remaining
+     * responses by {@code orderId:attemptId} for correlation.
+     */
+    private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+        // Legacy responses cannot be correlated safely; NEW orders will be retried with an ID.
+        return stream.filter(
+                        (key, order) ->
+                                order != null
+                                        && order.orderId() != null
+                                        && order.attemptId() != null
+                                        && !order.attemptId().isBlank())
+                .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
     }
 }

@@ -40,6 +40,34 @@ username: admin
 password : admin1234
 ```
 
+## 🔐 Keycloak Security Configuration
+
+To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+
+### 1. Create the ADMIN Client Role
+1. Open the Keycloak Admin Console (`http://localhost:9191`).
+2. Select the `retailstore` realm.
+3. Go to **Clients** -> click on **`retailstore-webapp`**.
+4. Go to the **Roles** tab and click **Create Role**.
+5. Name the role **`ADMIN`** and click **Save**.
+
+### 2. Map the Client Role to the ID Token
+By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
+1. On the left menu, go to **Client Scopes**.
+2. Select and click on the **`roles`** scope in the list.
+3. Go to the **Mappers** tab.
+4. Click on the **`client roles`** mapper.
+5. Toggle **ON** both **Add to ID token** and **Add to userinfo**.
+6. Click **Save**.
+
+### 3. Assign the Role to Your User
+1. On the left menu, go to **Users**.
+2. Search for your user (e.g., `raja` or `retail`) and click on the username.
+3. Go to the **Role mapping** tab.
+4. Click **Assign role**.
+5. From the dropdown at the top, select **Filter by client roles**.
+6. Find `ADMIN`, check the box, and click **Assign**.
+
 ## Export realm
 
 ### Automated Import (Recommended)
@@ -51,20 +79,10 @@ If you need to export an updated realm configuration after making changes in the
 If you need to manually export the realm configuration, you can use the following steps:
 
 ```shell
-$ docker ps
-# copy the keycloak container id
-
-# ssh into keycloak container
-$ docker exec -it <container-id> bash
-
 # export the realm configuration along with users info
-$ /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
-
-# exit from the container
-$ exit
-
-# copy the exported realm configuration to local machine
-$ docker cp <container-id>:/opt/keycloak/data/import/retailstore-realm.json ~/realm/retailstore-realm.json
+# Since the deployment mounts the ./realm-config directory to /opt/keycloak/data/import inside the container,
+# running this command will directly update the retailstore-realm.json file in your project!
+$ docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
 ```
 
 ## UI

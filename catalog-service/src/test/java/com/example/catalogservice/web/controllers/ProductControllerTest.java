@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,10 +8,12 @@ package com.example.catalogservice.web.controllers;
 
 import static com.example.catalogservice.utils.AppConstants.PROFILE_TEST;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
@@ -20,10 +22,13 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.data.domain.Page;
@@ -44,15 +49,37 @@ class ProductControllerTest {
 
     private List<ProductResponse> productResponseList;
 
+    /** Creates product response fixtures with decimal prices for controller tests. */
     @BeforeEach
     void setUp() {
         this.productResponseList = new ArrayList<>();
         this.productResponseList.add(
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true));
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(9.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(2L, "code 2", "name 2", "description 2", null, 10.0, true));
+                new ProductResponse(
+                        2L,
+                        "code 2",
+                        "name 2",
+                        "description 2",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true));
         this.productResponseList.add(
-                new ProductResponse(3L, "code 3", "name 3", "description 3", null, 11.0, true));
+                new ProductResponse(
+                        3L,
+                        "code 3",
+                        "name 3",
+                        "description 3",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true));
     }
 
     @Test
@@ -87,12 +114,21 @@ class ProductControllerTest {
                                                 }));
     }
 
+    /**
+     * Verifies that product lookup by ID returns its details with the ID encoded as a JSON string.
+     */
     @Test
     void shouldFindProductById() {
         Long productId = 1L;
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "name 1", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findProductById(productId)).willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -103,7 +139,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -128,15 +164,24 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies product creation returns its details, decimal price, and location header. */
     @Test
     void shouldCreateProduct() {
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "name 1", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "name 1",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.saveProduct(any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         ProductRequest productRequest =
-                new ProductRequest("code 1", "name 1", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "name 1", "description 1", null, BigDecimal.valueOf(1.00));
         webTestClient
                 .post()
                 .uri("/api/catalog")
@@ -162,9 +207,13 @@ class ProductControllerTest {
                 .isEqualTo(productResponse.price());
     }
 
+    /**
+     * Verifies a creation request with missing product fields returns a validation problem
+     * response.
+     */
     @Test
     void shouldReturn400WhenCreateNewProductWithoutCode() throws Exception {
-        ProductDto productDto = new ProductDto(null, null, null, 9.0);
+        ProductDto productDto = new ProductDto(null, null, null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .post()
@@ -189,6 +238,7 @@ class ProductControllerTest {
                 .isEqualTo("/api/catalog");
     }
 
+    /** Verifies that repeated creation requests return the same product code and string ID. */
     @Test
     void shouldHandleIdempotentProductCreation() {
         ProductResponse existingProductResponse =
@@ -198,11 +248,15 @@ class ProductControllerTest {
                         "Existing Product",
                         "This product already exists",
                         null,
-                        19.99,
+                        BigDecimal.valueOf(19.99),
                         true);
         ProductRequest productRequest =
                 new ProductRequest(
-                        "code-123", "Existing Product", "This product already exists", null, 19.99);
+                        "code-123",
+                        "Existing Product",
+                        "This product already exists",
+                        null,
+                        BigDecimal.valueOf(19.99));
 
         // Mock the service to return the existing product when trying to save with the same product
         // code
@@ -222,7 +276,7 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
 
@@ -239,11 +293,14 @@ class ProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(existingProductResponse.id())
+                .isEqualTo(existingProductResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(existingProductResponse.productCode());
     }
 
+    /**
+     * Verifies that updating a product returns the updated details with its ID encoded as a string.
+     */
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
@@ -253,12 +310,19 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
                 new ProductResponse(
-                        productId, "code 1", "Updated name", "description 1", null, 9.0, true);
+                        productId,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findById(productId)).willReturn(Mono.just(product));
         given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
                 .willReturn(Mono.just(productResponse));
@@ -273,23 +337,25 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .value(is(1))
+                .isEqualTo("1")
                 .jsonPath("$.productCode")
-                .value(is(product.getProductCode()))
+                .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
-                .value(is(product.getProductName()))
+                .isEqualTo(product.getProductName())
                 .jsonPath("$.description")
-                .value(is(product.getDescription()))
+                .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
-                .value(is(product.getPrice()));
+                .isEqualTo(product.getPrice());
     }
 
+    /** Verifies updating an unknown product returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
         given(productService.findById(productId)).willReturn(Mono.empty());
         ProductRequest productRequest =
-                new ProductRequest("code 1", "Updated name", "description 1", null, 9.0);
+                new ProductRequest(
+                        "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
 
         webTestClient
                 .put()
@@ -301,6 +367,7 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that deleting a product returns its details with a string ID. */
     @Test
     void shouldDeleteProduct() {
         Long productId = 1L;
@@ -310,9 +377,16 @@ class ProductControllerTest {
                         .setProductCode("code 1")
                         .setProductName("Updated name")
                         .setDescription("description 1")
-                        .setPrice(9.0);
+                        .setPrice(BigDecimal.valueOf(1.00));
         ProductResponse productResponse =
-                new ProductResponse(1L, "code 1", "Updated name", "description 1", null, 9.0, true);
+                new ProductResponse(
+                        1L,
+                        "code 1",
+                        "Updated name",
+                        "description 1",
+                        null,
+                        BigDecimal.valueOf(1.00),
+                        true);
         given(productService.findByIdWithMapping(productId)).willReturn(Mono.just(productResponse));
         given(productService.deleteProductById(product.getId())).willReturn(Mono.empty());
 
@@ -324,7 +398,7 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(product.getId())
+                .isEqualTo(product.getId().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(product.getProductCode())
                 .jsonPath("$.productName")
@@ -348,24 +422,26 @@ class ProductControllerTest {
                 .isNotFound();
     }
 
+    /** Verifies that lookup by product code returns product details with a string ID. */
     @Test
     void shouldFindProductByProductCode() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(42L, code, "Product XYZ", "desc", null, 99.0, true);
+                new ProductResponse(
+                        42L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id())
+                .isEqualTo(productResponse.id().toString())
                 .jsonPath("$.productCode")
                 .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
@@ -386,17 +462,19 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", code)
+                .uri("/api/catalog/product-code/{productCode}", code)
                 .exchange()
                 .expectStatus()
                 .isNotFound();
     }
 
+    /** Verifies the stock lookup flag is forwarded to the product service. */
     @Test
     void shouldFetchInStockWhenRequested() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(43L, code, "Product XYZ", "desc", null, 49.0, true);
+                new ProductResponse(
+                        43L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, true))
                 .willReturn(Mono.just(productResponse));
@@ -406,7 +484,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("fetchInStock", true)
                                         .build(code))
                 .exchange()
@@ -416,11 +494,13 @@ class ProductControllerTest {
         verify(productService).findProductByProductCode(code, true);
     }
 
+    /** Verifies that product lookup accepts the delay parameter and returns a string product ID. */
     @Test
     void shouldRespectDelayParameter() {
         String code = "code-xyz";
         ProductResponse productResponse =
-                new ProductResponse(44L, code, "Product XYZ", "desc", null, 59.0, true);
+                new ProductResponse(
+                        44L, code, "Product XYZ", "desc", null, BigDecimal.valueOf(1.00), true);
 
         given(productService.findProductByProductCode(code, false))
                 .willReturn(Mono.just(productResponse));
@@ -430,7 +510,7 @@ class ProductControllerTest {
                 .uri(
                         uriBuilder ->
                                 uriBuilder
-                                        .path("/api/catalog/productCode/{productCode}")
+                                        .path("/api/catalog/product-code/{productCode}")
                                         .queryParam("delay", 1)
                                         .build(code))
                 .exchange()
@@ -438,12 +518,12 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody()
                 .jsonPath("$.id")
-                .isEqualTo(productResponse.id());
+                .isEqualTo(productResponse.id().toString());
     }
 
     @Test
     void shouldReturnTrueWhenProductsExist() {
-        var codes = java.util.List.of("code-1", "code-2");
+        var codes = List.of("code-1", "code-2");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(true));
 
         webTestClient
@@ -457,7 +537,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(true);
 
         verify(productService).productExistsByProductCodes(codes);
@@ -465,7 +546,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnFalseWhenProductsDoNotExist() {
-        var codes = java.util.List.of("missing");
+        var codes = List.of("missing");
         given(productService.productExistsByProductCodes(codes)).willReturn(Mono.just(false));
 
         webTestClient
@@ -479,7 +560,8 @@ class ProductControllerTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.exists")
                 .isEqualTo(false);
     }
 
@@ -498,29 +580,68 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts()).willReturn(Mono.just(true));
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(true));
 
         webTestClient
-                .get()
+                .post()
                 .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(true);
     }
 
     @Test
-    void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts()).willReturn(Mono.just(false));
+    void shouldGenerateRandomProductsWithBatchSize() {
+        given(productService.generateProducts(any(String.class), eq(25)))
+                .willReturn(Mono.just(true));
 
         webTestClient
-                .get()
-                .uri("/api/catalog/generate")
+                .post()
+                .uri("/api/catalog/generate?batchSize=25")
+                .header("Idempotency-Key", "test-batch-123")
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(Boolean.class)
+                .expectBody()
+                .jsonPath("$.success")
+                .isEqualTo(true);
+
+        verify(productService).generateProducts("test-batch-123", 25);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1, 10_001})
+    void shouldRejectInvalidGenerationBatchSize(int batchSize) {
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate?batchSize=" + batchSize)
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+
+        verifyNoInteractions(productService);
+    }
+
+    @Test
+    void shouldHandleGenerateProductsFailure() {
+        given(productService.generateProducts(any(String.class), isNull()))
+                .willReturn(Mono.just(false));
+
+        webTestClient
+                .post()
+                .uri("/api/catalog/generate")
+                .header("Idempotency-Key", "test-batch-123")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.success")
                 .isEqualTo(false);
     }
 
@@ -549,13 +670,21 @@ class ProductControllerTest {
         verify(productService).searchProductsByTerm("laptop", 0, 10, "id", "asc");
     }
 
+    /** Verifies decimal price bounds select the price-range search with default pagination. */
     @Test
     void shouldSearchByPriceRangeOnly() {
         org.springframework.data.domain.Page<ProductResponse> page =
                 new org.springframework.data.domain.PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
-        given(productService.searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc"))
+        given(
+                        productService.searchProductsByPriceRange(
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -572,9 +701,14 @@ class ProductControllerTest {
                 .isOk()
                 .expectBody(PagedResult.class);
 
-        verify(productService).searchProductsByPriceRange(50.0, 150.0, 0, 10, "id", "asc");
+        verify(productService)
+                .searchProductsByPriceRange(
+                        BigDecimal.valueOf(50.0), BigDecimal.valueOf(150.0), 0, 10, "id", "asc");
     }
 
+    /**
+     * Verifies a term and decimal price bounds select the combined search with default pagination.
+     */
     @Test
     void shouldSearchByTermAndPriceRange() {
         org.springframework.data.domain.Page<ProductResponse> page =
@@ -583,7 +717,13 @@ class ProductControllerTest {
 
         given(
                         productService.searchProductsByTermAndPriceRange(
-                                "laptop", 50.0, 150.0, 0, 10, "id", "asc"))
+                                "laptop",
+                                BigDecimal.valueOf(50.0),
+                                BigDecimal.valueOf(150.0),
+                                0,
+                                10,
+                                "id",
+                                "asc"))
                 .willReturn(Mono.just(pagedResult));
 
         webTestClient
@@ -602,7 +742,14 @@ class ProductControllerTest {
                 .expectBody(PagedResult.class);
 
         verify(productService)
-                .searchProductsByTermAndPriceRange("laptop", 50.0, 150.0, 0, 10, "id", "asc");
+                .searchProductsByTermAndPriceRange(
+                        "laptop",
+                        BigDecimal.valueOf(50.0),
+                        BigDecimal.valueOf(150.0),
+                        0,
+                        10,
+                        "id",
+                        "asc");
     }
 
     @Test

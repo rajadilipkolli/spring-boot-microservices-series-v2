@@ -6,6 +6,11 @@ server:
 spring:
   application:
     name: order-service
+  cloud:
+    refresh:
+      enabled: false
+  config:
+    import: optional:configserver:http://${CONFIG_SERVER_USR:dev-usr}:${CONFIG_SERVER_PWD:dev-pass}@${CONFIG_SERVER_HOST:localhost}:${CONFIG_SERVER_PORT:8888}/
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -34,6 +39,9 @@ spring:
           json:
             trusted:
               packages: '*'
+            use:
+              type:
+                headers: false
         processing.guarantee: exactly_once_v2
       # state-dir: ${java.io.tmpdir}/kafka-streams/${spring.application.name}
   modulith:

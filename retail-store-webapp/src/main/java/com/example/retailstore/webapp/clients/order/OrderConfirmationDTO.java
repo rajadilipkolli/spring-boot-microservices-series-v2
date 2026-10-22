@@ -1,3 +1,8 @@
 package com.example.retailstore.webapp.clients.order;
 
-public record OrderConfirmationDTO(Long orderId, Long customerId, String status) {}
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+public record OrderConfirmationDTO(
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
+        String status) {}

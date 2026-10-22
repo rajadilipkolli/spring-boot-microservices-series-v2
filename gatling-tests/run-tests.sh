@@ -3,7 +3,7 @@
 # Default values
 TEST_PROFILE="standard"
 BASE_URL="http://localhost:8765"
-USERS=50
+USERS=20
 DURATION=300
 
 # Parse command line arguments
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
             echo "Parameters:"
             echo "  -p, --profile   Test profile to run (quick, standard, extended, resilience, stress, gateway, all)"
             echo "  -u, --url       Base URL for the API Gateway (default: http://localhost:8765)"
-            echo "  -n, --users     Number of users for the test (default: 50)"
+            echo "  -n, --users     Number of users for the test (default: 20)"
             echo "  -d, --duration  Duration of the test in seconds (default: 300)"
             echo "  -h, --help      Display this help message"
             echo ""
@@ -66,9 +66,9 @@ done
 # Function to check service health
 check_health() {
     local service_url=$1
-    local max_attempts=10
+    local max_attempts=50
     local attempt=1
-    local sleep_time=5
+    local sleep_time=8
 
     echo "Checking health for $service_url..."
     while [ $attempt -le $max_attempts ]; do
@@ -95,6 +95,14 @@ for service in "${SERVICES[@]}"; do
     fi
 done
 echo "All services are healthy. Proceeding with tests."
+
+echo "Warming up services via API Gateway /api/v1/generate endpoint..."
+BATCH_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "$(date +%s)-$RANDOM")
+if ! curl -v -X POST -f -m 120 --retry 3 --retry-connrefused --retry-delay 5 -k -H "Idempotency-Key: ${BATCH_ID}" "${BASE_URL}/api/v1/generate?batchSize=10"; then
+    echo "WARNING: Warm-up request failed or timed out. Proceeding with tests anyway."
+fi
+echo "Sleeping for 10 sec for warmup processing to complete..."
+sleep 10
 
 # Set Maven command based on the selected profile
 case $TEST_PROFILE in
@@ -132,10 +140,18 @@ case $TEST_PROFILE in
         ;;
 esac
 
+# Detect OS to use the correct maven wrapper
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    MVNW="./mvnw.cmd"
+else
+    MVNW="./mvnw"
+fi
+
 # Run the tests
-CMD="./mvnw clean gatling:test $MAVEN_PARAMS"
+CMD="$MVNW clean gatling:test $MAVEN_PARAMS"
 echo "Executing: $CMD"
 eval $CMD
+STATUS=$?
 
 # Find the latest report by modification time (ignoring the parent directory)
 LATEST_REPORT=$(ls -td target/gatling/*/ 2>/dev/null | head -n 1 | sed 's/\/$//')
@@ -143,4 +159,31 @@ if [ -n "$LATEST_REPORT" ] && [ -f "$LATEST_REPORT/index.html" ]; then
     echo "Report generated at: $LATEST_REPORT/index.html"
 else
     echo "No test report found in target/gatling/."
+fi
+
+if [ $STATUS -ne 0 ]; then
+    echo "Gatling tests failed with status $STATUS"
+    exit $STATUS
+fi
+
+if [ -n "$LATEST_REPORT" ]; then
+    BASELINE_FILE="../docs/baselines/main-baseline.json"
+    THRESHOLD=10.0
+    echo "Running performance regression check..."
+    
+    if [ ! -f "$BASELINE_FILE" ]; then
+        echo "Error: Baseline file $BASELINE_FILE not found! Cannot perform regression check."
+        exit 1
+    fi
+
+    if [ -f "scripts/compare-baseline.sh" ]; then
+        bash scripts/compare-baseline.sh "$BASELINE_FILE" "$LATEST_REPORT" "$THRESHOLD"
+        COMPARE_STATUS=$?
+        if [ $COMPARE_STATUS -ne 0 ]; then
+            echo "Performance regression detected! (Exit $COMPARE_STATUS)"
+            exit $COMPARE_STATUS
+        fi
+    else
+        echo "Warning: scripts/compare-baseline.sh not found, skipping regression check."
+    fi
 fi

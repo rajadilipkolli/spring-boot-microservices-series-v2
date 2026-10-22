@@ -8,6 +8,84 @@
 
 ![Microservices Architecture](images/microservicesArchitecture.png)
 
+## FlowChart
+
+```mermaid
+flowchart TD
+
+subgraph group_customer["Customer experience"]
+  node_storefront["Retail web app"]
+end
+
+subgraph group_platform["Platform access"]
+  node_gateway["API gateway"]
+  node_registry["Service registry"]
+  node_config["Configuration server"]
+end
+
+subgraph group_commerce["Commerce services"]
+  node_catalog["Catalog service"]
+  node_inventory["Inventory service"]
+  node_orders["Order service"]
+  node_payments["Payment service"]
+  node_database[("PostgreSQL")]
+end
+
+subgraph group_operations["Platform operations"]
+  node_kafka["Kafka"]
+  node_observability["Metrics and tracing"]
+end
+
+node_shopper(("Shopper"))
+node_prometheus["Prometheus"]
+node_grafana["Grafana"]
+
+node_shopper -->|"uses"| node_storefront
+node_storefront -->|"requests APIs"| node_gateway
+node_gateway -->|"routes requests"| node_catalog
+node_gateway -->|"routes requests"| node_inventory
+node_gateway -->|"routes requests"| node_orders
+node_gateway -->|"routes requests"| node_payments
+node_registry -->|"provides discovery"| node_gateway
+node_registry -->|"provides discovery"| node_catalog
+node_registry -->|"provides discovery"| node_inventory
+node_registry -->|"provides discovery"| node_orders
+node_registry -->|"provides discovery"| node_payments
+node_config -->|"provides config"| node_gateway
+node_config -->|"provides config"| node_catalog
+node_config -->|"provides config"| node_inventory
+node_config -->|"provides config"| node_orders
+node_config -->|"provides config"| node_payments
+node_orders -->|"publishes events"| node_kafka
+node_payments -->|"publishes events"| node_kafka
+node_inventory -->|"publishes events"| node_kafka
+node_catalog -->|"stores catalog"| node_database
+node_observability -.->|"configures metrics"| node_prometheus
+node_prometheus -->|"feeds dashboards"| node_grafana
+
+click node_storefront "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/retail-store-webapp/src/main"
+click node_gateway "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/api-gateway/src/main/java/com/example/api/gateway"
+click node_catalog "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/catalog-service/src/main/java/com/example/catalogservice"
+click node_inventory "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/inventory-service/src/main/java"
+click node_orders "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/order-service/src/main/java"
+click node_payments "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/payment-service/src/main/java"
+click node_registry "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/service-registry/src/main/java/org/service/registry"
+click node_config "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/config-server/src/main/java/com/example/configserver"
+click node_observability "https://github.com/rajadilipkolli/spring-boot-microservices-series-v2/tree/main/deployment/config"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_storefront toneBlue
+class node_gateway,node_registry,node_config toneAmber
+class node_catalog,node_inventory,node_orders,node_payments,node_database toneMint
+class node_kafka,node_observability toneRose
+class node_shopper,node_prometheus,node_grafana toneIndigo
+```
 </div>
 
 ---
@@ -109,16 +187,16 @@ This project implements a **microservices pattern** where different functionalit
 
 <div align="center">
 
-| Service | Port | Description | Tech Stack |
-|---------|------|-------------|------------|
-| 🌐 **API Gateway** | 8765 | Single entry point, routing & load balancing | Spring Cloud Gateway |
-| 📁 **Config Server** | 8888 | Centralized configuration management | Spring Cloud Config |
-| 🏢 **Service Registry** | 8761 | Service discovery with Eureka | Spring Cloud Netflix |
-| 📚 **Catalog Service** | 18080 | Product catalog management | PostgreSQL + Liquibase (YAML) |
-| 📦 **Inventory Service** | 18181 | Stock level management | PostgreSQL + Liquibase (JSON) |
-| 🛍️ **Order Service** | 18282 | Order processing & orchestration | PostgreSQL + Liquibase (XML) |
-| 💳 **Payment Service** | 18085 | Payment processing | PostgreSQL + Liquibase (XML) |
-| 🛒 **Retail Store Web** | 8080 | Customer-facing web application | Thymeleaf + Alpine.js |
+| Service                  | Port  | Description                                  | Tech Stack                    |
+|--------------------------|-------|----------------------------------------------|-------------------------------|
+| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
+| 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
+| 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
+| 📦 **Inventory Service** | 18181 | Stock level management                       | PostgreSQL + Liquibase (JSON) |
+| 🛍️ **Order Service**     | 18282 | Order processing & orchestration             | PostgreSQL + Liquibase (XML)  |
+| 💳 **Payment Service**   | 18085 | Payment processing                           | PostgreSQL + Liquibase (XML)  |
+| 🛒 **Retail Store Web**  | 8080  | Customer-facing web application              | Thymeleaf + Alpine.js         |
 
 </div>
 
@@ -199,6 +277,8 @@ graph TB
 ### Containerization & CI/CD
 * ![Docker](https://img.shields.io/badge/Docker-Latest-blue?style=flat-square&logo=docker) [Docker](https://www.docker.com/)
 * ![Docker Compose](https://img.shields.io/badge/Docker_Compose-Latest-blue?style=flat-square&logo=docker) [Docker Compose](https://github.com/docker/compose)
+* [Kubernetes deployment guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md)
+* [Kubernetes E2E workflow](.github/workflows/k8s-e2e.yml)
 * ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Latest-black?style=flat-square&logo=github) [GitHub Actions](https://github.com/features/actions)
 
 </details>
@@ -234,13 +314,15 @@ graph TB
 
 Before you begin, ensure you have the following installed:
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| ☕ **Java** | 21+ | Runtime environment |
-| 📦 **Maven** | 3.9.x+ | Build tool |
-| 🐳 **Docker** | Latest | Containerization |
-| 🔧 **Docker Compose** | Latest | Orchestration |
-| 📚 **Git** | Latest | Version control |
+| Tool                  | Version | Purpose             |
+|-----------------------|---------|---------------------|
+| ☕ **Java**           | 25+     | Runtime environment |
+| 📦 **Maven**          | 3.9.x+  | Build tool          |
+| 🐳 **Docker**         | Latest  | Containerization    |
+| 🔧 **Docker Compose** | Latest  | Orchestration       |
+| **Kind**              | Latest  | Local Kubernetes cluster |
+| **kubectl**           | Latest  | Kubernetes CLI       |
+| 📚 **Git**            | Latest  | Version control     |
 
 > 💡 **Tip:** Ensure `JAVA_HOME` environment variable is properly set
 
@@ -294,6 +376,20 @@ bash run.sh
 .\start-services.ps1
 ```
 
+#### Option 4: Local Kubernetes with Kind
+
+For a local Kubernetes deployment, use Kind with the manifests under
+[`deployment/k8s/`](deployment/k8s/). See the
+[Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
+the complete setup and validation flow.
+
+```bash
+./deployment/scripts/run-local-kubernetes-e2e.sh
+```
+
+The same Kubernetes end-to-end gate runs in
+[`k8s-e2e.yml`](.github/workflows/k8s-e2e.yml).
+
 ### 🛑 Stopping Services
 
 ```bash
@@ -329,6 +425,44 @@ Access all microservice APIs through a unified interface:
 ![Swagger Documentation](images/swagger.jpg)
 
 > 💡 **Pro Tip:** Use the dropdown menu in Swagger UI to switch between different service APIs
+
+## 🔐 Keycloak Security Configuration
+
+> **Production note**: In the prod Kubernetes overlay the `retailstore` realm,
+> `retailstore-webapp` client, roles, and seed-user identities are managed by
+> the **`keycloak-terraform-runner` Job** via Terraform. Seed passwords are
+> applied afterward through the Keycloak Admin API and never enter Terraform
+> state. The manual steps below only apply to fresh local Docker Compose
+> environments that have not
+> previously imported the realm via `--import-realm` (the default local path).
+> See [KUBERNETES_DEPLOYMENT_GUIDE.md](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#terraform-managed-keycloak-realm-prod)
+> and the [ADR](docs/architecture/ADR-Keycloak-Terraform-Realm.md) for details.
+
+To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+
+### 1. Create the ADMIN Client Role
+1. Open the Keycloak Admin Console (`http://localhost:9191`).
+2. Select the `retailstore` realm.
+3. Go to **Clients** -> click on **`retailstore-webapp`**.
+4. Go to the **Roles** tab and click **Create Role**.
+5. Name the role **`ADMIN`** and click **Save**.
+
+### 2. Map the Client Role to the ID Token
+By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
+1. On the left menu, go to **Client Scopes**.
+2. Click on the **`roles`** scope in the list.
+3. Go to the **Mappers** tab.
+4. Click on the **`client roles`** mapper.
+5. Toggle **ON** both **Add to ID token** and **Add to userinfo**.
+6. Click **Save**.
+
+### 3. Assign the Role to Your User
+1. On the left menu, go to **Users**.
+2. Search for your user (e.g., `raja`) and click on the username.
+3. Go to the **Role mapping** tab.
+4. Click **Assign role**.
+5. From the dropdown at the top, select **Filter by clients**.
+6. Find `retailstore-webapp ADMIN`, check the box, and click **Assign**.
 
 ## 📊 Observability
 
@@ -420,12 +554,12 @@ This project demonstrates **flexible database schema management** using Liquibas
 
 <div align="center">
 
-| 🏷️ Format | 📁 Service Examples | 📝 Use Case |
-|-----------|-------------------|-------------|
-| **XML** | `order-service`, `payment-service` | Complex migrations, detailed documentation |
-| **YAML** | `catalog-service` | Human-readable, simple structure |
-| **JSON** | `inventory-service` | API-friendly, structured data |
-| **SQL** | Custom implementations | Direct SQL control, legacy migrations |
+| 🏷️ Format | 📁 Service Examples                | 📝 Use Case                                |
+|-----------|------------------------------------|--------------------------------------------|
+| **XML**   | `order-service`, `payment-service` | Complex migrations, detailed documentation |
+| **YAML**  | `catalog-service`                  | Human-readable, simple structure           |
+| **JSON**  | `inventory-service`                | API-friendly, structured data              |
+| **SQL**   | Custom implementations             | Direct SQL control, legacy migrations      |
 
 </div>
 
@@ -501,6 +635,51 @@ docker-compose logs | grep ERROR
 
 </details>
 
+## 📋 Kubernetes Commands Cheat‑Sheet
+
+This guide provides a concise reference of useful `kubectl` commands for everyday debugging, maintenance, and inspection of the **retailstore** namespace used by this project. Each command includes a short description of when to use it.
+
+---
+## 1. Viewing Logs
+| Command                                                                                           | Purpose                                                                                        |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| `kubectl logs deployment/order-service -n retailstore --previous \| Select-Object -Last 30` | Show the last 30 lines of the **previous** container instance (useful after a crash/restart).  |
+| `kubectl logs deployment/order-service -n retailstore --previous`                           | Get the full logs of the previous container run (full crash dump).                             |
+| `kubectl logs deployment/inventory-service -n retailstore --tail=40 2>&1`                         | Show the most recent 40 lines of the **inventory‑service** deployment logs (including errors). |
+| `kubectl logs deployment/keycloak -n retailstore \| Select-Object -Last 50`                       | Retrieve the last 50 lines of the **keycloak** deployment logs.                                |
+
+---
+## 2. Cleaning Up & Restarting Pods
+| Command                                                           | Purpose                                                                                               |
+|-------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `kubectl delete pods -l app=keycloak -n retailstore`              | Delete all pods with label `app=keycloak` normally; they will be recreated by the Deployment controller. |
+| `kubectl rollout restart deployment config-server -n retailstore` | Trigger a rolling restart of the **config‑server** deployment (e.g., after config changes).           |
+
+---
+## 3. Inspecting Resources
+| Command                                                                                                | Purpose                                                                                          |
+|--------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `kubectl get deployment keycloak -n retailstore -o yaml`                                               | Dump the full YAML definition of the **keycloak** Deployment for inspection or debugging.        |
+| `kubectl get pods -n retailstore -l app=keycloak; kubectl describe pod -l app=keycloak -n retailstore` | List all Keycloak pods and then show a detailed description (events, conditions, env vars).      |
+| `kubectl get pods -l app=keycloak -n retailstore -w`                                                   | Watch the Keycloak pods in real‑time; useful while waiting for them to become **Ready**.         |
+| `kubectl wait --for=condition=ready pod -l app=keycloak -n retailstore --timeout=60s`                  | Block until all Keycloak pods reach the **Ready** condition (or timeout).                        |
+| `kubectl get all -n retailstore`                                                                       | Overview of every resource (pods, services, deployments, etc.) in the **retailstore** namespace. |
+
+---
+## 4. Port‑Forwarding (local testing)
+| Command                                                                 | Purpose                                                                                                |
+|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `kubectl port-forward service/order-service 28282:28282 -n retailstore` | Expose the `order-service` port locally on `28282` to interact with the service from your workstation. |
+
+---
+## 5. General Tips
+- **Namespace**: All commands target the `retailstore` namespace (`-n retailstore`). Adjust if you work in a different namespace.
+- **Label selectors** (`-l`) are handy for batch operations on a set of pods.
+- Use `--previous` to see logs from a terminated container (useful after a CrashLoopBackOff).
+- Combine commands with PowerShell pipelines (`| Select-Object -Last N`) to trim output.
+- For scripted CI pipelines, prefer `kubectl wait` to ensure resources are ready before proceeding.
+
+
 ### 🚫 Kill Processes by Port
 
 <details>
@@ -562,7 +741,7 @@ import static org.hamcrest.Matchers.closeTo;
 // .andExpected(jsonPath("$.totalPrice").value(100.00))
 
 // ✅ Do this instead:
-.andExpect(jsonPath("$.totalPrice").value(closeTo(new BigDecimal("100.00"), new BigDecimal("0.01"))))
+.andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
 ```
 
 </details>
@@ -570,10 +749,11 @@ import static org.hamcrest.Matchers.closeTo;
 <details>
 <summary><strong>🏗️ Architecture Considerations</strong></summary>
 
-- **🔄 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
+- **💾 Transaction Management:** Use `@Transactional` directly on jOOQ repository methods
 - **📊 Event Sourcing:** Kafka integration for reliable message delivery
-- **🚀 Native Images:** Some services may need additional GraalVM configuration
+- **🚀 Native Images:** Some services may need additional GraalVM configuration. **Note:** For native builds, we cannot use `@RefreshScope`, OpenTelemetry Java agents, or Spring Boot DevTools.
 - **🔍 Service Discovery:** Health checks are crucial for proper load balancing
+- **🔑 TSID Generation:** If a deployment does not set a unique `tsid.node` or `TSID_NODE` for each generator, replicas can share a node and produce colliding IDs during an overlapping timestamp and counter window. Configure unique node IDs, or inject an explicitly configured `TSID.Factory`, for this service and the other TSID generators. The Hypersistence documentation states that exclusive node IDs avoid collisions and that the node is random when no setting is provided. This project's TSID implementation will fallback to this random node library default when `withNode` is omitted.
 
 </details>
 

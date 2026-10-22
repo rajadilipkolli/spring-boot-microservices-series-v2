@@ -1,8 +1,9 @@
-/*** Licensed under MIT License Copyright (c) 2022-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
 import com.example.paymentservice.config.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
+import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
@@ -18,6 +19,7 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
@@ -38,21 +40,35 @@ public class KafkaListenerConfig {
         this.jsonMapper = jsonMapper;
     }
 
+    /**
+     * Deserializes an order event and reserves NEW orders or forwards other statuses for
+     * settlement. Missing-customer, illegal-argument, and operation-conflict errors bypass retries;
+     * other propagated errors, including a missing completed reservation, remain retryable.
+     *
+     * @param orderDtoStr the JSON order event
+     * @throws JacksonException if the event cannot be deserialized
+     * @throws IllegalArgumentException if a NEW order's attempt ID is null or blank after trimming
+     * @throws CustomerNotFoundException if the requested operation's customer ID is null or absent
+     * @throws OperationConflictException if the operation conflicts with its stored fingerprint
+     * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement
+     *     requires a reservation that is absent or incomplete
+     */
     // retries if processing of event fails
-    // @RetryableTopic annotation configures retry behavior for failed message processing:
-    // - Initial retry delay of 1000ms that doubles with each attempt (multiplier=2.0)
-    // - Excludes CustomerNotFoundException from retries since it's a permanent failure
-    // - Creates retry topics with indexed suffixes (e.g. topic-retry-0, topic-retry-1)
-    // @KafkaListener configures the Kafka consumer:
-    // - Consumer group ID "payment" for load balancing across instances
-    // - Listens to the ORDERS_TOPIC defined in AppConstants
-    // - Unique listener ID "orders" to identify this consumer
+    // Exclude CustomerNotFoundException, IllegalArgumentException (for missing attemptId), and
+    // OperationConflictException
+    // Keep ReservationNotFoundException retryable
     @RetryableTopic(
             backOff = @BackOff(delay = 1000, multiplier = 2.0),
-            exclude = {CustomerNotFoundException.class},
+            exclude = {
+                CustomerNotFoundException.class,
+                OperationConflictException.class,
+                IllegalArgumentException.class
+            },
+            retryTopicSuffix = "-retry-payment",
+            dltTopicSuffix = "-dlt-payment",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
-    @KafkaListener(id = "orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
-    public void onEvent(String orderDtoStr) throws tools.jackson.core.JacksonException {
+    @KafkaListener(id = "payment-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
+    public void onEvent(String orderDtoStr) throws JacksonException {
         OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
@@ -60,6 +76,10 @@ public class KafkaListenerConfig {
                 AppConstants.ORDERS_TOPIC,
                 orderDto.source());
         if ("NEW".equals(orderDto.status())) {
+            if (orderDto.attemptId() == null || orderDto.attemptId().trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "attemptId must not be null or blank for NEW orders");
+            }
             paymentOrderManageService.reserve(orderDto);
         } else {
             paymentOrderManageService.confirm(orderDto);
@@ -67,19 +87,32 @@ public class KafkaListenerConfig {
     }
 
     /**
-     * Dead Letter Topic (DLT) handler for processing messages that have failed processing after all
-     * retries This method is invoked when a message reaches the dead letter topic after exhausting
-     * retry attempts
+     * Handles a dead-letter message and counts down the dead-letter latch. Parsing failures are
+     * caught so malformed messages still release the latch. Messages can reach the DLT after
+     * retries are exhausted or when their failure is excluded from retries.
      *
      * @param orderDtoStr The failed order message that reached the DLT
      * @param topic The Kafka topic from which the dead letter message was received
      */
     @DltHandler
     public void dlt(String orderDtoStr, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        // Log the failed message and topic at error level for monitoring/debugging
-        log.error("Received dead-letter message : {} from topic {}", orderDtoStr, topic);
-        // Decrement latch to signal that a DLT message was processed
-        // This is useful for testing and monitoring DLT handling
+        String operationKey = "unknown";
+        try {
+            OrderDto dto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
+            if (dto.orderId() != null) {
+                operationKey =
+                        "payment:"
+                                + dto.orderId()
+                                + ":"
+                                + ("NEW".equals(dto.status()) ? "RESERVE" : "SETTLE");
+            }
+        } catch (Exception ignored) {
+        }
+        log.error(
+                "Received dead-letter message for operation {} from topic {}: {}",
+                operationKey,
+                topic,
+                orderDtoStr);
         deadLetterLatch.countDown();
     }
 

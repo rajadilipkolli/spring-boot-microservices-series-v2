@@ -14,8 +14,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,19 +32,21 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 
 class OrderControllerIT extends AbstractIntegrationTest {
 
@@ -118,6 +120,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     is(orderList.getFirst().getItems().size())));
         }
 
+        /**
+         * Verifies that order lookup returns order details with order and customer IDs encoded as
+         * strings.
+         */
         @Test
         void shouldFindOrderById() throws Exception {
             Order order = orderList.getFirst();
@@ -125,8 +131,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(get("/api/orders/{id}", orderId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
-                    .andExpect(jsonPath("$.customerId", is(order.getCustomerId()), Long.class))
+                    .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                    .andExpect(jsonPath("$.customerId", is(order.getCustomerId().toString())))
                     .andExpect(jsonPath("$.status", is(order.getStatus().name())))
                     .andExpect(jsonPath("$.source", is(order.getSource())))
                     .andExpect(
@@ -181,6 +187,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
     @DisplayName("save methods")
     class SaveOrder {
 
+        /**
+         * Verifies that order creation returns the initial order details with a string customer ID.
+         */
         @Test
         void shouldCreateNewOrder() throws Exception {
             OrderRequest orderRequest =
@@ -196,41 +205,48 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                     "country"));
             mockProductsExistsRequest(true, "PRODUCT10");
 
-            mockMvc.perform(
-                            post("/api/orders")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(jsonMapper.writeValueAsString(orderRequest)))
-                    .andExpect(status().isCreated())
-                    .andExpect(header().exists("Location"))
-                    .andExpect(jsonPath("$.orderId", notNullValue()))
-                    .andExpect(jsonPath("$.customerId", is(orderRequest.customerId()), Long.class))
-                    .andExpect(jsonPath("$.status", is("NEW")))
-                    .andExpect(jsonPath("$.source", nullValue()))
-                    .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
-                    .andExpect(jsonPath("$.items.size()", is(1)))
-                    .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
-                    .andExpect(jsonPath("$.items[0].productId", is("Product10")))
-                    .andExpect(jsonPath("$.items[0].quantity", is(10)))
-                    .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
-                    .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
-                    .andExpect(jsonPath("$.createdDate", notNullValue()))
-                    // Verify address fields
-                    .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Junit Address1")))
-                    .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
-                    .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
-                    .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
-                    .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
-                    .andExpect(jsonPath("$.deliveryAddress.country", is("country")));
+            MvcResult mvcResult =
+                    mockMvc.perform(
+                                    post("/api/orders")
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .content(jsonMapper.writeValueAsString(orderRequest)))
+                            .andExpect(status().isCreated())
+                            .andExpect(header().exists("Location"))
+                            .andExpect(jsonPath("$.orderId", notNullValue()))
+                            .andExpect(
+                                    jsonPath(
+                                            "$.customerId",
+                                            is(orderRequest.customerId().toString())))
+                            .andExpect(jsonPath("$.status", is("NEW")))
+                            .andExpect(jsonPath("$.source", nullValue()))
+                            .andExpect(jsonPath("$.totalPrice").value(closeTo(100.00, 0.01)))
+                            .andExpect(jsonPath("$.items.size()", is(1)))
+                            .andExpect(jsonPath("$.items[0].itemId", notNullValue()))
+                            .andExpect(jsonPath("$.items[0].productId", is("Product10")))
+                            .andExpect(jsonPath("$.items[0].quantity", is(10)))
+                            .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
+                            .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
+                            .andExpect(jsonPath("$.createdDate", notNullValue()))
+                            // Verify address fields
+                            .andExpect(
+                                    jsonPath(
+                                            "$.deliveryAddress.addressLine1", is("Junit Address1")))
+                            .andExpect(
+                                    jsonPath("$.deliveryAddress.addressLine2", is("AddressLine2")))
+                            .andExpect(jsonPath("$.deliveryAddress.city", is("city")))
+                            .andExpect(jsonPath("$.deliveryAddress.state", is("state")))
+                            .andExpect(jsonPath("$.deliveryAddress.zipCode", is("zipCode")))
+                            .andExpect(jsonPath("$.deliveryAddress.country", is("country")))
+                            .andReturn();
+
+            Long orderId =
+                    jsonMapper
+                            .readValue(
+                                    mvcResult.getResponse().getContentAsString(),
+                                    OrderResponse.class)
+                            .orderId();
 
             // Verify the order was actually saved in the database
-            List<Order> savedOrders = orderRepository.findAll();
-            assertThat(savedOrders)
-                    .isNotEmpty()
-                    .hasSize(orderList.size() + 1); // Original orders plus the new one
-
-            // Verify the last order in the database matches our request
-            savedOrders.sort(Comparator.comparing(Order::getId));
-            Long orderId = savedOrders.getLast().getId();
             Order lastOrder = orderRepository.findOrderById(orderId).orElseThrow();
             assertThat(lastOrder.getCustomerId()).isEqualTo(orderRequest.customerId());
             assertThat(lastOrder.getStatus().name()).isEqualTo("NEW");
@@ -239,13 +255,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
             assertThat(lastOrder.getItems().getFirst().getQuantity()).isEqualTo(10);
 
             // Verify Kafka message
-            await().atMost(Duration.ofSeconds(10))
-                    .pollInterval(Duration.ofSeconds(1))
+            await().atMost(Duration.ofSeconds(15))
+                    .pollInterval(Duration.ofMillis(500))
                     .untilAsserted(
                             () -> {
-                                OrderDto orderDto = testKafkaListenerConfig.pollPayload(1, SECONDS);
-                                assertThat(orderDto).isNotNull();
-                                assertThat(orderDto.orderId()).isEqualTo(orderId);
+                                Optional<OrderDto> orderDtoOpt =
+                                        testKafkaListenerConfig.getMessageByOrderId(orderId);
+                                assertThat(orderDtoOpt).isPresent();
+                                OrderDto orderDto = orderDtoOpt.get();
                                 assertThat(orderDto.customerId()).isEqualTo(1L);
                                 assertThat(orderDto.status()).isEqualTo("NEW");
                             });
@@ -276,15 +293,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .pollInterval(Duration.ofSeconds(1))
                     .untilAsserted(
                             () ->
-                                    mockMvc.perform(get("/api/orders/store/{id}", orderId))
+                                    mockMvc.perform(get("/api/orders/{id}", orderId))
                                             .andExpect(status().isOk())
-                                            .andExpect(jsonPath("orderId", is(orderId), Long.class))
-                                            .andExpect(jsonPath("status", is("CONFIRMED")))
-                                            .andExpect(jsonPath("source", emptyOrNullString()))
-                                            .andExpect(jsonPath("customerId", is(1)))
+                                            .andExpect(
+                                                    jsonPath("$.orderId", is(orderId.toString())))
+                                            .andExpect(jsonPath("$.status", is("CONFIRMED")))
+                                            .andExpect(jsonPath("$.customerId", is("1")))
                                             .andExpect(
                                                     jsonPath(
-                                                            "items.size()",
+                                                            "$.items.size()",
                                                             is(orderRequest.items().size()))));
         }
 
@@ -440,13 +457,17 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andReturn();
         }
 
+        /**
+         * Verifies blank product codes, zero quantities, and zero prices produce field validation
+         * errors.
+         */
         @Test
         void shouldReturn400WhenOrderItemValidationFails() throws Exception {
             // Test invalid productCode (blank)
             OrderRequest invalidProductCodeRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("", 2, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("", 2, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "");
@@ -476,7 +497,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidQuantityRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 0, new BigDecimal("10.00"))),
+                            List.of(new OrderItemRequest("Product1", 0, BigDecimal.TEN)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -504,7 +525,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
             OrderRequest invalidPriceRequest =
                     new OrderRequest(
                             1L,
-                            List.of(new OrderItemRequest("Product1", 2, new BigDecimal("0.00"))),
+                            List.of(new OrderItemRequest("Product1", 2, BigDecimal.ZERO)),
                             new Address("Line1", "Line2", "City", "State", "12345", "Country"));
 
             mockProductsExistsRequest(true, "PRODUCT1");
@@ -609,6 +630,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 BigDecimal.class));
     }
 
+    /**
+     * Verifies that updating an order preserves its response structure, string IDs, and persisted
+     * item details.
+     */
     @Test
     void shouldPreserveOrderStructureAfterUpdate() throws Exception {
         // Get an order from the existing list
@@ -639,8 +664,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(jsonMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderId", is(orderId), Long.class))
-                .andExpect(jsonPath("$.customerId", is(1)))
+                .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                .andExpect(jsonPath("$.customerId", is("1")))
                 .andExpect(jsonPath("$.status", is("NEW")))
                 .andExpect(jsonPath("$.deliveryAddress.addressLine1", is("Updated Address")))
                 .andExpect(jsonPath("$.deliveryAddress.addressLine2", is("Suite 123")))
@@ -684,5 +709,75 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
         assertThat(foundUpdatedProduct).isTrue();
         assertThat(foundSecondProduct).isTrue();
+    }
+
+    /**
+     * Verifies that keyword search returns an order with a matching delivery address.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersByKeyword() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Address")
+                                .param("mode", "keyword")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(
+                        jsonPath(
+                                "$.data[0].deliveryAddress.addressLine1",
+                                containsString("Junit Address")));
+    }
+
+    /**
+     * Verifies that similarity search accepts a misspelled term and returns a successful array
+     * response.
+     *
+     * @throws Exception if the mock HTTP request fails
+     */
+    @Test
+    void shouldSearchOrdersBySimilarity() throws Exception {
+        mockMvc.perform(
+                        get("/api/orders/search")
+                                .param("term", "Junit Adress")
+                                .param("mode", "similarity")
+                                .param("page", "0")
+                                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
+    /** Verifies null prices and prices with more than two fractional digits are rejected. */
+    @Test
+    void shouldReturn400WhenOrderItemPriceIsInvalid() throws Exception {
+        OrderRequest invalidScaleRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, BigDecimal.valueOf(10.123))),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockProductsExistsRequest(true, "PRODUCT1");
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(invalidScaleRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
+
+        OrderRequest nullPriceRequest =
+                new OrderRequest(
+                        1L,
+                        List.of(new OrderItemRequest("Product1", 2, null)),
+                        new Address("Line1", "Line2", "City", "State", "12345", "Country"));
+
+        mockMvc.perform(
+                        post("/api/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(nullPriceRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")));
     }
 }

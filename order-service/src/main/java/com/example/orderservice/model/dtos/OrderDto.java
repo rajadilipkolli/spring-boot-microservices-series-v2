@@ -7,29 +7,81 @@
 package com.example.orderservice.model.dtos;
 
 import com.example.orderservice.utils.AppConstants;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.modulith.events.Externalized;
 
 @Externalized(AppConstants.ORDERS_TOPIC + "::#{orderId()}")
 public record OrderDto(
-        Long orderId,
-        @Positive(message = "CustomerId should be positive") Long customerId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING) Long orderId,
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+                @Positive(message = "CustomerId should be positive")
+                Long customerId,
         String status,
         String source,
-        @NotEmpty(message = "Order without items not valid") List<OrderItemDto> items)
+        @NotEmpty(message = "Order without items not valid")
+                List<@NotNull @Valid OrderItemDto> items,
+        String attemptId)
         implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
 
+    /** Creates an order with a null attempt ID. */
+    public OrderDto(
+            Long orderId, Long customerId, String status, String source, List<OrderItemDto> items) {
+        this(orderId, customerId, status, source, items, null);
+    }
+
+    /**
+     * Returns a new order with the supplied attempt ID and all other fields preserved.
+     *
+     * @param attemptId identifier used to correlate payment and inventory responses, or null
+     */
+    public OrderDto withAttemptId(String attemptId) {
+        return new OrderDto(orderId(), customerId(), status(), source(), items(), attemptId);
+    }
+
+    /**
+     * Returns this order if the status and source are unchanged; otherwise returns a copy with the
+     * requested status and source, preserving the attempt ID and all other fields.
+     */
     public OrderDto withStatusAndSource(String status, String source) {
         if (Objects.equals(this.status(), status) && Objects.equals(this.source(), source)) {
             return this;
         }
-        return new OrderDto(orderId(), customerId(), status, source, items());
+        return new OrderDto(orderId(), customerId(), status, source, items(), attemptId());
+    }
+
+    public record OrderItemDto(
+            @JsonFormat(shape = JsonFormat.Shape.STRING) Long itemId,
+            String productId,
+            @NotNull(message = "Quantity cannot be null")
+                    @Positive(message = "Quantity should be positive")
+                    Integer quantity,
+            BigDecimal productPrice)
+            implements Serializable {
+
+        @Serial private static final long serialVersionUID = 1L;
+
+        /**
+         * Returns the unit price multiplied by quantity, rounded to two decimal places using
+         * HALF_UP.
+         *
+         * @throws NullPointerException if the unit price or quantity is null
+         */
+        public BigDecimal getPrice() {
+            return this.productPrice()
+                    .multiply(BigDecimal.valueOf(this.quantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
     }
 }

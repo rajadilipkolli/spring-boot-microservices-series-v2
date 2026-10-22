@@ -1,0 +1,35 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.config;
+
+import com.example.inventoryservice.inventory.ApplicationProperties;
+import org.jspecify.annotations.NonNull;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration(proxyBeanMethods = false)
+class WebMvcConfig implements WebMvcConfigurer {
+
+    private final ApplicationProperties properties;
+
+    WebMvcConfig(ApplicationProperties properties) {
+        this.properties = properties;
+    }
+
+    /** Registers the configured CORS paths, methods, headers, and origins for MVC requests. */
+    @Override
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
+        ApplicationProperties.Cors cors = properties.getCors();
+        registry.addMapping(cors.getPathPattern())
+                .allowedMethods(cors.getAllowedMethods().split(","))
+                .allowedHeaders(cors.getAllowedHeaders().split(","))
+                .allowedOriginPatterns(cors.getAllowedOriginPatterns().split(","))
+                .allowCredentials(cors.isAllowCredentials())
+                .maxAge(3600); // Cache preflight response for 1 hour
+    }
+}

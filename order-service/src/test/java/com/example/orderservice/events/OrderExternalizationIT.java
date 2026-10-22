@@ -6,7 +6,6 @@
 
 package com.example.orderservice.events;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,12 +16,15 @@ import com.example.orderservice.model.Address;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
+import com.example.orderservice.model.response.OrderResponse;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 
 class OrderExternalizationIT extends AbstractIntegrationTest {
 
@@ -49,19 +51,29 @@ class OrderExternalizationIT extends AbstractIntegrationTest {
                                 "country"));
         mockProductsExistsRequest(true, "PRODUCT10");
 
-        mockMvc.perform(
-                        post("/api/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(jsonMapper.writeValueAsString(orderRequest)))
-                .andExpect(status().isCreated());
+        MvcResult mvcResult =
+                mockMvc.perform(
+                                post("/api/orders")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(jsonMapper.writeValueAsString(orderRequest)))
+                        .andExpect(status().isCreated())
+                        .andReturn();
+
+        Long orderId =
+                jsonMapper
+                        .readValue(
+                                mvcResult.getResponse().getContentAsString(), OrderResponse.class)
+                        .orderId();
 
         // Verify Kafka message shape
         await().atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
                         () -> {
-                            OrderDto orderDto = testKafkaListenerConfig.pollPayload(1, SECONDS);
-                            assertThat(orderDto).isNotNull();
+                            Optional<OrderDto> orderDtoOpt =
+                                    testKafkaListenerConfig.getMessageByOrderId(orderId);
+                            assertThat(orderDtoOpt).isPresent();
+                            OrderDto orderDto = orderDtoOpt.get();
                             assertThat(orderDto.customerId()).isEqualTo(1L);
                             assertThat(orderDto.status()).isEqualTo("NEW");
                         });

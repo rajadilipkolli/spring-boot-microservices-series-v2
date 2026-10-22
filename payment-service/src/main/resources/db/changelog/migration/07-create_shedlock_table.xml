@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd">
+
+    <changeSet author="rajakolli" id="createTable-shedlock">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="shedlock" schemaName="payment"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="shedlock" schemaName="payment">
+            <column name="name" type="varchar(64)">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="shedlock_pkey"/>
+            </column>
+            <column name="lock_until" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_by" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="shedlock" schemaName="payment"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

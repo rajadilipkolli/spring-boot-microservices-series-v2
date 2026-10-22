@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Continuous-Actions/dynamic-monorepo/v1/schema.json",
+  "projects": {
+    "api-gateway": {
+      "path": "api-gateway",
+      "exclude": ["api-gateway/docker-compose.yml", "api-gateway/docker/**"]
+    },
+    "catalog-service": {
+      "path": "catalog-service",
+      "exclude": ["catalog-service/docker-compose.yml", "catalog-service/docker/**"]
+    },
+    "config-server": {
+      "path": "config-server",
+      "exclude": ["config-server/docker-compose.yml", "config-server/docker/**"]
+    },
+    "inventory-service": {
+      "path": "inventory-service",
+      "exclude": ["inventory-service/docker-compose.yml", "inventory-service/docker/**"]
+    },
+    "order-service": {
+      "path": "order-service",
+      "exclude": ["order-service/docker-compose.yml", "order-service/docker/**"]
+    },
+    "payment-service": {
+      "path": "payment-service",
+      "exclude": ["payment-service/docker-compose.yml", "payment-service/docker/**"]
+    },
+    "retail-store-webapp": {
+      "path": "retail-store-webapp",
+      "exclude": ["retail-store-webapp/docker-compose.yml", "retail-store-webapp/docker/**"]
+    },
+    "service-registry": {
+      "path": "service-registry",
+      "exclude": ["service-registry/docker-compose.yml", "service-registry/docker/**"]
+    }
+  }
+}

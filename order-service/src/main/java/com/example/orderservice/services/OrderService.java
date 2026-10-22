@@ -20,9 +20,14 @@ import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +39,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -41,24 +47,47 @@ import org.springframework.transaction.annotation.Transactional;
 @Observed(name = "orderService")
 public class OrderService {
 
+    private static final int PRODUCT_VALIDATION_BATCH_SIZE = 25;
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final CatalogService catalogService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
 
+    /**
+     * Creates an order service with its persistence, mapping, catalog, event, and transaction
+     * collaborators.
+     *
+     * @param orderRepository repository used to access orders
+     * @param orderMapper mapper between order API models and entities
+     * @param catalogService service used to validate products
+     * @param eventPublisher publisher for persisted order events
+     * @param transactionTemplate template used to run persistence operations in a transaction
+     */
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
             CatalogService catalogService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TransactionTemplate transactionTemplate) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
         this.eventPublisher = eventPublisher;
+        this.transactionTemplate = transactionTemplate;
     }
 
+    /**
+     * Finds a page of orders using the requested sort order.
+     *
+     * @param pageNo zero-based page number
+     * @param pageSize number of orders per page
+     * @param sortBy order property to sort by
+     * @param sortDir sort direction
+     * @return the requested page of order responses
+     */
     public PagedResult<OrderResponse> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -76,11 +105,23 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
+    /**
+     * Finds an order by its identifier.
+     *
+     * @param id order identifier
+     * @return the order, or an empty optional if it does not exist
+     */
     public Optional<Order> findOrderById(Long id) {
         return orderRepository.findOrderById(id);
     }
 
-    @Transactional
+    /**
+     * Validates and saves an order, then publishes its persisted representation.
+     *
+     * @param orderRequest order to save
+     * @return the persisted order response
+     * @throws ProductNotFoundException if a requested product does not exist or is out of stock
+     */
     public OrderResponse saveOrder(OrderRequest orderRequest) {
         // Verify if items exists
         List<String> productCodes =
@@ -88,16 +129,11 @@ public class OrderService {
                         .map(OrderItemRequest::productCode)
                         .map(String::toUpperCase)
                         .toList();
-        if (productsExistsAndInStock(productCodes)) {
+        if (productsExistsAndInStock(productCodes).exists()) {
             log.debug(
                     "ProductCodes :{} exists in db, hence proceeding",
                     LogSanitizer.sanitizeCollection(productCodes));
-            Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
-            Order savedOrder = this.orderRepository.save(orderEntity);
-            OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
-            // Should send persistedOrderDto as it contains OrderId used for subsequent processing
-            eventPublisher.publishEvent(persistedOrderDto);
-            return this.orderMapper.toResponse(savedOrder);
+            return transactionTemplate.execute(_ -> persistOrder(orderRequest));
         } else {
             log.debug(
                     "one or more of product codes :{} does not exists in db",
@@ -106,7 +142,29 @@ public class OrderService {
         }
     }
 
-    @Transactional
+    /**
+     * Persists an order and publishes its persisted representation with a new random attempt ID.
+     *
+     * @param orderRequest order to persist
+     * @return the persisted order response
+     */
+    private OrderResponse persistOrder(OrderRequest orderRequest) {
+        Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
+        Order savedOrder = this.orderRepository.save(orderEntity);
+        OrderDto persistedOrderDto =
+                this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
+        // Should send persistedOrderDto as it contains OrderId used for subsequent processing
+        eventPublisher.publishEvent(persistedOrderDto);
+        return this.orderMapper.toResponse(savedOrder);
+    }
+
+    /**
+     * Validates and saves a batch of orders, then publishes each persisted order.
+     *
+     * @param orderRequests orders to save
+     * @return the persisted order responses
+     * @throws ProductNotFoundException if a requested product does not exist or is out of stock
+     */
     public List<OrderResponse> saveBatchOrders(List<OrderRequest> orderRequests) {
         // Collect all product codes to validate
         List<String> allProductCodes =
@@ -116,25 +174,27 @@ public class OrderService {
                         .map(String::toUpperCase)
                         .distinct()
                         .toList();
+        // TODO once Catalog-service migrates to QUERY HttpMethod we should change below
+        // implementation to validate all product codes in a single call instead of batch processing
+        boolean allProductsExist =
+                IntStream.iterate(
+                                0,
+                                index -> index < allProductCodes.size(),
+                                index -> index + PRODUCT_VALIDATION_BATCH_SIZE)
+                        .mapToObj(
+                                start ->
+                                        allProductCodes.subList(
+                                                start,
+                                                Math.min(
+                                                        start + PRODUCT_VALIDATION_BATCH_SIZE,
+                                                        allProductCodes.size())))
+                        .allMatch(productBatch -> productsExistsAndInStock(productBatch).exists());
 
-        if (productsExistsAndInStock(allProductCodes)) {
+        if (allProductsExist) {
             log.debug(
                     "All ProductCodes exist in db, proceeding with batch save: {}",
                     LogSanitizer.sanitizeCollection(allProductCodes));
-            List<Order> orderEntities =
-                    orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
-
-            List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
-
-            // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
-            // OrderEventPublisher
-            savedOrders.forEach(
-                    order -> {
-                        OrderDto dto = orderMapper.toDto(order);
-                        eventPublisher.publishEvent(dto);
-                    });
-
-            return savedOrders.stream().map(this.orderMapper::toResponse).toList();
+            return transactionTemplate.execute(_ -> persistBatchOrders(orderRequests));
         } else {
             log.debug(
                     "One or more product codes do not exist in db: {}",
@@ -143,7 +203,39 @@ public class OrderService {
         }
     }
 
-    private boolean productsExistsAndInStock(List<String> productIds) {
+    /**
+     * Persists a batch of orders and publishes each persisted representation with a new random
+     * attempt ID per order.
+     *
+     * @param orderRequests orders to persist
+     * @return the persisted order responses
+     */
+    private List<OrderResponse> persistBatchOrders(List<OrderRequest> orderRequests) {
+        List<Order> orderEntities =
+                orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
+
+        List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
+
+        // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
+        // OrderEventPublisher
+        savedOrders.forEach(
+                order -> {
+                    OrderDto dto =
+                            orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
+                    eventPublisher.publishEvent(dto);
+                });
+
+        return savedOrders.stream().map(this.orderMapper::toResponse).toList();
+    }
+
+    /**
+     * Checks whether the requested products exist and are in stock.
+     *
+     * @param productIds product identifiers to check
+     * @return the catalog product-existence response
+     */
+    private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
+            List<String> productIds) {
         return catalogService.productsExistsByCodes(productIds);
     }
 
@@ -177,12 +269,26 @@ public class OrderService {
         return getOrderResponsePagedResult(page);
     }
 
+    /**
+     * Loads orders with their items and maps them to responses in the order of the supplied IDs.
+     *
+     * @param page ordered IDs and pagination metadata from the repository
+     * @return order responses with the original pagination metadata and a one-based page number
+     */
     private PagedResult<OrderResponse> getOrderResponsePagedResult(Page<Long> page) {
+        if (page.isEmpty()) {
+            return new PagedResult<>(page, List.of());
+        }
         // fetching parent along With ChildEntries
         List<Order> ordersWithOrderItems = orderRepository.findByIdIn(page.getContent());
+        Map<Long, Integer> positions = new HashMap<>();
+        for (int i = 0; i < page.getContent().size(); i++) {
+            positions.put(page.getContent().get(i), i);
+        }
         // Mapping Order to OrderDTO CompletableFuture
         List<CompletableFuture<OrderResponse>> completableFutureList =
                 ordersWithOrderItems.stream()
+                        .sorted(Comparator.comparingInt(order -> positions.get(order.getId())))
                         .map(
                                 order ->
                                         CompletableFuture.supplyAsync(
@@ -191,30 +297,78 @@ public class OrderService {
         // Joining all completable Future to get DTOs
         List<OrderResponse> orderListDto =
                 completableFutureList.stream().map(CompletableFuture::join).toList();
-        return new PagedResult<>(
-                orderListDto,
-                page.getTotalElements(),
-                page.getNumber() + 1,
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast(),
-                page.hasNext(),
-                page.hasPrevious());
+        return new PagedResult<>(page, orderListDto);
     }
 
+    /**
+     * Republishes NEW orders last modified strictly more than five minutes ago, in ascending ID
+     * order, with a new random attempt ID for each. After publishing, saves the order with its last
+     * modified time set to the current time. Exceptions while processing an individual order are
+     * caught so remaining orders are attempted; failures fetching the orders propagate.
+     */
     @Job(name = "reProcessNewOrders", retries = 2)
+    @Transactional
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order
         List<Order> byStatusOrderByIdAsc =
-                orderRepository.findByStatusAndCreatedDateLessThanOrderByIdAsc(
+                orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
                         OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
         byStatusOrderByIdAsc.forEach(
                 order -> {
-                    OrderDto persistedOrderDto = this.orderMapper.toDto(order);
-                    log.info(
-                            "Retrying Order :{}",
-                            LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                    eventPublisher.publishEvent(persistedOrderDto);
+                    try {
+                        OrderDto persistedOrderDto =
+                                this.orderMapper
+                                        .toDto(order)
+                                        .withAttemptId(UUID.randomUUID().toString());
+                        log.info(
+                                "Retrying Order :{}",
+                                LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
+                        eventPublisher.publishEvent(persistedOrderDto);
+
+                        // Update lastModifiedDate to prevent immediate repolling and endless spam
+                        order.setLastModifiedDate(LocalDateTime.now());
+                        orderRepository.save(order);
+                    } catch (Exception e) {
+                        log.error("Failed to retry publishing order :{}", order.getId(), e);
+                    }
                 });
+    }
+
+    /**
+     * Searches order IDs and loads the matching orders as a page of responses.
+     *
+     * @param term text to search for in source, delivery address, and item product codes
+     * @param mode selects trigram matching when equal to "similarity", ignoring case; otherwise
+     *     uses keyword matching
+     * @param customerId customer to filter by, or null for all customers
+     * @param status status to filter by, or null for all statuses
+     * @param threshold additional similarity cutoff, defaulting to 0.3 when null; ignored in
+     *     keyword mode
+     * @param pageable pagination options
+     * @return matching order responses and pagination metadata with a one-based page number
+     */
+    public PagedResult<OrderResponse> searchOrders(
+            String term,
+            String mode,
+            Long customerId,
+            OrderStatus status,
+            Double threshold,
+            Pageable pageable) {
+
+        Page<Long> page;
+        if ("similarity".equalsIgnoreCase(mode)) {
+            double actualThreshold = threshold != null ? threshold : 0.3;
+            page =
+                    orderRepository.searchOrdersBySimilarity(
+                            term,
+                            actualThreshold,
+                            customerId,
+                            status != null ? status.name() : null,
+                            pageable);
+        } else {
+            page = orderRepository.searchOrdersByKeyword(term, customerId, status, pageable);
+        }
+
+        return getOrderResponsePagedResult(page);
     }
 }

@@ -1,0 +1,299 @@
+{
+  "reflection": [
+    {
+      "condition": {"typeReached": "com.example.paymentservice.config.ApplicationProperties"},
+      "type": "com.example.paymentservice.config.ApplicationProperties",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.config.ApplicationProperties$Cors"},
+      "type": "com.example.paymentservice.config.ApplicationProperties$Cors",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.config.ApplicationProperties$Operation"},
+      "type": "com.example.paymentservice.config.ApplicationProperties$Operation",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.config.ApplicationProperties$Outbox"},
+      "type": "com.example.paymentservice.config.ApplicationProperties$Outbox",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.config.ApplicationProperties$Reconciler"},
+      "type": "com.example.paymentservice.config.ApplicationProperties$Reconciler",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.exception.CustomerExistsException"},
+      "type": "com.example.paymentservice.exception.CustomerExistsException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.exception.CustomerNotFoundException"},
+      "type": "com.example.paymentservice.exception.CustomerNotFoundException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.exception.GlobalExceptionHandler$ApiValidationError"},
+      "type": "com.example.paymentservice.exception.GlobalExceptionHandler$ApiValidationError",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.exception.OperationConflictException"},
+      "type": "com.example.paymentservice.exception.OperationConflictException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.exception.ReservationNotFoundException"},
+      "type": "com.example.paymentservice.exception.ReservationNotFoundException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.DefaultCatalog"},
+      "type": "com.example.paymentservice.jooq.DefaultCatalog",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.Payment"},
+      "type": "com.example.paymentservice.jooq.Payment",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.Customers"},
+      "type": "com.example.paymentservice.jooq.tables.Customers",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.Customers$CustomersPath"},
+      "type": "com.example.paymentservice.jooq.tables.Customers$CustomersPath",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.LedgerEntries"},
+      "type": "com.example.paymentservice.jooq.tables.LedgerEntries",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.LedgerEntries$LedgerEntriesPath"},
+      "type": "com.example.paymentservice.jooq.tables.LedgerEntries$LedgerEntriesPath",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.OutboxEvents"},
+      "type": "com.example.paymentservice.jooq.tables.OutboxEvents",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.PaymentOperations"},
+      "type": "com.example.paymentservice.jooq.tables.PaymentOperations",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.PaymentOperations$PaymentOperationsPath"},
+      "type": "com.example.paymentservice.jooq.tables.PaymentOperations$PaymentOperationsPath",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.Shedlock"},
+      "type": "com.example.paymentservice.jooq.tables.Shedlock",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.records.CustomersRecord"},
+      "type": "com.example.paymentservice.jooq.tables.records.CustomersRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord"},
+      "type": "com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.records.OutboxEventsRecord"},
+      "type": "com.example.paymentservice.jooq.tables.records.OutboxEventsRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord"},
+      "type": "com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.jooq.tables.records.ShedlockRecord"},
+      "type": "com.example.paymentservice.jooq.tables.records.ShedlockRecord",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.payload.OrderDto"},
+      "type": "com.example.paymentservice.model.payload.OrderDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.payload.OrderDto$OrderItemDto"},
+      "type": "com.example.paymentservice.model.payload.OrderDto$OrderItemDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.query.FindCustomersQuery"},
+      "type": "com.example.paymentservice.model.query.FindCustomersQuery",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.request.CustomerRequest"},
+      "type": "com.example.paymentservice.model.request.CustomerRequest",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.response.CustomerResponse"},
+      "type": "com.example.paymentservice.model.response.CustomerResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.response.OrderResponse"},
+      "type": "com.example.paymentservice.model.response.OrderResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.response.OrderResponse$Address"},
+      "type": "com.example.paymentservice.model.response.OrderResponse$Address",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.response.OrderResponse$OrderItemResponse"},
+      "type": "com.example.paymentservice.model.response.OrderResponse$OrderItemResponse",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.model.response.PagedResult"},
+      "type": "com.example.paymentservice.model.response.PagedResult",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.services.PaymentOperationEngine$ArrivalResult"},
+      "type": "com.example.paymentservice.services.PaymentOperationEngine$ArrivalResult",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.services.provider.ProviderCommand"},
+      "type": "com.example.paymentservice.services.provider.ProviderCommand",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.services.provider.ProviderResult"},
+      "type": "com.example.paymentservice.services.provider.ProviderResult",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {"typeReached": "com.example.paymentservice.services.provider.ProviderTimeoutException"},
+      "type": "com.example.paymentservice.services.provider.ProviderTimeoutException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true,
+      "serializable": true
+    }
+  ],
+  "resources": [
+    {"glob": "application*.properties"},
+    {"glob": "application*.yml"},
+    {"glob": "application*.yaml"},
+    {"glob": "logback-spring.xml"},
+    {"glob": "log4j2-spring.xml"}
+  ]
+}

@@ -1,17 +1,19 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2024 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
 </p>
 ***/
 
 package com.example.catalogservice.model.request;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 
 public record ProductRequest(
         @NotBlank(message = "Product code can't be blank") String productCode,
         String productName,
         String description,
         String imageUrl,
-        @Positive Double price) {}
+        @Positive @Digits(integer = 17, fraction = 2) BigDecimal price) {}

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -182,5 +182,19 @@ class OrderManageServiceIT extends AbstractIntegrationTest {
         assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(updatedOrder.getSource()).isNull();
         assertThat(updatedOrder.getCustomerId()).isEqualTo(testOrder.getCustomerId());
+    }
+
+    @Test
+    void lateRejectionDoesNotReplaceConfirmation() {
+        var payment = getPaymentOrderDto("ACCEPT", testOrder);
+        var stock = getStockOrderDto("ACCEPT", testOrder);
+        orderManageService.confirm(payment, stock);
+        var result =
+                orderManageService.confirm(
+                        payment.withAttemptId("retry"),
+                        stock.withStatusAndSource("REJECT", "INVENTORY").withAttemptId("retry"));
+        assertThat(result).isNull();
+        assertThat(orderRepository.findById(testOrder.getId()).orElseThrow().getStatus())
+                .isEqualTo(OrderStatus.CONFIRMED);
     }
 }

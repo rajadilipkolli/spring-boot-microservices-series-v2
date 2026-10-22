@@ -33,22 +33,22 @@ datasources:
       httpMethod: GET
       tracesToMetrics:
         datasourceUid: prometheus-micro-service
-        tags: [ { key: 'service.name', value: 'application' }, { key: 'org' }, { key: 'method' }, { key: 'uri' }, { key: 'outcome' }, { key: 'status' }, { key: 'exception' } ]
+        tags: [ { key: 'service.name', value: 'exported_job' }, { key: 'org' }, { key: 'http.request.method', value: 'http_request_method' }, { key: 'http.route', value: 'http_route' }, { key: 'http.response.status_code', value: 'http_response_status_code' } ]
         queries:
           - name: 'Throughput'
-            query: 'sum(rate(http_server_requests_seconds_count{$$__tags}[$$__rate_interval]))'
+            query: 'sum(rate(http_server_request_duration_seconds_count{$$__tags}[$$__rate_interval]))'
           - name: 'Latency'
-            query: 'histogram_quantile(1.00, sum(rate(http_server_requests_seconds_bucket{$$__tags}[$$__rate_interval])) by (le))'
+            query: 'histogram_quantile(1.00, sum(rate(http_server_request_duration_seconds_bucket{$$__tags}[$$__rate_interval])) by (le))'
       tracesToLogs:
         datasourceUid: 'loki-micro-service'
         tags: [ 'instance', 'pod', 'namespace', 'hostname' ]
-        mappedTags: [ { key: 'org' }, { key: 'service.name', value: 'application' }  ]
+        mappedTags: [ { key: 'org' }, { key: 'service.name', value: 'service_name' }  ]
         mapTagNamesEnabled: true
-        spanStartTimeShift: '1h'
+        spanStartTimeShift: '-1h'
         spanEndTimeShift: '1h'
         filterByTraceID: true
         filterBySpanID: false
-        lokiSearch: true
+        lokiSearch: false
       lokiSearch:
         datasourceUid: loki-micro-service
       serviceMap:

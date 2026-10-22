@@ -212,7 +212,7 @@ sequenceDiagram
     
     rect rgba(34, 197, 94, 0.3)
         Note over Client, InventoryAPI: <span style="color: white">Inventory Generation & Management</span>
-        Client->>Gateway: GET /inventory-service/api/inventory/generate
+        Client->>Gateway: POST /inventory-service/api/inventory/generate
         Gateway->>InventoryAPI: Trigger inventory generation
         InventoryAPI->>InventoryAPI: @Transactional + IntStream.rangeClosed(0, 100)
         
@@ -303,7 +303,7 @@ sequenceDiagram
 | `/api/inventory` | POST | Create inventory | Validation, entity mapping |
 | `/api/inventory/{id}` | PUT | Update inventory | Transactional updates |
 | `/api/inventory/{id}` | DELETE | Delete inventory | Safe deletion |
-| `/api/inventory/generate` | GET | Generate test inventory | Development utility |
+| `/api/inventory/generate` | POST | Generate test inventory | Development utility |
 
 ## Kafka Event Flow & Topics
 

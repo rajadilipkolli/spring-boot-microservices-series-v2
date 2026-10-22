@@ -7,8 +7,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public class OrderResponse {
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long orderId;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long customerId;
+
     private String status;
     private String source;
     private Address deliveryAddress;

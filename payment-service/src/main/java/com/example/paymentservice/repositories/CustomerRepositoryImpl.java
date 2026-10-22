@@ -1,25 +1,22 @@
-/*** Licensed under MIT License Copyright (c) 2023-2024 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.repositories;
 
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
-import com.example.paymentservice.entities.Customer;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
-import com.example.paymentservice.model.response.CustomerResponse;
-import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.jooq.DSLContext;
-import org.jooq.InsertSetMoreStep;
-import org.jooq.SortField;
-import org.jooq.TableField;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.jooq.OrderField;
+import org.jooq.conf.Settings;
+import org.jooq.conf.SettingsTools;
+import org.jooq.exception.DataChangedException;
+import org.jooq.impl.DSL;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,143 +25,255 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public class CustomerRepositoryImpl implements CustomerRepository {
 
-    private final DSLContext dslContext;
+    private final DSLContext insertDsl;
+    private final CustomerDAO customerDAO;
 
-    public CustomerRepositoryImpl(DSLContext dslContext) {
-        this.dslContext = dslContext;
+    /**
+     * Creates the repository with database access and record mapping, deriving an insert context
+     * with optimistic locking disabled.
+     *
+     * @param dslContext the context for database operations
+     * @param customerDAO the DAO for customer lookups and versioned updates
+     */
+    public CustomerRepositoryImpl(DSLContext dslContext, CustomerDAO customerDAO) {
+        this.customerDAO = customerDAO;
+
+        Settings insertSettings =
+                SettingsTools.clone(dslContext.configuration().settings())
+                        .withExecuteWithOptimisticLocking(false)
+                        .withReturnAllOnUpdatableRecord(true)
+                        .withInsertUnchangedRecords(false);
+        this.insertDsl = DSL.using(dslContext.configuration().derive(insertSettings));
     }
 
+    /** Returns the customer matching the ID, or empty if none exists. */
     @Override
-    public Page<Customer> findAll(Pageable pageable) {
-        return new PageImpl<>(
-                dslContext
-                        .select()
-                        .from(CUSTOMERS)
-                        .orderBy(getSortFields(pageable.getSort()))
-                        .limit(pageable.getPageSize())
-                        .offset(pageable.getOffset())
-                        .fetchInto(Customer.class),
-                pageable,
-                dslContext.fetchCount(CUSTOMERS));
+    public Optional<CustomersRecord> findById(Long id) {
+        return customerDAO.findById(id);
     }
 
+    /** Returns the customer matching the exact name, or empty if none exists. */
     @Override
-    public Optional<CustomerResponse> findByName(String name) {
-        return dslContext
-                .select(
-                        CUSTOMERS.ID,
-                        CUSTOMERS.NAME,
-                        CUSTOMERS.EMAIL,
-                        CUSTOMERS.PHONE,
-                        CUSTOMERS.ADDRESS,
-                        CUSTOMERS.AMOUNT_AVAILABLE)
-                .from(CUSTOMERS)
-                .where(CUSTOMERS.NAME.eq(name))
-                .fetchOptionalInto(CustomerResponse.class);
+    public Optional<CustomersRecord> findByName(String name) {
+        return customerDAO.findByName(name);
     }
 
+    /** Returns the customer matching the normalized email, or empty if none exists. */
     @Override
-    public Optional<Customer> findById(Long customerId) {
-        return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.ID.eq(customerId))
-                .map(r -> r.into(Customer.class));
+    public Optional<CustomersRecord> findByEmail(String normalizedEmail) {
+        return customerDAO.findByEmail(normalizedEmail);
     }
 
+    /** Returns a customer slice using the supplied row offset, limit, and sort expressions. */
     @Override
-    public Optional<Customer> findByEmail(String customerEmail) {
-        return dslContext
-                .fetchOptional(CUSTOMERS, CUSTOMERS.EMAIL.eq(customerEmail))
-                .map(r -> r.into(Customer.class));
+    public List<CustomersRecord> findAll(int offset, int limit, List<OrderField<?>> orderFields) {
+        return customerDAO.findAll(offset, limit, orderFields);
     }
 
+    /** Checks for an exact match against the supplied normalized email address. */
+    @Override
+    public boolean existsByEmail(String email) {
+        return customerDAO.existsByEmail(email);
+    }
+
+    /** Returns the total customer count reported by the DAO. */
+    @Override
+    public long count() {
+        return customerDAO.count();
+    }
+
+    /**
+     * Inserts a new customer when ID is null or updates an existing customer whose ID and version
+     * match. Lowercases a non-null email on the supplied record. Inserts generate a TSID and
+     * initialize the persisted version to one regardless of the supplied version. Updates require a
+     * non-null version and increment the stored version. The supplied record's ID and version
+     * remain unchanged. Database failures propagate to the caller.
+     *
+     * @param requestCustomer the customer details to insert or update
+     * @return the persisted CustomersRecord returned by the database
+     * @throws OptimisticLockingFailureException if an update finds no matching ID and version,
+     *     detects a concurrent change, or an insert affects no rows
+     * @throws NullPointerException if the supplied record is null or an existing customer's input
+     *     version is null
+     */
     @Override
     @Transactional
-    public Customer save(Customer customer) {
-        if (customer.getId() == null) {
-            CustomersRecord customersRecord = dslContext.newRecord(CUSTOMERS, customer);
-            return dslContext
-                    .insertInto(CUSTOMERS)
-                    .set(customersRecord)
-                    .returningResult()
-                    .fetchOneInto(Customer.class);
+    public CustomersRecord saveCustomer(CustomersRecord requestCustomer) {
+        normalizeCustomer(requestCustomer);
+        boolean isNew = requestCustomer.getId() == null;
+        if (isNew) {
+            return getInsertedCustomersRecord(requestCustomer);
         } else {
-            return dslContext
-                    .update(CUSTOMERS)
-                    .set(CUSTOMERS.AMOUNT_AVAILABLE, customer.getAmountAvailable())
-                    .set(CUSTOMERS.AMOUNT_RESERVED, customer.getAmountReserved())
-                    .set(CUSTOMERS.ADDRESS, customer.getAddress())
-                    .set(CUSTOMERS.NAME, customer.getName())
-                    .set(CUSTOMERS.EMAIL, customer.getEmail())
-                    .set(CUSTOMERS.PHONE, customer.getPhone())
-                    .where(CUSTOMERS.ID.eq(customer.getId()))
-                    .returningResult()
-                    .fetchOneInto(Customer.class);
+            return getUpdatedCustomersRecord(requestCustomer);
         }
     }
 
+    /**
+     * Inserts all supplied customers in a batch transaction. Returns an empty list if the input is
+     * null or empty. Lowercases non-null emails on the input records, preserves supplied IDs, and
+     * copies generated TSIDs back to inputs with missing IDs. Persisted versions start at one
+     * regardless of supplied versions; input versions remain unchanged. Database failures propagate
+     * and roll back the transaction.
+     *
+     * @param customerList the list of customers to insert
+     * @return the reloaded rows in input order, with null entries for IDs absent from the reload
+     */
     @Override
     @Transactional
-    public List<Customer> saveAll(List<Customer> customerList) {
-        InsertSetMoreStep<CustomersRecord> insertStepN =
-                dslContext
-                        .insertInto(CUSTOMERS)
-                        .set(dslContext.newRecord(CUSTOMERS, customerList.getFirst()));
-        for (var customer : customerList.subList(1, customerList.size())) {
-            insertStepN = insertStepN.newRecord().set(dslContext.newRecord(CUSTOMERS, customer));
+    public List<CustomersRecord> saveAll(List<CustomersRecord> customerList) {
+        if (customerList == null || customerList.isEmpty()) {
+            return List.of();
         }
-        return insertStepN.returning().fetch().into(Customer.class);
+
+        List<CustomersRecord> customersRecordList = new ArrayList<>(customerList.size());
+        for (var customer : customerList) {
+            normalizeCustomer(customer);
+            CustomersRecord record = insertDsl.newRecord(CUSTOMERS, customer);
+            record.reset(CUSTOMERS.VERSION);
+            customersRecordList.add(record);
+        }
+
+        insertDsl.batchInsert(customersRecordList).execute();
+
+        List<Long> assignedIds = new ArrayList<>(customersRecordList.size());
+        for (int i = 0; i < customersRecordList.size(); i++) {
+            Long assignedId = customersRecordList.get(i).getId();
+            customerList.get(i).setId(assignedId);
+            assignedIds.add(assignedId);
+        }
+
+        Map<Long, CustomersRecord> byId =
+                insertDsl
+                        .selectFrom(CUSTOMERS)
+                        .where(CUSTOMERS.ID.in(assignedIds))
+                        .fetchMap(CUSTOMERS.ID, CustomersRecord.class);
+        return assignedIds.stream().map(byId::get).toList();
     }
 
+    /** Deletes the customer by ID and returns the number of affected rows. */
     @Override
     @Transactional
-    public void deleteAll() {
-        dslContext.deleteFrom(CUSTOMERS).execute();
+    public int deleteById(Long id) {
+        return customerDAO.deleteById(id);
     }
 
+    /**
+     * Deletes all ledger entries, payment operations, outbox events, and customers through the DAO
+     * in one transaction. Database failures propagate.
+     *
+     * @return the number of deleted customer rows
+     */
     @Override
-    @Transactional
-    public void deleteById(Long id) {
-        dslContext.deleteFrom(CUSTOMERS).where(CUSTOMERS.ID.eq(id)).execute();
+    public int deleteAll() {
+        return customerDAO.deleteAll();
     }
 
-    private List<SortField<?>> getSortFields(Sort sortSpecification) {
-        List<SortField<?>> querySortFields = new ArrayList<>();
-
-        if (sortSpecification == null) {
-            return querySortFields;
-        }
-
-        for (Sort.Order specifiedField : sortSpecification) {
-            String sortFieldName = specifiedField.getProperty();
-            Sort.Direction sortDirection = specifiedField.getDirection();
-
-            TableField<CustomersRecord, Object> tableField = getTableField(sortFieldName);
-            SortField<?> querySortField = convertTableFieldToSortField(tableField, sortDirection);
-            querySortFields.add(querySortField);
-        }
-
-        return querySortFields;
+    /**
+     * Delegates the conditional transfer from available to reserved customer balance to the DAO.
+     */
+    @Override
+    public boolean reserveFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.reserveFunds(customerId, amount);
     }
 
-    private TableField<CustomersRecord, Object> getTableField(String sortFieldName) {
-        TableField<CustomersRecord, Object> sortField;
+    /** Delegates the conditional deduction from reserved customer balance to the DAO. */
+    @Override
+    public boolean captureFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.captureFunds(customerId, amount);
+    }
+
+    /**
+     * Delegates the conditional transfer from reserved to available customer balance to the DAO.
+     */
+    @Override
+    public boolean releaseFunds(Long customerId, BigDecimal amount) {
+        return customerDAO.releaseFunds(customerId, amount);
+    }
+
+    /** Lowercases a non-null email on the supplied record using the root locale. */
+    private void normalizeCustomer(CustomersRecord customer) {
+        if (customer.getEmail() != null) {
+            customer.setEmail(customer.getEmail().toLowerCase(Locale.ROOT));
+        }
+    }
+
+    /**
+     * Updates the stored customer only when its version matches the supplied version, returning the
+     * updated record with an incremented version. The supplied record is unchanged. Database
+     * failures propagate, except that jOOQ concurrent-change failures become optimistic locking
+     * failures.
+     *
+     * @throws OptimisticLockingFailureException if the customer is missing, the version differs, no
+     *     rows are updated, or jOOQ detects a concurrent change
+     * @throws NullPointerException if the input version is null for an existing customer
+     */
+    private CustomersRecord getUpdatedCustomersRecord(CustomersRecord requestCustomer) {
+        CustomersRecord existingRecord =
+                customerDAO
+                        .findById(requestCustomer.getId())
+                        .orElseThrow(
+                                () ->
+                                        new OptimisticLockingFailureException(
+                                                "Customer was updated or deleted by another transaction"));
+
+        int expectedVersion = requestCustomer.getVersion();
+        if (!existingRecord.getVersion().equals(expectedVersion)) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was updated or deleted by another transaction");
+        }
+
+        mapCustomerWithRecord(existingRecord, requestCustomer);
+
         try {
-            Field tableField =
-                    CUSTOMERS.getClass().getField(sortFieldName.toUpperCase(Locale.ROOT));
-            sortField = (TableField<CustomersRecord, Object>) tableField.get(CUSTOMERS);
-        } catch (NoSuchFieldException | IllegalAccessException ex) {
-            String errorMessage = "Could not find table field: %s".formatted(sortFieldName);
-            throw new InvalidDataAccessApiUsageException(errorMessage, ex);
+            int updatedRows = existingRecord.update();
+            if (updatedRows == 0) {
+                throw new OptimisticLockingFailureException(
+                        "Customer was updated or deleted by another transaction");
+            }
+            return existingRecord.into(CustomersRecord.class);
+        } catch (DataChangedException e) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was updated or deleted by another transaction", e);
         }
-        return sortField;
     }
 
-    private SortField<?> convertTableFieldToSortField(
-            TableField<CustomersRecord, Object> tableField, Sort.Direction sortDirection) {
-        if (sortDirection == Sort.Direction.ASC) {
-            return tableField.asc();
-        } else {
-            return tableField.desc();
+    /**
+     * Copies customer details and balances while preserving the target record's ID and version.
+     *
+     * @param existingRecord the persisted record to update
+     * @param requestCustomer the replacement details and balances
+     */
+    private void mapCustomerWithRecord(
+            CustomersRecord existingRecord, CustomersRecord requestCustomer) {
+        existingRecord
+                .setAmountAvailable(requestCustomer.getAmountAvailable())
+                .setAmountReserved(requestCustomer.getAmountReserved())
+                .setName(requestCustomer.getName())
+                .setAddressLine1(requestCustomer.getAddressLine1())
+                .setAddressLine2(requestCustomer.getAddressLine2())
+                .setCity(requestCustomer.getCity())
+                .setState(requestCustomer.getState())
+                .setZipCode(requestCustomer.getZipCode())
+                .setCountry(requestCustomer.getCountry())
+                .setEmail(requestCustomer.getEmail())
+                .setPhone(requestCustomer.getPhone());
+    }
+
+    /**
+     * Inserts a copy of the supplied customer, generating a missing ID and initializing the
+     * persisted version to one regardless of the supplied version. Returns the persisted record
+     * without changing the supplied record. Database failures propagate to the caller.
+     *
+     * @throws OptimisticLockingFailureException if the insert affects no rows
+     */
+    private CustomersRecord getInsertedCustomersRecord(CustomersRecord requestCustomer) {
+        CustomersRecord customersRecord = insertDsl.newRecord(CUSTOMERS, requestCustomer);
+        customersRecord.reset(CUSTOMERS.VERSION);
+        int inserted = customersRecord.insert();
+        if (inserted == 0) {
+            throw new OptimisticLockingFailureException(
+                    "Customer was inserted by another transaction");
         }
+        return customersRecord.into(CustomersRecord.class);
     }
 }

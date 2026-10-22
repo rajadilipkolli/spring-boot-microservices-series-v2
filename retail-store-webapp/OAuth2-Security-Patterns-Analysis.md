@@ -39,7 +39,7 @@ flowchart TD
 ```properties
 # application.properties
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=P1sibsIrELBhmvK18BOzw1bUl96DcP2z
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 ```
 
@@ -49,7 +49,7 @@ spring.security.oauth2.client.registration.retailstore-webapp.authorization-gran
   "clientId": "retailstore-webapp",
   "publicClient": false,
   "clientAuthenticatorType": "client-secret",
-  "secret": "P1sibsIrELBhmvK18BOzw1bUl96DcP2z"
+  "secret": "demo-throwaway-oauth-secret"
 }
 ```
 

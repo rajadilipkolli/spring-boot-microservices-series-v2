@@ -10,9 +10,9 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Table;
-import tools.jackson.databind.JsonNode;
 
 @Table("outbox_events")
 public class OutboxEvent implements Persistable<UUID> {
@@ -27,7 +27,7 @@ public class OutboxEvent implements Persistable<UUID> {
 
     private String eventType;
 
-    private JsonNode payload;
+    private OutboxPayload payload;
 
     private OutboxEventStatus status;
 
@@ -40,6 +40,8 @@ public class OutboxEvent implements Persistable<UUID> {
     private String errorMessage;
 
     private OffsetDateTime lockedAt;
+
+    @Version private Integer version;
 
     public OutboxEvent() {}
 
@@ -79,11 +81,11 @@ public class OutboxEvent implements Persistable<UUID> {
         return this;
     }
 
-    public JsonNode getPayload() {
+    public OutboxPayload getPayload() {
         return payload;
     }
 
-    public OutboxEvent setPayload(JsonNode payload) {
+    public OutboxEvent setPayload(OutboxPayload payload) {
         this.payload = payload;
         return this;
     }
@@ -139,6 +141,22 @@ public class OutboxEvent implements Persistable<UUID> {
 
     public OutboxEvent setLockedAt(OffsetDateTime lockedAt) {
         this.lockedAt = lockedAt;
+        return this;
+    }
+
+    /** Returns the optimistic locking version, or null if it has not been assigned. */
+    public Integer getVersion() {
+        return version;
+    }
+
+    /**
+     * Sets the optimistic locking version held by this instance.
+     *
+     * @param version the version to retain, or null to clear it
+     * @return this instance
+     */
+    public OutboxEvent setVersion(Integer version) {
+        this.version = version;
         return this;
     }
 

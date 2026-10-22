@@ -1,12 +1,23 @@
-/*** Licensed under MIT License Copyright (c) 2024-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2024-2026 Raja Kolli. ***/
 package com.example.paymentservice.util;
 
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
+import java.math.BigDecimal;
 
 public class TestData {
-    public static Customer getCustomer() {
-        return new Customer().setId(1L).setAmountAvailable(1000).setAmountReserved(100);
+    /**
+     * Creates a CustomersRecord fixture with 1000 available, 100 reserved, and initial version
+     * zero.
+     *
+     * @return a new CustomersRecord with decimal balances
+     */
+    public static CustomersRecord getCustomersRecord() {
+        return new CustomersRecord()
+                .setId(1L)
+                .setAmountAvailable(BigDecimal.valueOf(1000))
+                .setAmountReserved(BigDecimal.valueOf(100))
+                .setVersion(0);
     }
 
     public static OrderDto withCustomerId(long nonExistentCustomerId, OrderDto orderDto) {

@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
@@ -11,7 +11,6 @@ import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.dtos.OrderDto;
-import com.example.orderservice.model.dtos.OrderItemDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;
@@ -70,7 +69,7 @@ public class TestData {
     }
 
     public static OrderDto getOrderDto(String source, long orderId) {
-        return new OrderDto(orderId, 1L, "ACCEPT", source, getOrderItemDtoList());
+        return new OrderDto(orderId, 1L, "ACCEPT", source, getOrderItemDtoList(), "test-attempt");
     }
 
     public static OrderDto getStockOrderDto(String status, Order testOrder) {
@@ -88,10 +87,12 @@ public class TestData {
                 testOrder.getCustomerId(),
                 status,
                 source,
-                getOrderItemDtoList());
+                getOrderItemDtoList(),
+                "test-attempt");
     }
 
-    private static List<OrderItemDto> getOrderItemDtoList() {
-        return List.of(new OrderItemDto(205L, "Product10", 10, BigDecimal.TEN));
+    /** Creates a nested order-item DTO fixture with quantity ten and unit price ten. */
+    private static List<OrderDto.OrderItemDto> getOrderItemDtoList() {
+        return List.of(new OrderDto.OrderItemDto(205L, "Product10", 10, BigDecimal.TEN));
     }
 }

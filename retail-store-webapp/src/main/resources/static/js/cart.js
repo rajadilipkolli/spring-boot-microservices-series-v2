@@ -1,25 +1,29 @@
+const customerDetails = document.getElementById('customer-details').dataset;
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('initData', () => ({
         cart: { items: [], totalAmount: 0 },
         orderForm: {
             customer: {
-                name: window.customerName || "Siva",
-                email: window.customerEmail || "siva@gmail.com",
-                phone: window.customerPhone || "999999999999"
+                name: customerDetails.name || "Siva",
+                email: customerDetails.email || "siva@gmail.com",
+                phone: customerDetails.phone || "999999999999"
             },
             deliveryAddress: {
-                addressLine1: window.customerAddressLine1 || "KPHB",
-                addressLine2: window.customerAddressLine2 || "Kukatpally",
-                city: window.customerCity || "Hyderabad",
-                state: window.customerState || "TS",
-                zipCode: window.customerZipCode || "500072",
-                country: window.customerCountry || "India"
+                addressLine1: customerDetails.addressLine1 || "KPHB",
+                addressLine2: customerDetails.addressLine2,
+                city: customerDetails.city || "Hyderabad",
+                state: customerDetails.state || "TS",
+                zipCode: customerDetails.zipCode || "500072",
+                country: customerDetails.country || "India"
             }
         },
 
         init() {
-            this.loadCart();
-            updateCartItemCount();
+            fetchCart().then(cart => {
+                this.cart = cart;
+                localCachedCart = cart;
+            });
             document.addEventListener('cart-updated', (event) => {
                 this.cart = event.detail;
             });
@@ -43,27 +47,29 @@ document.addEventListener('alpine:init', () => {
             //console.log("Order ", order);
             const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
             const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfHeader && csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
             
-            $.ajax ({
-                url: '/api/orders',
-                type: "POST",
-                dataType: "json",
-                contentType: "application/json",
-                data : JSON.stringify(order),
-                beforeSend: function(xhr) {
-                    if (csrfHeader && csrfToken) {
-                        xhr.setRequestHeader(csrfHeader, csrfToken);
-                    }
-                },
-                success: (resp) => {
-                    //console.log("Order Resp:", resp)
-                    this.removeCart();
-                    //alert("Order placed successfully")
-                    window.location = "/orders/"+resp.orderId;
-                }, error: (err) => {
-                    console.log("Order Creation Error:", err)
-                    alert("Order creation failed")
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(order)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Order creation failed");
                 }
+                return response.json();
+            })
+            .then(resp => {
+                this.removeCart();
+                window.location = "/orders/" + resp.orderId;
+            })
+            .catch(err => {
+                console.error("Order Creation Error:", err);
+                alert("Order creation failed");
             });
         },
     }))

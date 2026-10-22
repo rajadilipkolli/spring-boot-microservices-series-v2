@@ -1,33 +1,30 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli.
 </p>
 ***/
 
 package com.example.api.gateway.config;
 
 import com.redis.testcontainers.RedisContainer;
-import java.time.Duration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.testcontainers.grafana.LgtmStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
-    @Bean
-    @ServiceConnection
-    LgtmStackContainer lgtmContainer() {
-        return new LgtmStackContainer(DockerImageName.parse("grafana/otel-lgtm:0.29.2"))
-                .withStartupTimeout(Duration.ofMinutes(2));
-    }
-
+    /**
+     * Provides a reusable Redis container for integration tests through a Spring service
+     * connection.
+     *
+     * @return the Redis test container configured for reuse
+     */
     @Bean
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.8.1-alpine"))
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"))
                 .withReuse(true);
     }
 }

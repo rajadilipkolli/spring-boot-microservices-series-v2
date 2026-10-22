@@ -10,10 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 
-public class LogWriter {
+public final class LogWriter {
+
+    private LogWriter() {
+        // Utility class
+    }
 
     public static void write(Class<?> originClass, LogLevel logLevel, String message) {
+
         Logger logger = LoggerFactory.getLogger(originClass);
+
         switch (logLevel) {
             case TRACE -> logger.trace(message);
             case DEBUG -> logger.debug(message);

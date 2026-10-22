@@ -1,19 +1,19 @@
-/*** Licensed under MIT License Copyright (c) 2023-2025 Raja Kolli. ***/
+/*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
-import com.example.paymentservice.entities.Customer;
+import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.payload.OrderDto;
-import com.example.paymentservice.model.payload.OrderItemDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import net.datafaker.Faker;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -23,8 +23,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
-    private Customer customer;
+    private CustomersRecord customer;
 
+    /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
     @BeforeEach
     void setUp() {
         this.customerRepository.deleteAll();
@@ -33,18 +34,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         String uniqueName = "Customer_" + faker.number().randomNumber();
         String uniqueEmail = "email_" + faker.number().randomNumber() + "@example.com";
 
-        customer =
-                this.customerRepository.save(
-                        new Customer()
-                                .setName(uniqueName)
-                                .setEmail(uniqueEmail)
-                                .setPhone("1234567890")
-                                .setAddress("First Address")
-                                .setAmountAvailable(100)
-                                .setAmountReserved(10));
+        CustomersRecord newCustomer = createCustomersRecord(uniqueName, uniqueEmail);
+
+        customer = this.customerRepository.saveCustomer(newCustomer);
         // Ensure the customer is saved before running tests
         assertThat(customer).isNotNull();
-        assertThat(this.customerRepository.findById(customer.getId()))
+        assertThat(this.customerDAO.findById(customer.getId()))
                 .isPresent()
                 .get()
                 .satisfies(
@@ -55,12 +50,35 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                         });
     }
 
+    /**
+     * Creates an unsaved listener-test customer with 100 available and 10 reserved.
+     *
+     * @param uniqueName the name chosen for this test
+     * @param uniqueEmail the email chosen for this test
+     * @return the customer record with sample contact details
+     */
+    private @NonNull CustomersRecord createCustomersRecord(String uniqueName, String uniqueEmail) {
+        return new CustomersRecord()
+                .setName(uniqueName)
+                .setEmail(uniqueEmail)
+                .setPhone("1234567890")
+                .setAddressLine1("First Address")
+                .setAddressLine2("Second Address")
+                .setCity("City")
+                .setState("State")
+                .setZipCode("12345")
+                .setCountry("Country")
+                .setAmountAvailable(BigDecimal.valueOf(100))
+                .setAmountReserved(BigDecimal.TEN);
+    }
+
+    /** Verifies a new order event transfers its decimal total from available to reserved funds. */
     @Test
     void onEventReserveOrder() {
         OrderDto orderDto = getOrderDto("NEW");
 
-        double amountReserved = customer.getAmountReserved();
-        double amountAvailable = customer.getAmountAvailable();
+        BigDecimal amountReserved = customer.getAmountReserved();
+        BigDecimal amountAvailable = customer.getAmountAvailable();
 
         // When
         log.debug("Sending order DTO: {}", orderDto);
@@ -72,12 +90,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualTo(amountReserved + 10);
+                                    .isEqualByComparingTo(amountReserved.add(BigDecimal.TEN));
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable - 10);
+                                    .isEqualByComparingTo(amountAvailable.subtract(BigDecimal.TEN));
                         });
     }
 
@@ -103,33 +121,53 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                                         .isZero());
     }
 
+    /**
+     * Verifies an inventory rollback event releases reserved funds back to the available balance.
+     */
     @Test
     void onEventConfirmOrder() {
 
         OrderDto orderDto = getOrderDto("ROLLBACK");
 
-        double amountReserved = customer.getAmountReserved();
-        double amountAvailable = customer.getAmountAvailable();
+        // Seed completed reservation first
+        OrderDto reserveDto =
+                new OrderDto(
+                        orderDto.orderId(),
+                        orderDto.customerId(),
+                        "NEW",
+                        "INVENTORY",
+                        orderDto.items(),
+                        "att-res-" + orderDto.orderId());
+        kafkaTemplate.send("orders", String.valueOf(reserveDto.orderId()), reserveDto);
 
-        // When
-        log.debug("Sending order DTO: {}", orderDto);
-        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
-
-        // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        await().pollInterval(Duration.ofMillis(500))
+                .atMost(Duration.ofSeconds(10))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
                             assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualTo(amountReserved - 10);
+                                    .isEqualByComparingTo(BigDecimal.valueOf(20));
+                        });
+
+        // When rollback is received
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
+
+        // Then funds are released back to available
+        await().pollInterval(Duration.ofMillis(500))
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(
+                        () -> {
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualByComparingTo(BigDecimal.TEN);
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualTo(amountAvailable + 10);
+                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
                         });
     }
 
+    /** Verifies a payment-originated rollback event leaves customer balances unchanged. */
     @Test
     void onEventConfirmOrderNoRollBack() {
 
@@ -140,28 +178,38 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 "orders", String.valueOf(orderDto.orderId()), orderDto.withSource("PAYMENT"));
 
         // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
+        await().pollDelay(1, TimeUnit.SECONDS)
+                .pollInterval(Duration.ofMillis(500))
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(
                         () -> {
-                            Customer persistedCustomer =
-                                    customerRepository.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved()).isEqualTo(10);
-                            assertThat(persistedCustomer.getAmountAvailable()).isEqualTo(100);
+                            CustomersRecord persistedCustomer =
+                                    customerDAO.findById(customer.getId()).get();
+                            assertThat(persistedCustomer.getAmountReserved())
+                                    .isEqualByComparingTo(BigDecimal.TEN);
+                            assertThat(persistedCustomer.getAmountAvailable())
+                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
                         });
     }
 
+    /**
+     * Creates an inventory-sourced order event for the current customer with one item priced at
+     * ten.
+     *
+     * @param status order status to place in the event
+     * @return an order event with a generated identifier
+     */
     private OrderDto getOrderDto(String status) {
 
         Faker faker = new Faker();
-        OrderItemDto orderItemDto =
-                new OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
+        OrderDto.OrderItemDto orderItemDto =
+                new OrderDto.OrderItemDto(1L, faker.commerce().productName(), 1, BigDecimal.TEN);
         return new OrderDto(
                 faker.number().randomNumber() + 10_000,
                 this.customer.getId(),
                 status,
                 "INVENTORY",
-                List.of(orderItemDto));
+                List.of(orderItemDto),
+                "att-" + faker.internet().uuid());
     }
 }

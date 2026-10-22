@@ -7,37 +7,40 @@ eureka:
 
 jdbc:
   datasource-proxy:
-    # enable and configure query logging
-    query:
-      # Enable logging all queries to the log.
-      enable-logging: true
-      # Severity of query logger.
-      log-level: DEBUG
-      # Name of query logger.
-      logger-name: datasource-query-logger
-    # Logging to use for logging queries.
-    logging: slf4j
-    # Use multiline output for logging query.
-    multiline: false
-    # How to Include the Bind Parameter Values in Spans
     include-parameter-values: false
-    # Use json output for logging query.
     json-format: false
-  # Specify jdbc.includes property. By default, the property is set to include(observe) all(CONNECTION, QUERY, FETCH) types.
+    logging: slf4j
+    multiline: false
+    query:
+      enable-logging: true
+      log-level: DEBUG
+      logger-name: datasource-query-logger
   includes: connection,fetch,query
-# traceID and spanId are predefined MDC keys - we want the logs to include them
 logging:
-  pattern:
-    correlation: "[%X{traceId:-},%X{spanId:-}]"
   level:
     datasource-query-logger: INFO
+  pattern:
+    correlation: '[%X{traceId:-},%X{spanId:-}]'
 management:
-  observations:
-    key-values:
-      application: ${spring.application.name}
-    annotations:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-components: always
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: configprops,env,health,info,loggers,metrics,refresh,prometheus,circuitbreakers,ratelimiters
+  info:
+    env:
       enabled: true
-  # For Exemplars to work we need histogram buckets
+    git:
+      mode: full
+    java:
+      enabled: true
+    os:
+      enabled: true
   metrics:
     distribution:
       percentiles-histogram:
@@ -47,32 +50,18 @@ management:
         resilience4j:
           circuitbreaker:
             calls: true
-  endpoint:
-    health:
-      probes:
-        enabled: true
-      show-details: always
-      show-components: always
-  endpoints:
-    web:
-      exposure:
-        include: configprops,env,health,info,loggers,metrics,refresh,prometheus,circuitbreakers,ratelimiters
-  info:
-    git:
-      mode: full
-    env:
+  observations:
+    annotations:
       enabled: true
-    java:
-      enabled: true
-    os:
-      enabled: true
-  tracing:
-    sampling:
-      probability: 1.0
+    key-values:
+      application: ${spring.application.name}
   prometheus:
     metrics:
       export:
         step: 10s
+  tracing:
+    sampling:
+      probability: 1.0
 server:
   shutdown: graceful
 spring:
@@ -106,8 +95,9 @@ spring:
         session:
           events:
             log:
-              LOG_QUERIES_SLOWER_THAN_MS: 5
-    # show-sql: true
+              LOG_QUERIES_SLOWER_THAN_MS: '5'
+  lifecycle:
+    timeout-per-shutdown-phase: 45s
   main:
     allow-bean-definition-overriding: true
   mvc:

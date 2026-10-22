@@ -1,0 +1,240 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.web.service;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.instancio.Select.field;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
+import java.util.List;
+import org.instancio.Instancio;
+import org.instancio.junit.InstancioExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.http.MediaType;
+
+@ExtendWith(InstancioExtension.class)
+class InventoryControllerIT extends AbstractIntegrationTest {
+
+    private List<Inventory> inventoryList = null;
+
+    @BeforeEach
+    void setUp() {
+        inventoryRepository.deleteAllInBatch();
+
+        List<Inventory> inventories =
+                Instancio.ofList(Inventory.class)
+                        .size(15)
+                        .ignore(field(Inventory::getId))
+                        .set(field(Inventory::getVersion), (short) 0)
+                        .create();
+        inventoryList = inventoryRepository.saveAll(inventories);
+    }
+
+    @Test
+    void shouldFetchAllInventories() throws Exception {
+        this.mockMvc
+                .perform(get("/api/inventory"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()", is(8)))
+                .andExpect(jsonPath("$.data.size()", is(10)))
+                .andExpect(jsonPath("$.totalElements", is(15)))
+                .andExpect(jsonPath("$.pageNumber", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(2)))
+                .andExpect(jsonPath("$.isFirst", is(true)))
+                .andExpect(jsonPath("$.isLast", is(false)))
+                .andExpect(jsonPath("$.hasNext", is(true)))
+                .andExpect(jsonPath("$.hasPrevious", is(false)));
+    }
+
+    @Test
+    void shouldFindInventoryByProductCode() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        String productCode = inventory.getProductCode();
+
+        this.mockMvc
+                .perform(get("/api/inventory/{productCode}", productCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity").value(inventory.getAvailableQuantity()))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldFindInventoriesByProductCodes() throws Exception {
+        String[] productCodeList =
+                inventoryList.stream().map(Inventory::getProductCode).toArray(String[]::new);
+
+        this.mockMvc
+                .perform(
+                        get("/api/inventory/product")
+                                .param("codes", productCodeList)
+                                .param("pageSize", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size()", is(inventoryList.size())))
+                .andExpect(
+                        jsonPath("$.data[0].productCode")
+                                .value(inventoryList.getFirst().getProductCode()))
+                .andExpect(
+                        jsonPath("$.data[0].availableQuantity")
+                                .value(inventoryList.getFirst().getAvailableQuantity()))
+                .andExpect(
+                        jsonPath("$.data[0].reservedItems")
+                                .value(inventoryList.getFirst().getReservedItems()))
+                .andExpect(
+                        jsonPath("$.data[1].productCode")
+                                .value(inventoryList.get(1).getProductCode()))
+                .andExpect(
+                        jsonPath("$.data[1].availableQuantity")
+                                .value(inventoryList.get(1).getAvailableQuantity()))
+                .andExpect(
+                        jsonPath("$.data[1].reservedItems")
+                                .value(inventoryList.get(1).getReservedItems()));
+    }
+
+    /** Verifies that inventory creation returns a string ID and the initial stock quantities. */
+    @Test
+    void shouldCreateNewInventory() throws Exception {
+        InventoryRequest inventoryRequest = new InventoryRequest("New Inventory", 10);
+        this.mockMvc
+                .perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isString())
+                .andExpect(jsonPath("$.availableQuantity", is(10)))
+                .andExpect(jsonPath("$.reservedItems", is(0)))
+                .andExpect(jsonPath("$.productCode", is(inventoryRequest.productCode())));
+    }
+
+    @Test
+    void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
+        InventoryRequest inventoryRequest = new InventoryRequest(null, 0);
+
+        this.mockMvc
+                .perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(
+                        jsonPath(
+                                "$.type",
+                                is("https://api.microservices.com/errors/validation-error")))
+                .andExpect(jsonPath("$.title", is("Constraint Violation")))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
+                .andExpect(jsonPath("$.instance", is("/api/inventory")))
+                .andExpect(jsonPath("$.violations").isArray())
+                .andExpect(jsonPath("$.violations[0].field").exists())
+                .andExpect(jsonPath("$.violations[0].message").exists())
+                .andReturn();
+    }
+
+    @Test
+    void shouldReturn409WhenCreateNewInventoryWithExistingProductCode() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        InventoryRequest inventoryRequest = new InventoryRequest(inventory.getProductCode(), 10);
+
+        this.mockMvc
+                .perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(
+                        header().string(
+                                        "Content-Type",
+                                        is(MediaType.APPLICATION_PROBLEM_JSON_VALUE)))
+                .andExpect(
+                        jsonPath(
+                                "$.type",
+                                is("https://api.microservices.com/errors/already-exists")))
+                .andExpect(jsonPath("$.title", is("Product Already Exists")))
+                .andExpect(jsonPath("$.status", is(409)))
+                .andExpect(
+                        jsonPath(
+                                "$.detail",
+                                is(
+                                        "Product with code "
+                                                + inventory.getProductCode()
+                                                + " already exists")));
+    }
+
+    @Test
+    void shouldUpdateInventory() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        Integer availableQuantity = inventory.getAvailableQuantity();
+        InventoryRequest inventoryRequest =
+                new InventoryRequest(inventory.getProductCode(), availableQuantity + 1000);
+
+        this.mockMvc
+                .perform(
+                        put("/api/inventory/{id}", inventory.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 1000)))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldDeleteInventory() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+
+        this.mockMvc
+                .perform(delete("/api/inventory/{id}", inventory.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(inventory.getAvailableQuantity())))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldUpdateInventoryByProductCode() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        Integer availableQuantity = inventory.getAvailableQuantity();
+        InventoryRequest inventoryRequest =
+                new InventoryRequest(inventory.getProductCode(), availableQuantity + 500);
+
+        this.mockMvc
+                .perform(
+                        put("/api/inventory/product/{productCode}", inventory.getProductCode())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
+                .andExpect(jsonPath("$.availableQuantity", is(availableQuantity + 500)))
+                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInventoryByNonExistingProductCode() throws Exception {
+        InventoryRequest inventoryRequest = new InventoryRequest("non-existing", 100);
+
+        this.mockMvc
+                .perform(
+                        put("/api/inventory/product/{productCode}", "non-existing")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(inventoryRequest)))
+                .andExpect(status().isNotFound());
+    }
+}

@@ -34,23 +34,27 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenPaymentFailsButInventorySucceeds_ShouldRollbackBothServices() {
+    void whenPaymentFailsButInventorySucceedsShouldRollbackBothServices() throws Exception {
         // Arrange
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("REJECT", testOrder);
 
         // Send payment rejection
-        kafkaTemplate.send(
-                "payment-orders",
-                String.valueOf(paymentOrderDto.orderId()),
-                toJsonBytes(paymentOrderDto));
+        kafkaTemplate
+                .send(
+                        "payment-orders",
+                        String.valueOf(paymentOrderDto.orderId()),
+                        toJsonBytes(paymentOrderDto))
+                .get();
 
         // Send a successful inventory response
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
-        kafkaTemplate.send(
-                "stock-orders",
-                String.valueOf(inventoryOrderDto.orderId()),
-                toJsonBytes(inventoryOrderDto));
+        kafkaTemplate
+                .send(
+                        "stock-orders",
+                        String.valueOf(inventoryOrderDto.orderId()),
+                        toJsonBytes(inventoryOrderDto))
+                .get();
 
         // Assert that the order is eventually rejected
         await().atMost(60, TimeUnit.SECONDS)
@@ -68,7 +72,7 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenBothServicesTimeOut_ShouldMarkOrderAsFailed() {
+    void whenBothServicesTimeOutShouldMarkOrderAsFailed() {
 
         // Simulate timeout by not sending any confirmation messages
         await().atMost(20, TimeUnit.SECONDS)
@@ -84,13 +88,17 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenPartialResponsesReceived_ShouldHandleIncompleteState() {
+    void whenPartialResponsesReceivedShouldHandleIncompleteState() throws Exception {
         // Arrange
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
         // Act - Only send payment response, missing inventory response
-        kafkaTemplate.send(
-                "payment-orders", String.valueOf(testOrder.getId()), toJsonBytes(paymentOrderDto));
+        kafkaTemplate
+                .send(
+                        "payment-orders",
+                        String.valueOf(testOrder.getId()),
+                        toJsonBytes(paymentOrderDto))
+                .get();
 
         // Assert - Order should stay in NEW state
         await().atMost(10, TimeUnit.SECONDS)
@@ -104,7 +112,7 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenInventoryPartiallyAvailable_ShouldRollbackEntireOrder() {
+    void whenInventoryPartiallyAvailableShouldRollbackEntireOrder() {
         // Arrange
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
@@ -122,19 +130,25 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void whenKafkaMessagesOutOfOrder_ShouldHandleCorrectly() {
+    void whenKafkaMessagesOutOfOrderShouldHandleCorrectly() throws Exception {
         // Arrange
         OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
 
         OrderDto inventoryOrderDto = TestData.getStockOrderDto("ACCEPT", testOrder);
 
         // Act - Send messages in reverse order
-        kafkaTemplate.send(
-                "stock-orders",
-                String.valueOf(inventoryOrderDto.orderId()),
-                toJsonBytes(inventoryOrderDto));
-        kafkaTemplate.send(
-                "payment-orders", String.valueOf(testOrder.getId()), toJsonBytes(paymentOrderDto));
+        kafkaTemplate
+                .send(
+                        "stock-orders",
+                        String.valueOf(inventoryOrderDto.orderId()),
+                        toJsonBytes(inventoryOrderDto))
+                .get();
+        kafkaTemplate
+                .send(
+                        "payment-orders",
+                        String.valueOf(testOrder.getId()),
+                        toJsonBytes(paymentOrderDto))
+                .get();
 
         // Assert - Final state should still be correct
         await().atMost(60, TimeUnit.SECONDS)

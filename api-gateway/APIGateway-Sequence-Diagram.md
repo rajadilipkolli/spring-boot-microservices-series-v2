@@ -210,12 +210,12 @@ sequenceDiagram
     
     rect rgba(34, 197, 94, 0.3)
         Note over Gateway, PaymentService: <span style="color: white">Generate Controller - Service Orchestration</span>
-        Client->>Gateway: GET /api/generate<br/>(Orchestrated data generation)
+        Client->>Gateway: POST /api/v1/generate<br/>(Orchestrated data generation)
         Gateway->>Gateway: GenerateController.generate()<br/>@LoadBalanced WebClient
         
         Gateway->>Gateway: Step 1: Call catalog service<br/>callMicroservice(CATALOG_SERVICE_URL)
         Gateway->>LoadBalancer: Resolve lb://CATALOG-SERVICE
-        LoadBalancer->>CatalogService: GET /catalog-service/api/catalog/generate<br/>(with timeout: 10s, retries: 3)
+        LoadBalancer->>CatalogService: POST /catalog-service/api/catalog/generate<br/>(with timeout: 10s, retries: 3)
         
         alt Catalog service succeeds
             CatalogService-->>Gateway: HTTP 200 + generation result
@@ -223,7 +223,7 @@ sequenceDiagram
             
             Gateway->>Gateway: Step 2: Call inventory service<br/>callMicroservice(INVENTORY_SERVICE_URL)
             Gateway->>LoadBalancer: Resolve lb://INVENTORY-SERVICE
-            LoadBalancer->>InventoryService: GET /inventory-service/api/inventory/generate<br/>(with timeout: 10s, retries: 3)
+            LoadBalancer->>InventoryService: POST /inventory-service/api/inventory/generate<br/>(with timeout: 10s, retries: 3)
             
             alt Inventory service succeeds
                 InventoryService-->>Gateway: HTTP 200 + generation result

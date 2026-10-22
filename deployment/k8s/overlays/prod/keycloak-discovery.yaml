@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-discovery
+  namespace: retailstore
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - name: jgroups
+    port: 7800
+    protocol: TCP
+    targetPort: jgroups
+  selector:
+    app: keycloak
