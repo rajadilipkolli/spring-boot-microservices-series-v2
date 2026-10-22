@@ -9,12 +9,10 @@ package com.example.orderservice.web.controllers;
 import com.example.orderservice.config.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
-import com.example.orderservice.services.OrderKafkaStreamService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import com.example.orderservice.utils.LogSanitizer;
@@ -27,7 +25,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,15 +53,10 @@ class OrderController implements OrderApi {
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
     private final OrderGeneratorService orderGeneratorService;
-    private final OrderKafkaStreamService orderKafkaStreamService;
 
-    OrderController(
-            OrderService orderService,
-            OrderGeneratorService orderGeneratorService,
-            OrderKafkaStreamService orderKafkaStreamService) {
+    OrderController(OrderService orderService, OrderGeneratorService orderGeneratorService) {
         this.orderService = orderService;
         this.orderGeneratorService = orderGeneratorService;
-        this.orderKafkaStreamService = orderKafkaStreamService;
     }
 
     @GetMapping
@@ -149,24 +141,6 @@ class OrderController implements OrderApi {
                     Integer batchSize) {
         orderGeneratorService.generateOrders(idempotencyKey, batchSize);
         return new GenericResponse(true);
-    }
-
-    @GetMapping("/store")
-    @Override
-    public List<OrderDto> all(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
-                    int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
-                    int pageSize) {
-        return orderKafkaStreamService.getAllOrders(pageNo, pageSize);
-    }
-
-    @GetMapping("/store/{id}")
-    ResponseEntity<OrderDto> getOrderFromStoreById(@PathVariable String id) {
-        return orderKafkaStreamService
-                .getOrderFromStoreById(id)
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new OrderNotFoundException(Long.valueOf(id)));
     }
 
     @GetMapping("/customer/{id}")

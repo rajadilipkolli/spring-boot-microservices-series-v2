@@ -6,7 +6,6 @@
 
 package com.example.orderservice.config.kafka;
 
-import static com.example.orderservice.utils.AppConstants.ORDERS_STORE;
 import static com.example.orderservice.utils.AppConstants.ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.PAYMENT_ORDERS_TOPIC;
 import static com.example.orderservice.utils.AppConstants.RECOVER_DLQ_TOPIC;
@@ -27,12 +26,9 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.JoinWindows;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.StreamJoined;
-import org.apache.kafka.streams.state.Stores;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,28 +176,5 @@ class KafkaStreamsConfig {
                                         && order.attemptId() != null
                                         && !order.attemptId().isBlank())
                 .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
-    }
-
-    @Bean
-    KTable<String, OrderDto> kTable(
-            StreamsBuilder streamsBuilder, Serde<@NonNull OrderDto> orderSerde) {
-        log.info("Inside fetching KTable values");
-
-        // KTable naturally keeps only the latest value for each key
-        KTable<String, OrderDto> ordersTable =
-                streamsBuilder.table(
-                        ORDERS_TOPIC,
-                        Consumed.with(Serdes.String(), orderSerde),
-                        Materialized.<String, OrderDto>as(
-                                        Stores.persistentKeyValueStore(ORDERS_STORE))
-                                .withKeySerde(Serdes.String())
-                                .withValueSerde(orderSerde));
-
-        // Add logging for visibility
-        ordersTable
-                .toStream()
-                .peek((key, value) -> log.debug("KTable entry for key {}: {}", key, value));
-
-        return ordersTable;
     }
 }

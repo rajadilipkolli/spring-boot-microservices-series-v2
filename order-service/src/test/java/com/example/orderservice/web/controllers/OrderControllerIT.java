@@ -16,7 +16,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -284,15 +283,15 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .pollInterval(Duration.ofSeconds(1))
                     .untilAsserted(
                             () ->
-                                    mockMvc.perform(get("/api/orders/store/{id}", orderId))
+                                    mockMvc.perform(get("/api/orders/{id}", orderId))
                                             .andExpect(status().isOk())
-                                            .andExpect(jsonPath("orderId", is(orderId.toString())))
-                                            .andExpect(jsonPath("status", is("CONFIRMED")))
-                                            .andExpect(jsonPath("source", emptyOrNullString()))
-                                            .andExpect(jsonPath("customerId", is("1")))
+                                            .andExpect(
+                                                    jsonPath("$.orderId", is(orderId.toString())))
+                                            .andExpect(jsonPath("$.status", is("CONFIRMED")))
+                                            .andExpect(jsonPath("$.customerId", is("1")))
                                             .andExpect(
                                                     jsonPath(
-                                                            "items.size()",
+                                                            "$.items.size()",
                                                             is(orderRequest.items().size()))));
         }
 
