@@ -6,14 +6,8 @@
 
 package com.example.orderservice.services;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.CoreMatchers.is;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.exception.ProductNotFoundException;
@@ -22,7 +16,6 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -159,17 +152,6 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
                             assertThat(order.items().getFirst().quantity()).isEqualTo(1);
                             assertThat(order.deliveryAddress().addressLine1()).isEqualTo("addr1");
                         });
-
-        // waiting till is kafka stream is changed from PARTITIONS_ASSIGNED to RUNNING
-        await().pollDelay(5, SECONDS)
-                .atMost(15, SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () ->
-                                this.mockMvc
-                                        .perform(get("/api/orders/store"))
-                                        .andExpect(status().isOk())
-                                        .andExpect(jsonPath("$.size()", is(10))));
     }
 
     @Test

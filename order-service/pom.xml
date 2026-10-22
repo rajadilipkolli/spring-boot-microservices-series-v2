@@ -329,8 +329,6 @@
                             <THC_PATH>/order-service/actuator/health</THC_PATH>
                             <THC_PORT>18282</THC_PORT>
                         </env>
-                        <builder>docker.io/paketobuildpacks/builder-jammy-base</builder>
-                        <runImage>docker.io/paketobuildpacks/run-jammy-base</runImage>
                     </image>
                     <pullPolicy>IF_NOT_PRESENT</pullPolicy>
                 </configuration>
