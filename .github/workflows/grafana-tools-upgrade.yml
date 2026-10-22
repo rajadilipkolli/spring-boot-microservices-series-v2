@@ -13,4 +13,4 @@ jobs:
   test-tools-upgrade:
     uses: ./.github/workflows/end-to-end-tests.yml
     with:
-      command_args: 'setup teardown'
+      compose_file: 'deployment/docker-compose-tools.yml'

@@ -15,7 +15,6 @@ fi
 
 KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 CI_OVERLAY="$PROJECT_ROOT/deployment/k8s/overlays/prod"
-E2E_SCRIPT="$PROJECT_ROOT/test-em-all.sh"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
@@ -436,19 +435,6 @@ collect_e2e_diagnostics() {
     printf 'Bash version: %s\n' "${BASH_VERSION:-unknown}"
     printf 'Bash executable: %s\n' "$(command -v bash || true)"
     printf 'Project root: %s\n' "$PROJECT_ROOT"
-    printf 'E2E script: %s\n' "$E2E_SCRIPT"
-    printf '\n'
-
-    printf '%s\n' "E2E script file:"
-    ls -la "$E2E_SCRIPT" 2>&1 || true
-    printf '\n'
-
-    printf '%s\n' "File type:"
-    file "$E2E_SCRIPT" 2>&1 || true
-    printf '\n'
-
-    printf '%s\n' "E2E script first 10 lines:"
-    sed -n '1,10p' "$E2E_SCRIPT" 2>&1 || true
     printf '\n'
 
     printf '%s\n' "Environment:"
@@ -512,34 +498,13 @@ ok "All tools found."
 # Verify E2E script
 ###############################################################################
 
-step "Validating end-to-end test script"
+step "Validating end-to-end test module"
 
-if [[ ! -f "$E2E_SCRIPT" ]]; then
-  fail "E2E test script not found: $E2E_SCRIPT"
+if [[ ! -d "$PROJECT_ROOT/e2e-tests" ]]; then
+  fail "e2e-tests module not found at: $PROJECT_ROOT/e2e-tests"
 fi
 
-if [[ ! -r "$E2E_SCRIPT" ]]; then
-  fail "E2E test script is not readable: $E2E_SCRIPT"
-fi
-
-printf '  E2E script: %s\n' "$E2E_SCRIPT"
-
-E2E_WORK_DIR="$(mktemp -d ./.retailstore-e2e.XXXXXX)"
-
-# Always clean up the temporary E2E script.
-cleanup_e2e_temp() {
-  rm -rf "$E2E_WORK_DIR" 2>/dev/null || true
-}
-
-trap cleanup_e2e_temp EXIT
-
-E2E_PREPARED_SCRIPT="$E2E_WORK_DIR/test-em-all.sh"
-
-prepare_e2e_script \
-  "$E2E_SCRIPT" \
-  "$E2E_PREPARED_SCRIPT"
-
-ok "E2E script is present and Bash syntax is valid."
+ok "e2e-tests module is present."
 
 ###############################################################################
 # KIND CLUSTER
@@ -913,49 +878,25 @@ add_hosts_entry
 
 step "Running end-to-end test suite"
 
+cd -- "$PROJECT_ROOT"
+
+TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
+KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+export TF_VAR_webapp_client_secret KEYCLOAK_RETAIL_PASSWORD
+
 E2E_LOG="k8s-diagnostics/e2e-test-output.log"
 
 mkdir -p k8s-diagnostics
 
-printf '  E2E source:   %s\n' "$E2E_SCRIPT"
-printf '  E2E prepared: %s\n' "$E2E_PREPARED_SCRIPT"
 printf '  E2E log:      %s\n' "$E2E_LOG"
 printf '  Bash:         %s\n' "$(command -v bash)"
 printf '  Bash version: %s\n' "${BASH_VERSION:-unknown}"
 
-###############################################################################
-# IMPORTANT WINDOWS/GIT-BASH FIX
-#
-# Do NOT do this:
-#
-#   HOST=api.retailstore.local PORT=80 "$E2E_SCRIPT" --no-cb-strict
-#
-# Direct execution can invoke the Windows Bash service layer and result in:
-#
-#   Catastrophic failure
-#   Error code: Bash/Service/E_UNEXPECTED
-#
-# Instead, explicitly invoke Bash:
-#
-#   bash "$E2E_PREPARED_SCRIPT"
-#
-###############################################################################
-
 set +e
 
-(
-  export HOST="api.retailstore.local"
-  export PORT="443"
-  export PROTOCOL="https"
-  export KEYCLOAK_URL="https://keycloak.local"
-  export OAUTH2_CLIENT_SECRET="$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 -d)"
-  export RAJA_PASSWORD="$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RAJA_PASSWORD}' | base64 -d)"
-
-  # Explicitly invoke sh to avoid accidentally calling Windows Subsystem for Linux (WSL) bash.exe
-  exec sh \
-    "$E2E_PREPARED_SCRIPT" \
-    --no-cb-strict
-) 2>&1 |
+"$PROJECT_ROOT/mvnw" test -pl e2e-tests -DskipE2E=false \
+  -Dbase.url=https://api.retailstore.local \
+  -Dkeycloak.url=https://keycloak.local 2>&1 |
   tee "$E2E_LOG"
 
 test_exit=${PIPESTATUS[0]}
@@ -1026,25 +967,8 @@ fi
 # KEYCLOAK TOKEN ENDPOINT
 ###############################################################################
 
-client_secret="$(
-  kubectl get secret webapp-oauth2-credentials \
-    -n "$NAMESPACE" \
-    -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' \
-    2>/dev/null |
-    base64 -d \
-    2>/dev/null ||
-    true
-)"
-
-retail_password="$(
-  kubectl get secret keycloak-user-passwords \
-    -n "$NAMESPACE" \
-    -o jsonpath='{.data.RETAIL_PASSWORD}' \
-    2>/dev/null |
-    base64 -d \
-    2>/dev/null ||
-    true
-)"
+client_secret="$TF_VAR_webapp_client_secret"
+retail_password="$KEYCLOAK_RETAIL_PASSWORD"
 
 if [[ -z "$client_secret" || -z "$retail_password" ]]; then
 

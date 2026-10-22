@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+E2E_TLS_DIR="$(mktemp -d)"
+trap 'rm -rf -- "$E2E_TLS_DIR"' EXIT
+
 echo "=========================================="
 echo " Starting Local Kubernetes E2E Tests"
 echo "=========================================="
@@ -116,26 +119,65 @@ else
 fi
 
 echo "=> Running E2E Validations..."
+echo "=> Issuing a locally trusted ingress certificate..."
+kubectl wait --namespace retailstore --for=condition=Ready issuer/keycloak-internal-ca --timeout=120s
+kubectl apply -f - <<'EOF'
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: retailstore-local-tls
+  namespace: retailstore
+spec:
+  secretName: retailstore-local-tls
+  dnsNames:
+    - retailstore.local
+    - api.retailstore.local
+    - keycloak.local
+  usages:
+    - server auth
+  issuerRef:
+    name: keycloak-internal-ca
+    kind: Issuer
+EOF
+kubectl wait --namespace retailstore --for=condition=Ready certificate/retailstore-local-tls --timeout=120s
+# Public ACME issuers cannot issue certificates for .local names.
+kubectl patch ingress retailstore-ingress -n retailstore --type=merge -p '{
+  "metadata":{"annotations":{"cert-manager.io/cluster-issuer":null}},
+  "spec":{"tls":[{"hosts":["retailstore.local","api.retailstore.local","keycloak.local"],"secretName":"retailstore-local-tls"}]}
+}'
+kubectl get secret keycloak-internal-ca -n retailstore -o jsonpath='{.data.tls\.crt}' |
+  base64 --decode > "$E2E_TLS_DIR/ca.crt"
+# This store contains only public CA certificates; changeit is not a credential.
+keytool -importcert -noprompt -alias retailstore-local-ca -file "$E2E_TLS_DIR/ca.crt" \
+  -keystore "$E2E_TLS_DIR/truststore.p12" -storetype PKCS12 -storepass changeit
+
 if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
   echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts || echo "Warning: Could not update /etc/hosts"
 fi
+# Allow NGINX to reload the new certificate before Java starts validating TLS.
+curl --silent --show-error --fail --cacert "$E2E_TLS_DIR/ca.crt" \
+  --retry 12 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 10 \
+  --output /dev/null https://retailstore.local
 export PROTOCOL=https
 export HOST=api.retailstore.local
 export PORT=443
-./test-em-all.sh --no-cb-strict || echo "E2E Tests had failures"
+TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n retailstore -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
+KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n retailstore -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
+export TF_VAR_webapp_client_secret KEYCLOAK_RETAIL_PASSWORD
+./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=https://api.retailstore.local -Dkeycloak.url=https://keycloak.local \
+  "-De2e.trustStore=$E2E_TLS_DIR/truststore.p12" \
+  -De2e.trustStoreType=PKCS12 -De2e.trustStorePassword=changeit || echo "E2E Tests had failures"
 
-if curl -s -k -f https://retailstore.local > /dev/null; then
+if curl -s --cacert "$E2E_TLS_DIR/ca.crt" -f https://retailstore.local > /dev/null; then
   echo "Webapp reachable via ingress."
 else
   echo "::warning::Webapp smoke check via https://retailstore.local failed (non-fatal)."
 fi
 
-webapp_client_secret=$(kubectl get secret webapp-oauth2-credentials -n retailstore \
-  -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)
-retail_password=$(kubectl get secret keycloak-user-passwords -n retailstore \
-  -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)
+webapp_client_secret="$TF_VAR_webapp_client_secret"
+retail_password="$KEYCLOAK_RETAIL_PASSWORD"
 
-if curl -s -k -f -X POST https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
+if curl -s --cacert "$E2E_TLS_DIR/ca.crt" -f -X POST https://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d "client_id=retailstore-webapp" \
   --data-urlencode "client_secret=$webapp_client_secret" \
   -d "grant_type=password" \
@@ -150,7 +192,7 @@ echo "=> Load Test Autoscaling (KEDA/HPA)..."
 kubectl apply -k deployment/k8s/overlays/autoscaling/ || echo "Warning: Autoscaling overlay failed, checking if already applied."
 echo "Sending load..."
 for i in {1..200}; do
-  curl -s -X POST http://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
+  curl -s --cacert "$E2E_TLS_DIR/ca.crt" -X POST https://api.retailstore.local/api/orders -H "Content-Type: application/json" -d '{"customerId":"1", "items":[{"productId":"1", "quantity":2}]}' > /dev/null &
 done
 wait
 echo "Waiting for autoscaler to trigger..."

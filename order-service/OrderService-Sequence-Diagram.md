@@ -100,17 +100,7 @@ sequenceDiagram
         
         KafkaStreams->>OrdersTopic: Publish final OrderDto<br/>(with resolved status)
         KafkaStreams->>OrderDB: UPDATE order SET status = ?<br/>WHERE id = ?
-        
-        KafkaStreams->>KafkaStreams: Store in KTable<br/>(materialized view)
     end
-
-    Note over Client, JobRunr: 📋 Kafka Streams Query API
-    Client->>Gateway: GET /order-service/api/orders/all?pageNo=0
-    Gateway->>OrderAPI: Forward request
-    OrderAPI->>KafkaStreams: Query ReadOnlyKeyValueStore<br/>(from materialized KTable)
-    KafkaStreams-->>OrderAPI: List<OrderDto> from Kafka Store
-    OrderAPI-->>Gateway: Orders from stream store
-    Gateway-->>Client: Real-time order data
 
     Note over Client, JobRunr: ⏰ Background Job Processing
     JobRunr->>JobRunr: @Job("reProcessNewOrders")<br/>Scheduled every 5 minutes
@@ -203,7 +193,6 @@ sequenceDiagram
 - **Kafka Producer**: Async order publishing to `orders` topic
 - **Kafka Streams**: Real-time stream processing with windowed joins
 - **Topics**: `orders`, `payment-orders`, `stock-orders`, `recovererDLQ`
-- **Materialized Views**: KTable for queryable order state
 
 ### 🔄 **Distributed Transaction Management**
 - **Saga Pattern**: Choreography-based with Kafka Streams
@@ -252,18 +241,15 @@ graph TB
         SO[stock-orders] --> |"Inventory Status"| KS
         KS --> |"Final Status"| O
         KS --> |"Failed Messages"| DLQ[recovererDLQ]
-        KS --> |"Materialized View"| KT[KTable Store]
     end
     
     subgraph "🛍️ Order Service"
         OS[Order Service] --> |"Publish"| O
-        OS --> |"Query"| KT
         JS[JobRunr Scheduler] --> |"Retry"| O
     end
     
     style O fill:#3b82f6,stroke:#ffffff,stroke-width:2px,color:#ffffff
     style KS fill:#ec4899,stroke:#ffffff,stroke-width:2px,color:#ffffff
-    style KT fill:#22c55e,stroke:#ffffff,stroke-width:2px,color:#ffffff
     style DLQ fill:#ef4444,stroke:#ffffff,stroke-width:2px,color:#ffffff
 ```
 
