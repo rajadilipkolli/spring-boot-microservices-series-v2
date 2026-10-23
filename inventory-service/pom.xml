@@ -45,6 +45,7 @@
     </properties>
 
     <dependencies>
+        <!-- Use common Library which supports Logging and Pagination -->
         <dependency>
             <groupId>io.github.rajadilipkolli</groupId>
             <artifactId>microservices-common</artifactId>
