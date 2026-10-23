@@ -778,8 +778,8 @@ The shared `common` module can be published directly to Maven Central via Sonaty
 ### Central Coordinates
 Artifacts are published under:
 - **Group ID:** `io.github.rajadilipkolli`
-- **Artifact ID:** `common`
-- **Dependency Coordinates:** `io.github.rajadilipkolli:common:<version>`
+- **Artifact ID:** `microservices-common`
+- **Dependency Coordinates:** `io.github.rajadilipkolli:microservices-common:<version>`
 
 ### Release Triggers
 Maven Central publication is release-only and is triggered via GitHub Actions (`publish-common.yml`) when:

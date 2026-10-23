@@ -13,10 +13,10 @@
 
     <groupId>io.github.rajadilipkolli</groupId>
     <artifactId>microservices-common</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>common</name>
+    <name>microservices-common</name>
     <description>Shared common utilities, logging aspects, and canonical pagination DTOs</description>
     <url>https://github.com/rajadilipkolli/spring-boot-microservices-series-v2</url>
 
