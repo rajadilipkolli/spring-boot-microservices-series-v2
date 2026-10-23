@@ -38,6 +38,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class InventoryOrderManageServiceImplTest {
 
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private ProcessedOrderEventRepository processedOrderEventRepository;
     @Mock private InventoryJOOQRepository inventoryJOOQRepository;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -240,5 +241,18 @@ class InventoryOrderManageServiceImplTest {
                             assertThat(list.get(1).getReservedItems()).isIn(0, -10, -20);
                         });
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository, eventPublisher);
+    }
+
+    @Test
+    void shouldSkipDuplicateReserveEvent() {
+        OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", List.of());
+        given(processedOrderEventRepository.existsByOrderIdAndEventType(100L, "RESERVE"))
+                .willReturn(true);
+
+        OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
+
+        assertThat(result).isEqualTo(orderDto);
+        verifyNoInteractions(inventoryRepository);
+        verifyNoInteractions(eventPublisher);
     }
 }

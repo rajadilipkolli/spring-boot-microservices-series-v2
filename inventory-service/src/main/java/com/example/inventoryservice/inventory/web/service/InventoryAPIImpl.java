@@ -6,11 +6,11 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.ProductManageService;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

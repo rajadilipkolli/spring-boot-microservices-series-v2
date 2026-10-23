@@ -25,6 +25,7 @@
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>1.0.0</testcontainers-jooq-codegen-maven-plugin.version>
+        <jooq.codegen.skip>false</jooq.codegen.skip>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>3.10.4</spotless.version>
@@ -44,6 +45,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>io.github.rajadilipkolli</groupId>
+            <artifactId>microservices-common</artifactId>
+            <version>0.0.1</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-micrometer-tracing</artifactId>
@@ -365,6 +371,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <skip>${jooq.codegen.skip}</skip>
                     <database>
                         <type>POSTGRES</type>
                         <containerImage>postgres:18-alpine</containerImage>
@@ -691,26 +698,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
 
 </project>

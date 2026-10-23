@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.domain.models.*;
 import java.util.List;
 import java.util.Optional;

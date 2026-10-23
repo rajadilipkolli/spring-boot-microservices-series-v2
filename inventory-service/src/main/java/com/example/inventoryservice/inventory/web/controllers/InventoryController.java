@@ -6,12 +6,13 @@
 
 package com.example.inventoryservice.inventory.web.controllers;
 
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import com.example.inventoryservice.inventory.utils.AppConstants;
-import com.example.inventoryservice.inventory.utils.logging.Loggable;
+import com.example.inventoryservice.inventory.web.api.InventoryApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -37,7 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/inventory")
 @Loggable
 @Validated
-class InventoryController {
+class InventoryController implements InventoryApi {
 
     private final InventoryAPI inventoryAPI;
 
@@ -48,7 +49,8 @@ class InventoryController {
 
     /** Returns inventory records using the requested pagination and sort options. */
     @GetMapping
-    PagedResult<InventoryResponse> getAllInventories(
+    @Override
+    public PagedResult<InventoryResponse> getAllInventories(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -66,7 +68,8 @@ class InventoryController {
      * <p>A positive optional delay pauses the lookup for the supplied number of seconds.
      */
     @GetMapping("/{productCode}")
-    ResponseEntity<InventoryResponse> getInventoryByProductCode(
+    @Override
+    public ResponseEntity<InventoryResponse> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay) {
         if (delay != null && delay > 0) {
             try {
@@ -83,7 +86,8 @@ class InventoryController {
 
     /** Returns HTTP 200 with a sorted page of inventory matching the supplied product codes. */
     @GetMapping("/product")
-    ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
+    @Override
+    public ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
             @RequestParam List<String> codes,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
@@ -99,7 +103,8 @@ class InventoryController {
 
     /** Updates a generated batch using the idempotency key and returns true on completion. */
     @PostMapping("/generate")
-    boolean updateInventoryWithRandomValue(
+    @Override
+    public boolean updateInventoryWithRandomValue(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
             @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize) {
         inventoryAPI.updateGeneratedInventory(idempotencyKey, batchSize);
@@ -109,13 +114,16 @@ class InventoryController {
     /** Creates inventory from a validated request and returns its representation with HTTP 201. */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest) {
+    @Override
+    public InventoryResponse createInventory(
+            @RequestBody @Valid InventoryRequest inventoryRequest) {
         return inventoryAPI.saveInventory(inventoryRequest);
     }
 
     /** Updates inventory by identifier, returning HTTP 404 when it is absent. */
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<InventoryResponse> updateInventory(
+    @Override
+    public ResponseEntity<InventoryResponse> updateInventory(
             @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest) {
         return inventoryAPI
                 .updateInventoryById(id, inventoryRequest)
@@ -129,7 +137,8 @@ class InventoryController {
      * <p>A request product code that differs from the path is rejected with HTTP 400.
      */
     @PutMapping(value = "/product/{productCode}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<InventoryResponse> updateInventoryByProductCode(
+    @Override
+    public ResponseEntity<InventoryResponse> updateInventoryByProductCode(
             @PathVariable String productCode,
             @RequestBody @Valid InventoryRequest inventoryRequest) {
         if (inventoryRequest.productCode() != null
@@ -146,7 +155,8 @@ class InventoryController {
      * Deletes existing inventory and returns its previous representation, or HTTP 404 if absent.
      */
     @DeleteMapping("/{id}")
-    ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
+    @Override
+    public ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
         return inventoryAPI
                 .findInventoryById(id)
                 .map(
