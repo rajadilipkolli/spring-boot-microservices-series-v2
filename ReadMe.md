@@ -806,11 +806,14 @@ The following repository secrets must be configured in GitHub under **Settings �
 Sonatype requires a **User Token** instead of your portal password:
 1. Log in to [Sonatype Central Portal](https://central.sonatype.com/) (sign in via GitHub).
 2. Ensure your namespace (e.g., `io.github.rajadilipkolli`) is verified under **Publishing → Namespaces** (verification is done by creating a temporary public GitHub repo with a generated name or via GitHub OAuth).
-3. Click your profile avatar in the upper right corner and select **View Account**.
-4. In the **Generate User Token** section, click **Generate Token**.
-5. Copy the displayed credentials directly as plain text (**do not Base64 encode them**; Maven and `central-publishing-maven-plugin` handle authentication internally via `.github/settings.xml`):
+3. Open the [User Tokens page](https://central.sonatype.com/usertoken).
+4. Click **Generate User Token**.
+5. Enter a display name and choose an expiration for the token.
+6. Copy the displayed credentials directly as plain text (**do not Base64 encode them**; Maven and `central-publishing-maven-plugin` handle authentication internally via `.github/settings.xml`):
    - **Username** $\rightarrow$ save as `CENTRAL_USERNAME` secret in GitHub.
    - **Password** $\rightarrow$ save the raw, plain token password as `CENTRAL_PASSWORD` secret in GitHub.
+   > ⚠️ **Save these credentials now:** They are displayed only once and cannot be retrieved after the dialog closes. Generate a replacement token if you lose them.
+
    > ℹ️ **Note:** Base64 encoding (`username:password`) is only required when making direct HTTP REST API calls via `curl`. For Maven deployment via `settings.xml`, always use the raw/unencoded token strings.
 
 #### 2. How to get `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE`
