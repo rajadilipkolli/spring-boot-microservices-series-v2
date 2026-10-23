@@ -202,15 +202,16 @@ public class LoggingAspect {
 
     private void logException(ProceedingJoinPoint joinPoint, Throwable e) {
 
+        // Log types only: exception messages and throwable chains may contain credentials.
+
         if (env != null && env.acceptsProfiles(Profiles.of("!prod"))) {
 
             log.error(
                     "Exception in {}.{}() with cause = '{}' and exception = '{}'",
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : LogSanitizer.sanitizeException(e.getCause()),
-                    LogSanitizer.sanitizeException(e),
-                    e);
+                    e.getCause() == null ? "NULL" : e.getCause().getClass().getName(),
+                    e.getClass().getName());
 
         } else {
 
@@ -218,7 +219,7 @@ public class LoggingAspect {
                     "Exception in {}.{}() with cause = {}",
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : LogSanitizer.sanitizeException(e.getCause()));
+                    e.getCause() == null ? "NULL" : e.getCause().getClass().getName());
         }
     }
 

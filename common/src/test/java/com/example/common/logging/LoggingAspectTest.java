@@ -229,19 +229,33 @@ class LoggingAspectTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"prod", "dev"})
-    void sanitizesExceptionCauseAndRethrowsOriginalException(String profile) throws Throwable {
+    void omitsExceptionMessagesAndRethrowsOriginalException(String profile) throws Throwable {
         environment.setActiveProfiles(profile);
         RuntimeException exception =
                 new RuntimeException(
-                        "outer", new IllegalStateException("cause\r\nforged\t\u001B[31m"));
+                        "password=outer-secret\r\nforged",
+                        new IllegalStateException("token=cause-secret\r\nforged\t\u001B[31m"));
+        exception.addSuppressed(new RuntimeException("password=suppressed-secret\nforged"));
         when(joinPoint.proceed()).thenThrow(exception);
 
         assertThat(catchThrowable(() -> aspect.logMethod(joinPoint))).isSameAs(exception);
 
         ILoggingEvent event = appender.list.getLast();
-        assertThat(event.getArgumentArray()[2]).isEqualTo("cause_forged_");
-        assertThat(event.getFormattedMessage()).doesNotContain("\r", "\n", "\t", "\u001B");
-        assertThat(event.getThrowableProxy() != null).isEqualTo(profile.equals("dev"));
+        assertThat(event.getArgumentArray()[2]).isEqualTo(IllegalStateException.class.getName());
+        if (profile.equals("dev")) {
+            assertThat(event.getArgumentArray()[3]).isEqualTo(RuntimeException.class.getName());
+        }
+        assertThat(event.getFormattedMessage())
+                .doesNotContain(
+                        "outer-secret",
+                        "cause-secret",
+                        "suppressed-secret",
+                        "forged",
+                        "\r",
+                        "\n",
+                        "\t",
+                        "\u001B");
+        assertThat(event.getThrowableProxy()).isNull();
     }
 
     @ParameterizedTest
