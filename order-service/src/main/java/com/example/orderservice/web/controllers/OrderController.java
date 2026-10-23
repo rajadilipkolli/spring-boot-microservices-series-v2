@@ -11,6 +11,7 @@ import com.example.common.logging.LogSanitizer;
 import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.request.OrderPaginationRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.services.OrderGeneratorService;
@@ -29,13 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -63,18 +64,8 @@ class OrderController implements OrderApi {
     @GetMapping
     @Override
     public PagedResult<OrderResponse> getAllOrders(
-            @PageableDefault(page = 0, size = 10, sort = "id", direction = Sort.Direction.ASC)
-                    Pageable pageable) {
-        int page = pageable.getPageNumber();
-        int size = pageable.getPageSize();
-        String sortBy =
-                pageable.getSort().stream().findFirst().map(Sort.Order::getProperty).orElse("id");
-        String sortDir =
-                pageable.getSort().stream()
-                        .findFirst()
-                        .map(o -> o.getDirection().name().toLowerCase())
-                        .orElse("asc");
-        return orderService.findAllOrders(page, size, sortBy, sortDir);
+            @Valid @ModelAttribute OrderPaginationRequest pagination, Sort sort) {
+        return orderService.findAllOrders(pagination.toPageable(sort));
     }
 
     @GetMapping("/{id}")

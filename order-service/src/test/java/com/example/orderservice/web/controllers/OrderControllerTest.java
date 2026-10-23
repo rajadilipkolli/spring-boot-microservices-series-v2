@@ -46,12 +46,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -139,7 +142,8 @@ class OrderControllerTest {
         PagedResult<OrderResponse> orderResponsePagedResult =
                 new PagedResult<>(page, orderResponseList);
 
-        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderResponsePagedResult);
+        given(orderService.findAllOrders(PageRequest.of(0, 10, Sort.by("id"))))
+                .willReturn(orderResponsePagedResult);
 
         this.mockMvc
                 .perform(get("/api/orders"))
@@ -162,6 +166,66 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.data[0].deliveryAddress.city", is("city")))
                 .andExpect(jsonPath("$.data[0].createdDate", notNullValue()))
                 .andExpect(jsonPath("$.data[0].totalPrice").value(10));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "pageNo=2&pageSize=5&sortBy=createdDate&sortDir=desc, 2, 5, createdDate, DESC",
+        "pageNo=3, 3, 10, id, ASC",
+        "pageSize=7&sortDir=desc, 0, 7, id, DESC",
+        "sortBy=customerId, 0, 10, customerId, ASC",
+        "page=2&size=5, 2, 5, id, ASC",
+        "page=1&size=4&pageNo=3&pageSize=7, 1, 4, id, ASC",
+        "size=3000, 0, 2000, id, ASC"
+    })
+    void shouldPreservePaginationParameters(
+            String query, int page, int size, String property, Sort.Direction direction)
+            throws Exception {
+        Pageable expected = PageRequest.of(page, size, Sort.by(direction, property));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(get("/api/orders?" + query)).andExpect(status().isOk());
+
+        verify(orderService).findAllOrders(expected);
+    }
+
+    @Test
+    void shouldPreserveMultipleSortOrdersAndPreferModernSort() throws Exception {
+        Pageable expected =
+                PageRequest.of(2, 5, Sort.by(Sort.Order.desc("createdDate"), Sort.Order.asc("id")));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(
+                        get("/api/orders")
+                                .param("page", "2")
+                                .param("size", "5")
+                                .param("sort", "createdDate,desc", "id,asc")
+                                .param("sortBy", "customerId")
+                                .param("sortDir", "desc"))
+                .andExpect(status().isOk());
+
+        verify(orderService).findAllOrders(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "page=-1",
+                "size=0",
+                "size=-1",
+                "pageNo=-1",
+                "pageSize=0",
+                "pageSize=-1",
+                "page=1&pageNo=-1",
+                "page=invalid",
+                "size=2147483648"
+            })
+    void shouldRejectInvalidPaginationBeforeCallingService(String query) throws Exception {
+        mockMvc.perform(get("/api/orders?" + query)).andExpect(status().isBadRequest());
+
+        verifyNoInteractions(orderService);
     }
 
     @Nested

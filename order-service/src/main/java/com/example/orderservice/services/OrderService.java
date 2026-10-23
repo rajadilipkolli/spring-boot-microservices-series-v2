@@ -95,8 +95,16 @@ public class OrderService {
                         ? Sort.by(sortBy).ascending()
                         : Sort.by(sortBy).descending();
 
-        // create Pageable instance
-        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+        return findAllOrders(PageRequest.of(pageNo, pageSize, sort));
+    }
+
+    /**
+     * Finds a page of orders preserving every requested sort order.
+     *
+     * @param pageable pagination and sorting options
+     * @return the requested page of order responses
+     */
+    public PagedResult<OrderResponse> findAllOrders(Pageable pageable) {
         // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory
         // pagination was about to be applied. Failing because 'Fail on pagination over collection
         // fetch' is enabled.
