@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -202,11 +203,53 @@ class OrderControllerTest {
                                 .param("page", "2")
                                 .param("size", "5")
                                 .param("sort", "createdDate,desc", "id,asc")
-                                .param("sortBy", "customerId")
+                                .param("sortBy", "unsupported")
                                 .param("sortDir", "desc"))
                 .andExpect(status().isOk());
 
         verify(orderService).findAllOrders(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "id",
+                "customerId",
+                "status",
+                "source",
+                "version",
+                "createdBy",
+                "createdDate",
+                "lastModifiedBy",
+                "lastModifiedDate"
+            })
+    void shouldAcceptAllowedSortProperties(String property) throws Exception {
+        Pageable expected = PageRequest.of(0, 10, Sort.by(property));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(get("/api/orders").param("sort", property)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/orders").param("sortBy", property)).andExpect(status().isOk());
+
+        verify(orderService, times(2)).findAllOrders(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "sort=unsupported,asc",
+                "sortBy=unsupported",
+                "sort=id,asc&sort=unsupported,desc",
+                "sort=unsupported,asc&sortBy=id",
+                "sort=items.id,asc",
+                "sortBy=deliveryAddress.city"
+            })
+    void shouldRejectUnsupportedSortPropertiesBeforeCallingService(String query) throws Exception {
+        mockMvc.perform(get("/api/orders?" + query))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Invalid Request")));
+
+        verifyNoInteractions(orderService);
     }
 
     @ParameterizedTest
