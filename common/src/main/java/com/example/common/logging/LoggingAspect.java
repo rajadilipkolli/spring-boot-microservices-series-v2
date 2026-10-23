@@ -8,6 +8,7 @@ package com.example.common.logging;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -25,6 +26,13 @@ import org.springframework.util.ObjectUtils;
 public class LoggingAspect {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
+
+    private static final Pattern SENSITIVE_NAME =
+            Pattern.compile(
+                    "(?i)password|credit[_-]?card|"
+                            + "(?:^|[^a-z])(?:passwd|pwd|passphrase|secrets?|tokens?|credentials?|"
+                            + "auth(?:entication|orization)?|api[_-]?key|private[_-]?key|"
+                            + "access[_-]?key|ssn)(?:$|[^a-z])");
 
     private final Environment env;
 
@@ -121,17 +129,10 @@ public class LoggingAspect {
         for (int i = 0; i < args.length; i++) {
 
             String paramName =
-                    parameterNames != null && i < parameterNames.length
-                            ? parameterNames[i]
-                            : "arg" + i;
+                    parameterNames != null && i < parameterNames.length ? parameterNames[i] : null;
 
-            Object argValue = args[i];
-
-            if (paramName.matches("(?i).*(password|creditCard|ssn).*")) {
-                argValue = "REDACTED";
-            }
-
-            values.add(paramName + " : " + argValue);
+            String displayName = paramName == null || paramName.isBlank() ? "arg" + i : paramName;
+            values.add(displayName + " : " + redactValue(paramName, args[i]));
         }
 
         logExecutionDetails(
@@ -158,7 +159,36 @@ public class LoggingAspect {
                 logLevel,
                 methodName
                         + "() Returned : "
-                        + LogSanitizer.sanitizeForLog(String.valueOf(result), 1024));
+                        + LogSanitizer.sanitizeForLog(redactValue(methodName, result), 1024));
+    }
+
+    private static String redactValue(String name, Object value) {
+        if (name == null || name.isBlank()) {
+            return "REDACTED";
+        }
+
+        // Split camel case and acronyms so SSN matches without matching className/businessName.
+        String words =
+                name.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
+                        .replaceAll("([a-z0-9])([A-Z])", "$1_$2");
+        if (SENSITIVE_NAME.matcher(words).find()) {
+            return "REDACTED";
+        }
+
+        // Only render known scalar types; arbitrary toString() methods may expose credentials.
+        return switch (value) {
+            case null -> "null";
+            case String s -> s;
+            case Boolean b -> b.toString();
+            case Character c -> c.toString();
+            case Byte b -> b.toString();
+            case Short s -> s.toString();
+            case Integer i -> i.toString();
+            case Long l -> l.toString();
+            case Float f -> f.toString();
+            case Double d -> d.toString();
+            default -> "REDACTED";
+        };
     }
 
     private void logMethodCompletion(
@@ -178,7 +208,7 @@ public class LoggingAspect {
                     "Exception in {}.{}() with cause = '{}' and exception = '{}'",
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : e.getCause(),
+                    e.getCause() == null ? "NULL" : LogSanitizer.sanitizeException(e.getCause()),
                     LogSanitizer.sanitizeException(e),
                     e);
 
@@ -188,7 +218,7 @@ public class LoggingAspect {
                     "Exception in {}.{}() with cause = {}",
                     joinPoint.getSignature().getDeclaringTypeName(),
                     joinPoint.getSignature().getName(),
-                    e.getCause() == null ? "NULL" : e.getCause());
+                    e.getCause() == null ? "NULL" : LogSanitizer.sanitizeException(e.getCause()));
         }
     }
 

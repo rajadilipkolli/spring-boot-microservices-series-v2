@@ -25,6 +25,9 @@ public final class LogWriter {
             case INFO -> logger.info(message);
             case WARN -> logger.warn(message);
             case ERROR, FATAL -> logger.error(message);
+            case OFF -> {
+                // Logging is disabled for this level.
+            }
             default -> logger.warn("No suitable logLevel found");
         }
     }
