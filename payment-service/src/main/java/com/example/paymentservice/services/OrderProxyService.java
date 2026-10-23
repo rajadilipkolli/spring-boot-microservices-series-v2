@@ -20,7 +20,7 @@ public class OrderProxyService {
     /**
      * Fetches customer orders through the {@code default} circuit breaker without a fallback.
      *
-     * @param pageNo page number starting at 1, converted to a zero-based index without validation
+     * @param pageNo zero-based page index, forwarded without validation
      * @param pageSize requested number of orders per page, forwarded without validation
      * @param sortBy order property to sort by
      * @param sortDir sort direction appended to the property, such as {@code asc} or {@code desc}

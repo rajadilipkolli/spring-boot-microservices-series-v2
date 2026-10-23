@@ -38,6 +38,7 @@ public class KafkaListenerConfig {
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
+    /** Creates the listener with payment processing, JSON deserialization, and payload validation. */
     public KafkaListenerConfig(
             PaymentOrderManageService paymentOrderManageService,
             JsonMapper jsonMapper,
@@ -48,13 +49,18 @@ public class KafkaListenerConfig {
     }
 
     /**
-     * Deserializes an order event and reserves NEW orders or forwards other statuses for
-     * settlement. Missing-customer, illegal-argument, and operation-conflict errors bypass retries;
-     * other propagated errors, including a missing completed reservation, remain retryable.
+     * Deserializes and validates an order event, then reserves NEW orders or forwards other
+     * statuses for settlement. Missing-customer, illegal-argument, and operation-conflict errors
+     * bypass retries; other propagated errors, including a missing completed reservation, remain
+     * retryable. Provider failures defer processing; persistence and reply serialization failures
+     * propagate.
      *
      * @param orderDtoStr the JSON order event
      * @throws JacksonException if the event cannot be deserialized
-     * @throws IllegalArgumentException if a NEW order's attempt ID is null or blank after trimming
+     * @throws IllegalArgumentException if the payload violates its bean validation constraints or
+     *     a NEW order's attempt ID is null or blank after trimming, or its calculated total is
+     *     negative
+     * @throws NullPointerException if a NEW order contains a null item, price, or quantity
      * @throws CustomerNotFoundException if the requested operation's customer ID is null or absent
      * @throws OperationConflictException if the operation conflicts with its stored fingerprint
      * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement

@@ -88,6 +88,10 @@ class CustomerController implements CustomerApi {
      *
      * @param customerRequest the validated customer details
      * @return the customer response with its ID appended to the current request URI
+     * @throws com.example.paymentservice.exception.CustomerExistsException if the email already
+     *     exists
+     * @throws org.springframework.dao.DataIntegrityViolationException if another database integrity
+     *     constraint fails
      */
     @PostMapping
     @Override

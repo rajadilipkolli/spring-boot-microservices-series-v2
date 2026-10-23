@@ -41,9 +41,10 @@ public class CustomerService {
     /**
      * Fetches a sorted customer page with counts and navigation metadata.
      *
-     * @param findCustomersQuery the one-based page number, page size, and sort options
-     * @return the requested page of customer responses
-     * @throws IllegalArgumentException if the page number or page size is less than one
+     * @param findCustomersQuery the zero-based page index, positive page size, and sort options
+     * @return the requested page of customer responses with a one-based page number
+     * @throws IllegalArgumentException if the page index is negative or the page size is less than
+     *     one
      */
     public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
 
