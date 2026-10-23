@@ -35,7 +35,9 @@ public class ProcessedOrderEventId implements Serializable {
         return Objects.equals(orderId, that.orderId) && Objects.equals(eventType, that.eventType);
     }
 
-    /** Computes a hash from the order ID and event type, consistent with {@link #equals(Object)}. */
+    /**
+     * Computes a hash from the order ID and event type, consistent with {@link #equals(Object)}.
+     */
     @Override
     public int hashCode() {
         return Objects.hash(orderId, eventType);
