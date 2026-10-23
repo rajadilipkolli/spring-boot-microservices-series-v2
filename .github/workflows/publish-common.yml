@@ -76,5 +76,6 @@ jobs:
 
       - name: Deploy Common to GitHub Packages
         env:
+          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./mvnw -B -pl common deploy -DskipTests
+        run: ./mvnw -B -pl common deploy -s .github/settings.xml -Daether.remoteRepositoryFilter.prefixes=false -DskipTests
