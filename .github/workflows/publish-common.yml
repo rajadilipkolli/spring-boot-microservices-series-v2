@@ -79,3 +79,73 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./mvnw -B -pl common deploy -s .github/settings.xml -Daether.remoteRepositoryFilter.prefixes=false -DskipTests
+
+  publish-central:
+    name: Publish to Maven Central
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/common-v') || (github.event_name == 'workflow_dispatch' && inputs.release_version != '')
+    permissions:
+      contents: read
+    concurrency:
+      group: publish-central-${{ inputs.release_version || github.ref }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify Maven Central & GPG secrets
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$CENTRAL_USERNAME" ] || [ -z "$CENTRAL_PASSWORD" ] || [ -z "$GPG_PRIVATE_KEY" ] || [ -z "$GPG_PASSPHRASE" ]; then
+            echo "Error: CENTRAL_USERNAME, CENTRAL_PASSWORD, GPG_PRIVATE_KEY, or GPG_PASSPHRASE secret is not set"
+            echo "Please add these secrets in: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - name: Guard Release Version
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          if [ -z "$VERSION" ]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#common-v}"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "Error: Release version is empty. A valid version must be specified."
+            exit 1
+          fi
+          if [[ "$VERSION" == *-SNAPSHOT ]]; then
+            echo "Error: Release version '$VERSION' must not end with -SNAPSHOT for Maven Central publication."
+            exit 1
+          fi
+
+      - name: Set up Java 25 & GPG
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Set Release Version
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          if [ -z "$VERSION" ]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#common-v}"
+          fi
+          echo "Setting common version to $VERSION"
+          ./mvnw -pl common versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+
+      - name: Deploy Common to Maven Central
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./mvnw -B -pl common deploy -Prelease -s .github/settings.xml -Daether.remoteRepositoryFilter.prefixes=false -DskipTests
