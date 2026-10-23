@@ -6,16 +6,16 @@
 
 package com.example.orderservice.web.controllers;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.request.OrderPaginationRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
-import com.example.orderservice.utils.AppConstants;
-import com.example.orderservice.utils.LogSanitizer;
 import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -29,12 +29,14 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -60,16 +62,10 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping
-    PagedResult<OrderResponse> getAllOrders(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
-                    int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
-                    int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
-                    String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
-                    String sortDir) {
-        return orderService.findAllOrders(pageNo, pageSize, sortBy, sortDir);
+    @Override
+    public PagedResult<OrderResponse> getAllOrders(
+            @Valid @ModelAttribute OrderPaginationRequest pagination, Sort sort) {
+        return orderService.findAllOrders(pagination.toPageable(sort));
     }
 
     @GetMapping("/{id}")

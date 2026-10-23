@@ -6,9 +6,10 @@
 
 package com.example.orderservice.web.api;
 
+import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.request.OrderPaginationRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -16,8 +17,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +29,38 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Tag(name = "order-controller", description = "the order-controller API")
 public interface OrderApi {
+
+    /**
+     * Returns orders using modern pagination parameters in preference to legacy aliases.
+     *
+     * @param pagination page and size values and legacy sorting options; omitted values default to
+     *     page 0, size 10, and id ASC, with sizes capped at 2000
+     * @param sort resolved sort orders, or an unsorted value to use legacy sorting
+     * @return order responses and pagination metadata with a one-based response page number
+     * @throws IllegalArgumentException if the resolved page is negative, the resolved size is less
+     *     than one, or a resolved sort property is unsupported
+     * @see OrderPaginationRequest#toPageable(Sort)
+     */
+    @Operation(
+            summary = "fetches all orders with pagination",
+            description =
+                    "Accepts page/size and repeated sort=property,direction parameters, or legacy "
+                            + "pageNo/pageSize/sortBy/sortDir parameters. Modern parameters take "
+                            + "precedence when both forms are supplied. Pages start at zero; "
+                            + "page sizes must be positive and are capped at 2000.",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Success",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PagedResult.class))
+                        })
+            })
+    PagedResult<OrderResponse> getAllOrders(
+            @Valid OrderPaginationRequest pagination, @Parameter(hidden = true) Sort sort);
 
     @Operation(
             summary = "fetches all orders for a customer",

@@ -6,7 +6,7 @@
 
 package com.example.orderservice.exception;
 
-import com.example.orderservice.utils.LogSanitizer;
+import com.example.common.logging.LogSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;

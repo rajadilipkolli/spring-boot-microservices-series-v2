@@ -112,6 +112,18 @@ public class OrderItem implements Serializable {
         return Objects.equals(getProductCode(), orderItem.getProductCode());
     }
 
+    /**
+     * Computes the line item subtotal (quantity * price).
+     *
+     * @return line item subtotal or ZERO if price is null
+     */
+    public BigDecimal getSubTotal() {
+        if (productPrice == null) {
+            return BigDecimal.ZERO;
+        }
+        return productPrice.multiply(BigDecimal.valueOf(quantity));
+    }
+
     @Override
     public final int hashCode() {
         return this instanceof HibernateProxy hp
