@@ -6,16 +6,15 @@
 
 package com.example.orderservice.web.controllers;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
-import com.example.orderservice.utils.AppConstants;
-import com.example.orderservice.utils.LogSanitizer;
 import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -29,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -60,16 +61,20 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping
-    PagedResult<OrderResponse> getAllOrders(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
-                    int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
-                    int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
-                    String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
-                    String sortDir) {
-        return orderService.findAllOrders(pageNo, pageSize, sortBy, sortDir);
+    @Override
+    public PagedResult<OrderResponse> getAllOrders(
+            @PageableDefault(page = 0, size = 10, sort = "id", direction = Sort.Direction.ASC)
+                    Pageable pageable) {
+        int page = pageable.getPageNumber();
+        int size = pageable.getPageSize();
+        String sortBy =
+                pageable.getSort().stream().findFirst().map(Sort.Order::getProperty).orElse("id");
+        String sortDir =
+                pageable.getSort().stream()
+                        .findFirst()
+                        .map(o -> o.getDirection().name().toLowerCase())
+                        .orElse("asc");
+        return orderService.findAllOrders(page, size, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")

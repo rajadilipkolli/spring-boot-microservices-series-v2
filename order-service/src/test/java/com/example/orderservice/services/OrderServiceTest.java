@@ -9,10 +9,10 @@ package com.example.orderservice.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
 import java.util.List;
 import org.junit.jupiter.api.extension.ExtendWith;

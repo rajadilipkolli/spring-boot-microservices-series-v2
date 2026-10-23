@@ -6,9 +6,9 @@
 
 package com.example.orderservice.web.api;
 
+import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -26,6 +26,21 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Tag(name = "order-controller", description = "the order-controller API")
 public interface OrderApi {
+
+    @Operation(
+            summary = "fetches all orders with pagination",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Success",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PagedResult.class))
+                        })
+            })
+    PagedResult<OrderResponse> getAllOrders(@Parameter(hidden = true) Pageable pageable);
 
     @Operation(
             summary = "fetches all orders for a customer",

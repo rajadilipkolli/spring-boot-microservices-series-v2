@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
@@ -33,7 +34,6 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;

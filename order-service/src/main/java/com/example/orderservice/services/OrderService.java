@@ -6,7 +6,9 @@
 
 package com.example.orderservice.services;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.ProductNotFoundException;
@@ -15,9 +17,7 @@ import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.repositories.OrderRepository;
-import com.example.orderservice.utils.LogSanitizer;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.Comparator;

@@ -6,7 +6,7 @@
 
 package com.example.orderservice.services;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.dtos.OrderDto;
@@ -71,10 +71,7 @@ public class OrderManageService {
                     orderRepository
                             .findById(orderDto.orderId())
                             .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
-            if (switch (persisted.getStatus()) {
-                case CONFIRMED, REJECTED, ROLLBACK, FAILED -> true;
-                default -> false;
-            }) {
+            if (persisted.isTerminal()) {
                 return null;
             }
             return orderDto.withStatusAndSource(

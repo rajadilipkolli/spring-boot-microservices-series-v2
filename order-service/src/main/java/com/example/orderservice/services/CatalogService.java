@@ -6,9 +6,9 @@
 
 package com.example.orderservice.services;
 
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.config.ApplicationProperties;
-import com.example.orderservice.config.logging.Loggable;
-import com.example.orderservice.utils.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import org.slf4j.Logger;

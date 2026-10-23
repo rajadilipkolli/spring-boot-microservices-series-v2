@@ -21,6 +21,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -140,5 +141,99 @@ public class Order extends Auditable<String> implements Serializable {
     public void removeOrderItem(OrderItem orderItem) {
         items.remove(orderItem);
         orderItem.setOrder(null);
+    }
+
+    /**
+     * Confirms a newly created order.
+     *
+     * @throws IllegalStateException if the order is not in {@link OrderStatus#NEW} status
+     */
+    public void confirm() {
+        if (this.status != OrderStatus.NEW) {
+            throw new IllegalStateException("Cannot confirm order in state: " + this.status);
+        }
+        this.status = OrderStatus.CONFIRMED;
+        this.source = null;
+    }
+
+    /**
+     * Rolls back a newly created order.
+     *
+     * @param source the failure source (e.g. PAYMENT or INVENTORY)
+     * @throws IllegalStateException if the order is not in {@link OrderStatus#NEW} status
+     */
+    public void rollback(String source) {
+        if (this.status != OrderStatus.NEW) {
+            throw new IllegalStateException("Cannot rollback order in state: " + this.status);
+        }
+        this.status = OrderStatus.ROLLBACK;
+        this.source = source;
+    }
+
+    /**
+     * Rejects a newly created order.
+     *
+     * @param source the failure source
+     * @throws IllegalStateException if the order is not in {@link OrderStatus#NEW} status
+     */
+    public void reject(String source) {
+        if (this.status != OrderStatus.NEW) {
+            throw new IllegalStateException("Cannot reject order in state: " + this.status);
+        }
+        this.status = OrderStatus.REJECTED;
+        this.source = source;
+    }
+
+    /**
+     * Marks a newly created order as failed.
+     *
+     * @param source the failure source
+     * @throws IllegalStateException if the order is not in {@link OrderStatus#NEW} status
+     */
+    public void fail(String source) {
+        if (this.status != OrderStatus.NEW) {
+            throw new IllegalStateException("Cannot fail order in state: " + this.status);
+        }
+        this.status = OrderStatus.FAILED;
+        this.source = source;
+    }
+
+    /**
+     * Checks if the order is in a terminal lifecycle state.
+     *
+     * @return true if the order is CONFIRMED, REJECTED, ROLLBACK, or FAILED
+     */
+    public boolean isTerminal() {
+        return switch (this.status) {
+            case CONFIRMED, REJECTED, ROLLBACK, FAILED -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * Transitions this order to the specified target status with an optional source.
+     *
+     * @param targetStatus the desired status
+     * @param source the source component
+     */
+    public void transitionTo(OrderStatus targetStatus, String source) {
+        switch (targetStatus) {
+            case CONFIRMED -> confirm();
+            case ROLLBACK -> rollback(source);
+            case REJECTED -> reject(source);
+            case FAILED -> fail(source);
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unsupported target transition status: " + targetStatus);
+        }
+    }
+
+    /**
+     * Calculates the total monetary amount of all items in this order.
+     *
+     * @return the total price sum
+     */
+    public BigDecimal getTotalAmount() {
+        return items.stream().map(OrderItem::getSubTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
