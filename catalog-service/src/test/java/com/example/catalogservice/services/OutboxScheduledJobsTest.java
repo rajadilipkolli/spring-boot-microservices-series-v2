@@ -110,7 +110,7 @@ class OutboxScheduledJobsTest {
     void cleanupFailedWaitsForDeletion() throws Exception {
         Sinks.One<Integer> work = Sinks.one();
         CountDownLatch subscribed = new CountDownLatch(1);
-        when(repository.deleteAllByStatusAndCreatedAtBefore(any(), any()))
+        when(repository.deleteAllByStatusAndProcessedAtBefore(any(), any()))
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxHousekeepingService housekeeping =
                 new OutboxHousekeepingService(repository, registry);

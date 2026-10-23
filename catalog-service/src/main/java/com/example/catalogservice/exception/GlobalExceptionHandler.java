@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
     Mono<ProblemDetail> handleDataBufferLimitException(DataBufferLimitException ex) {
         log.warn("Request body too large: {}", LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONTENT_TOO_LARGE);
-        problemDetail.setTitle("Request Entity Too Large");
+        problemDetail.setTitle("Content Too Large");
         problemDetail.setDetail("The request body exceeds the maximum allowed size");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/content-too-large"));
         problemDetail.setProperty("errorCategory", "Validation");

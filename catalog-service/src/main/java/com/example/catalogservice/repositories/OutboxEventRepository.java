@@ -20,8 +20,8 @@ public interface OutboxEventRepository
 
     /**
      * Releases expired processing locks and increments retry counts and versions. Events whose new
-     * retry count reaches or exceeds the limit are marked failed with an error message; the rest
-     * become pending again.
+     * retry count reaches or exceeds the limit are marked failed with an error message and terminal
+     * processing time; the rest become pending again.
      *
      * @param threshold the exclusive cutoff for the lock timestamp
      * @param maxRetries the retry count at which an event is marked failed
@@ -34,6 +34,10 @@ public interface OutboxEventRepository
             SET status = CASE
                 WHEN retry_count + 1 >= :maxRetries THEN 'FAILED'
                 ELSE 'PENDING'
+            END,
+            processed_at = CASE
+                WHEN retry_count + 1 >= :maxRetries THEN CURRENT_TIMESTAMP
+                ELSE processed_at
             END,
             locked_at = NULL,
             retry_count = retry_count + 1,
@@ -50,5 +54,8 @@ public interface OutboxEventRepository
     Mono<Long> countByStatus(OutboxEventStatus status);
 
     Mono<Integer> deleteAllByStatusAndCreatedAtBefore(
+            OutboxEventStatus status, OffsetDateTime time);
+
+    Mono<Integer> deleteAllByStatusAndProcessedAtBefore(
             OutboxEventStatus status, OffsetDateTime time);
 }

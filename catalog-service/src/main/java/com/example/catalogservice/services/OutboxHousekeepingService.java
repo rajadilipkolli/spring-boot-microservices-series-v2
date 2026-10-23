@@ -45,15 +45,19 @@ public class OutboxHousekeepingService {
     }
 
     /**
-     * Validates the configured retention period during initialization.
+     * Validates the configured retention periods during initialization.
      *
-     * @throws IllegalArgumentException if {@code application.outbox.retention-days} is negative
+     * @throws IllegalArgumentException if either retention period is negative
      */
     @PostConstruct
     void validateRetentionDays() {
         if (retentionDays < 0) {
             throw new IllegalArgumentException(
                     "application.outbox.retention-days must be zero or positive");
+        }
+        if (failedRetentionDays < 0) {
+            throw new IllegalArgumentException(
+                    "application.outbox.failed-retention-days must be zero or positive");
         }
     }
 
@@ -96,7 +100,8 @@ public class OutboxHousekeepingService {
     }
 
     /**
-     * Deletes failed events created strictly before the retention cutoff and waits for completion.
+     * Deletes events that failed strictly before the retention cutoff and waits for completion.
+     * Events without a recorded terminal processing time are retained.
      */
     @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
     @SchedulerLock(name = "cleanupFailedEventsLock")
@@ -104,7 +109,7 @@ public class OutboxHousekeepingService {
         OffsetDateTime threshold = OffsetDateTime.now().minusDays(failedRetentionDays);
         log.info("Starting cleanup of failed events older than {}", threshold);
         outboxEventRepository
-                .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.FAILED, threshold)
+                .deleteAllByStatusAndProcessedAtBefore(OutboxEventStatus.FAILED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old failed events", v))
                 .doOnError(e -> log.error("Error during failed outbox cleanup", e))
                 .onErrorComplete()

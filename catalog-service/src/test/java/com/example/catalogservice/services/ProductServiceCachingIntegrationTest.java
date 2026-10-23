@@ -21,12 +21,16 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
+
+    @Autowired private CacheManager cacheManager;
 
     @MockitoBean private InventoryServiceProxy inventoryServiceProxy;
 
@@ -58,6 +62,16 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         StepVerifier.create(redisOps.hasKey(cacheKey("products:0_10_id_asc")))
                 .expectNext(true)
                 .verifyComplete();
+        assertThat(redisOps.getExpire(cacheKey("products:0_10_id_asc")).block())
+                .isPositive()
+                .isLessThanOrEqualTo(Duration.ofMinutes(5));
+    }
+
+    @Test
+    void springProductsCacheHasConfiguredRedisExpiration() {
+        cacheManager.getCache("products").put("ttl-test", "value");
+        assertThat(redisOps.getExpire("products::ttl-test").block())
+                .isBetween(Duration.ofMinutes(9), Duration.ofMinutes(10));
     }
 
     /**

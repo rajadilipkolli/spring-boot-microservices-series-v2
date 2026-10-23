@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -80,6 +81,26 @@ class ProductControllerTest {
                         null,
                         BigDecimal.valueOf(1.00),
                         true));
+    }
+
+    @Test
+    void shouldReturnConsistentContentTooLargeProblem() {
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.error(new DataBufferLimitException("Request limit exceeded")));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isEqualTo(413)
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo(413)
+                .jsonPath("$.title")
+                .isEqualTo("Content Too Large")
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/content-too-large");
     }
 
     @Test
