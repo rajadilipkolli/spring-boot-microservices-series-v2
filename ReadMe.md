@@ -102,6 +102,7 @@ class node_shopper,node_prometheus,node_grafana toneIndigo
 - [🗃️ Database Management](#️-database-management)
 - [📦 Services Overview](#-services-overview)
 - [💡 Development Tips](#-development-tips)
+- [🚀 Publishing Common to Maven Central](#-publishing-common-to-maven-central)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
 
@@ -769,6 +770,105 @@ cd gatling-tests
 # 🔥 Stress test with custom parameters
 ./mvnw gatling:test -P stress -DmaxUsers=100 -DrampDurationMinutes=5
 ```
+
+## 🚀 Publishing Common to Maven Central
+
+The shared `common` module can be published directly to Maven Central via Sonatype Central Portal.
+
+### Central Coordinates
+Artifacts are published under:
+- **Group ID:** `io.github.rajadilipkolli`
+- **Artifact ID:** `common`
+- **Dependency Coordinates:** `io.github.rajadilipkolli:common:<version>`
+
+### Release Triggers
+Maven Central publication is release-only and is triggered via GitHub Actions (`publish-common.yml`) when:
+- A Git release tag matching `common-v*` is pushed (e.g., `common-v0.0.1`), extracting the version from the tag.
+- The workflow is manually dispatched (`workflow_dispatch`) with a non-empty `release_version` input (e.g., `0.0.1`).
+
+### Prerequisites
+Before publishing to Maven Central:
+1. **Namespace Verification:** Ensure the `io.github.rajadilipkolli` namespace is registered and verified on the [Sonatype Central Portal](https://central.sonatype.com/).
+2. **GPG Key Distribution:** Ensure a GPG key pair has been generated and the public key has been published to a recognized public keyserver (e.g., `keyserver.ubuntu.com`, `keys.openpgp.org`).
+
+### Required GitHub Secrets & Setup Guide
+
+The following repository secrets must be configured in GitHub under **Settings → Secrets and variables → Actions → Repository secrets**:
+
+| Secret Name | Description | Source |
+| --- | --- | --- |
+| `CENTRAL_USERNAME` | Sonatype Central Portal token username | Generated in Central Portal user account |
+| `CENTRAL_PASSWORD` | Sonatype Central Portal token password | Generated in Central Portal user account |
+| `GPG_PRIVATE_KEY` | ASCII-armored private GPG key | Exported from local GPG keyring (`gpg --armor --export-secret-keys`) |
+| `GPG_PASSPHRASE` | Passphrase for the GPG private key | Chosen during GPG key generation |
+
+#### 1. How to get `CENTRAL_USERNAME` and `CENTRAL_PASSWORD`
+Sonatype requires a **User Token** instead of your portal password:
+1. Log in to [Sonatype Central Portal](https://central.sonatype.com/) (sign in via GitHub).
+2. Ensure your namespace (e.g., `io.github.rajadilipkolli`) is verified under **Publishing → Namespaces** (verification is done by creating a temporary public GitHub repo with a generated name or via GitHub OAuth).
+3. Click your profile avatar in the upper right corner and select **View Account**.
+4. In the **Generate User Token** section, click **Generate Token**.
+5. Copy the displayed credentials directly as plain text (**do not Base64 encode them**; Maven and `central-publishing-maven-plugin` handle authentication internally via `.github/settings.xml`):
+   - **Username** $\rightarrow$ save as `CENTRAL_USERNAME` secret in GitHub.
+   - **Password** $\rightarrow$ save the raw, plain token password as `CENTRAL_PASSWORD` secret in GitHub.
+   > ℹ️ **Note:** Base64 encoding (`username:password`) is only required when making direct HTTP REST API calls via `curl`. For Maven deployment via `settings.xml`, always use the raw/unencoded token strings.
+
+#### 2. How to get `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE`
+Maven Central requires every release artifact and POM to be cryptographically signed with GPG, and the public key must be available on a public keyserver:
+
+1. **Generate a GPG key pair:**
+   ```bash
+   gpg --full-generate-key
+   ```
+   - Choose `(1) RSA and RSA` (default).
+   - Enter keysize: `4096`.
+   - Set validity (e.g., `0` for does not expire, or `2y`).
+   - Enter your name and email address.
+   - Enter a secure passphrase. **Remember this passphrase** $\rightarrow$ this is your `GPG_PASSPHRASE`.
+
+2. **Find your Key ID:**
+   ```bash
+   gpg --list-secret-keys --keyid-format LONG
+   ```
+   Sample output:
+   ```text
+   sec   rsa4096/3AA5C34371567BD2 2026-10-23 [SC]
+         E5D2A5A2B52B0301A8A3B22E3AA5C34371567BD2
+   uid                 [ultimate] Raja Kolli <rajakolli@gmail.com>
+   ```
+   In this example, the Key ID is `3AA5C34371567BD2` (the 16 characters after `rsa4096/`).
+
+3. **Publish your public key to public keyservers:**
+   Sonatype validates signatures against public keyservers. Send your public key to the major keyservers:
+   ```bash
+   gpg --keyserver keyserver.ubuntu.com --send-keys <YOUR_KEY_ID>
+   gpg --keyserver keys.openpgp.org --send-keys <YOUR_KEY_ID>
+   ```
+
+4. **Export your ASCII-armored private key:**
+   ```bash
+   gpg --armor --export-secret-keys <YOUR_KEY_ID>
+   ```
+   Copy the **entire** output including the header and footer:
+   ```text
+   -----BEGIN PGP PRIVATE KEY BLOCK-----
+
+   ... (key data) ...
+   -----END PGP PRIVATE KEY BLOCK-----
+   ```
+   Save this full text as the `GPG_PRIVATE_KEY` secret in GitHub.
+
+#### 3. Add Secrets to GitHub Repository
+1. Navigate to your repository on GitHub.
+2. Go to **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions**.
+3. Under **Repository secrets**, click **New repository secret** and add each secret:
+   - `CENTRAL_USERNAME`
+   - `CENTRAL_PASSWORD`
+   - `GPG_PRIVATE_KEY`
+   - `GPG_PASSPHRASE`
+
+### Immutability Rule
+Artifacts published to Maven Central are immutable. Once a version is published, it cannot be modified or replaced. Any updates, fixes, or corrections must be published under a new version number.
 
 ## 🤝 Contributing
 
