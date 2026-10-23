@@ -42,6 +42,8 @@ class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
         http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
                         .permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
+                        .hasRole("OPERATOR")
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())

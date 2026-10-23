@@ -27,8 +27,7 @@ public class ContainerConfig {
         return new KeycloakContainer(KEYCLOAK_IMAGE)
                 .withAdminUsername("junitAdmin")
                 .withAdminPassword("junitPasscode")
-                .withRealmImportFile(REALM_IMPORT_FILE)
-                .withReuse(true);
+                .withRealmImportFile(REALM_IMPORT_FILE);
     }
 
     /**
@@ -40,7 +39,7 @@ public class ContainerConfig {
     @RestartScope
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine")).withReuse(true);
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"));
     }
 
     @Bean
