@@ -1,7 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
@@ -9,7 +10,6 @@ import com.example.paymentservice.mapper.CustomerMapper;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
 import java.util.Locale;
@@ -50,8 +50,8 @@ public class CustomerService {
         int pageNo = findCustomersQuery.pageNo();
         int pageSize = findCustomersQuery.pageSize();
 
-        if (pageNo < 1) {
-            throw new IllegalArgumentException("Page number must be at least 1");
+        if (pageNo < 0) {
+            throw new IllegalArgumentException("Page number must be at least 0");
         }
 
         if (pageSize < 1) {
@@ -65,7 +65,7 @@ public class CustomerService {
                 findCustomersQuery.sortBy(),
                 findCustomersQuery.sortDir());
 
-        int offset = (pageNo - 1) * pageSize;
+        int offset = pageNo * pageSize;
 
         List<OrderField<?>> orderFields =
                 customerMapper.toOrderFields(
@@ -79,13 +79,13 @@ public class CustomerService {
 
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
 
-        boolean isFirst = pageNo == 1;
-        boolean isLast = pageNo >= totalPages;
-        boolean hasNext = pageNo < totalPages;
-        boolean hasPrevious = pageNo > 1 && totalElements > 0;
+        boolean isFirst = pageNo == 0;
+        boolean isLast = totalPages == 0 || pageNo >= totalPages - 1;
+        boolean hasNext = pageNo < totalPages - 1;
+        boolean hasPrevious = pageNo > 0 && totalElements > 0;
 
         return new PagedResult<>(
-                data, totalElements, pageNo, totalPages, isFirst, isLast, hasNext, hasPrevious);
+                data, totalElements, pageNo + 1, totalPages, isFirst, isLast, hasNext, hasPrevious);
     }
 
     /**

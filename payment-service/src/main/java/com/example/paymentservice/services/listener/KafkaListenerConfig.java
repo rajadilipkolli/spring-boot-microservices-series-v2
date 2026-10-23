@@ -1,12 +1,15 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +34,17 @@ public class KafkaListenerConfig {
 
     private final PaymentOrderManageService paymentOrderManageService;
     private final JsonMapper jsonMapper;
+    private final Validator validator;
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
     public KafkaListenerConfig(
-            PaymentOrderManageService paymentOrderManageService, JsonMapper jsonMapper) {
+            PaymentOrderManageService paymentOrderManageService,
+            JsonMapper jsonMapper,
+            Validator validator) {
         this.paymentOrderManageService = paymentOrderManageService;
         this.jsonMapper = jsonMapper;
+        this.validator = validator;
     }
 
     /**
@@ -70,6 +77,10 @@ public class KafkaListenerConfig {
     @KafkaListener(id = "payment-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(String orderDtoStr) throws JacksonException {
         OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
+        Set<ConstraintViolation<OrderDto>> violations = validator.validate(orderDto);
+        if (!violations.isEmpty()) {
+            throw new IllegalArgumentException("Payload validation failed: " + violations);
+        }
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,

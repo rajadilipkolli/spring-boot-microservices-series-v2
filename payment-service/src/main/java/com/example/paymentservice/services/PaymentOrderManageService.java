@@ -1,10 +1,10 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.utils.AppConstants;
-import com.example.paymentservice.utils.LogSanitizer;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

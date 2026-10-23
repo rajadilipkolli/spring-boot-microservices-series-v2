@@ -1,16 +1,17 @@
 /*** Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli. ***/
 package com.example.paymentservice.web.controllers;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderProxyService;
 import com.example.paymentservice.utils.AppConstants;
+import com.example.paymentservice.web.api.CustomerApi;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 @RequestMapping("/api/customers")
 @Loggable
-class CustomerController {
+class CustomerController implements CustomerApi {
 
     private final CustomerService customerService;
     private final OrderProxyService orderProxyService;
@@ -40,7 +41,8 @@ class CustomerController {
     }
 
     @GetMapping
-    PagedResult<CustomerResponse> getAllCustomers(
+    @Override
+    public PagedResult<CustomerResponse> getAllCustomers(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
@@ -55,7 +57,8 @@ class CustomerController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
+    @Override
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(ResponseEntity::ok)
@@ -63,7 +66,8 @@ class CustomerController {
     }
 
     @GetMapping("/name/{name}")
-    ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name) {
+    @Override
+    public ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name) {
         return customerService
                 .findCustomerByName(name)
                 .map(ResponseEntity::ok)
@@ -71,7 +75,8 @@ class CustomerController {
     }
 
     @GetMapping("/by-email")
-    ResponseEntity<CustomerResponse> getCustomerByEmail(@RequestParam String email) {
+    @Override
+    public ResponseEntity<CustomerResponse> getCustomerByEmail(@RequestParam String email) {
         return customerService
                 .findCustomerByEmail(email)
                 .map(ResponseEntity::ok)
@@ -85,7 +90,8 @@ class CustomerController {
      * @return the customer response with its ID appended to the current request URI
      */
     @PostMapping
-    ResponseEntity<CustomerResponse> createCustomer(
+    @Override
+    public ResponseEntity<CustomerResponse> createCustomer(
             @RequestBody @Valid CustomerRequest customerRequest) {
         CustomerResponse response = customerService.saveCustomer(customerRequest);
         URI location =
@@ -97,13 +103,15 @@ class CustomerController {
     }
 
     @PutMapping("/{id}")
-    ResponseEntity<CustomerResponse> updateCustomer(
+    @Override
+    public ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable Long id, @RequestBody @Valid CustomerRequest customerRequest) {
         return ResponseEntity.ok(customerService.updateCustomer(id, customerRequest));
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
+    @Override
+    public ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
                 .map(
@@ -117,12 +125,12 @@ class CustomerController {
     /**
      * Retrieves orders after validating pagination and confirming that the customer exists.
      *
-     * @param pageNo page number starting at 1; defaults to 1 when omitted from the request
+     * @param pageNo page number starting at 0; defaults to 0 when omitted from the request
      * @param pageSize positive number of orders per page; defaults to 10 when omitted
      * @param sortBy order property to sort by; defaults to {@code id} when omitted
      * @param sortDir sort direction forwarded to the order service; defaults to {@code asc}
      * @return HTTP 200 with the order service's orders and pagination metadata
-     * @throws IllegalArgumentException if {@code pageNo < 1} or {@code pageSize <= 0}
+     * @throws IllegalArgumentException if {@code pageNo < 0} or {@code pageSize <= 0}
      * @throws CustomerNotFoundException if the customer does not exist
      * @throws org.springframework.web.client.RestClientResponseException if the order service
      *     returns an HTTP error
@@ -132,7 +140,8 @@ class CustomerController {
      *     breaker rejects the call
      */
     @GetMapping("/{id}/orders")
-    ResponseEntity<PagedResult<OrderResponse>> getOrdersByCustomerId(
+    @Override
+    public ResponseEntity<PagedResult<OrderResponse>> getOrdersByCustomerId(
             @PathVariable Long id,
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
@@ -142,8 +151,8 @@ class CustomerController {
                     String sortBy,
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir) {
-        if (pageNo < 1) {
-            throw new IllegalArgumentException("pageNo must be greater than or equal to 1");
+        if (pageNo < 0) {
+            throw new IllegalArgumentException("pageNo must be greater than or equal to 0");
         }
         if (pageSize <= 0) {
             throw new IllegalArgumentException("pageSize must be greater than 0");

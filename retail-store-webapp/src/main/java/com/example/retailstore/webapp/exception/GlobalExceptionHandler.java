@@ -1,6 +1,6 @@
 package com.example.retailstore.webapp.exception;
 
-import com.example.retailstore.webapp.util.LogSanitizer;
+import com.example.common.logging.LogSanitizer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;

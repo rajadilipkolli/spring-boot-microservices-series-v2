@@ -2,6 +2,7 @@ package com.example.retailstore.webapp.common;
 
 import com.redis.testcontainers.RedisContainer;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
+import org.springframework.boot.devtools.restart.RestartScope;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -21,11 +22,13 @@ public class ContainerConfig {
      * @return the configured Keycloak test container
      */
     @Bean
+    @RestartScope
     KeycloakContainer keycloak() {
         return new KeycloakContainer(KEYCLOAK_IMAGE)
                 .withAdminUsername("junitAdmin")
                 .withAdminPassword("junitPasscode")
-                .withRealmImportFile(REALM_IMPORT_FILE);
+                .withRealmImportFile(REALM_IMPORT_FILE)
+                .withReuse(true);
     }
 
     /**
@@ -34,9 +37,10 @@ public class ContainerConfig {
      * @return a Redis 8.10.2 Alpine container
      */
     @Bean
+    @RestartScope
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"));
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine")).withReuse(true);
     }
 
     @Bean

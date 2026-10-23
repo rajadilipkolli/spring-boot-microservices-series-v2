@@ -23,6 +23,7 @@
         <springdoc-openapi.version>3.1.1</springdoc-openapi.version>
         <jooq-spring.version>1.2.0</jooq-spring.version>
         <testcontainers-jooq-codegen-maven-plugin.version>1.0.0</testcontainers-jooq-codegen-maven-plugin.version>
+        <jooq.codegen.skip>false</jooq.codegen.skip>
 
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <spotless.version>3.10.4</spotless.version>
@@ -130,6 +131,11 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.rajadilipkolli</groupId>
+            <artifactId>microservices-common</artifactId>
+            <version>0.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -301,6 +307,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <skip>${jooq.codegen.skip}</skip>
                     <database>
                         <type>POSTGRES</type>
                         <containerImage>postgres:18-alpine</containerImage>

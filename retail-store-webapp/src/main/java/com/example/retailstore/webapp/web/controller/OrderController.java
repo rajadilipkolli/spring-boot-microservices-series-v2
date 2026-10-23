@@ -1,6 +1,7 @@
 package com.example.retailstore.webapp.web.controller;
 
-import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.clients.order.CreateOrderRequest;
@@ -11,7 +12,6 @@ import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
 import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
-import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.slf4j.Logger;

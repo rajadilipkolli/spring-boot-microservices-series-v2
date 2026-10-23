@@ -1,5 +1,3 @@
-jwt:
-  secret-key: ecf1222c-88fd-47f3-988f-bdd78bade1ad
 management:
   endpoint:
     gateway:
@@ -7,7 +5,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: '*'
+        include: 'health,info,prometheus,metrics'
   info:
     git:
       mode: full
@@ -84,24 +82,7 @@ spring:
   webflux:
     problemdetails:
       enabled: true
-  threads:
-    virtual:
-      enabled: true
 #    base-path: /${spring.application.name}
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      catalogService:
-        slidingWindowSize: 10
-        permittedNumberOfCallsInHalfOpenState: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10000
-        registerHealthIndicator: true
-  timelimiter:
-    instances:
-      catalogService:
-        timeoutDuration: 3s
 
 springdoc:
   cache:

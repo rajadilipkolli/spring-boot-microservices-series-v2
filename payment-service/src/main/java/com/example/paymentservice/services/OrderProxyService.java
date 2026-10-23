@@ -1,9 +1,9 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.common.dto.PagedResult;
 import com.example.paymentservice.clients.OrderServiceProxy;
 import com.example.paymentservice.model.response.OrderResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +36,6 @@ public class OrderProxyService {
     public PagedResult<OrderResponse> getOrdersByCustomerId(
             Long customerId, int pageNo, int pageSize, String sortBy, String sortDir) {
         return orderServiceProxy.getOrdersByCustomerId(
-                customerId, pageNo - 1, pageSize, sortBy + "," + sortDir);
+                customerId, pageNo, pageSize, sortBy + "," + sortDir);
     }
 }

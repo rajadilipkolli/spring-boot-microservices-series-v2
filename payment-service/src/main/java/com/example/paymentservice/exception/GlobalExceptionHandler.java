@@ -1,7 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.exception;
 
-import com.example.paymentservice.utils.LogSanitizer;
+import com.example.common.logging.LogSanitizer;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;

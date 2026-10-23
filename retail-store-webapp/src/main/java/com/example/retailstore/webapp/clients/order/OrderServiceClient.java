@@ -1,6 +1,6 @@
 package com.example.retailstore.webapp.clients.order;
 
-import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.common.dto.PagedResult;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.web.bind.annotation.PathVariable;

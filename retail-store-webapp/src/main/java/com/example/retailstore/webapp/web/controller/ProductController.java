@@ -1,11 +1,11 @@
 package com.example.retailstore.webapp.web.controller;
 
-import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
 import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
 import com.example.retailstore.webapp.clients.catalog.ProductResponse;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
-import com.example.retailstore.webapp.util.LogSanitizer;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

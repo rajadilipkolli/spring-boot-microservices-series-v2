@@ -18,12 +18,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.services.CustomerService;
 import com.example.paymentservice.services.OrderProxyService;
 import java.math.BigDecimal;
@@ -161,8 +161,7 @@ class CustomerControllerTest {
 
     @ParameterizedTest
     @CsvSource({
-        "pageNo,0,pageNo must be greater than or equal to 1",
-        "pageNo,-1,pageNo must be greater than or equal to 1",
+        "pageNo,-1,pageNo must be greater than or equal to 0",
         "pageSize,0,pageSize must be greater than 0",
         "pageSize,-1,pageSize must be greater than 0"
     })
@@ -179,14 +178,14 @@ class CustomerControllerTest {
     void shouldUseDefaultOrderPagination() throws Exception {
         given(customerService.findCustomerById(1L))
                 .willReturn(Optional.of(getCustomerResponseList().getFirst()));
-        given(orderProxyService.getOrdersByCustomerId(1L, 1, 10, "id", "asc"))
+        given(orderProxyService.getOrdersByCustomerId(1L, 0, 10, "id", "asc"))
                 .willReturn(new PagedResult<>(List.of(), 0, 1, 0, true, true, false, false));
 
         mockMvc.perform(get("/api/customers/1/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
 
-        verify(orderProxyService).getOrdersByCustomerId(1L, 1, 10, "id", "asc");
+        verify(orderProxyService).getOrdersByCustomerId(1L, 0, 10, "id", "asc");
     }
 
     @Nested
