@@ -1,0 +1,244 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2026 Raja Kolli.
+</p>
+***/
+
+package com.example.inventoryservice.inventory.web.api;
+
+import com.example.common.dto.PagedResult;
+import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
+import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
+import com.example.inventoryservice.inventory.utils.AppConstants;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import java.util.List;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+
+@Validated
+@Tag(name = "inventory-controller", description = "the inventory-controller API")
+public interface InventoryApi {
+
+    /**
+     * Returns a sorted inventory page with pagination metadata using one-based page numbers. Lookup
+     * and sort-resolution failures propagate.
+     *
+     * @param pageNo zero-based page index
+     * @param pageSize maximum records per page; must be positive
+     * @param sortBy inventory property to sort by
+     * @param sortDir {@code asc} (case-insensitive) for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
+    @Operation(
+            summary = "Returns inventory records using requested pagination and sort options",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Successful retrieval",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema = @Schema(implementation = PagedResult.class)))
+            })
+    PagedResult<InventoryResponse> getAllInventories(
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+                    int pageNo,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+                    int pageSize,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+                    String sortBy,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+                    String sortDir);
+
+    /**
+     * Returns HTTP 200 with the matching inventory, or HTTP 404 if the product code is absent.
+     *
+     * @param delay optional pause in seconds before lookup; null or non-positive values do not
+     *     pause the lookup. Interruption restores the thread's interrupt flag and lookup continues.
+     */
+    @Operation(
+            summary = "Returns inventory by product code",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Inventory found",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema =
+                                                @Schema(implementation = InventoryResponse.class))),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Inventory not found",
+                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            })
+    ResponseEntity<InventoryResponse> getInventoryByProductCode(
+            @PathVariable String productCode, @RequestParam(required = false) Integer delay);
+
+    /**
+     * Returns HTTP 200 with a sorted inventory page restricted to the supplied product codes.
+     * Result metadata uses one-based page numbers. Lookup and sort-resolution failures propagate.
+     *
+     * @param pageNo zero-based page index
+     * @param pageSize maximum records per page; must be positive
+     * @param sortBy inventory property to sort by
+     * @param sortDir {@code asc} (case-insensitive) for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
+    @Operation(
+            summary = "Returns inventory matching supplied product codes",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Inventory list retrieved",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema = @Schema(implementation = PagedResult.class)))
+            })
+    ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
+            @RequestParam List<String> codes,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+                    int pageNo,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+                    int pageSize,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+                    String sortBy,
+            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+                    String sortDir);
+
+    /**
+     * Updates existing inventory with generated product codes to random available quantities from 1
+     * through 10,000. Missing products and optimistic locking failures are skipped; other
+     * persistence failures propagate.
+     *
+     * @param idempotencyKey identifies a batch; keys already seen by this service instance skip
+     *     updates, including keys retained after a failed attempt
+     * @param batchSize number of product codes to try, from 1 through 10,000; null uses 101
+     * @return true when processing completes, including when the key was already seen
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     */
+    @Operation(
+            summary = "Updates a generated batch using idempotency key",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(responseCode = "200", description = "Batch update completed")
+            })
+    boolean updateInventoryWithRandomValue(
+            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
+            @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize);
+
+    /**
+     * Creates inventory from a validated request and returns its representation with HTTP 201.
+     * Duplicate product codes raise {@link
+     * com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException}; other
+     * persistence failures propagate.
+     */
+    @Operation(
+            summary = "Creates new inventory record",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "201",
+                        description = "Inventory created",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema = @Schema(implementation = InventoryResponse.class)))
+            })
+    InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest);
+
+    /**
+     * Updates inventory by identifier and returns its representation with HTTP 200, or HTTP 404
+     * when absent. Persistence failures propagate.
+     */
+    @Operation(
+            summary = "Updates existing inventory record by identifier",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Inventory updated",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema =
+                                                @Schema(implementation = InventoryResponse.class))),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Inventory not found",
+                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            })
+    ResponseEntity<InventoryResponse> updateInventory(
+            @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest);
+
+    /**
+     * Updates inventory by product code and returns its representation with HTTP 200, or HTTP 404
+     * when absent. A non-null request product code that differs from the path returns HTTP 400.
+     * Persistence failures propagate.
+     */
+    @Operation(
+            summary = "Updates existing inventory record by product code",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Inventory updated",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema =
+                                                @Schema(implementation = InventoryResponse.class))),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Bad request",
+                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE)),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Inventory not found",
+                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            })
+    ResponseEntity<InventoryResponse> updateInventoryByProductCode(
+            @PathVariable String productCode,
+            @RequestBody @Valid InventoryRequest inventoryRequest);
+
+    /**
+     * Deletes inventory by identifier and returns its previous representation with HTTP 200, or
+     * HTTP 404 when absent. Persistence failures propagate.
+     */
+    @Operation(
+            summary = "Deletes inventory record by identifier",
+            tags = {"inventory-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Inventory deleted",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema =
+                                                @Schema(implementation = InventoryResponse.class))),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Inventory not found",
+                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            })
+    ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id);
+}

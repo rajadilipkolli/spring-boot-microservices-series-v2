@@ -80,6 +80,11 @@ class KafkaListenerConfig {
      * @throws JacksonException if the record value cannot be deserialized as a product
      * @throws ConstraintViolationException if the product violates bean validation constraints
      */
+    @RetryableTopic(
+            backOff = @BackOff(delay = 1000, multiplier = 2.0),
+            retryTopicSuffix = "-retry-product",
+            dltTopicSuffix = "-dlt-product",
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(id = "products", topics = AppConstants.PRODUCT_TOPIC, groupId = "product")
     public void onSaveProductEvent(ConsumerRecord<String, String> record) throws JacksonException {
         String productDtoStr = record.value();

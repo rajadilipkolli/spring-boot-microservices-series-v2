@@ -27,10 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;

@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,12 +24,14 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
+    private final AtomicLong orderIdGenerator = new AtomicLong(100L);
     private Inventory product1;
 
     /** Clears persisted inventory and seeds two products with available and reserved quantities. */
     @BeforeEach
     void setUp() {
-        // Clear existing inventory
+        // Clear existing processed events and inventory
+        processedOrderEventRepository.deleteAllInBatch();
         inventoryRepository.deleteAll();
 
         // Create test inventory items
@@ -93,9 +96,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
     @Test
     void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() { // Arrange
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -117,10 +121,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatus_ShouldDecreaseReservedItemsAndIncreaseAvailableQuantity() {
         // Arrange
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // Not inventory source to trigger rollback logic
-        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
+        OrderDto orderDto =
+                new OrderDto(orderId, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -142,11 +148,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatusAndInventorySource_ShouldNotChangeInventory() {
         // Arrange
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // inventory source, should not trigger rollback logic
         OrderDto orderDto =
-                new OrderDto(1L, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
+                new OrderDto(orderId, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -168,9 +175,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithSufficientStock_ShouldReturnAcceptStatus() {
         // Arrange
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -205,11 +213,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithInsufficientStock_ShouldReturnRejectStatus() {
         // Arrange
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 =
                 new OrderDto.OrderItemDto(
                         1L, "product1", 120, BigDecimal.TEN); // More than available
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -258,9 +267,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         inventoryRepository.save(product1);
 
         // Arrange the order with the parameterized quantity
+        Long orderId = orderIdGenerator.incrementAndGet();
         OrderDto.OrderItemDto item1 =
                 new OrderDto.OrderItemDto(1L, "product1", orderQuantity, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1));
 
         // Define expected changes based on expected status
         Map<String, int[]> expectedChanges;
@@ -297,5 +307,35 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         assertThat(resultOrderDto).isNotNull();
         assertThat(resultOrderDto.status()).isEqualTo(expectedStatus);
         assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+    }
+
+    @Test
+    void reserveOrderWithDuplicateEvent_ShouldSkipProcessing() {
+        Long orderId = orderIdGenerator.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1));
+
+        OrderDto firstResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(firstResult.status()).isEqualTo("ACCEPT");
+
+        // Duplicate reserve event should be skipped and return original orderDto
+        OrderDto secondResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(secondResult.status()).isEqualTo("NEW");
+    }
+
+    @Test
+    void confirmOrderWithDuplicateEvent_ShouldSkipProcessing() {
+        Long orderId = orderIdGenerator.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item1));
+
+        inventoryOrderManageService.confirm(orderDto);
+        Inventory afterFirst = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFirst.getReservedItems()).isEqualTo(40);
+
+        // Duplicate confirm should be skipped and not deduct reserved items again
+        inventoryOrderManageService.confirm(orderDto);
+        Inventory afterSecond = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterSecond.getReservedItems()).isEqualTo(40);
     }
 }

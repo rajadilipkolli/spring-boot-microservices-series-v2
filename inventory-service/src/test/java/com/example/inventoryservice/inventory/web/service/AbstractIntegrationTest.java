@@ -42,6 +42,8 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected InventoryRepository inventoryRepository;
 
+    @Autowired protected ProcessedOrderEventRepository processedOrderEventRepository;
+
     @Autowired protected TestStockOrderListenerConfig stockOrderListener;
 
     @Autowired protected InventoryOrderManageService inventoryOrderManageService;

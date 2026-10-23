@@ -6,13 +6,14 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.InventoryOrderManageService;
 import com.example.inventoryservice.inventory.domain.models.OrderDto;
 import com.example.inventoryservice.inventory.events.InventoryProcessedEvent;
 import com.example.inventoryservice.inventory.utils.AppConstants;
-import com.example.inventoryservice.inventory.utils.logging.Loggable;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             LoggerFactory.getLogger(InventoryOrderManageServiceImpl.class);
 
     private final InventoryRepository inventoryRepository;
+    private final ProcessedOrderEventRepository processedOrderEventRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final Counter inventoryReservationsCounter;
     private final Counter inventoryFailuresCounter;
@@ -40,9 +44,11 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     /** Creates the service and obtains reservation and failure counters from the registry. */
     public InventoryOrderManageServiceImpl(
             InventoryRepository inventoryRepository,
+            ProcessedOrderEventRepository processedOrderEventRepository,
             MeterRegistry meterRegistry,
             ApplicationEventPublisher eventPublisher) {
         this.inventoryRepository = inventoryRepository;
+        this.processedOrderEventRepository = processedOrderEventRepository;
         this.eventPublisher = eventPublisher;
         this.inventoryReservationsCounter = meterRegistry.counter("inventory_reservations");
         this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
@@ -52,22 +58,42 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * Reserves available inventory for a new order and publishes the reservation outcome.
      *
      * <p>Orders whose status is not {@code NEW} are returned unchanged without publishing an event.
-     * New orders are rejected without stock changes if products are missing, product codes are
+     * Orders with a non-null ID and an existing {@code RESERVE} record are also returned unchanged,
+     * without stock changes or an event. Accepted and rejected reservations record processing for
+     * non-null IDs; null IDs bypass duplicate tracking.
+     *
+     * <p>New orders are rejected without stock changes if products are missing, product codes are
      * repeated, or any requested quantity exceeds availability. Accepted orders move the requested
      * quantities from available to reserved stock. Both outcomes publish an {@link
-     * InventoryProcessedEvent}; persistence and event publication failures propagate to the caller.
+     * InventoryProcessedEvent}. Optimistic locking failures are eligible for up to three retries
+     * with an initial delay of one second, doubling between retries. Unresolved persistence and
+     * event publication failures propagate to the caller.
      *
      * @param orderDto order whose items should be reserved
      * @return the order with status {@code ACCEPT} or {@code REJECT} and source {@code INVENTORY},
-     *     or the original order if its status is not {@code NEW}
+     *     or the original order if its status is not {@code NEW} or its reservation was recorded
      */
     @Transactional
+    @Retryable(
+            includes = OptimisticLockingFailureException.class,
+            maxRetries = 3,
+            delay = 1000,
+            multiplier = 2.0)
     @Override
     public OrderDto reserve(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
         // Check if order status is not NEW
         if (!"NEW".equals(orderDto.status())) {
             LOGGER.error("Order status is not NEW, Hence Ignoring OrderID :{}", orderDto.orderId());
+            return orderDto;
+        }
+
+        if (orderDto.orderId() != null
+                && processedOrderEventRepository.existsByOrderIdAndEventType(
+                        orderDto.orderId(), "RESERVE")) {
+            LOGGER.warn(
+                    "Order {} reserve event has already been processed. Skipping duplicate.",
+                    orderDto.orderId());
             return orderDto;
         }
         List<String> productCodeList =
@@ -89,6 +115,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                     productCodeList);
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
             this.inventoryFailuresCounter.increment();
+            if (orderDto.orderId() != null) {
+                processedOrderEventRepository.save(
+                        new ProcessedOrderEvent(orderDto.orderId(), "RESERVE", Instant.now()));
+            }
             eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
                     "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
@@ -146,6 +176,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
 
         // Send order to Kafka
         OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
+        if (orderDto.orderId() != null) {
+            processedOrderEventRepository.save(
+                    new ProcessedOrderEvent(orderDto.orderId(), "RESERVE", Instant.now()));
+        }
         eventPublisher.publishEvent(new InventoryProcessedEvent(orderWithSource));
         LOGGER.info(
                 "Sent Order with status {} : {} from inventory service to topic {}",
@@ -161,12 +195,33 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * products are skipped and other statuses leave quantities unchanged. Changes are persisted
      * without publishing an event; persistence failures propagate to the caller.
      *
+     * <p>For non-null order IDs, an existing {@code CONFIRM_<status>} record skips processing;
+     * otherwise that record is saved even when no quantities change. Null IDs bypass duplicate
+     * tracking. Optimistic locking failures are eligible for up to three retries with an initial
+     * delay of one second, doubling between retries; failures remaining afterward propagate.
+     *
      * @param orderDto order whose item quantities are deducted from reserved stock
      */
     @Transactional
+    @Retryable(
+            includes = OptimisticLockingFailureException.class,
+            maxRetries = 3,
+            multiplier = 2.0,
+            delay = 1000)
     @Override
     public void confirm(OrderDto orderDto) {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
+
+        String eventType = "CONFIRM_" + orderDto.status();
+        if (orderDto.orderId() != null
+                && processedOrderEventRepository.existsByOrderIdAndEventType(
+                        orderDto.orderId(), eventType)) {
+            LOGGER.warn(
+                    "Order {} confirm ({}) event has already been processed. Skipping duplicate.",
+                    orderDto.orderId(),
+                    orderDto.status());
+            return;
+        }
 
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
@@ -196,6 +251,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         }
 
         inventoryRepository.saveAll(inventoryMap.values());
+        if (orderDto.orderId() != null) {
+            processedOrderEventRepository.save(
+                    new ProcessedOrderEvent(orderDto.orderId(), eventType, Instant.now()));
+        }
 
         LOGGER.info("Order confirmation completed for order ID: {}", orderDto.orderId());
     }

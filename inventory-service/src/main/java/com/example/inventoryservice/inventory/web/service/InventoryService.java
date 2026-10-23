@@ -6,11 +6,11 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException;
-import com.example.inventoryservice.inventory.utils.logging.Loggable;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
