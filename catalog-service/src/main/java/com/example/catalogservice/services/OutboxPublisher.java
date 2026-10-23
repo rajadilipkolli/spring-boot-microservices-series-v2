@@ -152,7 +152,13 @@ public class OutboxPublisher {
      */
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
         if (event.getRetryCount() < properties.outbox().getMaxRetries()) {
-            log.warn("Retrying event {}: {}", event.getId(), error);
+            long backoffSeconds = (long) Math.pow(2, event.getRetryCount());
+            log.warn(
+                    "Retrying event {} with exponential backoff ~{}s (attempt {}): {}",
+                    event.getId(),
+                    backoffSeconds,
+                    event.getRetryCount() + 1,
+                    error);
             event.setStatus(OutboxEventStatus.PENDING)
                     .setRetryCount(event.getRetryCount() + 1)
                     .setErrorMessage(error);

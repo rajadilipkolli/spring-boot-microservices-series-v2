@@ -32,7 +32,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +58,8 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
+        ProductAvailabilityEnricher enricher =
+                new ProductAvailabilityEnricher(inventoryServiceProxy);
         ProductService spy =
                 spy(
                         new ProductService(
@@ -67,11 +68,13 @@ class ProductServiceTest {
                                 inventoryServiceProxy,
                                 outboxService,
                                 redisOps,
+                                enricher,
                                 null,
-                                TSID.Factory.builder().build()));
-        ProxyFactory proxyFactory = new ProxyFactory(spy);
-        ProductService proxy = (ProductService) proxyFactory.getProxy();
-        ReflectionTestUtils.setField(spy, "self", proxy);
+                                null,
+                                TSID.Factory.builder().withNode(1).build()));
+        ProductGeneratorService generatorService = new ProductGeneratorService(spy);
+        ReflectionTestUtils.setField(spy, "productGeneratorService", generatorService);
+        ReflectionTestUtils.setField(spy, "self", spy);
         productService = spy;
 
         lenient().when(productRepository.findCacheGeneration()).thenReturn(Mono.just("initial"));

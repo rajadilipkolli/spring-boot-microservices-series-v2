@@ -32,6 +32,9 @@ public class OutboxHousekeepingService {
     @Value("${application.outbox.retention-days:7}")
     private int retentionDays = 7;
 
+    @Value("${application.outbox.failed-retention-days:30}")
+    private int failedRetentionDays = 30;
+
     public OutboxHousekeepingService(
             OutboxEventRepository outboxEventRepository, MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
@@ -88,6 +91,22 @@ public class OutboxHousekeepingService {
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
+                .onErrorComplete()
+                .block();
+    }
+
+    /**
+     * Deletes failed events created strictly before the retention cutoff and waits for completion.
+     */
+    @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
+    @SchedulerLock(name = "cleanupFailedEventsLock")
+    public void cleanupFailedEvents() {
+        OffsetDateTime threshold = OffsetDateTime.now().minusDays(failedRetentionDays);
+        log.info("Starting cleanup of failed events older than {}", threshold);
+        outboxEventRepository
+                .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.FAILED, threshold)
+                .doOnSuccess(v -> log.info("Successfully cleaned up {} old failed events", v))
+                .doOnError(e -> log.error("Error during failed outbox cleanup", e))
                 .onErrorComplete()
                 .block();
     }

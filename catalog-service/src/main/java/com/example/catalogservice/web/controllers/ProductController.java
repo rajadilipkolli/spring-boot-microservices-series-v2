@@ -6,14 +6,14 @@
 
 package com.example.catalogservice.web.controllers;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -121,12 +121,8 @@ public class ProductController implements ProductApi {
     public Mono<ResponseEntity<ProductResponse>> updateProduct(
             @PathVariable Long id, @RequestBody @Valid ProductRequest productRequest) {
         return productService
-                .findById(id)
-                .flatMap(
-                        product ->
-                                productService
-                                        .updateProduct(productRequest, product)
-                                        .map(ResponseEntity::ok))
+                .updateProduct(id, productRequest)
+                .map(ResponseEntity::ok)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)));
     }
 

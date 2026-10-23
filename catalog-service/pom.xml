@@ -120,6 +120,11 @@
 
         <!-- end Observability -->
         <dependency>
+            <groupId>com.example.microservices</groupId>
+            <artifactId>common</artifactId>
+            <version>0.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
@@ -377,6 +382,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>@{argLine} -XX:+EnableDynamicAgentLoading -Dtsid.node=1</argLine>
                     <runOrder>alphabetical</runOrder>
                     <reportsDirectory>${junit.utReportFolder}</reportsDirectory>
                     <excludes>
@@ -593,6 +599,11 @@
     </build>
 
     <repositories>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/rajadilipkolli/spring-boot-microservices-series-v2</url>
+        </repository>
         <repository>
             <id>spring-milestones</id>
             <name>Spring Milestones</name>

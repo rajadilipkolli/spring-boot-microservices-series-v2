@@ -6,16 +6,16 @@
 
 package com.example.catalogservice.services;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.math.BigDecimal;
@@ -59,8 +59,10 @@ public class ProductService {
     private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
     private final ReactiveRedisOperations<String, Object> redisOps;
+    private ProductAvailabilityEnricher productAvailabilityEnricher;
+    private ProductGeneratorService productGeneratorService;
 
-    private final ProductService self;
+    private ProductService self;
     private final TSID.Factory tsidFactory;
 
     /**
@@ -74,6 +76,8 @@ public class ProductService {
             InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
             ReactiveRedisOperations<String, Object> redisOps,
+            ProductAvailabilityEnricher productAvailabilityEnricher,
+            @Lazy ProductGeneratorService productGeneratorService,
             @Lazy ProductService self,
             TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
@@ -81,8 +85,34 @@ public class ProductService {
         this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
         this.redisOps = redisOps;
-        this.self = self;
-        this.tsidFactory = tsidFactory;
+        this.productAvailabilityEnricher = productAvailabilityEnricher;
+        this.self = self != null ? self : this;
+        this.productGeneratorService =
+                productGeneratorService != null
+                        ? productGeneratorService
+                        : new ProductGeneratorService(this.self);
+        this.tsidFactory =
+                tsidFactory != null ? tsidFactory : TSID.Factory.builder().withNode(1).build();
+    }
+
+    public ProductService(
+            ProductRepository productRepository,
+            ProductMapper productMapper,
+            InventoryServiceProxy inventoryServiceProxy,
+            OutboxService outboxService,
+            ReactiveRedisOperations<String, Object> redisOps,
+            ProductService self,
+            TSID.Factory tsidFactory) {
+        this(
+                productRepository,
+                productMapper,
+                inventoryServiceProxy,
+                outboxService,
+                redisOps,
+                new ProductAvailabilityEnricher(inventoryServiceProxy),
+                null,
+                self,
+                tsidFactory);
     }
 
     /**
@@ -228,11 +258,7 @@ public class ProductService {
 
     private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
             ProductResponse productResponse) {
-        return getInventoryByProductCode(productResponse.productCode())
-                .map(
-                        inventoryResponse ->
-                                productResponse.withInStock(
-                                        inventoryResponse.availableQuantity() > 0));
+        return productAvailabilityEnricher.enrichWithAvailability(productResponse);
     }
 
     /**
@@ -336,6 +362,21 @@ public class ProductService {
     }
 
     /**
+     * Updates a product by its ID and request DTO, preventing entity leakage across layer
+     * boundaries.
+     *
+     * @param id the product ID
+     * @param productRequest the updated product details
+     * @return Mono of updated ProductResponse
+     */
+    @Transactional
+    public Mono<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {
+        return productRepository
+                .findById(id)
+                .flatMap(product -> updateProduct(productRequest, product));
+    }
+
+    /**
      * Updates the supplied product in place, saves it, records an update outbox event, and
      * invalidates product caches, including entries for both the previous and current codes. Redis
      * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
@@ -387,27 +428,7 @@ public class ProductService {
      */
     @Transactional
     public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
-        validateBatchSize(batchSize);
-        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
-
-        return Flux.range(0, resolvedBatchSize)
-                .flatMap(
-                        i ->
-                                Mono.just(RAND.nextInt(100) + 1)
-                                        .map(
-                                                randomPrice ->
-                                                        new ProductRequest(
-                                                                "ProductCode_"
-                                                                        + idempotencyKey
-                                                                        + "_"
-                                                                        + i,
-                                                                "Gen Product " + i,
-                                                                "Gen Prod Description " + i,
-                                                                null,
-                                                                BigDecimal.valueOf(randomPrice)
-                                                                        .setScale(2))))
-                .flatMap(this::saveProduct)
-                .then(Mono.just(Boolean.TRUE));
+        return productGeneratorService.generateProducts(idempotencyKey, batchSize);
     }
 
     private static void validateBatchSize(Integer batchSize) {
@@ -539,48 +560,8 @@ public class ProductService {
      */
     private Mono<PagedResult<ProductResponse>> enrichWithAvailability(
             Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
-        return productResponseFlux
-                .collectList()
-                .flatMap(
-                        productResponseList -> {
-                            if (productResponseList.isEmpty()) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
-
-                            Flux<String> productCodeFlux =
-                                    Flux.fromIterable(productResponseList)
-                                            .map(ProductResponse::productCode);
-
-                            return productCodeFlux
-                                    .collectList()
-                                    .flatMap(
-                                            productCodeList ->
-                                                    getInventoryByProductCodes(productCodeList)
-                                                            .collectMap(
-                                                                    InventoryResponse::productCode,
-                                                                    InventoryResponse
-                                                                            ::availableQuantity)
-                                                            .flatMap(
-                                                                    inventoriesMap ->
-                                                                            updateProductAvailability(
-                                                                                            productResponseList,
-                                                                                            inventoriesMap)
-                                                                                    .collectList()
-                                                                                    .map(
-                                                                                            updatedProducts ->
-                                                                                                    new PagedResult<>(
-                                                                                                            new PageImpl<>(
-                                                                                                                    updatedProducts,
-                                                                                                                    pageable,
-                                                                                                                    totalCount
-                                                                                                                                    != null
-                                                                                                                            ? totalCount
-                                                                                                                            : productResponseList
-                                                                                                                                    .size())))));
-                        });
+        return productAvailabilityEnricher.enrichWithAvailability(
+                productResponseFlux, pageable, totalCount);
     }
 
     /** Builds a generation-free cache key using locale-independent lowercase product codes. */

@@ -16,7 +16,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.model.response.PagedResult;
+import com.example.common.dto.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.hypersistence.tsid.TSID;
 import java.io.IOException;
