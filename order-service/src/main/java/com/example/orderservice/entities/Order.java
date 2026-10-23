@@ -144,7 +144,7 @@ public class Order extends Auditable<String> implements Serializable {
     }
 
     /**
-     * Confirms a newly created order.
+     * Confirms a newly created order and clears its failure source.
      *
      * @throws IllegalStateException if the order is not in {@link OrderStatus#NEW} status
      */
@@ -202,6 +202,7 @@ public class Order extends Auditable<String> implements Serializable {
      * Checks if the order is in a terminal lifecycle state.
      *
      * @return true if the order is CONFIRMED, REJECTED, ROLLBACK, or FAILED
+     * @throws NullPointerException if the current status is null
      */
     public boolean isTerminal() {
         return switch (this.status) {
@@ -213,8 +214,12 @@ public class Order extends Auditable<String> implements Serializable {
     /**
      * Transitions this order to the specified target status with an optional source.
      *
-     * @param targetStatus the desired status
-     * @param source the source component
+     * @param targetStatus CONFIRMED, ROLLBACK, REJECTED, or FAILED
+     * @param source the failure source to store, which may be null; ignored and cleared for
+     *     confirmation
+     * @throws IllegalArgumentException if the target status is NEW or ACCEPT
+     * @throws IllegalStateException if the current status is not NEW
+     * @throws NullPointerException if the target status is null
      */
     public void transitionTo(OrderStatus targetStatus, String source) {
         switch (targetStatus) {
@@ -231,7 +236,8 @@ public class Order extends Auditable<String> implements Serializable {
     /**
      * Calculates the total monetary amount of all items in this order.
      *
-     * @return the total price sum
+     * @return the sum of quantity times price for each item, treating null prices as zero, or zero
+     *     if there are no items
      */
     public BigDecimal getTotalAmount() {
         return items.stream().map(OrderItem::getSubTotal).reduce(BigDecimal.ZERO, BigDecimal::add);

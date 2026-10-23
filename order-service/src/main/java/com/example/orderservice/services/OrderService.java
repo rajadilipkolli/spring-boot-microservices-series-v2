@@ -85,8 +85,13 @@ public class OrderService {
      * @param pageNo zero-based page number
      * @param pageSize number of orders per page
      * @param sortBy order property to sort by
-     * @param sortDir sort direction
-     * @return the requested page of order responses
+     * @param sortDir "asc" ignoring case for ascending order; any other non-null value selects
+     *     descending order
+     * @return the requested page of order responses with a one-based response page number
+     * @throws IllegalArgumentException if pageNo is negative, pageSize is less than one, or sortBy
+     *     is null or blank
+     * @throws NullPointerException if sortDir is null
+     * @see #findAllOrders(Pageable)
      */
     public PagedResult<OrderResponse> findAllOrders(
             int pageNo, int pageSize, String sortBy, String sortDir) {
@@ -102,7 +107,9 @@ public class OrderService {
      * Finds a page of orders preserving every requested sort order.
      *
      * @param pageable pagination and sorting options
-     * @return the requested page of order responses
+     * @return the requested page of order responses with a one-based response page number
+     * @throws org.springframework.dao.DataAccessException if a repository operation fails
+     * @throws java.util.concurrent.CompletionException if asynchronous response mapping fails
      */
     public PagedResult<OrderResponse> findAllOrders(Pageable pageable) {
         // Error:: JpaSystem firstResult/maxResults specified with collection fetch. In memory

@@ -17,6 +17,14 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 
 public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
 
+    /**
+     * Registers reflection access for order DTOs, responses, addresses, and the TSID supplier in
+     * native images.
+     *
+     * @param hints registry to update with constructor and method access, plus field access for
+     *     DTOs, responses, and addresses
+     * @param classLoader unused by this registrar
+     */
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection()

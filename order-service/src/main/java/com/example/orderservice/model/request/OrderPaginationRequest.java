@@ -38,8 +38,15 @@ public record OrderPaginationRequest(
     /**
      * Creates pagination with modern parameters taking precedence over their legacy aliases. A
      * supplied Spring Data sort retains all orders; otherwise legacy sorting defaults to id ASC.
+     * Missing page and size values default to page 0 and 10 rows, and sizes are capped at 2000.
+     * Legacy direction is ascending when absent, empty, or "asc" ignoring case; any other value
+     * selects descending order.
      *
-     * @throws IllegalArgumentException if a final sort property is unsupported
+     * @param sort non-null resolved sorting; an unsorted value enables legacy sorting
+     * @return pagination with a zero-based page number and the resolved sort orders
+     * @throws IllegalArgumentException if a final sort property is unsupported, the resolved page
+     *     number is negative, or the resolved size is less than one
+     * @throws NullPointerException if sort is null
      */
     public Pageable toPageable(Sort sort) {
         int pageNumber = page != null ? page : pageNo != null ? pageNo : 0;
