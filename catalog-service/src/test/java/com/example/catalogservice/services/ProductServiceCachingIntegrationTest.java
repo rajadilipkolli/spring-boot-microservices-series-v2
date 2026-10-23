@@ -124,25 +124,28 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .block();
         assertThat(cacheKey("products:0_10_id_asc")).isNotEqualTo(beforeUpdate);
 
-        String beforeDelete = productRepository.findCacheGeneration().block();
+        String beforeDelete = productCacheGenerationRepository.findCacheGeneration().block();
         productService.deleteProductById(product.getId()).block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeDelete);
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeDelete);
 
-        String beforeSave = productRepository.findCacheGeneration().block();
+        String beforeSave = productCacheGenerationRepository.findCacheGeneration().block();
         productService
                 .saveProduct(
                         new ProductRequest(
                                 "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeSave);
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeSave);
 
-        String beforeGenerate = productRepository.findCacheGeneration().block();
+        String beforeGenerate = productCacheGenerationRepository.findCacheGeneration().block();
         productService.generateProducts("cache-test", 1).block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeGenerate);
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeGenerate);
         productRepository.deleteByProductCodeAllIgnoreCase("ProductCode_cache-test_0").block();
     }
 
     private String cacheKey(String key) {
-        return key + ":" + productRepository.findCacheGeneration().block();
+        return key + ":" + productCacheGenerationRepository.findCacheGeneration().block();
     }
 }

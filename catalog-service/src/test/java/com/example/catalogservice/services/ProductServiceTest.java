@@ -19,6 +19,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
@@ -46,6 +47,8 @@ class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
 
+    @Mock private ProductCacheGenerationRepository productCacheGenerationRepository;
+
     @Mock private OutboxService outboxService;
 
     @Mock private ReactiveRedisOperations<String, Object> redisOps;
@@ -71,13 +74,16 @@ class ProductServiceTest {
                                 enricher,
                                 productGeneratorService,
                                 null,
-                                TSID.Factory.builder().withNode(1).build()));
+                                TSID.Factory.builder().withNode(1).build(),
+                                productCacheGenerationRepository));
         ReflectionTestUtils.setField(spy, "self", spy);
         productService = spy;
 
-        lenient().when(productRepository.findCacheGeneration()).thenReturn(Mono.just("initial"));
         lenient()
-                .when(productRepository.updateCacheGeneration(any(String.class)))
+                .when(productCacheGenerationRepository.findCacheGeneration())
+                .thenReturn(Mono.just("initial"));
+        lenient()
+                .when(productCacheGenerationRepository.updateCacheGeneration(any(String.class)))
                 .thenReturn(Mono.just(1));
         lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }

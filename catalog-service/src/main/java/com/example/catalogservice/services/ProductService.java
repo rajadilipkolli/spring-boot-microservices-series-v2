@@ -12,6 +12,7 @@ import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dto.PagedResult;
 import com.example.common.logging.Loggable;
@@ -58,6 +59,7 @@ public class ProductService {
 
     private final ProductService self;
     private final TSID.Factory tsidFactory;
+    private final ProductCacheGenerationRepository productCacheGenerationRepository;
 
     /**
      * Creates the product service with shared caching and transactional product creation.
@@ -72,7 +74,8 @@ public class ProductService {
             ProductAvailabilityEnricher productAvailabilityEnricher,
             ProductGeneratorService productGeneratorService,
             @Lazy ProductService self,
-            TSID.Factory tsidFactory) {
+            TSID.Factory tsidFactory,
+            ProductCacheGenerationRepository productCacheGenerationRepository) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.outboxService = outboxService;
@@ -81,6 +84,7 @@ public class ProductService {
         this.self = self != null ? self : this;
         this.productGeneratorService = productGeneratorService;
         this.tsidFactory = tsidFactory;
+        this.productCacheGenerationRepository = productCacheGenerationRepository;
     }
 
     /**
@@ -532,7 +536,7 @@ public class ProductService {
      *     errors propagate
      */
     private Mono<String> cacheGeneration() {
-        return productRepository
+        return productCacheGenerationRepository
                 .findCacheGeneration()
                 .switchIfEmpty(
                         Mono.error(new IllegalStateException("Missing product cache generation")));
@@ -615,7 +619,7 @@ public class ProductService {
                         cacheGeneration()
                                 .flatMap(
                                         generation ->
-                                                productRepository
+                                                productCacheGenerationRepository
                                                         .updateCacheGeneration(
                                                                 UUID.randomUUID().toString())
                                                         .filter(updated -> updated == 1)

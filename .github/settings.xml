@@ -11,4 +11,24 @@
             </repositoryOrigins>
         </server>
     </servers>
+
+    <profiles>
+        <profile>
+            <id>github-packages</id>
+            <repositories>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub Packages</name>
+                    <url>https://maven.pkg.github.com/rajadilipkolli/spring-boot-microservices-series-v2</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>github-packages</activeProfile>
+    </activeProfiles>
 </settings>

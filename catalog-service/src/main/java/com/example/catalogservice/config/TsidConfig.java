@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-public class TsidConfig {
+class TsidConfig {
 
     @Bean
-    public TSID.Factory tsidFactory() {
+    TSID.Factory tsidFactory() {
         String nodeStr = System.getProperty("tsid.node", System.getenv("TSID_NODE"));
         TSID.Factory.Builder builder = TSID.Factory.builder();
         if (nodeStr != null && !nodeStr.trim().isEmpty()) {

@@ -17,6 +17,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import java.math.BigDecimal;
@@ -36,6 +37,8 @@ import reactor.test.StepVerifier;
 class ProductCacheFailureTest {
 
     private final ProductRepository repository = mock(ProductRepository.class);
+    private final ProductCacheGenerationRepository productCacheGeneration =
+            mock(ProductCacheGenerationRepository.class);
     private final ProductMapper mapper = mock(ProductMapper.class);
     private final ProductAvailabilityEnricher enricher = mock(ProductAvailabilityEnricher.class);
     private final ProductGeneratorService productGeneratorService =
@@ -53,9 +56,10 @@ class ProductCacheFailureTest {
     @BeforeEach
     void setUp() {
         service = newService();
-        when(repository.findCacheGeneration()).thenAnswer(ignored -> Mono.just(generation.get()));
+        when(productCacheGeneration.findCacheGeneration())
+                .thenAnswer(ignored -> Mono.just(generation.get()));
         lenient()
-                .when(repository.updateCacheGeneration(anyString()))
+                .when(productCacheGeneration.updateCacheGeneration(anyString()))
                 .thenAnswer(
                         invocation ->
                                 Mono.fromSupplier(
@@ -161,6 +165,7 @@ class ProductCacheFailureTest {
                 enricher,
                 productGeneratorService,
                 null,
-                TSID.Factory.builder().withNode(1).build());
+                TSID.Factory.builder().withNode(1).build(),
+                productCacheGeneration);
     }
 }
