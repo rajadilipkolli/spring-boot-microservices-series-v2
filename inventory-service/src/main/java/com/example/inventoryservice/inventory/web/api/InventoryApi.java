@@ -32,8 +32,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface InventoryApi {
 
     /**
-     * Returns a sorted inventory page with pagination metadata using one-based page numbers.
-     * Lookup and sort-resolution failures propagate.
+     * Returns a sorted inventory page with pagination metadata using one-based page numbers. Lookup
+     * and sort-resolution failures propagate.
      *
      * @param pageNo zero-based page index
      * @param pageSize maximum records per page; must be positive
@@ -67,8 +67,8 @@ public interface InventoryApi {
     /**
      * Returns HTTP 200 with the matching inventory, or HTTP 404 if the product code is absent.
      *
-     * @param delay optional pause in seconds before lookup; null or non-positive values do not pause
-     *     the lookup. Interruption restores the thread's interrupt flag and lookup continues.
+     * @param delay optional pause in seconds before lookup; null or non-positive values do not
+     *     pause the lookup. Interruption restores the thread's interrupt flag and lookup continues.
      */
     @Operation(
             summary = "Returns inventory by product code",
@@ -125,8 +125,8 @@ public interface InventoryApi {
                     String sortDir);
 
     /**
-     * Updates existing inventory with generated product codes to random available quantities from
-     * 1 through 10,000. Missing products and optimistic locking failures are skipped; other
+     * Updates existing inventory with generated product codes to random available quantities from 1
+     * through 10,000. Missing products and optimistic locking failures are skipped; other
      * persistence failures propagate.
      *
      * @param idempotencyKey identifies a batch; keys already seen by this service instance skip
