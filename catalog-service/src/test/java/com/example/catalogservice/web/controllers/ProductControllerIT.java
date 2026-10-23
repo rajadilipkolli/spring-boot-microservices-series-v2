@@ -274,7 +274,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectBody(PagedResult.class);
 
         // Verify cache is populated
-        String generation = productRepository.findCacheGeneration().block();
+        String generation = productCacheGenerationRepository.findCacheGeneration().block();
         Boolean hasKey = redisOps.hasKey("products:1_2_id_asc:" + generation).block();
         assertThat(hasKey).isTrue();
     }
