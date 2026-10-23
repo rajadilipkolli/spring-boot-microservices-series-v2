@@ -11,7 +11,6 @@ import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.common.dto.PagedResult;
@@ -19,7 +18,6 @@ import com.example.common.logging.Loggable;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -50,19 +48,15 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final Duration CACHE_EXPIRY = Duration.ofMinutes(5);
-    private static final SecureRandom RAND = new SecureRandom();
-    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
-    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
-    private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
     private final ReactiveRedisOperations<String, Object> redisOps;
-    private ProductAvailabilityEnricher productAvailabilityEnricher;
-    private ProductGeneratorService productGeneratorService;
+    private final ProductAvailabilityEnricher productAvailabilityEnricher;
+    private final ProductGeneratorService productGeneratorService;
 
-    private ProductService self;
+    private final ProductService self;
     private final TSID.Factory tsidFactory;
 
     /**
@@ -73,46 +67,20 @@ public class ProductService {
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
-            InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
             ReactiveRedisOperations<String, Object> redisOps,
             ProductAvailabilityEnricher productAvailabilityEnricher,
-            @Lazy ProductGeneratorService productGeneratorService,
+            ProductGeneratorService productGeneratorService,
             @Lazy ProductService self,
             TSID.Factory tsidFactory) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
-        this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
         this.redisOps = redisOps;
         this.productAvailabilityEnricher = productAvailabilityEnricher;
         this.self = self != null ? self : this;
-        this.productGeneratorService =
-                productGeneratorService != null
-                        ? productGeneratorService
-                        : new ProductGeneratorService(this.self);
-        this.tsidFactory =
-                tsidFactory != null ? tsidFactory : TSID.Factory.builder().withNode(1).build();
-    }
-
-    public ProductService(
-            ProductRepository productRepository,
-            ProductMapper productMapper,
-            InventoryServiceProxy inventoryServiceProxy,
-            OutboxService outboxService,
-            ReactiveRedisOperations<String, Object> redisOps,
-            ProductService self,
-            TSID.Factory tsidFactory) {
-        this(
-                productRepository,
-                productMapper,
-                inventoryServiceProxy,
-                outboxService,
-                redisOps,
-                new ProductAvailabilityEnricher(inventoryServiceProxy),
-                null,
-                self,
-                tsidFactory);
+        this.productGeneratorService = productGeneratorService;
+        this.tsidFactory = tsidFactory;
     }
 
     /**
@@ -196,10 +164,6 @@ public class ProductService {
                         });
     }
 
-    private Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
-        return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
-    }
-
     /**
      * Finds a product by ID, caching its details and inventory availability for five minutes. Redis
      * failures are tolerated; database and unhandled inventory errors propagate.
@@ -218,10 +182,6 @@ public class ProductService {
                                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                                 .map(productMapper::toProductResponse)
                                 .flatMap(this::fetchInventoryAndUpdateProductResponse));
-    }
-
-    private Mono<InventoryResponse> getInventoryByProductCode(String code) {
-        return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
     /**
@@ -428,14 +388,10 @@ public class ProductService {
      */
     @Transactional
     public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
-        return productGeneratorService.generateProducts(idempotencyKey, batchSize);
-    }
-
-    private static void validateBatchSize(Integer batchSize) {
-        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
-            throw new IllegalArgumentException(
-                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
-        }
+        return productGeneratorService
+                .generateProducts(idempotencyKey, batchSize)
+                .flatMap(self::saveProduct)
+                .then(Mono.just(Boolean.TRUE));
     }
 
     public Mono<PagedResult<ProductResponse>> searchProductsByTerm(

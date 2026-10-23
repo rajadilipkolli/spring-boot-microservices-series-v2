@@ -16,7 +16,6 @@ import static org.mockito.Mockito.when;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
@@ -38,7 +37,9 @@ class ProductCacheFailureTest {
 
     private final ProductRepository repository = mock(ProductRepository.class);
     private final ProductMapper mapper = mock(ProductMapper.class);
-    private final InventoryServiceProxy inventory = mock(InventoryServiceProxy.class);
+    private final ProductAvailabilityEnricher enricher = mock(ProductAvailabilityEnricher.class);
+    private final ProductGeneratorService productGeneratorService =
+            mock(ProductGeneratorService.class);
     private final OutboxService outbox = mock(OutboxService.class);
     private final ReactiveRedisOperations<String, Object> redis = mock();
     private final ReactiveValueOperations<String, Object> values = mock();
@@ -94,9 +95,17 @@ class ProductCacheFailureTest {
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
         when(values.set(anyString(), any(), any(Duration.class)))
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
-        when(inventory.getInventoryByProductCode("P001"))
-                .thenReturn(Mono.just(new InventoryResponse("P001", 5)));
-        when(inventory.getInventoryByProductCodes(any())).thenReturn(Flux.empty());
+        when(enricher.enrichWithAvailability(any()))
+                .thenReturn(
+                        Mono.just(
+                                new ProductResponse(
+                                        1L,
+                                        "P001",
+                                        "Fresh",
+                                        "Description",
+                                        null,
+                                        BigDecimal.TEN,
+                                        false)));
         when(repository.count()).thenReturn(Mono.just(1L));
         when(repository.findAllBy(any(Pageable.class))).thenReturn(Flux.just(product));
 
@@ -145,6 +154,13 @@ class ProductCacheFailureTest {
 
     private ProductService newService() {
         return new ProductService(
-                repository, mapper, inventory, outbox, redis, null, TSID.Factory.builder().build());
+                repository,
+                mapper,
+                outbox,
+                redis,
+                enricher,
+                productGeneratorService,
+                null,
+                TSID.Factory.builder().withNode(1).build());
     }
 }

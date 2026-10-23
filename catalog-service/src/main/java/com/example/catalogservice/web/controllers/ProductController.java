@@ -9,6 +9,7 @@ package com.example.catalogservice.web.controllers;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.services.ProductGeneratorService;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
@@ -94,7 +95,8 @@ public class ProductController implements ProductApi {
     @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<GenerateProductsResponse> createRandomProducts(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) @Min(1) @Max(ProductService.MAX_GENERATION_BATCH_SIZE) Integer batchSize) {
+            @RequestParam(required = false)
+                    @Min(1) @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE) Integer batchSize) {
         return productService
                 .generateProducts(idempotencyKey, batchSize)
                 .map(GenerateProductsResponse::new);
