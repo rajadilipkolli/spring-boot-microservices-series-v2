@@ -89,6 +89,14 @@ public class InventoryServiceProxy {
         return Mono.just(new InventoryResponse(code, 0));
     }
 
+    /**
+     * Fetches inventory for the supplied codes across all response pages. Fetch and circuit breaker
+     * errors complete the stream without further values; entries already emitted from earlier pages
+     * are retained.
+     *
+     * @param productCodeList the product codes to query
+     * @return inventory entries, or an empty stream if the request fails before emitting any
+     */
     public Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
         log.info(
                 "Fetching inventory information for productCodes : {}",

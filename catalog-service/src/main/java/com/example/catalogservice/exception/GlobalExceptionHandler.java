@@ -50,6 +50,12 @@ public class GlobalExceptionHandler {
         return Mono.just(problemDetail);
     }
 
+    /**
+     * Converts a request buffer limit failure to an HTTP 413 problem with a validation error
+     * category and timestamp.
+     *
+     * @return the problem details without exposing the exception message
+     */
     @ExceptionHandler(DataBufferLimitException.class)
     Mono<ProblemDetail> handleDataBufferLimitException(DataBufferLimitException ex) {
         log.warn("Request body too large: {}", LogSanitizer.sanitizeException(ex));

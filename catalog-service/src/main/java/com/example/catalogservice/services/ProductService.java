@@ -64,7 +64,8 @@ public class ProductService {
     /**
      * Creates the product service with shared caching and transactional product creation.
      *
-     * @param self the Spring proxy used to apply transactions when creating a product
+     * @param self the Spring proxy used for product saves and creation, or null to use this
+     *     instance without proxy interception
      */
     public ProductService(
             ProductRepository productRepository,
@@ -220,6 +221,10 @@ public class ProductService {
         return productResponseMono;
     }
 
+    /**
+     * Refreshes stock availability, treating an empty inventory response as out of stock. Unhandled
+     * inventory errors propagate through the returned Mono.
+     */
     private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
             ProductResponse productResponse) {
         return productAvailabilityEnricher.enrichWithAvailability(productResponse);
@@ -326,12 +331,13 @@ public class ProductService {
     }
 
     /**
-     * Updates a product by its ID and request DTO, preventing entity leakage across layer
-     * boundaries.
+     * Updates an existing product, records an update outbox event, and invalidates product caches.
+     * Redis deletion failures are suppressed; database, outbox serialization, cache-generation, and
+     * optimistic locking errors propagate through the returned Mono.
      *
      * @param id the product ID
      * @param productRequest the updated product details
-     * @return Mono of updated ProductResponse
+     * @return the updated product, or an empty Mono if the ID does not exist
      */
     @Transactional
     public Mono<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {

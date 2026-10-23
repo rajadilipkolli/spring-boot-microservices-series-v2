@@ -101,7 +101,9 @@ public class OutboxHousekeepingService {
 
     /**
      * Deletes events that failed strictly before the retention cutoff and waits for completion.
-     * Events without a recorded terminal processing time are retained.
+     * Events without a recorded terminal processing time are retained. The cutoff is the current
+     * time minus {@code application.outbox.failed-retention-days} (default 30 days); zero uses the
+     * current time. Deletion errors emitted by the publisher are suppressed.
      */
     @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
     @SchedulerLock(name = "cleanupFailedEventsLock")

@@ -144,7 +144,8 @@ public class OutboxPublisher {
 
     /**
      * Records a publishing failure and saves the event. Below the configured retry limit, marks it
-     * pending and increments its retry count; otherwise marks it failed.
+     * pending and increments its retry count; otherwise marks it failed with the current terminal
+     * processing time.
      *
      * @param error the message stored on the event
      * @return the saved event, or an empty Mono on an optimistic locking conflict; other

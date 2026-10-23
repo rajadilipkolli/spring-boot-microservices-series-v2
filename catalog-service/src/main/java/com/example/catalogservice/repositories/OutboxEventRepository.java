@@ -56,6 +56,14 @@ public interface OutboxEventRepository
     Mono<Integer> deleteAllByStatusAndCreatedAtBefore(
             OutboxEventStatus status, OffsetDateTime time);
 
+    /**
+     * Deletes events with the supplied status and a terminal processing time strictly before the
+     * cutoff. Events without a processing time are retained.
+     *
+     * @param status the status of events eligible for deletion
+     * @param time the exclusive cutoff for terminal processing time
+     * @return the number of deleted events; database failures are emitted as errors
+     */
     Mono<Integer> deleteAllByStatusAndProcessedAtBefore(
             OutboxEventStatus status, OffsetDateTime time);
 }

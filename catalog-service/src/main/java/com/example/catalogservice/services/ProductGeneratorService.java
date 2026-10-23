@@ -24,11 +24,12 @@ public class ProductGeneratorService {
     private static final SecureRandom RAND = new SecureRandom();
 
     /**
-     * Creates sample products with whole-unit prices from 1.00 through 100.00.
+     * Generates unsaved sample product requests with whole-unit prices from 1.00 through 100.00.
      *
      * @param idempotencyKey included in each product code with its zero-based batch index
      * @param batchSize number of products, from 1 through 10,000, or null for 101
-     * @return true after all saves complete
+     * @return the generated requests, with prices chosen on each subscription
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
      */
     @Transactional
     public Flux<ProductRequest> generateProducts(String idempotencyKey, Integer batchSize) {
@@ -55,6 +56,11 @@ public class ProductGeneratorService {
                                                                                 RoundingMode.UP))));
     }
 
+    /**
+     * Accepts a null batch size for the default or an explicit size from 1 through 10,000.
+     *
+     * @throws IllegalArgumentException if a supplied size is outside the allowed range
+     */
     private static void validateBatchSize(Integer batchSize) {
         if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
             throw new IllegalArgumentException(

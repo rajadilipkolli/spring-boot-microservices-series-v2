@@ -14,6 +14,13 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 
 public class CatalogServiceRuntimeHints implements RuntimeHintsRegistrar {
 
+    /**
+     * Registers reflection access to declared constructors, methods, and fields of product and
+     * inventory responses.
+     *
+     * @param hints the runtime hints to extend
+     * @param classLoader unused
+     */
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection()

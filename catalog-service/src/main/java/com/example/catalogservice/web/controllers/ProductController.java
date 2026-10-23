@@ -92,6 +92,14 @@ public class ProductController implements ProductApi {
                 .map(exists -> ResponseEntity.ok(new ProductExistsResponse(exists)));
     }
 
+    /**
+     * Generates and saves sample products, reusing products with matching codes. Service errors
+     * propagate.
+     *
+     * @param idempotencyKey included in each product code with its zero-based batch index
+     * @param batchSize number of products from 1 through 10,000, or null for 101
+     * @return the generation result after saves complete
+     */
     @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<GenerateProductsResponse> createRandomProducts(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
@@ -116,6 +124,11 @@ public class ProductController implements ProductApi {
                         });
     }
 
+    /**
+     * Updates a product and returns its saved details. Service errors propagate.
+     *
+     * @return HTTP 200 with the updated product, or ProductNotFoundException as an error if absent
+     */
     @PutMapping(
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE,

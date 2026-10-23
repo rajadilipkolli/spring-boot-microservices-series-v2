@@ -31,12 +31,14 @@ public class ProductAvailabilityEnricher {
     }
 
     /**
-     * Enriches a reactive stream of product responses with inventory stock information.
+     * Sets stock availability from positive inventory quantities, treating missing entries as out
+     * of stock. An empty product stream yields an empty page with total zero without querying
+     * inventory. Product stream and unhandled inventory errors propagate.
      *
-     * @param productResponseFlux Flux of product responses
+     * @param productResponseFlux products to enrich, preserving their order
      * @param pageable pagination details
-     * @param totalCount total elements count
-     * @return Mono of PagedResult with populated inStock and availableQuantity fields
+     * @param totalCount total element count, or null to use the collected product count
+     * @return the page with updated {@code inStock} flags
      */
     public Mono<PagedResult<ProductResponse>> enrichWithAvailability(
             Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
@@ -88,10 +90,12 @@ public class ProductAvailabilityEnricher {
     }
 
     /**
-     * Enriches a single product response with inventory stock information.
+     * Sets a product's stock availability from a positive inventory quantity. An empty inventory
+     * response or a zero-quantity fallback marks it out of stock; unhandled inventory errors
+     * propagate.
      *
      * @param productResponse product response to enrich
-     * @return Mono of enriched ProductResponse
+     * @return the product with its updated {@code inStock} flag
      */
     public Mono<ProductResponse> enrichWithAvailability(ProductResponse productResponse) {
         return inventoryServiceProxy

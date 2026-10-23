@@ -44,12 +44,19 @@ public class ProductCacheGeneration implements Serializable, Persistable<Long> {
         return this.id;
     }
 
+    /** Returns whether insertion is requested explicitly or the ID has not been assigned. */
     @Override
     @Transient
     public boolean isNew() {
         return this.isNew || this.id == null;
     }
 
+    /**
+     * Sets the explicit insertion flag. Clearing it does not make an entity with a null ID
+     * existing.
+     *
+     * @return this entity
+     */
     public ProductCacheGeneration setNew(boolean isNew) {
         this.isNew = isNew;
         return this;

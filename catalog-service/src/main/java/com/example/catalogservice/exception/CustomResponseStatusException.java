@@ -12,6 +12,12 @@ import org.springframework.web.ErrorResponseException;
 
 public class CustomResponseStatusException extends ErrorResponseException {
 
+    /**
+     * Creates an HTTP error whose problem detail uses the supplied status and message.
+     *
+     * @param status the status for both the response and its problem detail
+     * @param message the problem detail text
+     */
     public CustomResponseStatusException(HttpStatusCode status, String message) {
         super(status, problemDetail(status, message), null);
     }
