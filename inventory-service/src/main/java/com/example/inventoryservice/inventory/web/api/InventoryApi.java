@@ -31,6 +31,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Tag(name = "inventory-controller", description = "the inventory-controller API")
 public interface InventoryApi {
 
+    /**
+     * Returns a sorted inventory page with pagination metadata using one-based page numbers.
+     * Lookup and sort-resolution failures propagate.
+     *
+     * @param pageNo zero-based page index
+     * @param pageSize maximum records per page; must be positive
+     * @param sortBy inventory property to sort by
+     * @param sortDir {@code asc} (case-insensitive) for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
     @Operation(
             summary = "Returns inventory records using requested pagination and sort options",
             tags = {"inventory-controller"},
@@ -53,6 +64,12 @@ public interface InventoryApi {
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir);
 
+    /**
+     * Returns HTTP 200 with the matching inventory, or HTTP 404 if the product code is absent.
+     *
+     * @param delay optional pause in seconds before lookup; null or non-positive values do not pause
+     *     the lookup. Interruption restores the thread's interrupt flag and lookup continues.
+     */
     @Operation(
             summary = "Returns inventory by product code",
             tags = {"inventory-controller"},
@@ -73,6 +90,17 @@ public interface InventoryApi {
     ResponseEntity<InventoryResponse> getInventoryByProductCode(
             @PathVariable String productCode, @RequestParam(required = false) Integer delay);
 
+    /**
+     * Returns HTTP 200 with a sorted inventory page restricted to the supplied product codes.
+     * Result metadata uses one-based page numbers. Lookup and sort-resolution failures propagate.
+     *
+     * @param pageNo zero-based page index
+     * @param pageSize maximum records per page; must be positive
+     * @param sortBy inventory property to sort by
+     * @param sortDir {@code asc} (case-insensitive) for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
     @Operation(
             summary = "Returns inventory matching supplied product codes",
             tags = {"inventory-controller"},
@@ -96,6 +124,17 @@ public interface InventoryApi {
             @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
                     String sortDir);
 
+    /**
+     * Updates existing inventory with generated product codes to random available quantities from
+     * 1 through 10,000. Missing products and optimistic locking failures are skipped; other
+     * persistence failures propagate.
+     *
+     * @param idempotencyKey identifies a batch; keys already seen by this service instance skip
+     *     updates, including keys retained after a failed attempt
+     * @param batchSize number of product codes to try, from 1 through 10,000; null uses 101
+     * @return true when processing completes, including when the key was already seen
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     */
     @Operation(
             summary = "Updates a generated batch using idempotency key",
             tags = {"inventory-controller"},
@@ -106,6 +145,12 @@ public interface InventoryApi {
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
             @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize);
 
+    /**
+     * Creates inventory from a validated request and returns its representation with HTTP 201.
+     * Duplicate product codes raise {@link
+     * com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException}; other
+     * persistence failures propagate.
+     */
     @Operation(
             summary = "Creates new inventory record",
             tags = {"inventory-controller"},
@@ -120,6 +165,10 @@ public interface InventoryApi {
             })
     InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest);
 
+    /**
+     * Updates inventory by identifier and returns its representation with HTTP 200, or HTTP 404
+     * when absent. Persistence failures propagate.
+     */
     @Operation(
             summary = "Updates existing inventory record by identifier",
             tags = {"inventory-controller"},
@@ -140,6 +189,11 @@ public interface InventoryApi {
     ResponseEntity<InventoryResponse> updateInventory(
             @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest);
 
+    /**
+     * Updates inventory by product code and returns its representation with HTTP 200, or HTTP 404
+     * when absent. A non-null request product code that differs from the path returns HTTP 400.
+     * Persistence failures propagate.
+     */
     @Operation(
             summary = "Updates existing inventory record by product code",
             tags = {"inventory-controller"},
@@ -165,6 +219,10 @@ public interface InventoryApi {
             @PathVariable String productCode,
             @RequestBody @Valid InventoryRequest inventoryRequest);
 
+    /**
+     * Deletes inventory by identifier and returns its previous representation with HTTP 200, or
+     * HTTP 404 when absent. Persistence failures propagate.
+     */
     @Operation(
             summary = "Deletes inventory record by identifier",
             tags = {"inventory-controller"},

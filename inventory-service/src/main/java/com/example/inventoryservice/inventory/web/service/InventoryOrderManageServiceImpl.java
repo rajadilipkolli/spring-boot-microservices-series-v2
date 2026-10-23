@@ -58,14 +58,20 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * Reserves available inventory for a new order and publishes the reservation outcome.
      *
      * <p>Orders whose status is not {@code NEW} are returned unchanged without publishing an event.
-     * New orders are rejected without stock changes if products are missing, product codes are
+     * Orders with a non-null ID and an existing {@code RESERVE} record are also returned unchanged,
+     * without stock changes or an event. Accepted and rejected reservations record processing for
+     * non-null IDs; null IDs bypass duplicate tracking.
+     *
+     * <p>New orders are rejected without stock changes if products are missing, product codes are
      * repeated, or any requested quantity exceeds availability. Accepted orders move the requested
      * quantities from available to reserved stock. Both outcomes publish an {@link
-     * InventoryProcessedEvent}; persistence and event publication failures propagate to the caller.
+     * InventoryProcessedEvent}. Optimistic locking failures are eligible for up to three retries
+     * with an initial delay of one second, doubling between retries. Unresolved persistence and
+     * event publication failures propagate to the caller.
      *
      * @param orderDto order whose items should be reserved
      * @return the order with status {@code ACCEPT} or {@code REJECT} and source {@code INVENTORY},
-     *     or the original order if its status is not {@code NEW}
+     *     or the original order if its status is not {@code NEW} or its reservation was recorded
      */
     @Transactional
     @Retryable(
@@ -188,6 +194,11 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * {@code ROLLBACK} orders whose source is not {@code INVENTORY} (case-insensitive). Missing
      * products are skipped and other statuses leave quantities unchanged. Changes are persisted
      * without publishing an event; persistence failures propagate to the caller.
+     *
+     * <p>For non-null order IDs, an existing {@code CONFIRM_<status>} record skips processing;
+     * otherwise that record is saved even when no quantities change. Null IDs bypass duplicate
+     * tracking. Optimistic locking failures are eligible for up to three retries with an initial
+     * delay of one second, doubling between retries; failures remaining afterward propagate.
      *
      * @param orderDto order whose item quantities are deducted from reserved stock
      */

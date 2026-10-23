@@ -11,5 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface ProcessedOrderEventRepository
         extends JpaRepository<ProcessedOrderEvent, ProcessedOrderEventId> {
 
+    /** Returns whether processing has been recorded for this order ID and event type. */
     boolean existsByOrderIdAndEventType(Long orderId, String eventType);
 }
