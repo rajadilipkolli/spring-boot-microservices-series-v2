@@ -1,6 +1,6 @@
 package com.example.retailstore.webapp.clients.inventory;
 
-import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.common.dto.PagedResult;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;

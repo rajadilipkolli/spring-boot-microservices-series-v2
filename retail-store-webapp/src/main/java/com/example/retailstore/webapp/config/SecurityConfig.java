@@ -32,7 +32,9 @@ class SecurityConfig {
 
     /**
      * Configures public routes, authenticated access, OAuth2 login, logout, and response headers.
-     * Registration bypasses CSRF checks; other requests use cookie-based CSRF protection.
+     * Prometheus and metrics endpoints require the OPERATOR role; other nonpublic routes require
+     * authentication. Registration bypasses CSRF checks; other requests use cookie-based CSRF
+     * protection.
      *
      * @param http the security configuration builder
      * @param userAuthoritiesMapper mapper for authorities supplied by the identity provider
@@ -42,6 +44,8 @@ class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
         http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
                         .permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
+                        .hasRole("OPERATOR")
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())

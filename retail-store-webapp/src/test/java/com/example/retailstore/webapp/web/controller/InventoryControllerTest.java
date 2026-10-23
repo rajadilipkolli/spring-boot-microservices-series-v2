@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import com.example.retailstore.webapp.clients.PagedResult;
+import com.example.common.dto.PagedResult;
 import com.example.retailstore.webapp.clients.inventory.InventoryResponse;
 import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
 import com.example.retailstore.webapp.config.TestSecurityConfig;

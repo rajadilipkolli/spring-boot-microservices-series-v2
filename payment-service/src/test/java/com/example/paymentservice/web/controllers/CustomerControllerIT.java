@@ -16,12 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

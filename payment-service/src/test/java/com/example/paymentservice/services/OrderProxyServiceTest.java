@@ -41,7 +41,7 @@ class OrderProxyServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"1,10,id,asc,0", "3,5,createdDate,desc,2"})
+    @CsvSource({"0,10,id,asc,0", "2,5,createdDate,desc,2"})
     void shouldSendPageableParametersAndPreserveOrderDetails(
             int pageNo, int pageSize, String sortBy, String sortDir, int expectedPage) {
         server.expect(queryParam("page", Integer.toString(expectedPage)))
@@ -96,7 +96,7 @@ class OrderProxyServiceTest {
                                 "http://order-service/api/orders/customer/1?page=0&size=10&sort=id%2Casc"))
                 .andRespond(withStatus(HttpStatus.valueOf(status)));
 
-        assertThatThrownBy(() -> service.getOrdersByCustomerId(1L, 1, 10, "id", "asc"))
+        assertThatThrownBy(() -> service.getOrdersByCustomerId(1L, 0, 10, "id", "asc"))
                 .isInstanceOfSatisfying(
                         RestClientResponseException.class,
                         exception ->

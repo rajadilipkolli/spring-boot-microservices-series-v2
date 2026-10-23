@@ -27,7 +27,9 @@ import reactor.test.StepVerifier;
  * <p>Testing Framework: JUnit 5 with Spring Boot WebFluxTest Testing Library: Spring Boot Test with
  * WebTestClient, AssertJ, and Reactor Test
  */
-@WebFluxTest(GatewayInventoryFallback.class)
+@WebFluxTest(
+        controllers = GatewayInventoryFallback.class,
+        properties = "spring.cloud.config.enabled=false")
 @DisplayName("GatewayInventoryFallback Controller Tests")
 class GatewayInventoryFallbackTest {
 
@@ -511,17 +513,10 @@ class GatewayInventoryFallbackTest {
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
             String testId = "FORMAT_TEST";
 
-            // When
-            Mono<String> result = controller.fallback(testId);
-            String actualResult = result.block(); // Block for testing purposes only
-
-            // Then
-            assertThat(actualResult).isEqualTo("Hello FORMAT_TEST");
-            assertThat(actualResult).contains(testId);
-
-            // Verify String.formatted behavior is preserved
-            String expectedDirect = "Hello %s".formatted(testId);
-            assertThat(actualResult).isEqualTo(expectedDirect);
+            // When & Then
+            StepVerifier.create(controller.fallback(testId))
+                    .expectNext("Hello FORMAT_TEST")
+                    .verifyComplete();
         }
 
         @Test

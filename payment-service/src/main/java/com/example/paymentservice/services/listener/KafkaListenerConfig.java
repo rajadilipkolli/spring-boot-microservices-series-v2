@@ -1,12 +1,15 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,23 +34,33 @@ public class KafkaListenerConfig {
 
     private final PaymentOrderManageService paymentOrderManageService;
     private final JsonMapper jsonMapper;
+    private final Validator validator;
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
+    /** Creates the listener with payment processing, JSON deserialization, and payload validation. */
     public KafkaListenerConfig(
-            PaymentOrderManageService paymentOrderManageService, JsonMapper jsonMapper) {
+            PaymentOrderManageService paymentOrderManageService,
+            JsonMapper jsonMapper,
+            Validator validator) {
         this.paymentOrderManageService = paymentOrderManageService;
         this.jsonMapper = jsonMapper;
+        this.validator = validator;
     }
 
     /**
-     * Deserializes an order event and reserves NEW orders or forwards other statuses for
-     * settlement. Missing-customer, illegal-argument, and operation-conflict errors bypass retries;
-     * other propagated errors, including a missing completed reservation, remain retryable.
+     * Deserializes and validates an order event, then reserves NEW orders or forwards other
+     * statuses for settlement. Missing-customer, illegal-argument, and operation-conflict errors
+     * bypass retries; other propagated errors, including a missing completed reservation, remain
+     * retryable. Provider failures defer processing; persistence and reply serialization failures
+     * propagate.
      *
      * @param orderDtoStr the JSON order event
      * @throws JacksonException if the event cannot be deserialized
-     * @throws IllegalArgumentException if a NEW order's attempt ID is null or blank after trimming
+     * @throws IllegalArgumentException if the payload violates its bean validation constraints or
+     *     a NEW order's attempt ID is null or blank after trimming, or its calculated total is
+     *     negative
+     * @throws NullPointerException if a NEW order contains a null item, price, or quantity
      * @throws CustomerNotFoundException if the requested operation's customer ID is null or absent
      * @throws OperationConflictException if the operation conflicts with its stored fingerprint
      * @throws com.example.paymentservice.exception.ReservationNotFoundException if settlement
@@ -70,6 +83,10 @@ public class KafkaListenerConfig {
     @KafkaListener(id = "payment-orders", topics = AppConstants.ORDERS_TOPIC, groupId = "payment")
     public void onEvent(String orderDtoStr) throws JacksonException {
         OrderDto orderDto = jsonMapper.readValue(orderDtoStr, OrderDto.class);
+        Set<ConstraintViolation<OrderDto>> violations = validator.validate(orderDto);
+        if (!violations.isEmpty()) {
+            throw new IllegalArgumentException("Payload validation failed: " + violations);
+        }
         log.info(
                 "Received Order in payment service : {} from topic: {} with source :{}",
                 orderDto,

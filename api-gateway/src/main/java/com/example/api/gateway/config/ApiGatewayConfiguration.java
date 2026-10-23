@@ -12,6 +12,13 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuration for custom programmatic routes in Spring Cloud Gateway.
+ *
+ * <p>NOTE: The /get route is maintained for demonstration and contract integration testing
+ * (validated by ApiGatewayConfigurationIntegrationTest). Core microservice business routes are
+ * declared declaratively in application.yml.
+ */
 @Configuration(proxyBeanMethods = false)
 class ApiGatewayConfiguration {
 
