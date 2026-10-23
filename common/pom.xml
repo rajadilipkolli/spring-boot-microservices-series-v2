@@ -11,13 +11,35 @@
         <relativePath />
     </parent>
 
-    <groupId>com.example.microservices</groupId>
-    <artifactId>common</artifactId>
+    <groupId>io.github.rajadilipkolli</groupId>
+    <artifactId>microservices-common</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>common</name>
     <description>Shared common utilities, logging aspects, and canonical pagination DTOs</description>
+    <url>https://github.com/rajadilipkolli/spring-boot-microservices-series-v2</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>rajadilipkolli</id>
+            <name>Raja Kolli</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/rajadilipkolli/spring-boot-microservices-series-v2.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/rajadilipkolli/spring-boot-microservices-series-v2.git</developerConnection>
+        <url>https://github.com/rajadilipkolli/spring-boot-microservices-series-v2</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <java.version>25</java.version>
@@ -91,6 +113,37 @@
             <id>release</id>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.11.2</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <doclint>none</doclint>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
