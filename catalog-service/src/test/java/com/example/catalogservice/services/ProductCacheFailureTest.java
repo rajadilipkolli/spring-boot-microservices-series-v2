@@ -19,14 +19,17 @@ import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.common.dto.PagedResult;
 import io.hypersistence.tsid.TSID;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.data.redis.core.ReactiveValueOperations;
@@ -99,7 +102,7 @@ class ProductCacheFailureTest {
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
         when(values.set(anyString(), any(), any(Duration.class)))
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
-        when(enricher.enrichWithAvailability(any()))
+        when(enricher.enrichWithAvailability(any(ProductResponse.class)))
                 .thenReturn(
                         Mono.just(
                                 new ProductResponse(
@@ -110,6 +113,20 @@ class ProductCacheFailureTest {
                                         null,
                                         BigDecimal.TEN,
                                         false)));
+        when(enricher.enrichWithAvailability(any(), any(), any()))
+                .thenReturn(
+                        Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(
+                                                List.of(
+                                                        new ProductResponse(
+                                                                1L,
+                                                                "P001",
+                                                                "Fresh",
+                                                                "Description",
+                                                                null,
+                                                                BigDecimal.TEN,
+                                                                false))))));
         when(repository.count()).thenReturn(Mono.just(1L));
         when(repository.findAllBy(any(Pageable.class))).thenReturn(Flux.just(product));
 
