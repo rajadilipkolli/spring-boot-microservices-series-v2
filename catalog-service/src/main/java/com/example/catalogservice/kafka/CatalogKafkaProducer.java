@@ -6,7 +6,7 @@
 
 package com.example.catalogservice.kafka;
 
-import com.example.catalogservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;

@@ -144,7 +144,8 @@ public class OutboxPublisher {
 
     /**
      * Records a publishing failure and saves the event. Below the configured retry limit, marks it
-     * pending and increments its retry count; otherwise marks it failed.
+     * pending and increments its retry count; otherwise marks it failed with the current terminal
+     * processing time.
      *
      * @param error the message stored on the event
      * @return the saved event, or an empty Mono on an optimistic locking conflict; other
@@ -152,13 +153,19 @@ public class OutboxPublisher {
      */
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
         if (event.getRetryCount() < properties.outbox().getMaxRetries()) {
-            log.warn("Retrying event {}: {}", event.getId(), error);
+            log.warn(
+                    "Retrying event {} (attempt {}): {}",
+                    event.getId(),
+                    event.getRetryCount() + 1,
+                    error);
             event.setStatus(OutboxEventStatus.PENDING)
                     .setRetryCount(event.getRetryCount() + 1)
                     .setErrorMessage(error);
         } else {
             log.error("Event {} failed after max retries: {}", event.getId(), error);
-            event.setStatus(OutboxEventStatus.FAILED).setErrorMessage(error);
+            event.setStatus(OutboxEventStatus.FAILED)
+                    .setProcessedAt(OffsetDateTime.now())
+                    .setErrorMessage(error);
             return outboxEventRepository
                     .save(event)
                     .doOnSuccess(saved -> failedEventCounter.increment())

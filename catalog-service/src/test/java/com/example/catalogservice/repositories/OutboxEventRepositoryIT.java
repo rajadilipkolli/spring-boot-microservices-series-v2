@@ -14,6 +14,7 @@ import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.entities.OutboxPayload;
 import com.example.catalogservice.services.OutboxPublisher;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,89 @@ class OutboxEventRepositoryIT extends AbstractIntegrationTest {
     @BeforeEach
     void setUp() {
         outboxEventRepository.deleteAll().block();
+    }
+
+    @Test
+    void shouldRetainRecentFailuresRegardlessOfCreationTime() {
+        OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        OffsetDateTime cutoff = now.minusDays(30);
+        OutboxEvent expired =
+                event(OutboxEventStatus.FAILED, now).setProcessedAt(cutoff.minusDays(1));
+        OutboxEvent recent = event(OutboxEventStatus.FAILED, now.minusDays(60)).setProcessedAt(now);
+        OutboxEvent boundary =
+                event(OutboxEventStatus.FAILED, now.minusDays(60)).setProcessedAt(cutoff);
+        OutboxEvent unknownFailureTime = event(OutboxEventStatus.FAILED, now.minusDays(60));
+        OutboxEvent published =
+                event(OutboxEventStatus.PUBLISHED, now.minusDays(60))
+                        .setProcessedAt(cutoff.minusDays(1));
+        outboxEventRepository
+                .saveAll(List.of(expired, recent, boundary, unknownFailureTime, published))
+                .collectList()
+                .block();
+
+        StepVerifier.create(
+                        outboxEventRepository.deleteAllByStatusAndProcessedAtBefore(
+                                OutboxEventStatus.FAILED, cutoff))
+                .expectNext(1)
+                .verifyComplete();
+        assertThat(outboxEventRepository.findAll().map(OutboxEvent::getId).collectList().block())
+                .containsExactlyInAnyOrder(
+                        recent.getId(),
+                        boundary.getId(),
+                        unknownFailureTime.getId(),
+                        published.getId());
+    }
+
+    @Test
+    void shouldRecordFailureTimeWhenReaperExhaustsRetries() {
+        OffsetDateTime now = OffsetDateTime.now();
+        OutboxEvent retry =
+                event(OutboxEventStatus.PROCESSING, now.minusDays(60))
+                        .setLockedAt(now.minusMinutes(10))
+                        .setRetryCount(1);
+        OutboxEvent exhausted =
+                event(OutboxEventStatus.PROCESSING, now.minusDays(60))
+                        .setLockedAt(now.minusMinutes(10))
+                        .setRetryCount(2);
+        OutboxEvent active =
+                event(OutboxEventStatus.PROCESSING, now.minusDays(60))
+                        .setLockedAt(now)
+                        .setRetryCount(2);
+        outboxEventRepository.saveAll(List.of(retry, exhausted, active)).collectList().block();
+
+        StepVerifier.create(outboxEventRepository.reapOrphanedEvents(now.minusMinutes(5), 3))
+                .expectNext(2L)
+                .verifyComplete();
+        OutboxEvent reaped = outboxEventRepository.findById(exhausted.getId()).block();
+        assertThat(reaped.getStatus()).isEqualTo(OutboxEventStatus.FAILED);
+        assertThat(reaped.getProcessedAt()).isBetween(now, OffsetDateTime.now());
+        assertThat(reaped.getRetryCount()).isEqualTo(3);
+        assertThat(reaped.getLockedAt()).isNull();
+        assertThat(reaped.getVersion()).isEqualTo(1);
+        OutboxEvent pending = outboxEventRepository.findById(retry.getId()).block();
+        assertThat(pending.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+        assertThat(pending.getProcessedAt()).isNull();
+        assertThat(outboxEventRepository.findById(active.getId()).block().getStatus())
+                .isEqualTo(OutboxEventStatus.PROCESSING);
+
+        StepVerifier.create(
+                        outboxEventRepository.deleteAllByStatusAndProcessedAtBefore(
+                                OutboxEventStatus.FAILED, now.minusDays(30)))
+                .expectNext(0)
+                .verifyComplete();
+    }
+
+    private OutboxEvent event(OutboxEventStatus status, OffsetDateTime createdAt) {
+        return new OutboxEvent()
+                .setId(UUID.randomUUID())
+                .setAggregateType("Product")
+                .setAggregateId("P001")
+                .setEventType("ProductCreated")
+                .setPayload(new OutboxPayload("{}"))
+                .setStatus(status)
+                .setCreatedAt(createdAt)
+                .setVersion(0)
+                .setNew(true);
     }
 
     @Test

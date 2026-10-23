@@ -12,6 +12,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import com.example.catalogservice.config.TestKafkaListenerConfig;
 import com.example.catalogservice.config.TestWebClientConfig;
 import com.example.catalogservice.repositories.OutboxEventRepository;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import com.example.catalogservice.services.OutboxPublisher;
 import com.example.catalogservice.services.ProductService;
@@ -47,6 +48,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected JsonMapper jsonMapper;
 
     @Autowired protected ProductRepository productRepository;
+
+    @Autowired protected ProductCacheGenerationRepository productCacheGenerationRepository;
 
     @Autowired protected ProductService productService;
 

@@ -8,11 +8,11 @@ package com.example.catalogservice.services;
 
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.model.response.PagedResult;
-import com.example.catalogservice.utils.LogSanitizer;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -48,6 +48,7 @@ public class InventoryServiceProxy {
 
     private final WebClient webClient;
     private final CircuitBreaker circuitBreaker;
+    private final CircuitBreaker batchCircuitBreaker;
     private final Retry retry;
     private final RateLimiter rateLimiter;
     private final TimeLimiter timeLimiter;
@@ -60,6 +61,8 @@ public class InventoryServiceProxy {
             TimeLimiterRegistry timeLimiterRegistry) {
         this.webClient = webClient;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT);
+        this.batchCircuitBreaker =
+                circuitBreakerRegistry.circuitBreaker("getInventoryByProductCodes");
         this.retry = retryRegistry.retry("product-api");
         this.rateLimiter = rateLimiterRegistry.rateLimiter(DEFAULT);
         this.timeLimiter = timeLimiterRegistry.timeLimiter(DEFAULT);
@@ -86,9 +89,14 @@ public class InventoryServiceProxy {
         return Mono.just(new InventoryResponse(code, 0));
     }
 
-    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(
-            name = "getInventoryByProductCodes",
-            fallbackMethod = "getInventoryByProductCodesFallBack")
+    /**
+     * Fetches inventory for the supplied codes across all response pages. Fetch and circuit breaker
+     * errors complete the stream without further values; entries already emitted from earlier pages
+     * are retained.
+     *
+     * @param productCodeList the product codes to query
+     * @return inventory entries, or an empty stream if the request fails before emitting any
+     */
     public Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
         log.info(
                 "Fetching inventory information for productCodes : {}",
@@ -101,7 +109,14 @@ public class InventoryServiceProxy {
                             }
                             return Mono.empty();
                         })
-                .flatMapIterable(PagedResult::data);
+                .flatMapIterable(PagedResult::data)
+                .transformDeferred(CircuitBreakerOperator.of(batchCircuitBreaker))
+                .onErrorResume(
+                        throwable ->
+                                getInventoryByProductCodesFallBack(
+                                        throwable instanceof Exception ex
+                                                ? ex
+                                                : new RuntimeException(throwable)));
     }
 
     private Mono<PagedResult<InventoryResponse>> fetchInventoryPage(

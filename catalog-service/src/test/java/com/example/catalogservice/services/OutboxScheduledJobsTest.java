@@ -10,7 +10,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,12 +48,11 @@ class OutboxScheduledJobsTest {
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.claimPendingEvents(anyInt()))
                 .thenReturn(work.asFlux().doOnSubscribe(ignored -> subscribed.countDown()));
+        ApplicationProperties properties =
+                new ApplicationProperties("http://localhost:8082", null, null, null);
         OutboxPublisher publisher =
                 new OutboxPublisher(
-                        repository,
-                        mock(CatalogKafkaProducer.class),
-                        mock(ApplicationProperties.class),
-                        registry);
+                        repository, mock(CatalogKafkaProducer.class), properties, registry);
 
         assertWaits(publisher::scheduledPublish, subscribed, () -> work.tryEmitComplete());
         when(repository.claimPendingEvents(anyInt())).thenReturn(Flux.empty());
@@ -69,8 +67,10 @@ class OutboxScheduledJobsTest {
      */
     @Test
     void reaperWaitsForCompletion() throws Exception {
-        ApplicationProperties properties = mock(ApplicationProperties.class, RETURNS_DEEP_STUBS);
-        when(properties.outbox().getLockTimeout()).thenReturn(Duration.ofMinutes(5));
+        ApplicationProperties.Outbox outbox = new ApplicationProperties.Outbox();
+        outbox.setLockTimeout(Duration.ofMinutes(5));
+        ApplicationProperties properties =
+                new ApplicationProperties("http://localhost:8082", null, null, outbox);
         Sinks.One<Long> work = Sinks.one();
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.reapOrphanedEvents(any(), anyInt()))
@@ -104,6 +104,17 @@ class OutboxScheduledJobsTest {
         OutboxHousekeepingService housekeeping =
                 new OutboxHousekeepingService(repository, registry);
         assertWaits(housekeeping::cleanupPublishedEvents, subscribed, () -> work.tryEmitValue(2));
+    }
+
+    @Test
+    void cleanupFailedWaitsForDeletion() throws Exception {
+        Sinks.One<Integer> work = Sinks.one();
+        CountDownLatch subscribed = new CountDownLatch(1);
+        when(repository.deleteAllByStatusAndProcessedAtBefore(any(), any()))
+                .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
+        OutboxHousekeepingService housekeeping =
+                new OutboxHousekeepingService(repository, registry);
+        assertWaits(housekeeping::cleanupFailedEvents, subscribed, () -> work.tryEmitValue(2));
     }
 
     private void assertWaits(Runnable job, CountDownLatch subscribed, Runnable complete)

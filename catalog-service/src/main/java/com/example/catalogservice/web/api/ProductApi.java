@@ -6,9 +6,9 @@
 
 package com.example.catalogservice.web.api;
 
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.utils.AppConstants;
+import com.example.common.dto.PagedResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

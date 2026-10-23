@@ -32,6 +32,9 @@ public class OutboxHousekeepingService {
     @Value("${application.outbox.retention-days:7}")
     private int retentionDays = 7;
 
+    @Value("${application.outbox.failed-retention-days:30}")
+    private int failedRetentionDays = 30;
+
     public OutboxHousekeepingService(
             OutboxEventRepository outboxEventRepository, MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
@@ -42,15 +45,19 @@ public class OutboxHousekeepingService {
     }
 
     /**
-     * Validates the configured retention period during initialization.
+     * Validates the configured retention periods during initialization.
      *
-     * @throws IllegalArgumentException if {@code application.outbox.retention-days} is negative
+     * @throws IllegalArgumentException if either retention period is negative
      */
     @PostConstruct
     void validateRetentionDays() {
         if (retentionDays < 0) {
             throw new IllegalArgumentException(
                     "application.outbox.retention-days must be zero or positive");
+        }
+        if (failedRetentionDays < 0) {
+            throw new IllegalArgumentException(
+                    "application.outbox.failed-retention-days must be zero or positive");
         }
     }
 
@@ -88,6 +95,25 @@ public class OutboxHousekeepingService {
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
+                .onErrorComplete()
+                .block();
+    }
+
+    /**
+     * Deletes events that failed strictly before the retention cutoff and waits for completion.
+     * Events without a recorded terminal processing time are retained. The cutoff is the current
+     * time minus {@code application.outbox.failed-retention-days} (default 30 days); zero uses the
+     * current time. Deletion errors emitted by the publisher are suppressed.
+     */
+    @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
+    @SchedulerLock(name = "cleanupFailedEventsLock")
+    public void cleanupFailedEvents() {
+        OffsetDateTime threshold = OffsetDateTime.now().minusDays(failedRetentionDays);
+        log.info("Starting cleanup of failed events older than {}", threshold);
+        outboxEventRepository
+                .deleteAllByStatusAndProcessedAtBefore(OutboxEventStatus.FAILED, threshold)
+                .doOnSuccess(v -> log.info("Successfully cleaned up {} old failed events", v))
+                .doOnError(e -> log.error("Error during failed outbox cleanup", e))
                 .onErrorComplete()
                 .block();
     }

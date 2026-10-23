@@ -17,6 +17,9 @@ databaseChangeLog:
           not:
             - tableExists:
                 tableName: outbox_events
+            - indexExists:
+                indexName: idx_outbox_events_status_created_at
+                tableName: outbox_events
       changes:
         - createTable:
             tableName: outbox_events
@@ -77,3 +80,11 @@ databaseChangeLog:
                   name: version
                   type: int
                   defaultValueNumeric: '0'
+        - createIndex:
+            indexName: idx_outbox_events_status_created_at
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at

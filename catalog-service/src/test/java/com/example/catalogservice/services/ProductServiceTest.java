@@ -19,6 +19,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
 import io.hypersistence.tsid.TSID;
 import java.lang.reflect.Method;
@@ -32,10 +33,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -46,11 +47,15 @@ class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
 
+    @Mock private ProductCacheGenerationRepository productCacheGenerationRepository;
+
     @Mock private OutboxService outboxService;
 
-    @Mock private InventoryServiceProxy inventoryServiceProxy;
-
     @Mock private ReactiveRedisOperations<String, Object> redisOps;
+
+    @Mock private ProductGeneratorService productGeneratorService;
+
+    @Mock private ProductAvailabilityEnricher enricher;
 
     private ProductService productService;
 
@@ -64,19 +69,21 @@ class ProductServiceTest {
                         new ProductService(
                                 productRepository,
                                 productMapper,
-                                inventoryServiceProxy,
                                 outboxService,
                                 redisOps,
+                                enricher,
+                                productGeneratorService,
                                 null,
-                                TSID.Factory.builder().build()));
-        ProxyFactory proxyFactory = new ProxyFactory(spy);
-        ProductService proxy = (ProductService) proxyFactory.getProxy();
-        ReflectionTestUtils.setField(spy, "self", proxy);
+                                TSID.Factory.builder().withNode(1).build(),
+                                productCacheGenerationRepository));
+        ReflectionTestUtils.setField(spy, "self", spy);
         productService = spy;
 
-        lenient().when(productRepository.findCacheGeneration()).thenReturn(Mono.just("initial"));
         lenient()
-                .when(productRepository.updateCacheGeneration(any(String.class)))
+                .when(productCacheGenerationRepository.findCacheGeneration())
+                .thenReturn(Mono.just("initial"));
+        lenient()
+                .when(productCacheGenerationRepository.updateCacheGeneration(any(String.class)))
                 .thenReturn(Mono.just(1));
         lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
     }
@@ -126,6 +133,30 @@ class ProductServiceTest {
         // Stubbing productRepository.save()
         given(productRepository.save(any(Product.class)))
                 .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
+
+        given(productGeneratorService.generateProducts("test-batch-123", null))
+                .willAnswer(
+                        invocation -> {
+                            String idempotencyKey = invocation.getArgument(0);
+                            return Flux.range(0, 101)
+                                    .map(
+                                            i ->
+                                                    new ProductRequest(
+                                                            "ProductCode_"
+                                                                    + idempotencyKey
+                                                                    + "_"
+                                                                    + i,
+                                                            "ProductName_"
+                                                                    + idempotencyKey
+                                                                    + "_"
+                                                                    + i,
+                                                            "Description for product "
+                                                                    + idempotencyKey,
+                                                            null,
+                                                            BigDecimal.valueOf(
+                                                                    ThreadLocalRandom.current()
+                                                                            .nextInt(1, 101))));
+                        });
 
         // Use StepVerifier to test the method
         StepVerifier.create(productService.generateProducts("test-batch-123", null))
@@ -186,6 +217,32 @@ class ProductServiceTest {
         given(productRepository.save(any(Product.class)))
                 .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
 
+        given(productGeneratorService.generateProducts("test-batch-456", 5))
+                .willAnswer(
+                        invocation -> {
+                            String idempotencyKey = invocation.getArgument(0);
+                            return Flux.range(0, 5)
+                                    .map(
+                                            i ->
+                                                    new ProductRequest(
+                                                            "ProductCode_"
+                                                                    + idempotencyKey
+                                                                    + "_"
+                                                                    + i,
+                                                            "ProductName_"
+                                                                    + idempotencyKey
+                                                                    + "_"
+                                                                    + i,
+                                                            "Description for product "
+                                                                    + idempotencyKey
+                                                                    + "_"
+                                                                    + i,
+                                                            null,
+                                                            BigDecimal.valueOf(
+                                                                    ThreadLocalRandom.current()
+                                                                            .nextInt(1, 101))));
+                        });
+
         StepVerifier.create(productService.generateProducts("test-batch-456", 5))
                 .expectSubscription()
                 .expectNext(Boolean.TRUE)
@@ -215,39 +272,43 @@ class ProductServiceTest {
      * methods.
      */
     @Test
-    void saveProduct_whenEmpty_shouldUseProxyAndCacheEvict() throws Exception {
-        ProductRequest request =
-                new ProductRequest("P001", "name", "desc", null, BigDecimal.valueOf(5.00));
-        Product product = new Product().setId(1L).setProductCode("P001");
-        ProductResponse response =
-                new ProductResponse(
-                        1L, "P001", "name", "desc", null, BigDecimal.valueOf(6.00), true);
+    void saveProductWhenEmptyShouldUseProxyAndCacheEvict() throws Exception {
+        {
+            ProductRequest request =
+                    new ProductRequest("P001", "name", "desc", null, BigDecimal.valueOf(5.00));
+            Product product = new Product().setId(1L).setProductCode("P001");
+            ProductResponse response =
+                    new ProductResponse(
+                            1L, "P001", "name", "desc", null, BigDecimal.valueOf(6.00), true);
 
-        given(productRepository.findByProductCodeAllIgnoreCase("P001")).willReturn(Mono.empty());
-        given(productMapper.toEntity(request)).willReturn(product);
-        given(productRepository.save(any(Product.class))).willReturn(Mono.just(product));
-        given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
-        given(productMapper.toProductResponse(any(Product.class))).willReturn(response);
+            given(productRepository.findByProductCodeAllIgnoreCase("P001"))
+                    .willReturn(Mono.empty());
+            given(productMapper.toEntity(request)).willReturn(product);
+            given(productRepository.save(any(Product.class))).willReturn(Mono.just(product));
+            given(outboxService.createOutboxEvent(any(), any(), any(), any()))
+                    .willReturn(Mono.empty());
+            given(productMapper.toProductResponse(any(Product.class))).willReturn(response);
 
-        StepVerifier.create(productService.saveProduct(request))
-                .expectNext(response)
-                .verifyComplete();
+            StepVerifier.create(productService.saveProduct(request))
+                    .expectNext(response)
+                    .verifyComplete();
 
-        // Verify the proxy routed to the self method
-        then(productService).should().createAndSaveProduct(request);
+            // Verify the proxy routed to the self method
+            then(productService).should().createAndSaveProduct(request);
 
-        then(productRepository).should().save(productEntityCaptor.capture());
-        Product capturedProduct = productEntityCaptor.getValue();
-        assertThat(capturedProduct.getId()).isNotNull();
-        assertThat(capturedProduct.isNew()).isTrue();
+            then(productRepository).should().save(productEntityCaptor.capture());
+            Product capturedProduct = productEntityCaptor.getValue();
+            assertThat(capturedProduct.getId()).isNotNull();
+            assertThat(capturedProduct.isNew()).isTrue();
 
-        // Verify createAndSaveProduct is transactional
-        Method method = ProductService.class.getMethod("saveProduct", ProductRequest.class);
-        assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
+            // Verify createAndSaveProduct is transactional
+            Method method = ProductService.class.getMethod("saveProduct", ProductRequest.class);
+            assertThat(method.isAnnotationPresent(Transactional.class)).isTrue();
 
-        // Verify createAndSaveProduct is transactional
-        Method createMethod =
-                ProductService.class.getMethod("createAndSaveProduct", ProductRequest.class);
-        assertThat(createMethod.isAnnotationPresent(Transactional.class)).isTrue();
+            // Verify createAndSaveProduct is transactional
+            Method createMethod =
+                    ProductService.class.getMethod("createAndSaveProduct", ProductRequest.class);
+            assertThat(createMethod.isAnnotationPresent(Transactional.class)).isTrue();
+        }
     }
 }

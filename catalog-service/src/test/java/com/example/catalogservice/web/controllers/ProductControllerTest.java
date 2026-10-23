@@ -19,9 +19,9 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
+import com.example.common.dto.PagedResult;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -80,6 +81,26 @@ class ProductControllerTest {
                         null,
                         BigDecimal.valueOf(1.00),
                         true));
+    }
+
+    @Test
+    void shouldReturnConsistentContentTooLargeProblem() {
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.error(new DataBufferLimitException("Request limit exceeded")));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isEqualTo(413)
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo(413)
+                .jsonPath("$.title")
+                .isEqualTo("Content Too Large")
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/content-too-large");
     }
 
     @Test
@@ -304,13 +325,6 @@ class ProductControllerTest {
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
-        Product product =
-                new Product()
-                        .setId(productId)
-                        .setProductCode("code 1")
-                        .setProductName("Updated name")
-                        .setDescription("description 1")
-                        .setPrice(BigDecimal.valueOf(1.00));
         ProductRequest productRequest =
                 new ProductRequest(
                         "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
@@ -323,8 +337,7 @@ class ProductControllerTest {
                         null,
                         BigDecimal.valueOf(1.00),
                         true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
-        given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
+        given(productService.updateProduct(eq(productId), any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -339,20 +352,21 @@ class ProductControllerTest {
                 .jsonPath("$.id")
                 .isEqualTo("1")
                 .jsonPath("$.productCode")
-                .isEqualTo(product.getProductCode())
+                .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
-                .isEqualTo(product.getProductName())
+                .isEqualTo(productResponse.productName())
                 .jsonPath("$.description")
-                .isEqualTo(product.getDescription())
+                .isEqualTo(productResponse.description())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(productResponse.price());
     }
 
     /** Verifies updating an unknown product returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findById(productId)).willReturn(Mono.empty());
+        given(productService.updateProduct(eq(productId), any(ProductRequest.class)))
+                .willReturn(Mono.empty());
         ProductRequest productRequest =
                 new ProductRequest(
                         "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));

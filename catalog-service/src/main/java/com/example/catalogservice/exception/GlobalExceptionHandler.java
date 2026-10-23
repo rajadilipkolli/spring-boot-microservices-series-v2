@@ -6,7 +6,7 @@
 
 package com.example.catalogservice.exception;
 
-import com.example.catalogservice.utils.LogSanitizer;
+import com.example.common.logging.LogSanitizer;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -50,12 +50,21 @@ public class GlobalExceptionHandler {
         return Mono.just(problemDetail);
     }
 
+    /**
+     * Converts a request buffer limit failure to an HTTP 413 problem with a validation error
+     * category and timestamp.
+     *
+     * @return the problem details without exposing the exception message
+     */
     @ExceptionHandler(DataBufferLimitException.class)
     Mono<ProblemDetail> handleDataBufferLimitException(DataBufferLimitException ex) {
         log.warn("Request body too large: {}", LogSanitizer.sanitizeException(ex));
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
-        problemDetail.setTitle("Request Entity Too Large");
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONTENT_TOO_LARGE);
+        problemDetail.setTitle("Content Too Large");
         problemDetail.setDetail("The request body exceeds the maximum allowed size");
+        problemDetail.setType(URI.create("https://api.microservices.com/errors/content-too-large"));
+        problemDetail.setProperty("errorCategory", "Validation");
+        problemDetail.setProperty("timestamp", Instant.now());
         return Mono.just(problemDetail);
     }
 
