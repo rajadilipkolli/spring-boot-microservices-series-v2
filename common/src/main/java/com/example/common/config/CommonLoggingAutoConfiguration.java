@@ -18,6 +18,13 @@ import org.springframework.core.env.Environment;
 @ConditionalOnClass(Aspect.class)
 public class CommonLoggingAutoConfiguration {
 
+    /**
+     * Supplies the default logging aspect when AspectJ is available and no logging aspect bean
+     * exists.
+     *
+     * @param env application environment used to determine production logging behavior
+     * @return a logging aspect using the supplied environment
+     */
     @Bean
     @ConditionalOnMissingBean
     LoggingAspect commonLoggingAspect(Environment env) {

@@ -20,7 +20,7 @@ import java.math.BigDecimal;
  * @param code unique product identifier
  * @param productName human-readable name of the product
  * @param description detailed description of the product
- * @param price unit price formatted with standard two decimal digits
+ * @param price unit price, normalized to at least two decimal places when non-null
  */
 public record ProductDto(
         @NotBlank(message = "Product code can't be blank") String code,
@@ -34,6 +34,11 @@ public record ProductDto(
 
     @Serial private static final long serialVersionUID = 1L;
 
+    /**
+     * Creates a product payload, padding prices with fewer than two decimal places with trailing
+     * zeros. Null prices and higher precision are preserved; validation constraints are not checked
+     * here.
+     */
     public ProductDto {
         if (price != null && price.scale() < 2) {
             if ((long) price.precision() - price.scale() > 17) {

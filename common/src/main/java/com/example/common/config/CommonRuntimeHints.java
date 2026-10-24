@@ -18,6 +18,13 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  */
 public class CommonRuntimeHints implements RuntimeHintsRegistrar {
 
+    /**
+     * Registers reflection access to declared constructors, methods, and fields of {@link
+     * PagedResult} and {@link ProductDto} for native images.
+     *
+     * @param hints registry to update
+     * @param classLoader unused by this registrar
+     */
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection()
