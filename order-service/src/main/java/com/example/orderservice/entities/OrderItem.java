@@ -6,6 +6,7 @@
 
 package com.example.orderservice.entities;
 
+import com.example.common.tsid.TsidFactorySupplier;
 import io.hypersistence.utils.hibernate.id.Tsid;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,7 +30,7 @@ import org.hibernate.proxy.HibernateProxy;
 public class OrderItem implements Serializable {
 
     @Id
-    @Tsid(TsidSupplier.class)
+    @Tsid(TsidFactorySupplier.class)
     private Long id;
 
     @Column(nullable = false, name = "product_code")

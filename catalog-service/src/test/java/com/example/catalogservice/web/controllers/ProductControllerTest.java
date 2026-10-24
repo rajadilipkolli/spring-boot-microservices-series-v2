@@ -17,11 +17,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dto.PagedResult;
+import com.example.common.dto.ProductDto;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;

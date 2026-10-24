@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
@@ -21,7 +22,8 @@ public record OrderDto(
                 Long customerId,
         String status,
         String source,
-        @NotEmpty(message = "Order without items not valid") List<@Valid OrderItemDto> items,
+        @NotEmpty(message = "Order without items not valid")
+                List<@NotNull @Valid OrderItemDto> items,
         String attemptId)
         implements Serializable {
 

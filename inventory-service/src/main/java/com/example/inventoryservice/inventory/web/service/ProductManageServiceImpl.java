@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.ProductDto;
 import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.ProductManageService;
-import com.example.inventoryservice.inventory.domain.models.ProductDto;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 

@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.config;
 
+import com.example.common.tsid.TsidFactories;
 import io.hypersistence.tsid.TSID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,11 +23,6 @@ class TsidConfig {
      */
     @Bean
     TSID.Factory tsidFactory() {
-        String nodeStr = System.getProperty("tsid.node", System.getenv("TSID_NODE"));
-        TSID.Factory.Builder builder = TSID.Factory.builder();
-        if (nodeStr != null && !nodeStr.trim().isEmpty()) {
-            builder.withNode(Integer.parseInt(nodeStr));
-        }
-        return builder.build();
+        return TsidFactories.fromEnvironment();
     }
 }

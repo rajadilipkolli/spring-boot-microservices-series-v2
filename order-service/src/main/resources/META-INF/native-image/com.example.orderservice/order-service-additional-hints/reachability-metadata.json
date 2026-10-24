@@ -137,15 +137,6 @@
     },
     {
       "condition": {
-        "typeReached": "com.example.orderservice.model.response.PagedResult"
-      },
-      "type": "com.example.orderservice.model.response.PagedResult",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
         "typeReached": "com.example.orderservice.services.CatalogServiceProxy$ProductExistsResponse"
       },
       "type": "com.example.orderservice.services.CatalogServiceProxy$ProductExistsResponse",
