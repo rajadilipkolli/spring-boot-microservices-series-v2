@@ -7,6 +7,7 @@
 package com.example.common.config;
 
 import com.example.common.dto.PagedResult;
+import com.example.common.dto.ProductDto;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -24,7 +25,11 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
                         PagedResult.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        ProductDto.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
-        hints.reflection().registerType(PagedResult.class);
     }
 }
