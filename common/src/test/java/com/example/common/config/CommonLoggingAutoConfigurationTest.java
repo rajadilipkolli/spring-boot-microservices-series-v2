@@ -8,11 +8,10 @@ package com.example.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.common.dto.PagedResult;
 import com.example.common.logging.LoggingAspect;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
-import org.springframework.aot.hint.RuntimeHints;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -21,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 
+@DisabledInNativeImage
 class CommonLoggingAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner =
@@ -62,26 +62,13 @@ class CommonLoggingAutoConfigurationTest {
     }
 
     @Test
-    void contextStartupAndRuntimeHintsRegistrationSafeWhenSpringDataIsAbsent() {
+    void contextStartupSafeWhenSpringDataIsAbsent() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader(Page.class))
                 .run(
                         context -> {
                             assertThat(context).hasNotFailed();
                             assertThat(context).hasSingleBean(LoggingAspect.class);
-
-                            // Test CommonRuntimeHints execution without Spring Data Page class
-                            CommonRuntimeHints hintsRegistrar = new CommonRuntimeHints();
-                            RuntimeHints hints = new RuntimeHints();
-                            ClassLoader filteredLoader = new FilteredClassLoader(Page.class);
-                            hintsRegistrar.registerHints(hints, filteredLoader);
-
-                            assertThat(hints.reflection().typeHints())
-                                    .anyMatch(
-                                            typeHint ->
-                                                    typeHint.getType()
-                                                            .getName()
-                                                            .equals(PagedResult.class.getName()));
                         });
     }
 

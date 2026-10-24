@@ -44,9 +44,27 @@ jobs:
       - name: Verify Spotless & Compile
         run: ./mvnw -pl common clean test spotless:check
 
-  publish:
+  native-test:
+    name: Native Test Common
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: graalvm/setup-graalvm@27b360dbb857524eaf0b4c4cef364d38e5b4f173
+        with:
+          distribution: 'graalvm'
+          java-version: '25'
+          cache: 'maven'
+
+      - name: Run Native Tests
+        run: ./mvnw -B -pl common -PnativeTest test
+
+  publish-github:
     name: Publish to GitHub Packages
-    needs: build-and-test
+    needs: [build-and-test, native-test]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -82,7 +100,7 @@ jobs:
 
   publish-central:
     name: Publish to Maven Central
-    needs: build-and-test
+    needs: [build-and-test, native-test]
     if: startsWith(github.ref, 'refs/tags/common-v') || (github.event_name == 'workflow_dispatch' && inputs.release_version != '')
     permissions:
       contents: write

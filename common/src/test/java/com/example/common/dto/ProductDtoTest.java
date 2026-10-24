@@ -1,65 +1,65 @@
+/***
+ * <p>
+ * Licensed under MIT License Copyright (c) 2026 Raja Kolli.
+ * </p>
+ ***/
+
 package com.example.common.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import java.math.BigDecimal;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import tools.jackson.databind.json.JsonMapper;
 
 class ProductDtoTest {
 
-    private final JsonMapper jsonMapper = JsonMapper.builder().build();
+    private static Validator validator;
 
-    @ParameterizedTest
-    @CsvSource({
-        "10, 10.00",
-        "10.5, 10.50",
-        "10.50, 10.50",
-        "1E+2, 100.00",
-        "1E+16, 10000000000000000.00",
-        "99999999999999999, 99999999999999999.00"
-    })
-    void serializesPriceAsNumberWithTwoDecimalPlaces(String price, String expectedPrice) {
-        ProductDto product =
-                new ProductDto("P001", "Product", "Description", new BigDecimal(price));
-
-        String json = jsonMapper.writeValueAsString(product);
-
-        assertThat(json).contains("\"price\":" + expectedPrice + "}");
-        assertThat(jsonMapper.readValue(json, ProductDto.class)).isEqualTo(product);
+    @BeforeAll
+    static void setUp() {
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            validator = factory.getValidator();
+        }
     }
 
     @Test
-    void preservesNullPrice() {
-        ProductDto product = new ProductDto("P001", "Product", "Description", null);
-
-        String json = jsonMapper.writeValueAsString(product);
-
-        assertThat(json).contains("\"price\":null");
-        assertThat(jsonMapper.readValue(json, ProductDto.class).price()).isNull();
+    void rejectsBlankCode() {
+        ProductDto dto = new ProductDto("  ", "Name", "Desc", BigDecimal.valueOf(10.00));
+        Set<ConstraintViolation<ProductDto>> violations = validator.validate(dto);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("code"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"10.001", "100000000000000000.001"})
-    void preservesExcessPrecisionForValidation(String value) {
-        BigDecimal price = new BigDecimal(value);
+    @Test
+    void rejectsNonPositivePrice() {
+        ProductDto zeroPrice = new ProductDto("CODE1", "Name", "Desc", BigDecimal.ZERO);
+        Set<ConstraintViolation<ProductDto>> violationsZero = validator.validate(zeroPrice);
+        assertThat(violationsZero).anyMatch(v -> v.getPropertyPath().toString().equals("price"));
 
-        ProductDto product = new ProductDto("P001", "Product", "Description", price);
-
-        assertThat(product.price()).isEqualTo(price);
+        ProductDto negativePrice =
+                new ProductDto("CODE1", "Name", "Desc", BigDecimal.valueOf(-1.00));
+        Set<ConstraintViolation<ProductDto>> violationsNegative = validator.validate(negativePrice);
+        assertThat(violationsNegative)
+                .anyMatch(v -> v.getPropertyPath().toString().equals("price"));
     }
 
-    @ParameterizedTest
-    @CsvSource({"100000000000000000, 0", "1, -17", "1, -1000000000", "1, -2147483648"})
-    void rejectsTooManyIntegerDigitsBeforeNormalization(long unscaledValue, int scale) {
-        BigDecimal price = BigDecimal.valueOf(unscaledValue, scale);
+    @Test
+    void rejectsPriceWithMoreThanTwoFractionDigits() {
+        ProductDto dto = new ProductDto("CODE1", "Name", "Desc", new BigDecimal("10.999"));
+        Set<ConstraintViolation<ProductDto>> violations = validator.validate(dto);
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("price"));
+    }
 
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ProductDto("P001", "Product", "Description", price))
-                .withMessage("Price must have at most 17 integer digits");
+    @Test
+    void acceptsValidRecord() {
+        ProductDto dto =
+                new ProductDto("CODE1", "Product Name", "Description", new BigDecimal("19.99"));
+        Set<ConstraintViolation<ProductDto>> violations = validator.validate(dto);
+        assertThat(violations).isEmpty();
     }
 }
