@@ -111,7 +111,8 @@ jobs:
           
           ./mvnw $PROFILE spring-boot:build-image \
             -DskipTests \
-            -Dspring-boot.build-image.imagePlatform=linux/arm64 \
+            -Dspring-boot.build-image.builder="paketobuildpacks/builder-jammy-java-tiny:latest" \
+            -Dspring-boot.build-image.imagePlatform=linux/amd64 \
             -Dspring-boot.build-image.pullPolicy=ALWAYS \
             -Dspring-boot.build-image.publish=true \
             -Dspring-boot.build-image.imageName="dockertmt/mmv2-${SERVICE}:latest"
