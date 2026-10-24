@@ -125,7 +125,7 @@ class InventoryAPIImpl implements InventoryAPI {
     /** Handles product creation within a write transaction, ignoring existing product codes. */
     @Override
     @Transactional
-    public void manage(com.example.inventoryservice.inventory.domain.models.ProductDto productDto) {
+    public void manage(com.example.common.dto.ProductDto productDto) {
         productManageService.manage(productDto);
     }
 }

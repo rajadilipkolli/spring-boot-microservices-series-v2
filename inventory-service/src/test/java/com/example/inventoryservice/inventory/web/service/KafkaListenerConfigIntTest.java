@@ -9,8 +9,8 @@ package com.example.inventoryservice.inventory.web.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.domain.models.OrderDto;
-import com.example.inventoryservice.inventory.domain.models.ProductDto;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.Optional;

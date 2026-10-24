@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.tsid.TsidFactorySupplier;
 import io.hypersistence.utils.hibernate.id.Tsid;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +19,7 @@ import jakarta.persistence.Version;
 class Inventory {
 
     @Id
-    @Tsid(TsidSupplier.class)
+    @Tsid(TsidFactorySupplier.class)
     private Long id;
 
     @Column(name = "product_code", nullable = false, unique = true, updatable = false)

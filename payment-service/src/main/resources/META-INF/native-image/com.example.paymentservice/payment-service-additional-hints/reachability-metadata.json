@@ -253,13 +253,6 @@
       "allDeclaredFields": true
     },
     {
-      "condition": {"typeReached": "com.example.paymentservice.model.response.PagedResult"},
-      "type": "com.example.paymentservice.model.response.PagedResult",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
       "condition": {"typeReached": "com.example.paymentservice.services.PaymentOperationEngine$ArrivalResult"},
       "type": "com.example.paymentservice.services.PaymentOperationEngine$ArrivalResult",
       "allDeclaredConstructors": true,

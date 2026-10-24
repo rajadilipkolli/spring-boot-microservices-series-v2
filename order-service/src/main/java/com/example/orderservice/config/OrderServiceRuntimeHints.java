@@ -6,7 +6,6 @@
 
 package com.example.orderservice.config;
 
-import com.example.orderservice.entities.TsidSupplier;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -18,8 +17,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
 
     /**
-     * Registers reflection access for order DTOs, responses, addresses, and the TSID supplier in
-     * native images.
+     * Registers reflection access for order DTOs, responses, and addresses in native images.
      *
      * @param hints registry to update with constructor and method access, plus field access for
      *     DTOs, responses, and addresses
@@ -52,10 +50,6 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
                         OrderItemResponse.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
-                        MemberCategory.ACCESS_DECLARED_FIELDS)
-                .registerType(
-                        TsidSupplier.class,
-                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                        MemberCategory.INVOKE_DECLARED_METHODS);
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
     }
 }

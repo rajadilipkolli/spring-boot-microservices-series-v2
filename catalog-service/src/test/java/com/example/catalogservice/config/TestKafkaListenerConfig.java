@@ -8,7 +8,7 @@ package com.example.catalogservice.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.catalogservice.model.payload.ProductDto;
+import com.example.common.dto.ProductDto;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;

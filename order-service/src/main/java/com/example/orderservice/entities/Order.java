@@ -6,6 +6,7 @@
 
 package com.example.orderservice.entities;
 
+import com.example.common.tsid.TsidFactorySupplier;
 import com.example.orderservice.model.Address;
 import io.hypersistence.utils.hibernate.id.Tsid;
 import jakarta.persistence.AttributeOverride;
@@ -30,7 +31,7 @@ import java.util.List;
 public class Order extends Auditable<String> implements Serializable {
 
     @Id
-    @Tsid(TsidSupplier.class)
+    @Tsid(TsidFactorySupplier.class)
     private Long id;
 
     @Column(name = "customer_id", nullable = false)
