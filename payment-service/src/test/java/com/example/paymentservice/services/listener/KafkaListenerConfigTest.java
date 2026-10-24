@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import jakarta.validation.Validation;
-import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
@@ -20,17 +20,21 @@ class KafkaListenerConfigTest {
 
     private PaymentOrderManageService paymentOrderManageService;
     private KafkaListenerConfig kafkaListenerConfig;
+    private ValidatorFactory validatorFactory;
 
     @BeforeEach
     void setUp() {
         paymentOrderManageService = mock(PaymentOrderManageService.class);
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        Validator validator;
-        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
-            validator = factory.getValidator();
-        }
+        validatorFactory = Validation.buildDefaultValidatorFactory();
         kafkaListenerConfig =
-                new KafkaListenerConfig(paymentOrderManageService, jsonMapper, validator);
+                new KafkaListenerConfig(
+                        paymentOrderManageService, jsonMapper, validatorFactory.getValidator());
+    }
+
+    @AfterEach
+    void tearDown() {
+        validatorFactory.close();
     }
 
     /**

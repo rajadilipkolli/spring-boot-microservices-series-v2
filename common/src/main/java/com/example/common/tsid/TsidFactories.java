@@ -16,9 +16,9 @@ public final class TsidFactories {
     /**
      * Builds a {@link TSID.Factory} using {@code tsid.node} system property, falling back to {@code
      * TSID_NODE} environment variable only when the system property is absent. A blank system
-     * property suppresses the environment fallback. Null or empty values explicitly select a random
-     * node. Surrounding spaces are not trimmed before parsing and will cause a {@link
-     * NumberFormatException}.
+     * property suppresses the environment fallback. Null or blank values explicitly select a random
+     * node. Surrounding spaces on nonblank values are not trimmed before parsing and will cause a
+     * {@link NumberFormatException}.
      *
      * @return the configured identifier factory
      * @throws NumberFormatException if a non-blank node value cannot be parsed as an integer
@@ -32,7 +32,7 @@ public final class TsidFactories {
         String nodeStr = resolveNodeValue(systemProperty, environmentVariable);
         NodeBuilder builder = new NodeBuilder();
         int nodeLimit = builder.nodeLimit();
-        if (nodeStr != null && !nodeStr.isEmpty()) {
+        if (nodeStr != null && !nodeStr.isBlank()) {
             int node = Integer.parseInt(nodeStr);
             if (node < 0 || node >= nodeLimit) {
                 throw new IllegalArgumentException(

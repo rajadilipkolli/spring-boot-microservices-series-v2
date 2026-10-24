@@ -17,6 +17,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @ResourceLock(Resources.SYSTEM_PROPERTIES)
 class TsidFactoriesTest {
@@ -59,12 +60,21 @@ class TsidFactoriesTest {
         assertThat(nodeOf(tsid, 10)).isEqualTo(10);
     }
 
-    @Test
-    void blankPropertySuppressesEnvironmentFallback() {
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "\t\n", "\u2003"})
+    void blankPropertySuppressesEnvironmentFallback(String node) {
         System.setProperty("tsid.node.count", "1");
-        TSID.Factory factory = TsidFactories.build("", "not-an-integer");
+        TSID.Factory factory = TsidFactories.build(node, "not-an-integer");
         TSID tsid = factory.generate();
         assertThat(nodeOf(tsid, 0)).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "\t\n", "\u2003"})
+    void blankEnvironmentUsesDefaultNodeSelection(String node) {
+        System.setProperty("tsid.node.count", "1");
+        TSID.Factory factory = TsidFactories.build(null, node);
+        assertThat(nodeOf(factory.generate(), 0)).isZero();
     }
 
     @Test
@@ -74,9 +84,12 @@ class TsidFactoriesTest {
         assertThat(tsid).isNotNull();
     }
 
-    @Test
-    void surroundingSpacesFailToParse() {
-        assertThatThrownBy(() -> TsidFactories.build(" 42 ", null))
+    @ParameterizedTest
+    @ValueSource(strings = {" 42", "42 ", " 42 "})
+    void surroundingSpacesFailToParse(String node) {
+        assertThatThrownBy(() -> TsidFactories.build(node, null))
+                .isInstanceOf(NumberFormatException.class);
+        assertThatThrownBy(() -> TsidFactories.build(null, node))
                 .isInstanceOf(NumberFormatException.class);
     }
 

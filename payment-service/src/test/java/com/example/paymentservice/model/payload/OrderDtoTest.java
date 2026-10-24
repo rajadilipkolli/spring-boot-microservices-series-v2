@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,13 +24,18 @@ import org.springframework.boot.test.json.JacksonTester;
 @JsonTest
 class OrderDtoTest {
 
+    private static ValidatorFactory validatorFactory;
     private static Validator validator;
 
     @BeforeAll
     static void setUp() {
-        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
-            validator = factory.getValidator();
-        }
+        validatorFactory = Validation.buildDefaultValidatorFactory();
+        validator = validatorFactory.getValidator();
+    }
+
+    @AfterAll
+    static void tearDown() {
+        validatorFactory.close();
     }
 
     @Autowired private JacksonTester<OrderDto> jsonMapper;
