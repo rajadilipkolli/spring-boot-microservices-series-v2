@@ -21,5 +21,4 @@ interface InventoryRepository extends JpaRepository<Inventory, Long> {
     List<Inventory> findByProductCodeInAndDeletedFalse(List<String> productCodes);
 
     Optional<Inventory> findByIdAndDeletedFalse(Long id);
-
 }
