@@ -6,9 +6,9 @@
 
 package com.example.orderservice.mapper;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;

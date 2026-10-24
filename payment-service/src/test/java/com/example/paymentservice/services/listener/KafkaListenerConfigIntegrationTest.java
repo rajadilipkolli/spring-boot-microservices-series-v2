@@ -4,9 +4,9 @@ package com.example.paymentservice.services.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.util.TestData;
 import java.math.BigDecimal;
 import java.time.Duration;

@@ -1,10 +1,10 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services.listener;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.exception.OperationConflictException;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import com.example.paymentservice.utils.AppConstants;
 import jakarta.validation.ConstraintViolation;

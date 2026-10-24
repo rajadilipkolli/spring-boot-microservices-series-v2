@@ -1,9 +1,9 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

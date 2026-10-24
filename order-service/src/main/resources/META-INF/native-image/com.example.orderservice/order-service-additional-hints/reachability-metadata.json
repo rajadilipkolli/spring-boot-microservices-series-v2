@@ -83,24 +83,6 @@
     },
     {
       "condition": {
-        "typeReached": "com.example.orderservice.model.dtos.OrderDto"
-      },
-      "type": "com.example.orderservice.model.dtos.OrderDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
-        "typeReached": "com.example.orderservice.model.dtos.OrderItemDto"
-      },
-      "type": "com.example.orderservice.model.dtos.OrderItemDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
         "typeReached": "com.example.orderservice.model.request.OrderItemRequest"
       },
       "type": "com.example.orderservice.model.request.OrderItemRequest",

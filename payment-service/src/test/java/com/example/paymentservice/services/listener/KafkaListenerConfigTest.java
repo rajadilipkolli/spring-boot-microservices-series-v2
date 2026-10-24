@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.example.paymentservice.model.payload.OrderDto;
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.services.PaymentOrderManageService;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;

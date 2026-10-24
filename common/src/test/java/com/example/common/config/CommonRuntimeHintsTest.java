@@ -8,6 +8,7 @@ package com.example.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
 import com.example.common.dto.ProductDto;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,10 @@ class CommonRuntimeHintsTest {
 
         assertThat(RuntimeHintsPredicates.reflection().onType(PagedResult.class)).accepts(hints);
         assertThat(RuntimeHintsPredicates.reflection().onType(ProductDto.class)).accepts(hints);
-        assertThat(hints.serialization().javaSerializationHints()).isEmpty();
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderDto.class)).accepts(hints);
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderDto.OrderItemDto.class))
+                .accepts(hints);
+        assertThat(hints.reflection().typeHints()).isEmpty();
     }
 
     @Test
@@ -40,6 +44,9 @@ class CommonRuntimeHintsTest {
 
         assertThat(RuntimeHintsPredicates.reflection().onType(PagedResult.class)).rejects(hints);
         assertThat(RuntimeHintsPredicates.reflection().onType(ProductDto.class)).accepts(hints);
-        assertThat(hints.serialization().javaSerializationHints()).isEmpty();
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderDto.class)).accepts(hints);
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderDto.OrderItemDto.class))
+                .accepts(hints);
+        assertThat(hints.reflection().typeHints()).isEmpty();
     }
 }

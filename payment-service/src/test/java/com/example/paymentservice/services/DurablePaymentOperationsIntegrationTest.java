@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.LedgerEntries;
@@ -18,7 +19,6 @@ import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
 import com.example.paymentservice.services.provider.ProviderResult;

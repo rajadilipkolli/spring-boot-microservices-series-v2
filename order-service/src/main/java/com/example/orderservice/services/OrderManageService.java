@@ -6,10 +6,10 @@
 
 package com.example.orderservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import io.micrometer.core.instrument.Counter;

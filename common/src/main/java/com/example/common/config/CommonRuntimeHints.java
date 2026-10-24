@@ -6,6 +6,7 @@
 
 package com.example.common.config;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.ProductDto;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
@@ -23,9 +24,9 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
 
     /**
      * Registers reflection access to declared constructors, methods, and fields of {@code
-     * PagedResult} (if Spring Data's {@code Page} is on the classpath) and {@link ProductDto} for
-     * native images. Also registers constructor access for {@code TsidFactorySupplier} when
-     * Hypersistence TSID is on the classpath.
+     * PagedResult} (if Spring Data's {@code Page} is on the classpath), {@link ProductDto}, and
+     * {@link OrderDto} for native images. Also registers constructor access for {@code
+     * TsidFactorySupplier} when Hypersistence TSID is on the classpath.
      *
      * @param hints registry to update
      * @param classLoader classLoader to inspect for optional dependencies
@@ -43,6 +44,18 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
         hints.reflection()
                 .registerType(
                         ProductDto.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection()
+                .registerType(
+                        OrderDto.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection()
+                .registerType(
+                        OrderDto.OrderItemDto.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);

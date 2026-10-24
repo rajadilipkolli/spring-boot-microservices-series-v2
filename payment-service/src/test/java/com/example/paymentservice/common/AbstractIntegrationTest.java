@@ -4,9 +4,9 @@ package com.example.paymentservice.common;
 import static com.example.paymentservice.utils.AppConstants.PROFILE_TEST;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.PaymentApplication;
 import com.example.paymentservice.clients.OrderServiceProxy;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.repositories.LedgerRepository;

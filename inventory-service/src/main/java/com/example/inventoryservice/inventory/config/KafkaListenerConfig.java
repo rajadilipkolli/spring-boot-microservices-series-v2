@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice.inventory.config;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.InventoryAPI;
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
+import com.example.common.dto.OrderDto;
 import java.math.BigDecimal;
 import java.util.List;
 

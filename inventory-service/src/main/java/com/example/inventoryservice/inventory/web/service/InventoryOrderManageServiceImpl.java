@@ -6,9 +6,9 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.InventoryOrderManageService;
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
 import com.example.inventoryservice.inventory.events.InventoryProcessedEvent;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import io.micrometer.core.instrument.Counter;
