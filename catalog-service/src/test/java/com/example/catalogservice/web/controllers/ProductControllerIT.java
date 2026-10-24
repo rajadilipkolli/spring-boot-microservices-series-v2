@@ -1078,8 +1078,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                                 .filter(event -> "PRODUCT_CREATED".equals(event.getEventType()))
                                 .filter(
                                         event ->
-                                                request.productCode()
-                                                        .equals(event.getAggregateId())))
+                                                product.getProductCode()
+                                                        .equalsIgnoreCase(event.getAggregateId())))
                 .assertNext(
                         event ->
                                 assertThat(event.getPayload().content())
