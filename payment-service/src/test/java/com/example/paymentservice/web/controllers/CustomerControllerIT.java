@@ -475,6 +475,40 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         jsonPath(
                                 "$.amountAvailable",
                                 is(customer.getAmountAvailable().doubleValue())));
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by ID must return 404
+        this.mockMvc
+                .perform(get("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isNotFound());
+
+        // Update must return 404
+        CustomerRequest updateRequest =
+                new CustomerRequest(
+                        "Updated",
+                        customer.getEmail(),
+                        "123-456-7890",
+                        "New Address",
+                        null,
+                        "City",
+                        "State",
+                        "12345",
+                        "Country",
+                        BigDecimal.valueOf(50.0));
+        this.mockMvc
+                .perform(
+                        put("/api/customers/{id}", customer.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound());
+
+        // Retained in database with deleted = true
+        CustomersRecord retained = customerRepository.findById(customer.getId()).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
     }
 
     /** Verifies that deleting an unknown customer returns HTTP 404 with problem details. */

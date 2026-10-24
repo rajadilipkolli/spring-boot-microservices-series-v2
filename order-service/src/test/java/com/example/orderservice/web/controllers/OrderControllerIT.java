@@ -604,6 +604,26 @@ class OrderControllerIT extends AbstractIntegrationTest {
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
                 .andExpect(status().isAccepted());
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by ID must return 404
+        this.mockMvc
+                .perform(get("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // List must exclude soft-deleted order
+        this.mockMvc
+                .perform(get("/api/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(orderList.size() - 1)));
+
+        // Unfiltered lookup verifies database row retained with deleted = true
+        Order retained = orderRepository.findById(order.getId()).orElseThrow();
+        assertThat(retained.isDeleted()).isTrue();
     }
 
     @Test

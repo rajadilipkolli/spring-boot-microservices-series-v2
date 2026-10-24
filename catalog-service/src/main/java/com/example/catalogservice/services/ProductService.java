@@ -131,7 +131,7 @@ public class ProductService {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         return productRepository
-                .count()
+                .countByDeletedFalse()
                 .flatMap(
                         count -> {
                             if (count == 0) {
@@ -142,7 +142,7 @@ public class ProductService {
                             }
 
                             return productRepository
-                                    .findAllBy(pageable)
+                                    .findAllByDeletedFalse(pageable)
                                     .collectList()
                                     .flatMap(
                                             products -> {
@@ -183,7 +183,7 @@ public class ProductService {
                 cacheKey,
                 () ->
                         productRepository
-                                .findById(id)
+                                .findByIdAndDeletedFalse(id)
                                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                                 .map(productMapper::toProductResponse)
                                 .flatMap(this::fetchInventoryAndUpdateProductResponse));
@@ -208,7 +208,7 @@ public class ProductService {
                         cacheKey,
                         () ->
                                 productRepository
-                                        .findByProductCodeAllIgnoreCase(productCode)
+                                        .findByProductCodeAllIgnoreCaseAndDeletedFalse(productCode)
                                         .map(productMapper::toProductResponse)
                                         .switchIfEmpty(
                                                 Mono.error(
@@ -245,7 +245,7 @@ public class ProductService {
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository
-                .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                .findByProductCodeAllIgnoreCaseAndDeletedFalse(productRequest.productCode())
                 .map(productMapper::toProductResponse)
                 .switchIfEmpty(Mono.defer(() -> self.createAndSaveProduct(productRequest)))
                 // Catch DuplicateKeyException from unique constraint violation
@@ -258,7 +258,8 @@ public class ProductService {
                             // Recovery mechanism: fetch the existing product that was concurrently
                             // saved
                             return productRepository
-                                    .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                                    .findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                            productRequest.productCode())
                                     .map(productMapper::toProductResponse)
                                     .switchIfEmpty(
                                             // This should never happen, but just in case
@@ -303,25 +304,33 @@ public class ProductService {
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
         return productRepository
-                .findById(id)
+                .findByIdAndDeletedFalse(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                 .flatMap(
-                        product ->
-                                productRepository
-                                        .deleteById(id)
-                                        .then(
-                                                outboxService.createOutboxEvent(
-                                                        "PRODUCT",
-                                                        product.getProductCode(),
-                                                        "PRODUCT_DELETED",
-                                                        product))
-                                        .then(evictProductCache(id, product.getProductCode())));
+                        product -> {
+                            product.setDeleted(true);
+                            return productRepository
+                                    .save(product)
+                                    .flatMap(
+                                            savedProduct ->
+                                                    outboxService
+                                                            .createOutboxEvent(
+                                                                    "PRODUCT",
+                                                                    savedProduct.getProductCode(),
+                                                                    "PRODUCT_DELETED",
+                                                                    savedProduct)
+                                                            .then(
+                                                                    evictProductCache(
+                                                                            id,
+                                                                            savedProduct
+                                                                                    .getProductCode())));
+                        });
     }
 
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
         log.info("checking if products Exists :{}", productCodes);
         return productRepository
-                .countDistinctByProductCodeAllIgnoreCaseIn(productCodes)
+                .countDistinctByProductCodeAllIgnoreCaseInAndDeletedFalse(productCodes)
                 .map(count -> count == productCodes.size());
     }
 
@@ -342,7 +351,7 @@ public class ProductService {
     @Transactional
     public Mono<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {
         return productRepository
-                .findById(id)
+                .findByIdAndDeletedFalse(id)
                 .flatMap(product -> updateProduct(productRequest, product));
     }
 
@@ -382,7 +391,7 @@ public class ProductService {
     }
 
     public Mono<Product> findById(Long id) {
-        return this.productRepository.findById(id);
+        return this.productRepository.findByIdAndDeletedFalse(id);
     }
 
     /**
@@ -410,7 +419,7 @@ public class ProductService {
 
         Flux<Product> productFlux =
                 productRepository
-                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                        .findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndDeletedFalse(
                                 term, term, pageable);
 
         return processSearchResults(productFlux, pageable);
@@ -443,7 +452,7 @@ public class ProductService {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
-                productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
+                productRepository.findByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable);
         return processSearchResults(productFlux, pageable);
     }
 
@@ -485,7 +494,7 @@ public class ProductService {
 
         Flux<Product> productFlux =
                 productRepository
-                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+                        .findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndPriceBetweenAndDeletedFalse(
                                 term, term, minPrice, maxPrice, pageable);
 
         return processSearchResults(productFlux, pageable);

@@ -49,6 +49,7 @@ public interface OrderMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "createdDate", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)

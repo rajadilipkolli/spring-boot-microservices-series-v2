@@ -31,6 +31,9 @@ class Inventory {
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     @Version private Short version = 0;
 
     public Inventory() {}
@@ -69,6 +72,20 @@ class Inventory {
 
     public Integer getReservedItems() {
         return reservedItems;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Inventory setDeleted(boolean deleted) {
+        this.deleted = deleted;
+        return this;
+    }
+
+    public Inventory markDeleted() {
+        this.deleted = true;
+        return this;
     }
 
     public Short getVersion() {

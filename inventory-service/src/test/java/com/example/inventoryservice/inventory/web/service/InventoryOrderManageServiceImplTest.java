@@ -63,7 +63,9 @@ class InventoryOrderManageServiceImplTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
-        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(
+                        inventoryRepository.findByProductCodeInAndDeletedFalse(
+                                List.of("product1", "product2")))
                 .willReturn(List.of(inventory1, inventory2));
 
         // Act
@@ -101,7 +103,9 @@ class InventoryOrderManageServiceImplTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
-        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(
+                        inventoryRepository.findByProductCodeInAndDeletedFalse(
+                                List.of("product1", "product2")))
                 .willReturn(List.of(inventory1, inventory2));
 
         // Act
@@ -112,7 +116,8 @@ class InventoryOrderManageServiceImplTest {
         assertThat(result.status()).isEqualTo("REJECT");
         assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
         assertThat(result.orderId()).isEqualTo(1L);
-        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1))
+                .findByProductCodeInAndDeletedFalse(List.of("product1", "product2"));
         verify(eventPublisher, times(1)).publishEvent(any(InventoryProcessedEvent.class));
         verify(inventoryRepository, times(0)).saveAll(anyList());
         verifyNoMoreInteractions(inventoryRepository, inventoryJOOQRepository);
@@ -127,7 +132,9 @@ class InventoryOrderManageServiceImplTest {
         orderItems.add(new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", "TEST", orderItems);
 
-        given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
+        given(
+                        inventoryRepository.findByProductCodeInAndDeletedFalse(
+                                List.of("product1", "product2")))
                 .willReturn(new ArrayList<>());
 
         // Act
@@ -136,7 +143,8 @@ class InventoryOrderManageServiceImplTest {
         assertThat(result.status()).isEqualTo("REJECT");
         assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
         assertThat(result.orderId()).isEqualTo(1L);
-        verify(inventoryRepository, times(1)).findByProductCodeIn(List.of("product1", "product2"));
+        verify(inventoryRepository, times(1))
+                .findByProductCodeInAndDeletedFalse(List.of("product1", "product2"));
         ArgumentCaptor<InventoryProcessedEvent> eventCaptor =
                 ArgumentCaptor.forClass(InventoryProcessedEvent.class);
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());

@@ -41,7 +41,7 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     public Optional<Inventory> findById(Long inventoryId) {
         return dslContext
                 .selectFrom(INVENTORY)
-                .where(INVENTORY.ID.eq(inventoryId))
+                .where(INVENTORY.ID.eq(inventoryId).and(INVENTORY.DELETED.isFalse()))
                 .fetchOptionalInto(Inventory.class);
     }
 
@@ -56,12 +56,13 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                                 INVENTORY.RESERVED_ITEMS,
                                 INVENTORY.VERSION)
                         .from(INVENTORY)
+                        .where(INVENTORY.DELETED.isFalse())
                         .orderBy(getSortFields(pageable.getSort()))
                         .limit(pageable.getPageSize())
                         .offset(pageable.getOffset())
                         .fetchInto(Inventory.class),
                 pageable,
-                dslContext.fetchCount(INVENTORY));
+                dslContext.fetchCount(INVENTORY, INVENTORY.DELETED.isFalse()));
     }
 
     @Override
@@ -74,7 +75,7 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                         INVENTORY.RESERVED_ITEMS,
                         INVENTORY.VERSION)
                 .from(INVENTORY)
-                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
+                .where(INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()))
                 .fetchOptionalInto(Inventory.class);
     }
 
@@ -89,13 +90,19 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                                 INVENTORY.RESERVED_ITEMS,
                                 INVENTORY.VERSION)
                         .from(INVENTORY)
-                        .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                        .where(
+                                INVENTORY
+                                        .PRODUCT_CODE
+                                        .in(productCodes)
+                                        .and(INVENTORY.DELETED.isFalse()))
                         .orderBy(getSortFields(pageable.getSort()))
                         .limit(pageable.getPageSize())
                         .offset(pageable.getOffset())
                         .fetchInto(Inventory.class),
                 pageable,
-                dslContext.fetchCount(INVENTORY, INVENTORY.PRODUCT_CODE.in(productCodes)));
+                dslContext.fetchCount(
+                        INVENTORY,
+                        INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse())));
     }
 
     @Override

@@ -36,6 +36,8 @@ public class Product implements Serializable, Persistable<Long> {
 
     private String imageUrl;
 
+    private boolean deleted = false;
+
     public Product() {}
 
     public Long getId() {
@@ -112,6 +114,15 @@ public class Product implements Serializable, Persistable<Long> {
 
     public Product setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+        return this;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Product setDeleted(boolean deleted) {
+        this.deleted = deleted;
         return this;
     }
 

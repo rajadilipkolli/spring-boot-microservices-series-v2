@@ -96,5 +96,41 @@ class CatalogAndInventoryE2ETest {
                                         .statusCode(200)
                                         .body("productCode", is(PRODUCT_CODE))
                                         .body("inStock", is(true)));
+
+        // 5. Delete product in Catalog Service and verify soft delete propagation to Inventory
+        // Service
+        String productId =
+                given().spec(E2EConfig.defaultRequestSpec())
+                        .when()
+                        .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
+                        .then()
+                        .statusCode(200)
+                        .extract()
+                        .path("id");
+
+        given().spec(E2EConfig.defaultRequestSpec())
+                .when()
+                .delete("/catalog-service/api/catalog/" + productId)
+                .then()
+                .statusCode(200);
+
+        // Catalog reads should return 404
+        given().spec(E2EConfig.defaultRequestSpec())
+                .when()
+                .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
+                .then()
+                .statusCode(404);
+
+        // Inventory should soft-delete the item via Kafka event propagation
+        await("Inventory should be soft-deleted for product " + PRODUCT_CODE)
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(500))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .when()
+                                        .get("/inventory-service/api/inventory/" + PRODUCT_CODE)
+                                        .then()
+                                        .statusCode(404));
     }
 }

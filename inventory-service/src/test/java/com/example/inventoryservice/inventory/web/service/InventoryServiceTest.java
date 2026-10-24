@@ -47,7 +47,7 @@ class InventoryServiceTest {
     @Test
     void testUpdateGeneratedInventory() {
         // Mock the behavior of dependencies
-        given(inventoryRepository.findByProductCode(anyString()))
+        given(inventoryRepository.findByProductCodeAndDeletedFalse(anyString()))
                 .willReturn(
                         Optional.of(
                                 new Inventory()
@@ -75,13 +75,13 @@ class InventoryServiceTest {
         inventoryService.updateGeneratedInventory("test-batch-123", null);
 
         // Verify interactions
-        verify(inventoryRepository, times(101)).findByProductCode(anyString());
+        verify(inventoryRepository, times(101)).findByProductCodeAndDeletedFalse(anyString());
         verify(inventoryRepository, times(101)).save(any(Inventory.class));
     }
 
     @Test
     void shouldUpdateRequestedGeneratedInventoryBatchSize() {
-        given(inventoryRepository.findByProductCode(anyString()))
+        given(inventoryRepository.findByProductCodeAndDeletedFalse(anyString()))
                 .willReturn(
                         Optional.of(
                                 new Inventory()
@@ -95,7 +95,7 @@ class InventoryServiceTest {
 
         inventoryService.updateGeneratedInventory("test-batch-456", 5);
 
-        verify(inventoryRepository, times(5)).findByProductCode(anyString());
+        verify(inventoryRepository, times(5)).findByProductCodeAndDeletedFalse(anyString());
         verify(inventoryRepository, times(5)).save(any(Inventory.class));
     }
 

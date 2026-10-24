@@ -18,26 +18,33 @@ import reactor.core.publisher.Mono;
 public interface ProductRepository
         extends ReactiveCrudRepository<Product, Long>, ReactiveSortingRepository<Product, Long> {
 
-    Mono<Long> countDistinctByProductCodeAllIgnoreCaseIn(List<String> productCodeList);
+    Mono<Long> countDistinctByProductCodeAllIgnoreCaseInAndDeletedFalse(
+            List<String> productCodeList);
 
-    Mono<Long> countByProductCodeAllIgnoreCase(String productCode);
+    Mono<Long> countByProductCodeAllIgnoreCaseAndDeletedFalse(String productCode);
 
-    Mono<Product> findByProductCodeAllIgnoreCase(String productCode);
+    Mono<Product> findByIdAndDeletedFalse(Long id);
+
+    Mono<Product> findByProductCodeAllIgnoreCaseAndDeletedFalse(String productCode);
 
     Mono<Void> deleteByProductCodeAllIgnoreCase(String productCode);
 
-    Flux<Product> findAllBy(Pageable pageable);
+    Mono<Long> countByDeletedFalse();
+
+    Flux<Product> findAllByDeletedFalse(Pageable pageable);
 
     // Search by term (in product name or description)
-    Flux<Product> findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
-            String productName, String description, Pageable pageable);
+    Flux<Product>
+            findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndDeletedFalse(
+                    String productName, String description, Pageable pageable);
 
     // Search by price range
     /**
      * Returns products within the inclusive unit-price bounds using the requested page and sort.
      * Database errors propagate through the returned Flux.
      */
-    Flux<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+    Flux<Product> findByPriceBetweenAndDeletedFalse(
+            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     // Search by both term and price range
     /**
@@ -46,7 +53,7 @@ public interface ProductRepository
      * matches. Database errors propagate through the returned Flux.
      */
     Flux<Product>
-            findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+            findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndPriceBetweenAndDeletedFalse(
                     String productName,
                     String description,
                     BigDecimal minPrice,

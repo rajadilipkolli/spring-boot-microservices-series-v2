@@ -104,7 +104,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         // JOOQ returns detached entities which can lead to StaleObjectStateException
         // when merged and saved if the version field mapping is not perfectly synchronized.
         List<Inventory> inventoryListFromDB =
-                inventoryRepository.findByProductCodeIn(productCodeList);
+                inventoryRepository.findByProductCodeInAndDeletedFalse(productCodeList);
 
         // Check if all requested products exist in the inventory
         if (inventoryListFromDB.size() != productCodeList.size()) {
@@ -226,8 +226,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
 
-        // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
-        // detached entities
+        // Confirmation and rollback remain unfiltered so existing reservations can complete or
+        // release
         Map<String, Inventory> inventoryMap =
                 inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

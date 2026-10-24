@@ -29,7 +29,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.Order;
-import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
@@ -618,14 +617,14 @@ class OrderControllerTest {
         @Test
         void shouldDeleteOrder() throws Exception {
             Long orderId = 1L;
-            Order order = new Order().setId(orderId).setCustomerId(1L).setStatus(OrderStatus.NEW);
-            given(orderService.findById(orderId)).willReturn(Optional.of(order));
+            Order order = new Order().setId(orderId).setCustomerId(1L);
+            given(orderService.findOrderById(orderId)).willReturn(Optional.of(order));
             doNothing().when(orderService).deleteOrderById(orderId);
 
             mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
 
             // Verify that the service method was called with the correct ID
-            verify(orderService).findById(orderId);
+            verify(orderService).findOrderById(orderId);
             verify(orderService).deleteOrderById(orderId);
             verifyNoMoreInteractions(orderService);
         }

@@ -24,6 +24,7 @@ public interface ProductMapper {
     /** Creates a product from request details, leaving its ID and version unset. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     @Mapping(target = "code", source = "productCode")
@@ -32,5 +33,6 @@ public interface ProductMapper {
     /** Copies request details into the supplied product, preserving its ID and version. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);
 }

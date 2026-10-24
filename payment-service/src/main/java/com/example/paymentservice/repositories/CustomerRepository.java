@@ -9,12 +9,21 @@ import org.jooq.OrderField;
 public interface CustomerRepository {
 
     /**
-     * Finds a customer by its identifier.
+     * Finds a customer by its identifier, including soft-deleted customers. Retained for payment
+     * processing.
      *
      * @param id the customer identifier
      * @return the matching record, or empty if absent
      */
     Optional<CustomersRecord> findById(Long id);
+
+    /**
+     * Finds an active customer by its identifier.
+     *
+     * @param id the customer identifier
+     * @return the matching active record, or empty if absent or deleted
+     */
+    Optional<CustomersRecord> findActiveById(Long id);
 
     /**
      * Finds a customer by an exact name match.
@@ -43,6 +52,16 @@ public interface CustomerRepository {
     List<CustomersRecord> findAll(int offset, int limit, List<OrderField<?>> orderFields);
 
     /**
+     * Fetches a sorted slice of active customer records.
+     *
+     * @param offset the number of rows to skip
+     * @param limit the maximum number of rows to return
+     * @param orderFields the sort expressions to apply
+     * @return the requested active customer records
+     */
+    List<CustomersRecord> findActiveAll(int offset, int limit, List<OrderField<?>> orderFields);
+
+    /**
      * Checks whether a customer has the supplied email address.
      *
      * @param email the normalized email address to match exactly
@@ -52,6 +71,9 @@ public interface CustomerRepository {
 
     /** Returns the total number of stored customers. */
     long count();
+
+    /** Returns the total number of active customers. */
+    long countActive();
 
     /**
      * Inserts customer records after normalizing emails and assigning missing IDs and versions.
@@ -86,6 +108,14 @@ public interface CustomerRepository {
      * @return the number of deleted rows
      */
     int deleteById(Long id);
+
+    /**
+     * Soft deletes the customer with the supplied identifier if active.
+     *
+     * @param id the identifier of the customer to soft delete
+     * @return the number of updated rows
+     */
+    int softDeleteById(Long id);
 
     /**
      * Atomically transfers funds from available to reserved balance if available balance is

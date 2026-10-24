@@ -61,12 +61,15 @@ public class OrderManageService {
         }
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = getOrderDto(orderPayment, orderStock);
+        // Uses unfiltered updateOrderStatusAndSourceById so in-flight orders complete even if
+        // soft-deleted
         int rows =
                 this.orderRepository.updateOrderStatusAndSourceById(
                         orderDto.orderId(),
                         OrderStatus.valueOf(orderDto.status()),
                         orderDto.source());
         if (rows == 0) {
+            // Unfiltered findById to verify terminal state for retained orders
             var persisted =
                     orderRepository
                             .findById(orderDto.orderId())

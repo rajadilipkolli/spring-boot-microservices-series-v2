@@ -84,12 +84,16 @@ public class PaymentOperationEngine {
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     public OrderDto processReserve(OrderDto orderDto) {
-        validateCustomerExists(orderDto.customerId());
+        String operationKey = "payment:" + orderDto.orderId() + ":RESERVE";
+        if (operationRepository.findByOperationKey(operationKey).isPresent()) {
+            validateCustomerRetained(orderDto.customerId());
+        } else {
+            validateCustomerActive(orderDto.customerId());
+        }
         BigDecimal amount = calculateTotalOrderPrice(orderDto);
         if (amount.signum() < 0) {
             throw new IllegalArgumentException("Order total must not be negative");
         }
-        String operationKey = "payment:" + orderDto.orderId() + ":RESERVE";
         String fingerprint = generateFingerprint(orderDto.customerId(), "RESERVE", amount);
 
         String ownerId = UUID.randomUUID().toString();
@@ -171,7 +175,7 @@ public class PaymentOperationEngine {
      * @throws OperationConflictException if an applicable existing settlement's fingerprint differs
      */
     public void processSettlement(OrderDto orderDto, String settlementType) {
-        validateCustomerExists(orderDto.customerId());
+        validateCustomerRetained(orderDto.customerId());
         String reserveOpKey = "payment:" + orderDto.orderId() + ":RESERVE";
         PaymentOperationsRecord reserveOp =
                 operationRepository
@@ -474,11 +478,22 @@ public class PaymentOperationEngine {
     }
 
     /**
-     * Checks that the customer exists; database lookup failures propagate.
+     * Checks that the customer exists and is active; database lookup failures propagate.
+     *
+     * @throws CustomerNotFoundException if the ID is null, absent, or soft-deleted
+     */
+    private void validateCustomerActive(Long customerId) {
+        if (customerId == null || customerRepository.findActiveById(customerId).isEmpty()) {
+            throw new CustomerNotFoundException(customerId);
+        }
+    }
+
+    /**
+     * Checks that the customer exists (active or soft-deleted); database lookup failures propagate.
      *
      * @throws CustomerNotFoundException if the ID is null or absent
      */
-    private void validateCustomerExists(Long customerId) {
+    private void validateCustomerRetained(Long customerId) {
         if (customerId == null || customerRepository.findById(customerId).isEmpty()) {
             throw new CustomerNotFoundException(customerId);
         }

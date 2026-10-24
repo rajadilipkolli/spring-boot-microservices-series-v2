@@ -127,7 +127,7 @@ class ProductServiceTest {
 
         // Mock the repository findByProductCodeAllIgnoreCase method to return empty Mono
         // This is needed for the idempotency check in saveProduct
-        given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
+        given(productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(any(String.class)))
                 .willReturn(Mono.empty());
 
         // Stubbing productRepository.save()
@@ -212,7 +212,7 @@ class ProductServiceTest {
                                 BigDecimal.valueOf(6.00),
                                 true));
         given(outboxService.createOutboxEvent(any(), any(), any(), any())).willReturn(Mono.empty());
-        given(productRepository.findByProductCodeAllIgnoreCase(any(String.class)))
+        given(productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(any(String.class)))
                 .willReturn(Mono.empty());
         given(productRepository.save(any(Product.class)))
                 .willAnswer(invocation -> Mono.just(invocation.getArgument(0, Product.class)));
@@ -281,7 +281,7 @@ class ProductServiceTest {
                     new ProductResponse(
                             1L, "P001", "name", "desc", null, BigDecimal.valueOf(6.00), true);
 
-            given(productRepository.findByProductCodeAllIgnoreCase("P001"))
+            given(productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001"))
                     .willReturn(Mono.empty());
             given(productMapper.toEntity(request)).willReturn(product);
             given(productRepository.save(any(Product.class))).willReturn(Mono.just(product));

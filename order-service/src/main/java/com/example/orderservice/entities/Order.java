@@ -68,6 +68,9 @@ public class Order extends Auditable<String> implements Serializable {
 
     @Version private Short version;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
@@ -242,5 +245,14 @@ public class Order extends Auditable<String> implements Serializable {
      */
     public BigDecimal getTotalAmount() {
         return items.stream().map(OrderItem::getSubTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public Order setDeleted(boolean deleted) {
+        this.deleted = deleted;
+        return this;
     }
 }

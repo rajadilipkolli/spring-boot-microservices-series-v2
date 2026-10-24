@@ -25,24 +25,35 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // @Query("select o from Order o join fetch o.items where o.id in :orderIds ")
+    // Intentionally unfiltered for internal batch hydration and event processing
     @EntityGraph(attributePaths = {"items"})
     List<Order> findByIdIn(List<Long> ids);
 
-    @Query("select o from Order o join fetch o.items oi where o.id = :id")
+    /**
+     * Finds active order by ID.
+     *
+     * @param id order ID
+     * @return active order if present and not deleted
+     */
+    Optional<Order> findByIdAndDeletedFalse(Long id);
+
+    @Query("select o from Order o join fetch o.items oi where o.id = :id and o.deleted = false")
     Optional<Order> findOrderById(@Param("id") Long id);
 
     @Query(
-            value = "select o from Order o join fetch o.items oi where o.customerId = :customerId",
-            countQuery = "select count(o) from Order o where o.customerId=:customerId")
+            value =
+                    "select o from Order o join fetch o.items oi where o.customerId = :customerId and o.deleted = false",
+            countQuery =
+                    "select count(o) from Order o where o.customerId = :customerId and o.deleted = false")
     Page<Order> findByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
-    @Query("select o.id from Order o where o.customerId = :customerId")
+    @Query("select o.id from Order o where o.customerId = :customerId and o.deleted = false")
     Page<Long> findAllOrdersByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
     /**
      * Updates status and source only while the identified order is NEW. Flushes pending changes
-     * before the update and clears the persistence context afterward.
+     * before the update and clears the persistence context afterward. Retained unfiltered for
+     * processing inflight orders even if soft-deleted.
      *
      * @return the number of updated orders, or zero if the order is absent or no longer NEW
      */
@@ -55,9 +66,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("status") OrderStatus status,
             @Param("source") String source);
 
-    @Query("select o.id from Order o")
+    @Query("select o.id from Order o where o.deleted = false")
     Page<Long> findAllOrders(Pageable pageable);
 
+    // Intentionally unfiltered for background retry job so in-flight orders complete
     @EntityGraph(attributePaths = {"items"})
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
             OrderStatus status, LocalDateTime lastModifiedDate);
@@ -102,6 +114,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             value =
                     """
                             SELECT DISTINCT o.id FROM Order o LEFT JOIN o.items oi WHERE \
+                            o.deleted = false AND \
                             (:customerId IS NULL OR o.customerId = :customerId) AND \
                             (:status IS NULL OR o.status = :status) AND \
                             (lower(o.source) LIKE lower(concat('%', :term, '%')) OR \
@@ -115,6 +128,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             countQuery =
                     """
                             SELECT count(DISTINCT o.id) FROM Order o LEFT JOIN o.items oi WHERE \
+                            o.deleted = false AND \
                             (:customerId IS NULL OR o.customerId = :customerId) AND \
                             (:status IS NULL OR o.status = :status) AND \
                             (lower(o.source) LIKE lower(concat('%', :term, '%')) OR \
@@ -147,6 +161,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             value =
                     """
                             SELECT o.id FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id WHERE \
+                            o.deleted = false AND \
                             (:customerId IS NULL OR o.customer_id = :customerId) AND \
                             (:status IS NULL OR cast(o.status as text) = :status) AND \
                             (o.source % :term OR o.delivery_address_line1 % :term OR o.delivery_address_line2 % :term OR \
@@ -164,6 +179,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             countQuery =
                     """
                             SELECT count(DISTINCT o.id) FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id WHERE \
+                            o.deleted = false AND \
                             (:customerId IS NULL OR o.customer_id = :customerId) AND \
                             (:status IS NULL OR cast(o.status as text) = :status) AND \
                             (o.source % :term OR o.delivery_address_line1 % :term OR o.delivery_address_line2 % :term OR \

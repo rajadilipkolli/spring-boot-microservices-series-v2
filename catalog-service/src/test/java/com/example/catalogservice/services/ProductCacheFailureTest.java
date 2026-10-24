@@ -79,9 +79,9 @@ class ProductCacheFailureTest {
                             cache.put(invocation.getArgument(0), invocation.getArgument(1));
                             return Mono.just(true);
                         });
-        lenient().when(repository.findById(1L)).thenReturn(Mono.just(product));
+        lenient().when(repository.findByIdAndDeletedFalse(1L)).thenReturn(Mono.just(product));
         lenient()
-                .when(repository.findByProductCodeAllIgnoreCase(anyString()))
+                .when(repository.findByProductCodeAllIgnoreCaseAndDeletedFalse(anyString()))
                 .thenReturn(Mono.just(product));
         when(mapper.toProductResponse(product))
                 .thenAnswer(
@@ -127,8 +127,8 @@ class ProductCacheFailureTest {
                                                                 null,
                                                                 BigDecimal.TEN,
                                                                 false))))));
-        when(repository.count()).thenReturn(Mono.just(1L));
-        when(repository.findAllBy(any(Pageable.class))).thenReturn(Flux.just(product));
+        when(repository.countByDeletedFalse()).thenReturn(Mono.just(1L));
+        when(repository.findAllByDeletedFalse(any(Pageable.class))).thenReturn(Flux.just(product));
 
         StepVerifier.create(service.findProductById(1L))
                 .assertNext(response -> assertThat(response.productName()).isEqualTo("Fresh"))
@@ -166,7 +166,7 @@ class ProductCacheFailureTest {
 
     @Test
     void databaseErrorsAreNotSwallowedAsCacheFailures() {
-        when(repository.findByProductCodeAllIgnoreCase("P001"))
+        when(repository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001"))
                 .thenReturn(Mono.error(new IllegalArgumentException("database failure")));
         StepVerifier.create(service.findProductByProductCode("P001", false))
                 .expectErrorMessage("database failure")

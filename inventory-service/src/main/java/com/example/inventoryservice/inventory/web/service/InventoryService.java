@@ -72,7 +72,7 @@ class InventoryService {
     }
 
     public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryRepository.findById(id);
+        return inventoryRepository.findByIdAndDeletedFalse(id);
     }
 
     @Transactional
@@ -93,7 +93,13 @@ class InventoryService {
 
     @Transactional
     public void deleteInventoryById(Long id) {
-        inventoryRepository.deleteById(id);
+        inventoryRepository
+                .findByIdAndDeletedFalse(id)
+                .ifPresent(
+                        inventory -> {
+                            inventory.markDeleted();
+                            inventoryRepository.save(inventory);
+                        });
     }
 
     @Transactional
@@ -103,7 +109,7 @@ class InventoryService {
     }
 
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
-        return this.inventoryRepository.findByProductCode(productCode);
+        return this.inventoryRepository.findByProductCodeAndDeletedFalse(productCode);
     }
 
     public PagedResult<InventoryResponse> getInventoryByProductCodes(

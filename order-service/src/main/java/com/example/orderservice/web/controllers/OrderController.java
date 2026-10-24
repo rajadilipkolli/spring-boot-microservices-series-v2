@@ -119,7 +119,7 @@ class OrderController implements OrderApi {
     @DeleteMapping("/{id}")
     ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
         return orderService
-                .findById(id)
+                .findOrderById(id)
                 .map(
                         order -> {
                             orderService.deleteOrderById(id);

@@ -649,7 +649,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(productRequest.price().doubleValue());
 
         // Verify product was created in the database and version is 0
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase("code 4"))
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("code 4"))
                 .assertNext(
                         p -> {
                             assertThat(p).isNotNull();
@@ -922,7 +923,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exists();
     }
 
-    /** Verifies that deleting a product returns its details with a string ID. */
+    /**
+     * Verifies that deleting a product returns its details with a string ID and verifies soft
+     * delete.
+     */
     @Test
     void shouldDeleteProduct() {
         Product product = savedProductList.getFirst();
@@ -946,6 +950,65 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice().doubleValue());
+
+        // Repeated delete must return 404
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // Get by ID must return 404
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // Get by code must return 404
+        webTestClient
+                .get()
+                .uri("/api/catalog/productCode/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // /exists must return false
+        webTestClient
+                .get()
+                .uri("/api/catalog/exists?productCodes={code}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.exists")
+                .isEqualTo(false);
+
+        // Verify row is retained in database with deleted = true
+        StepVerifier.create(productRepository.findById(product.getId()))
+                .assertNext(
+                        dbProduct -> {
+                            assertThat(dbProduct.isDeleted()).isTrue();
+                            assertThat(dbProduct.getProductCode())
+                                    .isEqualTo(product.getProductCode());
+                        })
+                .verifyComplete();
+
+        // Verify outbox event with PRODUCT_DELETED and deleted = true
+        StepVerifier.create(
+                        outboxEventRepository
+                                .findAll()
+                                .filter(e -> "PRODUCT_DELETED".equals(e.getEventType())))
+                .assertNext(
+                        outboxEvent -> {
+                            assertThat(outboxEvent.getAggregateId())
+                                    .isEqualTo(product.getProductCode());
+                            assertThat(outboxEvent.getPayload().content())
+                                    .contains("\"deleted\": true");
+                        })
+                .verifyComplete();
     }
 
     @Nested

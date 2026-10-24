@@ -10,8 +10,10 @@ import com.example.paymentservice.jooq.tables.OutboxEvents;
 import com.example.paymentservice.jooq.tables.PaymentOperations;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.OrderField;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +31,48 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
+     * Finds an active customer by its identifier.
+     *
+     * @param id the customer identifier
+     * @return the matching active record, or empty if absent or deleted
+     * @throws org.springframework.dao.DataAccessException if the database query fails
+     */
+    public Optional<CustomersRecord> findActiveById(Long id) {
+        return dslContext
+                .selectFrom(table)
+                .where(CUSTOMERS.ID.eq(id).and(CUSTOMERS.DELETED.isFalse()))
+                .fetchOptional();
+    }
+
+    /**
+     * Fetches a sorted slice of active customer records.
+     *
+     * @param offset the number of rows to skip
+     * @param limit the maximum number of rows to return
+     * @param orderFields the sort expressions to apply
+     * @return the requested active customer records
+     */
+    public List<CustomersRecord> findActiveAll(
+            int offset, int limit, List<OrderField<?>> orderFields) {
+        return findAll(CUSTOMERS.DELETED.isFalse(), offset, limit, orderFields);
+    }
+
+    /** Returns the total number of active customers. */
+    public int countActive() {
+        return count(CUSTOMERS.DELETED.isFalse());
+    }
+
+    /**
      * Finds a customer by name.
      *
      * @return the matching customer, or empty if no name matches
      * @throws org.springframework.dao.DataAccessException if the database query fails
      */
     public Optional<CustomersRecord> findByName(String name) {
-        return dslContext.selectFrom(table).where(CUSTOMERS.NAME.eq(name)).fetchOptional();
+        return dslContext
+                .selectFrom(table)
+                .where(CUSTOMERS.NAME.eq(name).and(CUSTOMERS.DELETED.isFalse()))
+                .fetchOptional();
     }
 
     /**
@@ -47,8 +84,24 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     public Optional<CustomersRecord> findByEmail(String normalizedEmail) {
         return dslContext
                 .selectFrom(table)
-                .where(CUSTOMERS.EMAIL.eq(normalizedEmail))
+                .where(CUSTOMERS.EMAIL.eq(normalizedEmail).and(CUSTOMERS.DELETED.isFalse()))
                 .fetchOptional();
+    }
+
+    /**
+     * Soft deletes an active customer by id, setting DELETED = true and incrementing VERSION.
+     *
+     * @param id the customer identifier
+     * @return the number of updated rows
+     */
+    @Transactional
+    public int softDeleteById(Long id) {
+        return dslContext
+                .update(CUSTOMERS)
+                .set(CUSTOMERS.DELETED, true)
+                .set(CUSTOMERS.VERSION, CUSTOMERS.VERSION.plus(1))
+                .where(CUSTOMERS.ID.eq(id).and(CUSTOMERS.DELETED.isFalse()))
+                .execute();
     }
 
     /**

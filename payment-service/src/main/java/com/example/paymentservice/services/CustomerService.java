@@ -72,9 +72,10 @@ public class CustomerService {
                 customerMapper.toOrderFields(
                         findCustomersQuery.sortBy(), findCustomersQuery.sortDir());
 
-        long totalElements = customerRepository.count();
+        long totalElements = customerRepository.countActive();
 
-        List<CustomersRecord> records = customerRepository.findAll(offset, pageSize, orderFields);
+        List<CustomersRecord> records =
+                customerRepository.findActiveAll(offset, pageSize, orderFields);
 
         List<CustomerResponse> data = customerMapper.toListResponse(records);
 
@@ -90,13 +91,13 @@ public class CustomerService {
     }
 
     /**
-     * Finds customer details by identifier.
+     * Finds active customer details by identifier.
      *
      * @param id the customer identifier
-     * @return the matching response, or empty if absent
+     * @return the matching response, or empty if absent or deleted
      */
     public Optional<CustomerResponse> findCustomerById(Long id) {
-        return customerRepository.findById(id).map(CustomerResponse::toResponse);
+        return customerRepository.findActiveById(id).map(CustomerResponse::toResponse);
     }
 
     /**
@@ -187,7 +188,7 @@ public class CustomerService {
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
         CustomersRecord customersRecord =
                 customerRepository
-                        .findById(id)
+                        .findActiveById(id)
                         .orElseThrow(() -> new CustomerNotFoundException(id));
 
         // Update the customersRecord object with data from customerRequest
@@ -199,9 +200,9 @@ public class CustomerService {
         return CustomerResponse.toResponse(updatedCustomer);
     }
 
-    /** Deletes the customer by ID and returns the number of deleted rows. */
+    /** Soft deletes the customer by ID and returns the number of deleted rows. */
     @Transactional
     public int deleteCustomerById(Long id) {
-        return customerRepository.deleteById(id);
+        return customerRepository.softDeleteById(id);
     }
 }
