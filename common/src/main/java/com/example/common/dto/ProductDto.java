@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -33,6 +32,5 @@ public record ProductDto(
                 BigDecimal price)
         implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 }
