@@ -149,10 +149,11 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productService
                 .saveProduct(
                         new ProductRequest(
-                                "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
+                                "P002", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
         assertThat(productCacheGenerationRepository.findCacheGeneration().block())
                 .isNotEqualTo(beforeSave);
+        productRepository.deleteByProductCodeAllIgnoreCase("P002").block();
 
         String beforeGenerate = productCacheGenerationRepository.findCacheGeneration().block();
         productService.generateProducts("cache-test", 1).block();
