@@ -77,10 +77,20 @@ class InventoryService {
 
     @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
-        if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
-            throw new ProductAlreadyExistsException(inventoryRequest.productCode());
-        }
-        Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
+        Inventory inventory =
+                inventoryRepository
+                        .findByProductCode(inventoryRequest.productCode())
+                        .map(
+                                retained -> {
+                                    if (!retained.isDeleted()) {
+                                        throw new ProductAlreadyExistsException(
+                                                inventoryRequest.productCode());
+                                    }
+                                    inventoryMapper.updateInventoryFromRequest(
+                                            inventoryRequest, retained);
+                                    return retained.setDeleted(false);
+                                })
+                        .orElseGet(() -> inventoryMapper.toEntity(inventoryRequest));
         try {
             return inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {

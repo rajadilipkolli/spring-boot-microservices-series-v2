@@ -132,7 +132,8 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
      * Atomically moves the amount from available to reserved balance and increments the customer
      * version. An exact available balance match is sufficient; database failures propagate.
      *
-     * @return true if the customer was updated, false if absent or available funds are insufficient
+     * @return true if the customer was updated, false if absent, deleted, or available funds are
+     *     insufficient
      */
     @Transactional
     public boolean reserveFunds(Long customerId, BigDecimal amount) {
@@ -148,6 +149,7 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
                         .set(Customers.CUSTOMERS.VERSION, Customers.CUSTOMERS.VERSION.plus(1))
                         .where(Customers.CUSTOMERS.ID.eq(customerId))
                         .and(Customers.CUSTOMERS.AMOUNT_AVAILABLE.ge(amount))
+                        .and(Customers.CUSTOMERS.DELETED.isFalse())
                         .execute();
         return updated > 0;
     }

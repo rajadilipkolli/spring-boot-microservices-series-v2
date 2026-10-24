@@ -27,6 +27,8 @@ public interface ProductRepository
 
     Mono<Product> findByProductCodeAllIgnoreCaseAndDeletedFalse(String productCode);
 
+    Mono<Product> findByProductCodeAllIgnoreCaseAndDeletedTrue(String productCode);
+
     Mono<Void> deleteByProductCodeAllIgnoreCase(String productCode);
 
     Mono<Long> countByDeletedFalse();

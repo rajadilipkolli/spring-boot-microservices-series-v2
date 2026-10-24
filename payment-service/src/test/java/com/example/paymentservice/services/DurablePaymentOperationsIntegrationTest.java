@@ -561,6 +561,36 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldRejectReservationWhenCustomerDeletedAfterValidation() {
+        doAnswer(
+                        invocation -> {
+                            customerRepository.softDeleteById(customer.getId());
+                            return invocation.callRealMethod();
+                        })
+                .when(customerRepository)
+                .reserveFunds(customer.getId(), new BigDecimal("10.00"));
+
+        OrderDto result =
+                paymentOperationEngine.processReserve(order(9998L, "deleted-after-validation"));
+
+        assertThat(result.status()).isEqualTo("REJECT");
+        CustomersRecord retained = customerRepository.findById(customer.getId()).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
+        assertThat(retained.getAmountAvailable()).isEqualByComparingTo("100");
+        assertThat(retained.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(
+                        ledgerRepository
+                                .findByDownstreamKey(
+                                        paymentOperationRepository
+                                                .findByOperationKey("payment:9998:RESERVE")
+                                                .orElseThrow()
+                                                .getDownstreamKey())
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("REJECT");
+    }
+
+    @Test
     void softDeletedCustomerRejectsNewReservationButAllowsExistingSettlement() {
         // Soft delete the customer
         customerRepository.softDeleteById(customer.getId());

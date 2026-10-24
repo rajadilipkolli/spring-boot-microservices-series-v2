@@ -44,6 +44,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -597,9 +599,10 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 is(orderRequest.deliveryAddress().country())));
     }
 
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Order order = orderList.getFirst();
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void shouldDeleteOrder(int orderIndex) throws Exception {
+        Order order = orderList.get(orderIndex);
 
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))

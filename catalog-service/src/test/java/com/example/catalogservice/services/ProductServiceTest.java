@@ -86,6 +86,11 @@ class ProductServiceTest {
                 .when(productCacheGenerationRepository.updateCacheGeneration(any(String.class)))
                 .thenReturn(Mono.just(1));
         lenient().when(redisOps.delete(any(String[].class))).thenReturn(Mono.just(0L));
+        lenient()
+                .when(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedTrue(
+                                any(String.class)))
+                .thenReturn(Mono.empty());
     }
 
     /**

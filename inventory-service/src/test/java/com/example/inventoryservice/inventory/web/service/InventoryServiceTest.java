@@ -102,7 +102,7 @@ class InventoryServiceTest {
     @Test
     void testSaveInventory() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(false);
+        given(inventoryRepository.findByProductCode("ProductCode1")).willReturn(Optional.empty());
         given(inventoryMapper.toEntity(any(InventoryRequest.class)))
                 .willReturn(
                         new Inventory()
@@ -127,7 +127,8 @@ class InventoryServiceTest {
     @Test
     void testSaveInventory_Conflict() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(true);
+        given(inventoryRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.of(new Inventory().setProductCode("ProductCode1")));
 
         assertThatThrownBy(() -> inventoryService.saveInventory(inventoryRequest))
                 .isInstanceOf(ProductAlreadyExistsException.class)

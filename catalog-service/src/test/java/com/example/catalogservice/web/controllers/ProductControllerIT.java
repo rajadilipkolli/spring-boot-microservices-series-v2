@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -970,7 +971,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         // Get by code must return 404
         webTestClient
                 .get()
-                .uri("/api/catalog/productCode/{productCode}", product.getProductCode())
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
                 .exchange()
                 .expectStatus()
                 .isNotFound();
@@ -1008,6 +1009,82 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                             assertThat(outboxEvent.getPayload().content())
                                     .contains("\"deleted\": true");
                         })
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldRestoreDeletedProductOnCreate() {
+        Product product = savedProductList.getFirst();
+        long originalCount = productRepository.count().block();
+
+        // Populate the code cache before the deletion and restoration.
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk();
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isOk();
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        ProductRequest request =
+                new ProductRequest(
+                        product.getProductCode().toLowerCase(Locale.ROOT),
+                        "Restored name",
+                        "Restored description",
+                        "https://example.com/restored.png",
+                        BigDecimal.TEN);
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId().toString())
+                .jsonPath("$.productName")
+                .isEqualTo("Restored name");
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productName")
+                .isEqualTo("Restored name");
+        Product restored = productRepository.findById(product.getId()).block();
+        assertThat(restored).isNotNull();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getVersion()).isGreaterThan(product.getVersion());
+        assertThat(productRepository.count().block()).isEqualTo(originalCount);
+        StepVerifier.create(
+                        outboxEventRepository
+                                .findAll()
+                                .filter(event -> "PRODUCT_CREATED".equals(event.getEventType()))
+                                .filter(
+                                        event ->
+                                                request.productCode()
+                                                        .equals(event.getAggregateId())))
+                .assertNext(
+                        event ->
+                                assertThat(event.getPayload().content())
+                                        .contains("Restored name")
+                                        .contains("\"deleted\": false"))
                 .verifyComplete();
     }
 

@@ -57,12 +57,13 @@ public interface InventoryAPI {
             List<String> codes, int pageNo, int pageSize, String sortBy, String sortDir);
 
     /**
-     * Creates inventory for a product code that is not already present.
+     * Creates inventory or restores deleted inventory with the requested available quantity,
+     * preserving its ID and reserved quantity.
      *
      * @param inventoryRequest product code and initial available quantity
      * @return the saved inventory
      * @throws com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException if the
-     *     product code already exists
+     *     product code already has active inventory
      */
     InventoryResponse saveInventory(InventoryRequest inventoryRequest);
 

@@ -118,14 +118,8 @@ class OrderController implements OrderApi {
 
     @DeleteMapping("/{id}")
     ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
-        return orderService
-                .findOrderById(id)
-                .map(
-                        order -> {
-                            orderService.deleteOrderById(id);
-                            return ResponseEntity.accepted().build();
-                        })
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        orderService.deleteOrderById(id);
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/generate")

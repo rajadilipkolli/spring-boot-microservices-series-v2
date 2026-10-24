@@ -123,6 +123,38 @@ class InventoryControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldRestoreDeletedInventoryOnCreate() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        Integer reservedItems = inventory.getReservedItems();
+        long originalCount = inventoryRepository.count();
+        mockMvc.perform(delete("/api/inventory/{id}", inventory.getId()))
+                .andExpect(status().isOk());
+
+        InventoryRequest request = new InventoryRequest(inventory.getProductCode(), 25);
+        mockMvc.perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(inventory.getId().toString()))
+                .andExpect(jsonPath("$.availableQuantity").value(25))
+                .andExpect(jsonPath("$.reservedItems").value(reservedItems));
+
+        Inventory restored = inventoryRepository.findById(inventory.getId()).orElseThrow();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getVersion()).isGreaterThan(inventory.getVersion());
+        assertThat(inventoryRepository.count()).isEqualTo(originalCount);
+        mockMvc.perform(get("/api/inventory/{productCode}", inventory.getProductCode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.availableQuantity").value(25));
+        mockMvc.perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void shouldReturn400WhenCreateNewInventoryWithoutProductCode() throws Exception {
         InventoryRequest inventoryRequest = new InventoryRequest(null, 0);
 

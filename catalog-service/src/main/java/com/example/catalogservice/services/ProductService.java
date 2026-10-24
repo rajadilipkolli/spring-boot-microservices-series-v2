@@ -231,10 +231,10 @@ public class ProductService {
     }
 
     /**
-     * Returns an existing product with the same case-insensitive code, or creates it with a product
-     * creation outbox event. Invalidates product caches before emitting either result. Redis
-     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
-     * propagate.
+     * Returns an active product with the same case-insensitive code, or restores a retained product
+     * or creates one with a product creation outbox event. Invalidates product caches before
+     * emitting the result. Redis deletion failures are suppressed; database, outbox serialization,
+     * and cache-generation errors propagate.
      *
      * @return the existing or created product; a duplicate-key race is recovered by looking up the
      *     existing product, or emits ProductAlreadyExistsException if that lookup is empty
@@ -272,13 +272,21 @@ public class ProductService {
 
     @Transactional
     public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
-        return Mono.fromSupplier(
-                        () -> {
-                            Product product = productMapper.toEntity(productRequest);
-                            product.setId(tsidFactory.generate().toLong());
-                            product.setNew(true);
-                            return product;
+        return productRepository
+                .findByProductCodeAllIgnoreCaseAndDeletedTrue(productRequest.productCode())
+                .map(
+                        product -> {
+                            productMapper.mapProductWithRequest(productRequest, product);
+                            return product.setDeleted(false);
                         })
+                .switchIfEmpty(
+                        Mono.fromSupplier(
+                                () -> {
+                                    Product product = productMapper.toEntity(productRequest);
+                                    product.setId(tsidFactory.generate().toLong());
+                                    product.setNew(true);
+                                    return product;
+                                }))
                 .flatMap(productRepository::save)
                 .flatMap(
                         savedProduct ->
