@@ -7,6 +7,7 @@
 package com.example.common.tsid;
 
 import io.hypersistence.tsid.TSID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class TsidFactories {
 
@@ -15,12 +16,13 @@ public final class TsidFactories {
     /**
      * Builds a {@link TSID.Factory} using {@code tsid.node} system property, falling back to {@code
      * TSID_NODE} environment variable only when the system property is absent. A blank system
-     * property suppresses the environment fallback. Null or blank values build a factory without an
-     * explicit node. Surrounding spaces are not trimmed before parsing and will cause a {@link
+     * property suppresses the environment fallback. Null or empty values explicitly select a random
+     * node. Surrounding spaces are not trimmed before parsing and will cause a {@link
      * NumberFormatException}.
      *
      * @return the configured identifier factory
      * @throws NumberFormatException if a non-blank node value cannot be parsed as an integer
+     * @throws IllegalArgumentException if the node is outside the configured node-bit range
      */
     public static TSID.Factory fromEnvironment() {
         return build(System.getProperty("tsid.node"), System.getenv("TSID_NODE"));
@@ -28,11 +30,26 @@ public final class TsidFactories {
 
     static TSID.Factory build(String systemProperty, String environmentVariable) {
         String nodeStr = resolveNodeValue(systemProperty, environmentVariable);
-        TSID.Factory.Builder builder = TSID.Factory.builder();
+        NodeBuilder builder = new NodeBuilder();
+        int nodeLimit = builder.nodeLimit();
         if (nodeStr != null && !nodeStr.isEmpty()) {
-            builder.withNode(Integer.parseInt(nodeStr));
+            int node = Integer.parseInt(nodeStr);
+            if (node < 0 || node >= nodeLimit) {
+                throw new IllegalArgumentException(
+                        "Node out of range [0, " + (nodeLimit - 1) + "]: " + node);
+            }
+            builder.withNode(node);
+        } else {
+            builder.withNode(ThreadLocalRandom.current().nextInt(nodeLimit));
         }
         return builder.build();
+    }
+
+    private static final class NodeBuilder extends TSID.Factory.Builder {
+
+        int nodeLimit() {
+            return 1 << getNodeBits();
+        }
     }
 
     private static String resolveNodeValue(String systemProperty, String environmentVariable) {
