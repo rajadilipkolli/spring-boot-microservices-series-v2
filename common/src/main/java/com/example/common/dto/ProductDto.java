@@ -36,6 +36,9 @@ public record ProductDto(
 
     public ProductDto {
         if (price != null && price.scale() < 2) {
+            if ((long) price.precision() - price.scale() > 17) {
+                throw new IllegalArgumentException("Price must have at most 17 integer digits");
+            }
             price = price.setScale(2);
         }
     }
