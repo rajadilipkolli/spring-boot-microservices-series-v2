@@ -38,7 +38,9 @@ public class KafkaListenerConfig {
 
     private final CountDownLatch deadLetterLatch = new CountDownLatch(1);
 
-    /** Creates the listener with payment processing, JSON deserialization, and payload validation. */
+    /**
+     * Creates the listener with payment processing, JSON deserialization, and payload validation.
+     */
     public KafkaListenerConfig(
             PaymentOrderManageService paymentOrderManageService,
             JsonMapper jsonMapper,
@@ -57,8 +59,8 @@ public class KafkaListenerConfig {
      *
      * @param orderDtoStr the JSON order event
      * @throws JacksonException if the event cannot be deserialized
-     * @throws IllegalArgumentException if the payload violates its bean validation constraints or
-     *     a NEW order's attempt ID is null or blank after trimming, or its calculated total is
+     * @throws IllegalArgumentException if the payload violates its bean validation constraints or a
+     *     NEW order's attempt ID is null or blank after trimming, or its calculated total is
      *     negative
      * @throws NullPointerException if a NEW order contains a null item, price, or quantity
      * @throws CustomerNotFoundException if the requested operation's customer ID is null or absent
