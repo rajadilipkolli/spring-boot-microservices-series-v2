@@ -247,10 +247,16 @@ public class Order extends Auditable<String> implements Serializable {
         return items.stream().map(OrderItem::getSubTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** Returns whether this instance is marked as soft deleted. */
     public boolean isDeleted() {
         return deleted;
     }
 
+    /**
+     * Changes the in-memory deletion flag without persisting it.
+     *
+     * @return this instance
+     */
     public Order setDeleted(boolean deleted) {
         this.deleted = deleted;
         return this;

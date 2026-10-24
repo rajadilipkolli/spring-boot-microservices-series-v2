@@ -37,9 +37,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     Optional<Order> findByIdAndDeletedFalse(Long id);
 
+    /**
+     * Finds an active order with its items loaded, or empty if absent, deleted, or without items.
+     * Persistence failures propagate.
+     */
     @Query("select o from Order o join fetch o.items oi where o.id = :id and o.deleted = false")
     Optional<Order> findOrderById(@Param("id") Long id);
 
+    /**
+     * Returns a page of active orders for the customer with items loaded; orders without items are
+     * excluded from the content. The count query counts all active orders for the customer.
+     * Persistence failures propagate.
+     */
     @Query(
             value =
                     "select o from Order o join fetch o.items oi where o.customerId = :customerId and o.deleted = false",
@@ -47,6 +56,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                     "select count(o) from Order o where o.customerId = :customerId and o.deleted = false")
     Page<Order> findByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
+    /** Returns a page of active order IDs for the customer; persistence failures propagate. */
     @Query("select o.id from Order o where o.customerId = :customerId and o.deleted = false")
     Page<Long> findAllOrdersByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 
@@ -66,6 +76,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("status") OrderStatus status,
             @Param("source") String source);
 
+    /** Returns a page of active order IDs; persistence failures propagate. */
     @Query("select o.id from Order o where o.deleted = false")
     Page<Long> findAllOrders(Pageable pageable);
 
@@ -101,7 +112,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     }
 
     /**
-     * Finds distinct order IDs by case-insensitive keyword matching across source, delivery
+     * Finds distinct active order IDs by case-insensitive keyword matching across source, delivery
      * address, and item product codes.
      *
      * @param term pattern fragment matched using SQL LIKE; wildcard characters retain their meaning
@@ -146,8 +157,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             Pageable pageable);
 
     /**
-     * Finds distinct order IDs using PostgreSQL trigram matching across source, delivery address,
-     * and item product codes, ordered by descending maximum similarity.
+     * Finds distinct active order IDs using PostgreSQL trigram matching across source, delivery
+     * address, and item product codes, ordered by descending maximum similarity.
      *
      * @param term text to compare with searchable fields
      * @param threshold explicit similarity cutoff, applied in addition to the database's trigram

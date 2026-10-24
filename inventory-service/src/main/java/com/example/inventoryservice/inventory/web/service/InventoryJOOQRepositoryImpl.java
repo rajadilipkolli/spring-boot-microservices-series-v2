@@ -37,6 +37,9 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
         this.dslContext = dslContext;
     }
 
+    /**
+     * Returns active inventory by ID, or empty if absent or deleted; database failures propagate.
+     */
     @Override
     public Optional<Inventory> findById(Long inventoryId) {
         return dslContext
@@ -45,6 +48,12 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                 .fetchOptionalInto(Inventory.class);
     }
 
+    /**
+     * Returns the requested sorted page and total count of active inventory. Database failures
+     * propagate.
+     *
+     * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
+     */
     @Override
     public Page<Inventory> findAll(Pageable pageable) {
         return new PageImpl<>(
@@ -65,6 +74,10 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                 dslContext.fetchCount(INVENTORY, INVENTORY.DELETED.isFalse()));
     }
 
+    /**
+     * Returns active inventory by exact product code, or empty if absent or deleted; database
+     * failures propagate.
+     */
     @Override
     public Optional<Inventory> findByProductCode(String productCode) {
         return dslContext
@@ -79,6 +92,12 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                 .fetchOptionalInto(Inventory.class);
     }
 
+    /**
+     * Returns the requested sorted page of active inventory matching the supplied codes, with a
+     * total count of active matches. Database failures propagate.
+     *
+     * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
+     */
     @Override
     public Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable) {
         return new PageImpl<>(

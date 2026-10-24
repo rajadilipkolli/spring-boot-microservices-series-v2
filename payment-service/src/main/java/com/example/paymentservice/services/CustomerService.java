@@ -39,7 +39,7 @@ public class CustomerService {
     }
 
     /**
-     * Fetches a sorted customer page with counts and navigation metadata.
+     * Fetches a sorted page of active customers with active counts and navigation metadata.
      *
      * @param findCustomersQuery the zero-based page index, positive page size, and sort options
      * @return the requested page of customer responses with a one-based page number
@@ -180,7 +180,7 @@ public class CustomerService {
      * @param id the identifier of the customer to update
      * @param customerRequest the replacement contact details and available balance
      * @return the persisted customer response
-     * @throws CustomerNotFoundException if no customer has the supplied ID
+     * @throws CustomerNotFoundException if the customer is absent or deleted
      * @throws org.springframework.dao.OptimisticLockingFailureException if the customer changes
      *     during the update
      */
@@ -200,7 +200,12 @@ public class CustomerService {
         return CustomerResponse.toResponse(updatedCustomer);
     }
 
-    /** Soft deletes the customer by ID and returns the number of deleted rows. */
+    /**
+     * Soft deletes an active customer, incrementing its version without changing balances. Database
+     * failures propagate.
+     *
+     * @return one if marked deleted, or zero if absent or already deleted
+     */
     @Transactional
     public int deleteCustomerById(Long id) {
         return customerRepository.softDeleteById(id);

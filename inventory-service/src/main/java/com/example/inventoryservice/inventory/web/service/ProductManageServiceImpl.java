@@ -33,10 +33,11 @@ class ProductManageServiceImpl implements ProductManageService {
 
     /**
      * Creates inventory for a new product code, ignoring existing or concurrently created codes.
-     * Soft deletes active inventory if productDto is marked deleted.
+     * Existing codes include deleted inventory, which is not restored. A deleted product DTO soft
+     * deletes active inventory; absent or already deleted inventory is left unchanged.
      *
      * <p>Integrity failures propagate when the product code is still absent after the failed
-     * insert.
+     * insert. Other persistence failures, including deletion failures, propagate.
      */
     @Override
     public void manage(ProductDto productDto) {

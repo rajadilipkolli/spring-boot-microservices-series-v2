@@ -63,9 +63,9 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
-     * Finds a customer by name.
+     * Finds an active customer by exact name.
      *
-     * @return the matching customer, or empty if no name matches
+     * @return the matching active customer, or empty if no active name matches
      * @throws org.springframework.dao.DataAccessException if the database query fails
      */
     public Optional<CustomersRecord> findByName(String name) {
@@ -76,9 +76,9 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
-     * Finds a customer by email.
+     * Finds an active customer by exact normalized email; no normalization is performed here.
      *
-     * @return the matching customer, or empty if no email matches
+     * @return the matching active customer, or empty if no active email matches
      * @throws org.springframework.dao.DataAccessException if the database query fails
      */
     public Optional<CustomersRecord> findByEmail(String normalizedEmail) {
@@ -89,10 +89,11 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
-     * Soft deletes an active customer by id, setting DELETED = true and incrementing VERSION.
+     * Soft deletes an active customer by ID, incrementing its version without changing balances.
+     * Database failures propagate.
      *
      * @param id the customer identifier
-     * @return the number of updated rows
+     * @return one if marked deleted, or zero if absent or already deleted
      */
     @Transactional
     public int softDeleteById(Long id) {

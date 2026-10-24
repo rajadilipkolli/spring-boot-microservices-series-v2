@@ -124,7 +124,7 @@ class InventoryAPIImpl implements InventoryAPI {
         orderManageService.confirm(orderDto);
     }
 
-    /** Handles product creation within a write transaction, ignoring existing product codes. */
+    /** Handles product creation or soft deletion within a write transaction. */
     @Override
     @Transactional
     public void manage(ProductDto productDto) {

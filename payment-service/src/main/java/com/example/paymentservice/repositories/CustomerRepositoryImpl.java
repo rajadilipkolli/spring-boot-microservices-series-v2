@@ -179,10 +179,11 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     /**
-     * Soft deletes the customer with the supplied identifier if active.
+     * Soft deletes the customer with the supplied identifier if active, incrementing its version
+     * without changing balances. Database failures propagate.
      *
      * @param id the identifier of the customer to soft delete
-     * @return the number of updated rows
+     * @return one if marked deleted, or zero if absent or already deleted
      */
     @Override
     @Transactional

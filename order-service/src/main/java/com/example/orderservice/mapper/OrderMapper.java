@@ -44,6 +44,10 @@ public interface OrderMapper {
     @Mapping(target = "productId", source = "productCode")
     OrderDto.OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
 
+    /**
+     * Creates an active order from request details, attaching the requested items. Leaves its ID,
+     * version, status, source, and audit fields at their entity defaults.
+     */
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)

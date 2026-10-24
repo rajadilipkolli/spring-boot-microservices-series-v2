@@ -117,10 +117,16 @@ public class Product implements Serializable, Persistable<Long> {
         return this;
     }
 
+    /** Returns whether this instance is marked as soft deleted. */
     public boolean isDeleted() {
         return deleted;
     }
 
+    /**
+     * Changes the in-memory deletion flag without persisting it.
+     *
+     * @return this instance
+     */
     public Product setDeleted(boolean deleted) {
         this.deleted = deleted;
         return this;

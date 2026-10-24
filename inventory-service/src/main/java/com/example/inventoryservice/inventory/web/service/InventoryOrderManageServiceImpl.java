@@ -62,9 +62,9 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * without stock changes or an event. Accepted and rejected reservations record processing for
      * non-null IDs; null IDs bypass duplicate tracking.
      *
-     * <p>New orders are rejected without stock changes if products are missing, product codes are
-     * repeated, or any requested quantity exceeds availability. Accepted orders move the requested
-     * quantities from available to reserved stock. Both outcomes publish an {@link
+     * <p>New orders are rejected without stock changes if products are missing or deleted, product
+     * codes are repeated, or any requested quantity exceeds availability. Accepted orders move the
+     * requested quantities from available to reserved stock. Both outcomes publish an {@link
      * InventoryProcessedEvent}. Optimistic locking failures are eligible for up to three retries
      * with an initial delay of one second, doubling between retries. Unresolved persistence and
      * event publication failures propagate to the caller.

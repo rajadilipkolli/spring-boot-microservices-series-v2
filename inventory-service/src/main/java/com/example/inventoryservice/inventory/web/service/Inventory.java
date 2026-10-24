@@ -74,15 +74,26 @@ class Inventory {
         return reservedItems;
     }
 
+    /** Returns whether this instance is marked as soft deleted. */
     public boolean isDeleted() {
         return deleted;
     }
 
+    /**
+     * Changes the in-memory deletion flag without persisting it.
+     *
+     * @return this instance
+     */
     public Inventory setDeleted(boolean deleted) {
         this.deleted = deleted;
         return this;
     }
 
+    /**
+     * Marks this instance as deleted without persisting it or changing stock quantities.
+     *
+     * @return this instance
+     */
     public Inventory markDeleted() {
         this.deleted = true;
         return this;

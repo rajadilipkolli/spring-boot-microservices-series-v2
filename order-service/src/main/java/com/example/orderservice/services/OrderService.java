@@ -255,6 +255,12 @@ public class OrderService {
         return catalogService.productsExistsByCodes(productIds);
     }
 
+    /**
+     * Marks an active order as deleted while retaining its items and status for ongoing processing.
+     * Persistence failures propagate.
+     *
+     * @throws OrderNotFoundException if the order is absent or already deleted
+     */
     @Transactional
     public void deleteOrderById(Long id) {
         Order order =

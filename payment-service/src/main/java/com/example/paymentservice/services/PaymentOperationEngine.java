@@ -73,12 +73,14 @@ public class PaymentOperationEngine {
      * Reserves the sum of individually rounded line totals, reusing the operation for the order
      * across attempts. Non-null attempt IDs register outbox replies for eventual publication.
      * Provider exceptions return PENDING after attempting to mark the operation UNKNOWN. Arrival,
-     * completion, status persistence, and reply serialization failures propagate.
+     * completion, status persistence, and reply serialization failures propagate. New operations
+     * require an active customer; existing operations allow a retained deleted customer.
      *
      * @return the order with source PAYMENT and its stored or provider outcome, or PENDING when
      *     unclaimed or provider execution fails; a provider outcome is returned even if fenced
      *     completion loses ownership
-     * @throws CustomerNotFoundException if the customer ID is null or absent
+     * @throws CustomerNotFoundException if the customer ID is null or absent, or the customer is
+     *     deleted and no reservation operation exists
      * @throws OperationConflictException if an existing operation has a different fingerprint
      * @throws IllegalArgumentException if the calculated total is negative
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
@@ -167,7 +169,8 @@ public class PaymentOperationEngine {
      * Capture and release share one settlement key per order. A rejected reservation records a
      * NOT_APPLICABLE settlement without invoking the provider. Completed or unclaimed operations
      * return without execution; provider exceptions attempt to defer completion as UNKNOWN.
-     * Arrival, completion, and status persistence failures propagate.
+     * Arrival, completion, and status persistence failures propagate. Retained deleted customers
+     * may settle existing reservations.
      *
      * @param settlementType CAPTURE to consume reserved funds or RELEASE to restore available funds
      * @throws CustomerNotFoundException if the customer ID is null or absent
