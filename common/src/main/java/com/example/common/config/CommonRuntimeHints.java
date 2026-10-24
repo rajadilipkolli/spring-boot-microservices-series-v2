@@ -7,6 +7,7 @@
 package com.example.common.config;
 
 import com.example.common.dto.PagedResult;
+import com.example.common.dto.ProductDto;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -17,6 +18,13 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  */
 public class CommonRuntimeHints implements RuntimeHintsRegistrar {
 
+    /**
+     * Registers reflection access to declared constructors, methods, and fields of {@link
+     * PagedResult} and {@link ProductDto} for native images.
+     *
+     * @param hints registry to update
+     * @param classLoader unused by this registrar
+     */
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
         hints.reflection()
@@ -24,7 +32,11 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
                         PagedResult.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        ProductDto.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
-        hints.reflection().registerType(PagedResult.class);
     }
 }

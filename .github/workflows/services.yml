@@ -95,10 +95,34 @@ jobs:
         env:
           SERVICE: ${{ matrix.service }}
         run: |
-          # config-server is published as a native image, as before.
+          set -euo pipefail
+
+          echo "=== Runner architecture ==="
+          uname -m
+
+          echo "=== Docker server architecture ==="
+          docker info --format '{{.OSType}}/{{.Architecture}}'
+
+          # config-server is published as a native image.
           PROFILE=""
-          if [ "$SERVICE" = "config-server" ]; then PROFILE="-Pnative"; fi
+          if [ "$SERVICE" = "config-server" ]; then
+            PROFILE="-Pnative"
+          fi
+
+          BUILDER="paketobuildpacks/builder-noble-java-tiny:latest"
+
+          echo "=== Pulling Buildpacks builder ==="
+          docker pull "$BUILDER"
+
+          echo "=== Builder image architecture ==="
+          docker image inspect "$BUILDER" \
+            --format '{{.Os}}/{{.Architecture}}'
+          
           ./mvnw $PROFILE spring-boot:build-image \
             -DskipTests \
+            -Dspring-boot.build-image.builder="$BUILDER" \
+            -Dspring-boot.build-image.imagePlatform=linux/amd64 \
+            -Dspring-boot.build-image.pullPolicy=ALWAYS \
             -Dspring-boot.build-image.publish=true \
-            -Dspring-boot.build-image.imageName=dockertmt/mmv2-${SERVICE}:latest
+            -Dspring-boot.build-image.imageName="dockertmt/mmv2-${SERVICE}:latest"
+
