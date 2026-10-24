@@ -285,7 +285,9 @@ public class ProductService {
                 .findByProductCodeAllIgnoreCaseAndDeletedTrue(productRequest.productCode())
                 .map(
                         product -> {
+                            String storedProductCode = product.getProductCode();
                             productMapper.mapProductWithRequest(productRequest, product);
+                            product.setProductCode(storedProductCode);
                             return product.setDeleted(false);
                         })
                 .switchIfEmpty(
