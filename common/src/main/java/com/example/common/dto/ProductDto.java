@@ -14,6 +14,7 @@ import jakarta.validation.constraints.Positive;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Shared product payload transferred between catalog-service outbox and inventory-service.
@@ -50,9 +51,7 @@ public record ProductDto(
         this(code, productName, description, price, false);
     }
 
-    /**
-     * Returns true if the product is deleted, false if deleted is false or null.
-     */
+    /** Returns true if the product is deleted, false if deleted is false or null. */
     public boolean isDeleted() {
         return Boolean.TRUE.equals(deleted);
     }
@@ -67,7 +66,7 @@ public record ProductDto(
             if ((long) price.precision() - price.scale() > 17) {
                 throw new IllegalArgumentException("Price must have at most 17 integer digits");
             }
-            price = price.setScale(2);
+            price = price.setScale(2, RoundingMode.HALF_UP);
         }
     }
 }
