@@ -25,8 +25,8 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
     /**
      * Registers reflection access to declared constructors, methods, and fields of {@code
      * PagedResult} (if Spring Data's {@code Page} is on the classpath), {@link ProductDto}, {@link
-     * OrderDto}, and {@link OrderDto.OrderItemDto} for native images. Also registers
-     * constructor access for {@code TsidFactorySupplier} when Hypersistence TSID is on the classpath.
+     * OrderDto}, and {@link OrderDto.OrderItemDto} for native images. Also registers constructor
+     * access for {@code TsidFactorySupplier} when Hypersistence TSID is on the classpath.
      *
      * @param hints registry to update
      * @param classLoader classLoader to inspect for optional dependencies
