@@ -22,12 +22,26 @@ public final class TsidFactories {
      *
      * @return the configured identifier factory
      * @throws NumberFormatException if a non-blank node value cannot be parsed as an integer
-     * @throws IllegalArgumentException if the node is outside the configured node-bit range
+     * @throws IllegalArgumentException if the node is outside the configured node-bit range or the
+     *     builder's node count requires an unsupported bit length
      */
     public static TSID.Factory fromEnvironment() {
         return build(System.getProperty("tsid.node"), System.getenv("TSID_NODE"));
     }
 
+    /**
+     * Builds a factory from the supplied node settings, using the environment value only when the
+     * system property value is null. A null or blank selected value chooses a random node within
+     * the configured node-bit range.
+     *
+     * @param systemProperty value of {@code tsid.node}, or null if absent
+     * @param environmentVariable value of {@code TSID_NODE}, or null if absent
+     * @return a new identifier factory
+     * @throws NumberFormatException if the selected nonblank value is not an integer in the {@code
+     *     int} range; surrounding whitespace is not trimmed
+     * @throws IllegalArgumentException if the node is negative or exceeds the configured node-bit
+     *     range, or the builder's node count requires an unsupported bit length
+     */
     static TSID.Factory build(String systemProperty, String environmentVariable) {
         String nodeStr = resolveNodeValue(systemProperty, environmentVariable);
         NodeBuilder builder = new NodeBuilder();
