@@ -59,20 +59,6 @@
       "allDeclaredFields": true
     },
     {
-      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderDto"},
-      "type": "com.example.inventoryservice.model.payload.OrderDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderItemDto"},
-      "type": "com.example.inventoryservice.model.payload.OrderItemDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
       "condition": {"typeReached": "com.example.inventoryservice.model.request.InventoryRequest"},
       "type": "com.example.inventoryservice.model.request.InventoryRequest",
       "allDeclaredConstructors": true,

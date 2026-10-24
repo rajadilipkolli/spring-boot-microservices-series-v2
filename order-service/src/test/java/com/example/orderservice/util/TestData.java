@@ -6,11 +6,11 @@
 
 package com.example.orderservice.util;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import java.math.BigDecimal;

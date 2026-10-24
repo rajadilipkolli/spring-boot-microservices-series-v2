@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.ProductManageService;
@@ -111,14 +112,14 @@ class InventoryAPIImpl implements InventoryAPI {
      */
     @Override
     @Transactional
-    public void reserve(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
+    public void reserve(OrderDto orderDto) {
         orderManageService.reserve(orderDto);
     }
 
     /** Applies order confirmation or rollback stock changes within a write transaction. */
     @Override
     @Transactional
-    public void confirm(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
+    public void confirm(OrderDto orderDto) {
         orderManageService.confirm(orderDto);
     }
 

@@ -195,22 +195,6 @@
       "serializable": true
     },
     {
-      "condition": {"typeReached": "com.example.paymentservice.model.payload.OrderDto"},
-      "type": "com.example.paymentservice.model.payload.OrderDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true,
-      "serializable": true
-    },
-    {
-      "condition": {"typeReached": "com.example.paymentservice.model.payload.OrderDto$OrderItemDto"},
-      "type": "com.example.paymentservice.model.payload.OrderDto$OrderItemDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true,
-      "serializable": true
-    },
-    {
       "condition": {"typeReached": "com.example.paymentservice.model.query.FindCustomersQuery"},
       "type": "com.example.paymentservice.model.query.FindCustomersQuery",
       "allDeclaredConstructors": true,

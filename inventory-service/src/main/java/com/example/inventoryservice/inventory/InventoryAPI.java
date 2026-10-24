@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
 import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.domain.models.*;

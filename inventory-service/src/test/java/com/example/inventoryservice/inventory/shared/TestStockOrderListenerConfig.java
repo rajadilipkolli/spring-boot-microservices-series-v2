@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.inventory.shared;
 
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
+import com.example.common.dto.OrderDto;
 import java.util.concurrent.CountDownLatch;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;

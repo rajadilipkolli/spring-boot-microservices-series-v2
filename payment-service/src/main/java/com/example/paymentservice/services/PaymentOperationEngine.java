@@ -1,13 +1,13 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.exception.ReservationNotFoundException;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.repositories.OutboxEventRepository;
 import com.example.paymentservice.repositories.PaymentOperationRepository;

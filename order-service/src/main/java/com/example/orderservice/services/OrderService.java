@@ -6,6 +6,7 @@
 
 package com.example.orderservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
 import com.example.common.logging.LogSanitizer;
 import com.example.common.logging.Loggable;
@@ -13,7 +14,6 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;

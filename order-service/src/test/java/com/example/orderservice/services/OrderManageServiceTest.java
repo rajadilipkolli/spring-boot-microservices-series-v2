@@ -17,9 +17,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Collections;

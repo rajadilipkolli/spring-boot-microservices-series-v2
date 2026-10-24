@@ -9,9 +9,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;

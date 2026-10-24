@@ -1,9 +1,9 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.PaymentOperationRepository;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
