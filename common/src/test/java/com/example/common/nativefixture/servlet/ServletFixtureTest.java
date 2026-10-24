@@ -45,6 +45,9 @@ class ServletFixtureTest {
         JsonNode root = mapper.readTree(response.getBody());
 
         assertThat(root.has("data")).isTrue();
+        assertThat(root.get("data").isArray()).isTrue();
+        assertThat(root.get("data").get(0).get("id").asString()).isEqualTo("1");
+        assertThat(root.get("data").get(0).get("name").asString()).isEqualTo("item-1");
         assertThat(root.has("totalElements")).isTrue();
         assertThat(root.has("pageNumber")).isTrue();
         assertThat(root.has("totalPages")).isTrue();
