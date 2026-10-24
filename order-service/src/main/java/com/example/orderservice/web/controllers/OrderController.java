@@ -116,16 +116,16 @@ class OrderController implements OrderApi {
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
+    /**
+     * Soft deletes an active order and returns HTTP 202 with no body. Persistence failures
+     * propagate.
+     *
+     * @throws OrderNotFoundException if the order is absent or already deleted
+     */
     @DeleteMapping("/{id}")
     ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
-        return orderService
-                .findById(id)
-                .map(
-                        order -> {
-                            orderService.deleteOrderById(id);
-                            return ResponseEntity.accepted().build();
-                        })
-                .orElseThrow(() -> new OrderNotFoundException(id));
+        orderService.deleteOrderById(id);
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/generate")

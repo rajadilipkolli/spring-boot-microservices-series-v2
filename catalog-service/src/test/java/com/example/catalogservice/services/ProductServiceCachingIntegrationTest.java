@@ -85,7 +85,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         String expectedCacheKey = cacheKey("productCode:p001");
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isTrue();
 
-        Product productInDb = productRepository.findByProductCodeAllIgnoreCase("P001").block();
+        Product productInDb =
+                productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001").block();
         productInDb.setProductName("Bypassed Name Update");
         productInDb = productRepository.save(productInDb).block();
 
@@ -120,7 +121,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
     /** Verifies product cache expiry and page generation changes after product mutations. */
     @Test
     void idCacheExpiresAndMutationsChangePageGeneration() {
-        Product product = productRepository.findByProductCodeAllIgnoreCase("P001").block();
+        Product product =
+                productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001").block();
         when(inventoryServiceProxy.getInventoryByProductCode("P001"))
                 .thenReturn(Mono.just(new InventoryResponse("P001", 5)));
         productService.findProductById(product.getId()).block();
@@ -147,10 +149,11 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productService
                 .saveProduct(
                         new ProductRequest(
-                                "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
+                                "P002", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
         assertThat(productCacheGenerationRepository.findCacheGeneration().block())
                 .isNotEqualTo(beforeSave);
+        productRepository.deleteByProductCodeAllIgnoreCase("P002").block();
 
         String beforeGenerate = productCacheGenerationRepository.findCacheGeneration().block();
         productService.generateProducts("cache-test", 1).block();

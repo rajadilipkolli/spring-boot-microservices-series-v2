@@ -52,6 +52,12 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         return customerDAO.findById(id);
     }
 
+    /** Returns the active customer matching the ID, or empty if none exists or deleted. */
+    @Override
+    public Optional<CustomersRecord> findActiveById(Long id) {
+        return customerDAO.findActiveById(id);
+    }
+
     /** Returns the customer matching the exact name, or empty if none exists. */
     @Override
     public Optional<CustomersRecord> findByName(String name) {
@@ -70,6 +76,15 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         return customerDAO.findAll(offset, limit, orderFields);
     }
 
+    /**
+     * Returns an active customer slice using the supplied row offset, limit, and sort expressions.
+     */
+    @Override
+    public List<CustomersRecord> findActiveAll(
+            int offset, int limit, List<OrderField<?>> orderFields) {
+        return customerDAO.findActiveAll(offset, limit, orderFields);
+    }
+
     /** Checks for an exact match against the supplied normalized email address. */
     @Override
     public boolean existsByEmail(String email) {
@@ -80,6 +95,12 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Override
     public long count() {
         return customerDAO.count();
+    }
+
+    /** Returns the active customer count reported by the DAO. */
+    @Override
+    public long countActive() {
+        return customerDAO.countActive();
     }
 
     /**
@@ -155,6 +176,19 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     @Transactional
     public int deleteById(Long id) {
         return customerDAO.deleteById(id);
+    }
+
+    /**
+     * Soft deletes the customer with the supplied identifier if active, incrementing its version
+     * without changing balances. Database failures propagate.
+     *
+     * @param id the identifier of the customer to soft delete
+     * @return one if marked deleted, or zero if absent or already deleted
+     */
+    @Override
+    @Transactional
+    public int softDeleteById(Long id) {
+        return customerDAO.softDeleteById(id);
     }
 
     /**

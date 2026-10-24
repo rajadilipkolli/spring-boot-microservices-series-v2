@@ -62,9 +62,9 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * without stock changes or an event. Accepted and rejected reservations record processing for
      * non-null IDs; null IDs bypass duplicate tracking.
      *
-     * <p>New orders are rejected without stock changes if products are missing, product codes are
-     * repeated, or any requested quantity exceeds availability. Accepted orders move the requested
-     * quantities from available to reserved stock. Both outcomes publish an {@link
+     * <p>New orders are rejected without stock changes if products are missing or deleted, product
+     * codes are repeated, or any requested quantity exceeds availability. Accepted orders move the
+     * requested quantities from available to reserved stock. Both outcomes publish an {@link
      * InventoryProcessedEvent}. Optimistic locking failures are eligible for up to three retries
      * with an initial delay of one second, doubling between retries. Unresolved persistence and
      * event publication failures propagate to the caller.
@@ -104,7 +104,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         // JOOQ returns detached entities which can lead to StaleObjectStateException
         // when merged and saved if the version field mapping is not perfectly synchronized.
         List<Inventory> inventoryListFromDB =
-                inventoryRepository.findByProductCodeIn(productCodeList);
+                inventoryRepository.findByProductCodeInAndDeletedFalse(productCodeList);
 
         // Check if all requested products exist in the inventory
         if (inventoryListFromDB.size() != productCodeList.size()) {
@@ -226,8 +226,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
 
-        // Using JPA repository to keep entities managed and avoid StaleObjectStateException on
-        // detached entities
+        // Confirmation and rollback remain unfiltered so existing reservations can complete or
+        // release
         Map<String, Inventory> inventoryMap =
                 inventoryRepository.findByProductCodeIn(productCodeList).stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));

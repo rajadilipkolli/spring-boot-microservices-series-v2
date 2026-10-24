@@ -314,6 +314,49 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
         assertThat(customerDAO.findByEmail("duplicate_batch@example.com")).isEmpty();
     }
 
+    @Test
+    void testSoftDeleteAndActiveQueries() {
+        CustomersRecord customer =
+                new CustomersRecord()
+                        .setName("Active User")
+                        .setEmail("active@example.com")
+                        .setAddressLine1("123 Active St")
+                        .setCity("City")
+                        .setState("ST")
+                        .setZipCode("12345")
+                        .setCountry("Country")
+                        .setPhone("123-456-7890")
+                        .setAmountAvailable(BigDecimal.valueOf(100.0))
+                        .setAmountReserved(BigDecimal.ZERO);
+        CustomersRecord saved = customerRepository.saveCustomer(customer);
+        Long id = saved.getId();
+
+        assertThat(customerRepository.findActiveById(id)).isPresent();
+        assertThat(customerRepository.countActive()).isEqualTo(1L);
+
+        int updated = customerRepository.softDeleteById(id);
+        assertThat(updated).isEqualTo(1);
+
+        // Repeated soft delete should affect 0 rows
+        assertThat(customerRepository.softDeleteById(id)).isZero();
+
+        // Active lookups must return empty
+        assertThat(customerRepository.findActiveById(id)).isEmpty();
+        assertThat(customerRepository.countActive()).isZero();
+        assertThat(customerRepository.findByName("Active User")).isEmpty();
+        assertThat(customerRepository.findByEmail("active@example.com")).isEmpty();
+
+        // Retained unfiltered lookups must still find the customer
+        assertThat(customerRepository.findById(id)).isPresent();
+        assertThat(customerRepository.existsByEmail("active@example.com")).isTrue();
+        assertThat(customerRepository.count()).isEqualTo(1L);
+
+        // Version should have incremented on soft delete
+        CustomersRecord retained = customerRepository.findById(id).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
+        assertThat(retained.getVersion()).isEqualTo(saved.getVersion() + 1);
+    }
+
     /**
      * Finds the first exception of the expected type, including the supplied exception itself.
      *

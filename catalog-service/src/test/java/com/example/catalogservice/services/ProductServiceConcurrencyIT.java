@@ -101,12 +101,16 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
 
         // Then: Only one product with this code should exist in DB using StepVerifier
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE))
                 .expectNext(1L)
                 .verifyComplete();
 
         // Verify the product was saved correctly using StepVerifier and has the original values
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE))
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE))
                 .assertNext(
                         savedProduct -> {
                             assertThat(savedProduct).isNotNull();
@@ -244,7 +248,9 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
 
         // Verify only one product was actually saved in the database
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
                 .assertNext(count -> assertThat(count).isEqualTo(1L))
                 .verifyComplete(); // Now create a more intense race condition with multiple
         // concurrent save attempts
@@ -320,12 +326,16 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                 .verifyComplete();
 
         // Final verification that only one product exists with this code
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
                 .assertNext(count -> assertThat(count).isEqualTo(1L))
                 .verifyComplete();
 
         // Verify the product in the database matches what we expect
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
                 .assertNext(
                         product -> {
                             assertThat(product).isNotNull();

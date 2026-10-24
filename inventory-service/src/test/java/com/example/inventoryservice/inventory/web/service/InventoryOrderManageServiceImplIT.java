@@ -69,7 +69,8 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Capture initial state of all products
         Map<String, Inventory> initialState =
                 inventoryRepository
-                        .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
+                        .findByProductCodeInAndDeletedFalse(
+                                new ArrayList<>(expectedChanges.keySet()))
                         .stream()
                         .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
 
@@ -337,5 +338,43 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         inventoryOrderManageService.confirm(orderDto);
         Inventory afterSecond = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
         assertThat(afterSecond.getReservedItems()).isEqualTo(40);
+    }
+
+    @Test
+    void reserveOrderForSoftDeletedProduct_ShouldRejectReservation() {
+        // Soft delete product1
+        product1.markDeleted();
+        inventoryRepository.save(product1);
+
+        Long orderId = orderIdGenerator.incrementAndGet();
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item));
+
+        OrderDto result = inventoryOrderManageService.reserve(orderDto);
+        assertThat(result.status()).isEqualTo("REJECT");
+    }
+
+    @Test
+    void confirmAndRollbackForSoftDeletedProduct_ShouldComplete() {
+        // Soft delete product1
+        product1.markDeleted();
+        inventoryRepository.save(product1);
+
+        Long orderId = orderIdGenerator.incrementAndGet();
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto confirmDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item));
+
+        // Unfiltered confirm should successfully deduct reserved items on soft-deleted row
+        inventoryOrderManageService.confirm(confirmDto);
+        Inventory afterConfirm = inventoryRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterConfirm.getReservedItems()).isEqualTo(40);
+
+        Long rollbackOrderId = orderIdGenerator.incrementAndGet();
+        OrderDto rollbackDto = new OrderDto(rollbackOrderId, 2L, "ROLLBACK", "TEST", List.of(item));
+        // Unfiltered rollback should successfully release reserved items
+        inventoryOrderManageService.confirm(rollbackDto);
+        Inventory afterRollback = inventoryRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterRollback.getAvailableQuantity()).isEqualTo(110);
+        assertThat(afterRollback.getReservedItems()).isEqualTo(30);
     }
 }

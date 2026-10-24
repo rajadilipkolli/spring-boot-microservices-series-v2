@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.instancio.Select.field;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -39,6 +40,7 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                         .size(15)
                         .ignore(field(Inventory::getId))
                         .set(field(Inventory::getVersion), (short) 0)
+                        .set(field(Inventory::isDeleted), false)
                         .create();
         inventoryList = inventoryRepository.saveAll(inventories);
     }
@@ -118,6 +120,38 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.availableQuantity", is(10)))
                 .andExpect(jsonPath("$.reservedItems", is(0)))
                 .andExpect(jsonPath("$.productCode", is(inventoryRequest.productCode())));
+    }
+
+    @Test
+    void shouldRestoreDeletedInventoryOnCreate() throws Exception {
+        Inventory inventory = inventoryList.getFirst();
+        Integer reservedItems = inventory.getReservedItems();
+        long originalCount = inventoryRepository.count();
+        mockMvc.perform(delete("/api/inventory/{id}", inventory.getId()))
+                .andExpect(status().isOk());
+
+        InventoryRequest request = new InventoryRequest(inventory.getProductCode(), 25);
+        mockMvc.perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(inventory.getId().toString()))
+                .andExpect(jsonPath("$.availableQuantity").value(25))
+                .andExpect(jsonPath("$.reservedItems").value(reservedItems));
+
+        Inventory restored = inventoryRepository.findById(inventory.getId()).orElseThrow();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getVersion()).isGreaterThan(inventory.getVersion());
+        assertThat(inventoryRepository.count()).isEqualTo(originalCount);
+        mockMvc.perform(get("/api/inventory/{productCode}", inventory.getProductCode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.availableQuantity").value(25));
+        mockMvc.perform(
+                        post("/api/inventory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -206,6 +240,26 @@ class InventoryControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
                 .andExpect(jsonPath("$.availableQuantity", is(inventory.getAvailableQuantity())))
                 .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/inventory/{id}", inventory.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by code must return 404
+        this.mockMvc
+                .perform(get("/api/inventory/{productCode}", inventory.getProductCode()))
+                .andExpect(status().isNotFound());
+
+        // Excluded from list count
+        this.mockMvc
+                .perform(get("/api/inventory"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(14)));
+
+        // Retained in database with deleted = true
+        Inventory retained = inventoryRepository.findById(inventory.getId()).orElseThrow();
+        assertThat(retained.isDeleted()).isTrue();
     }
 
     @Test

@@ -44,6 +44,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -597,13 +599,34 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 is(orderRequest.deliveryAddress().country())));
     }
 
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Order order = orderList.getFirst();
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void shouldDeleteOrder(int orderIndex) throws Exception {
+        Order order = orderList.get(orderIndex);
 
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
                 .andExpect(status().isAccepted());
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by ID must return 404
+        this.mockMvc
+                .perform(get("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // List must exclude soft-deleted order
+        this.mockMvc
+                .perform(get("/api/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(orderList.size() - 1)));
+
+        // Unfiltered lookup verifies database row retained with deleted = true
+        Order retained = orderRepository.findById(order.getId()).orElseThrow();
+        assertThat(retained.isDeleted()).isTrue();
     }
 
     @Test

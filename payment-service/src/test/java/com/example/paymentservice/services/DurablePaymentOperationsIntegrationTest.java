@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doThrow;
 import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.config.ApplicationProperties;
+import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.jooq.tables.LedgerEntries;
 import com.example.paymentservice.jooq.tables.OutboxEvents;
 import com.example.paymentservice.jooq.tables.PaymentOperations;
@@ -557,6 +558,86 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         assertThat(mutations).hasValue(1);
         assertThat(customerDAO.findById(customer.getId()).orElseThrow().getAmountAvailable())
                 .isEqualByComparingTo("90");
+    }
+
+    @Test
+    void shouldRejectReservationWhenCustomerDeletedAfterValidation() {
+        doAnswer(
+                        invocation -> {
+                            customerRepository.softDeleteById(customer.getId());
+                            return invocation.callRealMethod();
+                        })
+                .when(customerRepository)
+                .reserveFunds(customer.getId(), new BigDecimal("10.00"));
+
+        OrderDto result =
+                paymentOperationEngine.processReserve(order(9998L, "deleted-after-validation"));
+
+        assertThat(result.status()).isEqualTo("REJECT");
+        CustomersRecord retained = customerRepository.findById(customer.getId()).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
+        assertThat(retained.getAmountAvailable()).isEqualByComparingTo("100");
+        assertThat(retained.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(
+                        ledgerRepository
+                                .findByDownstreamKey(
+                                        paymentOperationRepository
+                                                .findByOperationKey("payment:9998:RESERVE")
+                                                .orElseThrow()
+                                                .getDownstreamKey())
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("REJECT");
+    }
+
+    @Test
+    void softDeletedCustomerRejectsNewReservationButAllowsExistingSettlement() {
+        // Soft delete the customer
+        customerRepository.softDeleteById(customer.getId());
+
+        OrderDto newOrder = order(9999L, "attempt-soft-deleted");
+        // New reservation for soft-deleted customer should fail with CustomerNotFoundException
+        assertThatThrownBy(() -> paymentOperationEngine.processReserve(newOrder))
+                .isInstanceOf(CustomerNotFoundException.class);
+
+        // Reactivate customer to create a completed reservation
+        customerDAO.deleteAll();
+        CustomersRecord record = new CustomersRecord();
+        record.setName("Customer 2");
+        record.setEmail("cust2@example.com");
+        record.setPhone("1234567890");
+        record.setAddressLine1("Street 1");
+        record.setCity("City");
+        record.setState("State");
+        record.setZipCode("12345");
+        record.setCountry("Country");
+        record.setAmountAvailable(BigDecimal.valueOf(100.00));
+        record.setAmountReserved(BigDecimal.ZERO);
+        CustomersRecord activeCust = customerRepository.saveCustomer(record);
+
+        OrderDto existingOrder =
+                new OrderDto(
+                        8888L,
+                        activeCust.getId(),
+                        "NEW",
+                        "INVENTORY",
+                        List.of(new OrderDto.OrderItemDto(1L, "p1", 1, BigDecimal.TEN)),
+                        "existing-reserve");
+        OrderDto reserveResult = paymentOperationEngine.processReserve(existingOrder);
+        assertThat(reserveResult.status()).isEqualTo("ACCEPT");
+
+        // Now soft delete the customer
+        customerRepository.softDeleteById(activeCust.getId());
+
+        // Replay of existing reservation with existing operation key should succeed using retained
+        // lookup
+        OrderDto replayResult = paymentOperationEngine.processReserve(existingOrder);
+        assertThat(replayResult.status()).isEqualTo("ACCEPT");
+
+        // Settlement (capture) on retained soft-deleted customer should succeed
+        paymentOperationEngine.processSettlement(existingOrder, "CAPTURE");
+        CustomersRecord settled = customerRepository.findById(activeCust.getId()).orElseThrow();
+        assertThat(settled.getAmountReserved()).isEqualByComparingTo("0.00");
     }
 
     /**

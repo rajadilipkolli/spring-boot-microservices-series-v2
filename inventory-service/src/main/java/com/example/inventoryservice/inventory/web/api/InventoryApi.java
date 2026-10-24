@@ -146,8 +146,8 @@ public interface InventoryApi {
             @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize);
 
     /**
-     * Creates inventory from a validated request and returns its representation with HTTP 201.
-     * Duplicate product codes raise {@link
+     * Creates inventory or restores deleted inventory from a validated request and returns its
+     * representation with HTTP 201. Active duplicate product codes raise {@link
      * com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException}; other
      * persistence failures propagate.
      */

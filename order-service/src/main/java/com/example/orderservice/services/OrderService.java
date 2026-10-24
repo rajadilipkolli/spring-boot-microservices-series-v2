@@ -12,6 +12,7 @@ import com.example.common.logging.LogSanitizer;
 import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.exception.ProductNotFoundException;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
@@ -254,9 +255,20 @@ public class OrderService {
         return catalogService.productsExistsByCodes(productIds);
     }
 
+    /**
+     * Marks an active order as deleted while retaining its items and status for ongoing processing.
+     * Persistence failures propagate.
+     *
+     * @throws OrderNotFoundException if the order is absent or already deleted
+     */
     @Transactional
     public void deleteOrderById(Long id) {
-        orderRepository.deleteById(id);
+        Order order =
+                orderRepository
+                        .findByIdAndDeletedFalse(id)
+                        .orElseThrow(() -> new OrderNotFoundException(id));
+        order.setDeleted(true);
+        orderRepository.save(order);
     }
 
     @Transactional

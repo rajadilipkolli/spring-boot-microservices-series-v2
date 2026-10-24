@@ -47,7 +47,7 @@ class InventoryServiceTest {
     @Test
     void testUpdateGeneratedInventory() {
         // Mock the behavior of dependencies
-        given(inventoryRepository.findByProductCode(anyString()))
+        given(inventoryRepository.findByProductCodeAndDeletedFalse(anyString()))
                 .willReturn(
                         Optional.of(
                                 new Inventory()
@@ -75,13 +75,13 @@ class InventoryServiceTest {
         inventoryService.updateGeneratedInventory("test-batch-123", null);
 
         // Verify interactions
-        verify(inventoryRepository, times(101)).findByProductCode(anyString());
+        verify(inventoryRepository, times(101)).findByProductCodeAndDeletedFalse(anyString());
         verify(inventoryRepository, times(101)).save(any(Inventory.class));
     }
 
     @Test
     void shouldUpdateRequestedGeneratedInventoryBatchSize() {
-        given(inventoryRepository.findByProductCode(anyString()))
+        given(inventoryRepository.findByProductCodeAndDeletedFalse(anyString()))
                 .willReturn(
                         Optional.of(
                                 new Inventory()
@@ -95,14 +95,14 @@ class InventoryServiceTest {
 
         inventoryService.updateGeneratedInventory("test-batch-456", 5);
 
-        verify(inventoryRepository, times(5)).findByProductCode(anyString());
+        verify(inventoryRepository, times(5)).findByProductCodeAndDeletedFalse(anyString());
         verify(inventoryRepository, times(5)).save(any(Inventory.class));
     }
 
     @Test
     void testSaveInventory() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(false);
+        given(inventoryRepository.findByProductCode("ProductCode1")).willReturn(Optional.empty());
         given(inventoryMapper.toEntity(any(InventoryRequest.class)))
                 .willReturn(
                         new Inventory()
@@ -127,7 +127,8 @@ class InventoryServiceTest {
     @Test
     void testSaveInventory_Conflict() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(true);
+        given(inventoryRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.of(new Inventory().setProductCode("ProductCode1")));
 
         assertThatThrownBy(() -> inventoryService.saveInventory(inventoryRequest))
                 .isInstanceOf(ProductAlreadyExistsException.class)

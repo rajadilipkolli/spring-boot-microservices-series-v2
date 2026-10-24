@@ -10,8 +10,10 @@ import com.example.paymentservice.jooq.tables.OutboxEvents;
 import com.example.paymentservice.jooq.tables.PaymentOperations;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.OrderField;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,26 +31,78 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
-     * Finds a customer by name.
+     * Finds an active customer by its identifier.
      *
-     * @return the matching customer, or empty if no name matches
+     * @param id the customer identifier
+     * @return the matching active record, or empty if absent or deleted
      * @throws org.springframework.dao.DataAccessException if the database query fails
      */
-    public Optional<CustomersRecord> findByName(String name) {
-        return dslContext.selectFrom(table).where(CUSTOMERS.NAME.eq(name)).fetchOptional();
+    public Optional<CustomersRecord> findActiveById(Long id) {
+        return dslContext
+                .selectFrom(table)
+                .where(CUSTOMERS.ID.eq(id).and(CUSTOMERS.DELETED.isFalse()))
+                .fetchOptional();
     }
 
     /**
-     * Finds a customer by email.
+     * Fetches a sorted slice of active customer records.
      *
-     * @return the matching customer, or empty if no email matches
+     * @param offset the number of rows to skip
+     * @param limit the maximum number of rows to return
+     * @param orderFields the sort expressions to apply
+     * @return the requested active customer records
+     */
+    public List<CustomersRecord> findActiveAll(
+            int offset, int limit, List<OrderField<?>> orderFields) {
+        return findAll(CUSTOMERS.DELETED.isFalse(), offset, limit, orderFields);
+    }
+
+    /** Returns the total number of active customers. */
+    public int countActive() {
+        return count(CUSTOMERS.DELETED.isFalse());
+    }
+
+    /**
+     * Finds an active customer by exact name.
+     *
+     * @return the matching active customer, or empty if no active name matches
+     * @throws org.springframework.dao.DataAccessException if the database query fails
+     */
+    public Optional<CustomersRecord> findByName(String name) {
+        return dslContext
+                .selectFrom(table)
+                .where(CUSTOMERS.NAME.eq(name).and(CUSTOMERS.DELETED.isFalse()))
+                .fetchOptional();
+    }
+
+    /**
+     * Finds an active customer by exact normalized email; no normalization is performed here.
+     *
+     * @return the matching active customer, or empty if no active email matches
      * @throws org.springframework.dao.DataAccessException if the database query fails
      */
     public Optional<CustomersRecord> findByEmail(String normalizedEmail) {
         return dslContext
                 .selectFrom(table)
-                .where(CUSTOMERS.EMAIL.eq(normalizedEmail))
+                .where(CUSTOMERS.EMAIL.eq(normalizedEmail).and(CUSTOMERS.DELETED.isFalse()))
                 .fetchOptional();
+    }
+
+    /**
+     * Soft deletes an active customer by ID, incrementing its version without changing balances.
+     * Database failures propagate.
+     *
+     * @param id the customer identifier
+     * @return one if marked deleted, or zero if absent or already deleted
+     */
+    @Transactional
+    public int softDeleteById(Long id) {
+        return dslContext
+                .update(CUSTOMERS)
+                .set(CUSTOMERS.DELETED, true)
+                .set(CUSTOMERS.VERSION, CUSTOMERS.VERSION.plus(1))
+                .where(CUSTOMERS.ID.eq(id).and(CUSTOMERS.DELETED.isFalse()))
+                .execute();
     }
 
     /**
@@ -79,7 +133,8 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
      * Atomically moves the amount from available to reserved balance and increments the customer
      * version. An exact available balance match is sufficient; database failures propagate.
      *
-     * @return true if the customer was updated, false if absent or available funds are insufficient
+     * @return true if the customer was updated, false if absent, deleted, or available funds are
+     *     insufficient
      */
     @Transactional
     public boolean reserveFunds(Long customerId, BigDecimal amount) {
@@ -95,6 +150,7 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
                         .set(Customers.CUSTOMERS.VERSION, Customers.CUSTOMERS.VERSION.plus(1))
                         .where(Customers.CUSTOMERS.ID.eq(customerId))
                         .and(Customers.CUSTOMERS.AMOUNT_AVAILABLE.ge(amount))
+                        .and(Customers.CUSTOMERS.DELETED.isFalse())
                         .execute();
         return updated > 0;
     }

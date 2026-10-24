@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -649,7 +650,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(productRequest.price().doubleValue());
 
         // Verify product was created in the database and version is 0
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase("code 4"))
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("code 4"))
                 .assertNext(
                         p -> {
                             assertThat(p).isNotNull();
@@ -922,7 +924,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .exists();
     }
 
-    /** Verifies that deleting a product returns its details with a string ID. */
+    /**
+     * Verifies that deleting a product returns its details with a string ID and verifies soft
+     * delete.
+     */
     @Test
     void shouldDeleteProduct() {
         Product product = savedProductList.getFirst();
@@ -946,6 +951,141 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo(product.getDescription())
                 .jsonPath("$.price")
                 .isEqualTo(product.getPrice().doubleValue());
+
+        // Repeated delete must return 404
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // Get by ID must return 404
+        webTestClient
+                .get()
+                .uri("/api/catalog/id/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // Get by code must return 404
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        // /exists must return false
+        webTestClient
+                .get()
+                .uri("/api/catalog/exists?productCodes={code}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.exists")
+                .isEqualTo(false);
+
+        // Verify row is retained in database with deleted = true
+        StepVerifier.create(productRepository.findById(product.getId()))
+                .assertNext(
+                        dbProduct -> {
+                            assertThat(dbProduct.isDeleted()).isTrue();
+                            assertThat(dbProduct.getProductCode())
+                                    .isEqualTo(product.getProductCode());
+                        })
+                .verifyComplete();
+
+        // Verify outbox event with PRODUCT_DELETED and deleted = true
+        StepVerifier.create(
+                        outboxEventRepository
+                                .findAll()
+                                .filter(e -> "PRODUCT_DELETED".equals(e.getEventType())))
+                .assertNext(
+                        outboxEvent -> {
+                            assertThat(outboxEvent.getAggregateId())
+                                    .isEqualTo(product.getProductCode());
+                            assertThat(outboxEvent.getPayload().content())
+                                    .contains("\"deleted\": true");
+                        })
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldRestoreDeletedProductOnCreate() {
+        Product product = savedProductList.getFirst();
+        long originalCount = productRepository.count().block();
+
+        // Populate the code cache before the deletion and restoration.
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk();
+        webTestClient
+                .delete()
+                .uri("/api/catalog/{id}", product.getId())
+                .exchange()
+                .expectStatus()
+                .isOk();
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+
+        ProductRequest request =
+                new ProductRequest(
+                        product.getProductCode().toLowerCase(Locale.ROOT),
+                        "Restored name",
+                        "Restored description",
+                        "https://example.com/restored.png",
+                        BigDecimal.TEN);
+        webTestClient
+                .post()
+                .uri("/api/catalog")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .jsonPath("$.id")
+                .isEqualTo(product.getId().toString())
+                .jsonPath("$.productName")
+                .isEqualTo("Restored name");
+
+        webTestClient
+                .get()
+                .uri("/api/catalog/product-code/{productCode}", product.getProductCode())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.productName")
+                .isEqualTo("Restored name");
+        Product restored = productRepository.findById(product.getId()).block();
+        assertThat(restored).isNotNull();
+        assertThat(restored.isDeleted()).isFalse();
+        assertThat(restored.getVersion()).isGreaterThan(product.getVersion());
+        assertThat(productRepository.count().block()).isEqualTo(originalCount);
+        StepVerifier.create(
+                        outboxEventRepository
+                                .findAll()
+                                .filter(event -> "PRODUCT_CREATED".equals(event.getEventType()))
+                                .filter(
+                                        event ->
+                                                request.productCode()
+                                                        .equals(event.getAggregateId())))
+                .assertNext(
+                        event ->
+                                assertThat(event.getPayload().content())
+                                        .contains("Restored name")
+                                        .contains("\"deleted\": false"))
+                .verifyComplete();
     }
 
     @Nested

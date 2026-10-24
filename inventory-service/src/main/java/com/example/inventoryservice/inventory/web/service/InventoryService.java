@@ -71,16 +71,40 @@ class InventoryService {
         return new PagedResult<>(page);
     }
 
+    /**
+     * Returns active inventory by ID, or empty if absent or deleted; persistence failures
+     * propagate.
+     */
     public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryRepository.findById(id);
+        return inventoryRepository.findByIdAndDeletedFalse(id);
     }
 
+    /**
+     * Creates inventory or restores deleted inventory with the requested available quantity,
+     * preserving its ID and reserved quantity. Other persistence failures propagate.
+     *
+     * @return the saved inventory
+     * @throws ProductAlreadyExistsException if active inventory already exists for the code, or an
+     *     integrity failure is followed by finding that code in storage
+     * @throws DataIntegrityViolationException if saving fails an integrity constraint and the
+     *     product code is still absent
+     */
     @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
-        if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
-            throw new ProductAlreadyExistsException(inventoryRequest.productCode());
-        }
-        Inventory inventory = this.inventoryMapper.toEntity(inventoryRequest);
+        Inventory inventory =
+                inventoryRepository
+                        .findByProductCode(inventoryRequest.productCode())
+                        .map(
+                                retained -> {
+                                    if (!retained.isDeleted()) {
+                                        throw new ProductAlreadyExistsException(
+                                                inventoryRequest.productCode());
+                                    }
+                                    inventoryMapper.updateInventoryFromRequest(
+                                            inventoryRequest, retained);
+                                    return retained.setDeleted(false);
+                                })
+                        .orElseGet(() -> inventoryMapper.toEntity(inventoryRequest));
         try {
             return inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
@@ -91,9 +115,19 @@ class InventoryService {
         }
     }
 
+    /**
+     * Soft deletes active inventory without changing available or reserved quantities. Does nothing
+     * if absent or already deleted; persistence failures propagate.
+     */
     @Transactional
     public void deleteInventoryById(Long id) {
-        inventoryRepository.deleteById(id);
+        inventoryRepository
+                .findByIdAndDeletedFalse(id)
+                .ifPresent(
+                        inventory -> {
+                            inventory.markDeleted();
+                            inventoryRepository.save(inventory);
+                        });
     }
 
     @Transactional
@@ -102,8 +136,12 @@ class InventoryService {
         return inventoryRepository.save(inventory);
     }
 
+    /**
+     * Returns active inventory by exact product code, or empty if absent or deleted; persistence
+     * failures propagate.
+     */
     public Optional<Inventory> findInventoryByProductCode(String productCode) {
-        return this.inventoryRepository.findByProductCode(productCode);
+        return this.inventoryRepository.findByProductCodeAndDeletedFalse(productCode);
     }
 
     public PagedResult<InventoryResponse> getInventoryByProductCodes(

@@ -13,6 +13,7 @@ import com.example.common.dto.OrderDto;
 import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -67,6 +68,53 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         await().untilAsserted(
                         () ->
                                 assertThat(inventoryJOOQRepository.findByProductCode("P001"))
+                                        .isPresent());
+    }
+
+    @Test
+    void onDeleteProductEvent() {
+        inventoryJOOQRepository.deleteByProductCode("P_DEL_001");
+        // Create active inventory
+        inventoryRepository.save(
+                new Inventory().setProductCode("P_DEL_001").setAvailableQuantity(100));
+
+        // Event with deleted: true
+        ProductDto deleteDto =
+                new ProductDto("P_DEL_001", "Product Del", "Desc", BigDecimal.TEN, true);
+        kafkaTemplate.send(
+                AppConstants.PRODUCT_TOPIC, "P_DEL_001", jsonMapper.writeValueAsBytes(deleteDto));
+
+        await().untilAsserted(
+                        () -> {
+                            // Unfiltered lookup shows it is retained with deleted = true
+                            Optional<Inventory> opt =
+                                    inventoryRepository.findByProductCode("P_DEL_001");
+                            assertThat(opt).isPresent();
+                            assertThat(opt.get().isDeleted()).isTrue();
+
+                            // Filtered lookup returns empty
+                            assertThat(inventoryJOOQRepository.findByProductCode("P_DEL_001"))
+                                    .isEmpty();
+                        });
+    }
+
+    @Test
+    void onProductEventWithUnknownFields() {
+        inventoryJOOQRepository.deleteByProductCode("P_UNKNOWN_001");
+
+        // JSON payload containing unknown fields
+        String rawJson =
+                "{\"code\":\"P_UNKNOWN_001\",\"productName\":\"Unknown Field Test\",\"price\":15.00,\"unknownProperty\":\"ignored\"}";
+        kafkaTemplate.send(
+                AppConstants.PRODUCT_TOPIC,
+                "P_UNKNOWN_001",
+                rawJson.getBytes(StandardCharsets.UTF_8));
+
+        await().untilAsserted(
+                        () ->
+                                assertThat(
+                                                inventoryJOOQRepository.findByProductCode(
+                                                        "P_UNKNOWN_001"))
                                         .isPresent());
     }
 }

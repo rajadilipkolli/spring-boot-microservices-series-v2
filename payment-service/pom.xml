@@ -40,7 +40,7 @@
         <junit.itReportFolder>${project.testresult.directory}/integrationTest</junit.itReportFolder>
         <hypersistence-tsid.version>2.1.4</hypersistence-tsid.version>
         <shedlock.version>7.10.1</shedlock.version>
-        <microservices-common.version>0.1.1</microservices-common.version>
+        <microservices-common.version>0.1.2</microservices-common.version>
     </properties>
 
     <dependencies>

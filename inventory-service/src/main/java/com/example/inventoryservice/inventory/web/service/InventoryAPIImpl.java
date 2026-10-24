@@ -8,6 +8,7 @@ package com.example.inventoryservice.inventory.web.service;
 
 import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
+import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.ProductManageService;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
@@ -123,10 +124,10 @@ class InventoryAPIImpl implements InventoryAPI {
         orderManageService.confirm(orderDto);
     }
 
-    /** Handles product creation within a write transaction, ignoring existing product codes. */
+    /** Handles product creation or soft deletion within a write transaction. */
     @Override
     @Transactional
-    public void manage(com.example.common.dto.ProductDto productDto) {
+    public void manage(ProductDto productDto) {
         productManageService.manage(productDto);
     }
 }

@@ -31,6 +31,9 @@ class Inventory {
     @Column(name = "reserved_items")
     private Integer reservedItems = 0;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     @Version private Short version = 0;
 
     public Inventory() {}
@@ -69,6 +72,31 @@ class Inventory {
 
     public Integer getReservedItems() {
         return reservedItems;
+    }
+
+    /** Returns whether this instance is marked as soft deleted. */
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    /**
+     * Changes the in-memory deletion flag without persisting it.
+     *
+     * @return this instance
+     */
+    public Inventory setDeleted(boolean deleted) {
+        this.deleted = deleted;
+        return this;
+    }
+
+    /**
+     * Marks this instance as deleted without persisting it or changing stock quantities.
+     *
+     * @return this instance
+     */
+    public Inventory markDeleted() {
+        this.deleted = true;
+        return this;
     }
 
     public Short getVersion() {

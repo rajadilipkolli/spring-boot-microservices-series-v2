@@ -39,7 +39,7 @@ public class CustomerService {
     }
 
     /**
-     * Fetches a sorted customer page with counts and navigation metadata.
+     * Fetches a sorted page of active customers with active counts and navigation metadata.
      *
      * @param findCustomersQuery the zero-based page index, positive page size, and sort options
      * @return the requested page of customer responses with a one-based page number
@@ -72,9 +72,10 @@ public class CustomerService {
                 customerMapper.toOrderFields(
                         findCustomersQuery.sortBy(), findCustomersQuery.sortDir());
 
-        long totalElements = customerRepository.count();
+        long totalElements = customerRepository.countActive();
 
-        List<CustomersRecord> records = customerRepository.findAll(offset, pageSize, orderFields);
+        List<CustomersRecord> records =
+                customerRepository.findActiveAll(offset, pageSize, orderFields);
 
         List<CustomerResponse> data = customerMapper.toListResponse(records);
 
@@ -90,13 +91,13 @@ public class CustomerService {
     }
 
     /**
-     * Finds customer details by identifier.
+     * Finds active customer details by identifier.
      *
      * @param id the customer identifier
-     * @return the matching response, or empty if absent
+     * @return the matching response, or empty if absent or deleted
      */
     public Optional<CustomerResponse> findCustomerById(Long id) {
-        return customerRepository.findById(id).map(CustomerResponse::toResponse);
+        return customerRepository.findActiveById(id).map(CustomerResponse::toResponse);
     }
 
     /**
@@ -179,7 +180,7 @@ public class CustomerService {
      * @param id the identifier of the customer to update
      * @param customerRequest the replacement contact details and available balance
      * @return the persisted customer response
-     * @throws CustomerNotFoundException if no customer has the supplied ID
+     * @throws CustomerNotFoundException if the customer is absent or deleted
      * @throws org.springframework.dao.OptimisticLockingFailureException if the customer changes
      *     during the update
      */
@@ -187,7 +188,7 @@ public class CustomerService {
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
         CustomersRecord customersRecord =
                 customerRepository
-                        .findById(id)
+                        .findActiveById(id)
                         .orElseThrow(() -> new CustomerNotFoundException(id));
 
         // Update the customersRecord object with data from customerRequest
@@ -199,9 +200,14 @@ public class CustomerService {
         return CustomerResponse.toResponse(updatedCustomer);
     }
 
-    /** Deletes the customer by ID and returns the number of deleted rows. */
+    /**
+     * Soft deletes an active customer, incrementing its version without changing balances. Database
+     * failures propagate.
+     *
+     * @return one if marked deleted, or zero if absent or already deleted
+     */
     @Transactional
     public int deleteCustomerById(Long id) {
-        return customerRepository.deleteById(id);
+        return customerRepository.softDeleteById(id);
     }
 }
