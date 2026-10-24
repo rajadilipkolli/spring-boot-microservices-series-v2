@@ -28,9 +28,15 @@ public record ProductDto(
         String description,
         @Positive
                 @Digits(integer = 17, fraction = 2)
-                @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
+                @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT)
                 BigDecimal price)
         implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
+
+    public ProductDto {
+        if (price != null && price.scale() < 2) {
+            price = price.setScale(2);
+        }
+    }
 }
