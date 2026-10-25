@@ -168,32 +168,42 @@ jobs:
           else
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
-
+    
       - name: Validate Kafka Consumer Groups Protocol
         run: |
           set -Eeuo pipefail
+      
           echo "Validating Kafka consumer groups protocol..."
-          groups_output=$(kubectl exec -n retailstore statefulset/kafka -- /bin/bash -c "/opt/kafka/bin/kafka-groups.sh --bootstrap-server localhost:9092 --list")
+      
+          groups_output=$(kubectl exec -n retailstore statefulset/kafka -- \
+            /bin/bash -c "/opt/kafka/bin/kafka-groups.sh --bootstrap-server localhost:9092 --list")
+      
           echo "Current Kafka groups:"
           echo "$groups_output"
-
-          # Validate consumer protocol for payment, stock, and product
+      
+          # Validate payment, stock, and product use the consumer protocol
           for group in payment stock product; do
-            if ! echo "$groups_output" | grep -E "^${group}[[:space:]]+.*[[:space:]]+consumer([[:space:]]|$)"; then
+            if ! echo "$groups_output" | awk -v group="$group" '
+              $1 == group && $3 == "consumer" { found = 1 }
+              END { exit !found }
+            '; then
               echo "Error: Group '$group' is not using protocol 'consumer'."
-              echo "$groups_output"
               exit 1
             fi
+      
             echo "Group '$group' verified with protocol 'consumer'."
           done
-
-          # Validate order-service remains a classic Streams consumer group
-          if ! echo "$groups_output" | grep -E "^order-service[[:space:]]+.*[[:space:]]+classic([[:space:]]|$)"; then
-            echo "Error: 'order-service' is not using classic protocol."
-            echo "$groups_output"
+      
+          # Validate order-service has TYPE Classic
+          if ! echo "$groups_output" | awk '
+            $1 == "order-service" && $2 == "Classic" { found = 1 }
+            END { exit !found }
+          '; then
+            echo "Error: 'order-service' is not a Classic consumer group."
             exit 1
           fi
-          echo "Group 'order-service' verified with classic Streams protocol."
+      
+          echo "Group 'order-service' verified with Classic type."
 
       - name: Publish E2E Test Reports
         if: always()
