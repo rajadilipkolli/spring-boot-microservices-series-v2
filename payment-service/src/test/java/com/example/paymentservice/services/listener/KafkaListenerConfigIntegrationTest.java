@@ -3,6 +3,9 @@ package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 
 import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
@@ -18,11 +21,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
+
+    @MockitoSpyBean private KafkaListenerConfig listenerSpy;
+
     private CustomersRecord customer;
 
     /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
@@ -85,9 +92,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        await().pollInterval(Duration.ofMillis(100))
+                .atMost(Duration.ofSeconds(30))
                 .untilAsserted(
                         () -> {
                             CustomersRecord persistedCustomer =
@@ -111,14 +117,15 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 String.valueOf(orderDto.orderId()),
                 TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
-        // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        // Allow asynchronous consumer delivery and match this order, since the latch is shared.
+        await().pollInterval(Duration.ofMillis(100))
+                .atMost(Duration.ofSeconds(30))
                 .untilAsserted(
                         () ->
-                                assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
-                                        .isZero());
+                                verify(listenerSpy)
+                                        .dlt(
+                                                contains(orderDto.orderId().toString()),
+                                                eq("orders-dlt-payment")));
     }
 
     /**

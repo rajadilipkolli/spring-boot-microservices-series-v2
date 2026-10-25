@@ -26,6 +26,7 @@ public class TestData {
                 nonExistentCustomerId,
                 orderDto.status(),
                 orderDto.source(),
-                orderDto.items());
+                orderDto.items(),
+                orderDto.attemptId());
     }
 }
