@@ -268,10 +268,7 @@ public interface ProductApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Product not found",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                                        schema = @Schema(implementation = ProblemDetail.class)))
+                        content = @Content)
             })
     Mono<ResponseEntity<ProductResponse>> deleteProduct(
             @Parameter(name = "id", description = "Product ID", example = "1") @PathVariable
