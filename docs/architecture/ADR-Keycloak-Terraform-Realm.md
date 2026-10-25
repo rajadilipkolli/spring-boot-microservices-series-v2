@@ -28,17 +28,17 @@ This approach had several problems:
 
 ## Decision
 
-We adopt the **`mrparkers/keycloak` Terraform provider** to declare the
+We adopt the **official `keycloak/keycloak` Terraform provider** ([keycloak/terraform-provider-keycloak](https://github.com/keycloak/terraform-provider-keycloak)) to declare the
 `retailstore` realm as code, applied by a **one-off Kubernetes Job** in the prod
 overlay after Keycloak becomes healthy.
 
 ### Provider
 
-| Component | Choice | Rationale |
-|---|---|---|
-| Provider | `mrparkers/keycloak ~> 4.4` | Canonical community provider; comprehensive resource coverage; matches Keycloak 26.x |
-| State backend | `kubernetes` backend | Zero extra infrastructure; state persisted as a Secret in the `retailstore` namespace; accessible only to the runner's ServiceAccount |
-| Terraform version | `>= 1.9` | Stable; shipped in `hashicorp/terraform:1.9` base image |
+| Component         | Choice                     | Rationale                                                                                                                             |
+|-------------------|----------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| Provider          | `keycloak/keycloak 5.1.0`  | Official provider (supports Keycloak 24 - 26); comprehensive resource coverage; matches Keycloak 26.x                                 |
+| State backend     | `kubernetes` backend       | Zero extra infrastructure; state persisted as a Secret in the `retailstore` namespace; accessible only to the runner's ServiceAccount |
+| Terraform version | `>= 1.9`                   | Shipped in `hashicorp/terraform:1.17` base image                                                                                      |
 
 ### Runtime topology (prod)
 
@@ -125,7 +125,7 @@ ADR or ticket should:
 - **Startup ordering dependency**: The Terraform Job must complete before
   Keycloak-dependent services can authenticate users. A failed Job blocks the
   deployment until `backoffLimit` is exhausted.
-- **Keycloak provider lag**: The `mrparkers/keycloak` provider lags behind the
+- **Keycloak provider lag**: The `keycloak/keycloak 5.1.0` provider lags behind the
   Keycloak release cycle. Keycloak 27+ API changes may require a provider update.
 
 ### Production validation

@@ -5,11 +5,13 @@ on:
   push:
     paths:
       - 'deployment/k8s/**'
+      - 'deployment/terraform/**'
       - '.github/workflows/k8s-e2e.yml'
     branches: [main]
   pull_request:
     paths:
       - 'deployment/k8s/**'
+      - 'deployment/terraform/**'
       - '.github/workflows/k8s-e2e.yml'
     types:
       - opened
@@ -17,8 +19,28 @@ on:
       - reopened
 
 jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.17'
+
+      - name: Terraform Format & Validation Check
+        working-directory: deployment/terraform/keycloak
+        run: |
+          set -Eeuo pipefail
+          terraform fmt -check
+          terraform init -backend=false -lockfile=readonly
+          terraform validate
+
   e2e-test:
     runs-on: ubuntu-latest
+    needs: [terraform-validate]
     timeout-minutes: 45
     steps:
       - name: Checkout Source
@@ -68,84 +90,10 @@ jobs:
             kind load docker-image "$image" --name kind
           done
 
-      - name: Apply CI Overlay
+      - name: Deploy CI Overlay
         run: |
           set -Eeuo pipefail
-          kubectl apply -k deployment/k8s/overlays/ci/
-
-      - name: Wait for Webapp Hostaliases Patch
-        run: |
-          set -Eeuo pipefail
-          # This Job patches retail-store-webapp's pod template (hostAliases for
-          # keycloak.local), triggering a new rollout. Wait for it here, before
-          # any rollout/readiness checks, so those checks see the final pod spec
-          # instead of racing a mid-patch rollout.
-          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=300s
-
-      - name: Wait for Infrastructure Rollouts
-        run: |
-          set -Eeuo pipefail
-          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
-          kubectl rollout status deployment/redis -n retailstore --timeout=300s
-          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
-          kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in postgresql redis kafka keycloak; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Keycloak Terraform Runner
-        run: |
-          set -Eeuo pipefail
-          echo "Waiting for keycloak-terraform-runner Job to complete..."
-          kubectl wait --namespace retailstore --for=condition=complete job/keycloak-terraform-runner --timeout=600s
-          echo "Keycloak Terraform runner completed."
-
-      - name: Wait for Platform Core Rollouts
-        run: |
-          set -Eeuo pipefail
-          kubectl rollout status deployment/config-server -n retailstore --timeout=300s
-          kubectl rollout status deployment/service-registry -n retailstore --timeout=300s
-          for app in config-server service-registry; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Application Rollouts
-        run: |
-          set -Eeuo pipefail
-          for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
-            kubectl rollout status "deployment/$svc" -n retailstore --timeout=300s
-          done
-
-      - name: Wait for All Pods Ready
-        run: |
-          set -Eeuo pipefail
-          # Final gate before running tests: every pod (excluding completed Job
-          # pods like patch-webapp-hostaliases) must be Running with all
-          # containers ready, regardless of which resource is still settling.
-          echo "Waiting for all pods in retailstore to be Running and fully ready..."
-          timeout_seconds=300
-          elapsed=0
-          while true; do
-            not_ready=$(kubectl get pods -n retailstore -o json | jq -r '
-              [.items[] | select(.status.phase != "Succeeded")
-                | select(
-                    (.status.phase != "Running") or
-                    ([.status.containerStatuses[]?.ready] | any(. == false))
-                  )
-                | .metadata.name
-              ] | length')
-            if [ "$not_ready" -eq 0 ]; then
-              echo "All pods are Running and ready."
-              break
-            fi
-            if [ "$elapsed" -ge "$timeout_seconds" ]; then
-              echo "Timed out after ${timeout_seconds}s waiting for all pods to be ready." >&2
-              kubectl get pods -n retailstore
-              exit 1
-            fi
-            sleep 5
-            elapsed=$((elapsed + 5))
-          done
+          ./deployment/k8s/deploy.sh ci
 
       - name: Validate NetworkPolicy and PDBs
         run: |

@@ -199,11 +199,11 @@ To apply the production overlay safely:
 
 ```bash
 cd deployment/k8s
-./deploy-prod.sh
+./deploy.sh prod
 ```
 
 **Note on Operator Sequencing (Step 4):**
-The `deploy-prod.sh` script performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
+The `deploy.sh prod` command performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
 
 ### Teardown
 
@@ -285,7 +285,7 @@ import used in base/dev/CI.
 2. After Keycloak passes its readiness probe, the **`keycloak-terraform-runner`
    Job** runs automatically.
 3. The Job applies `deployment/terraform/keycloak/` using the
-   `mrparkers/keycloak` provider, creating the realm, client, roles, and users
+   official `keycloak/keycloak` provider, creating the realm, client, roles, and users
    if they do not already exist — or updating them if they differ from the
    declared state.
 4. The runner then provisions seed-user passwords through Keycloak's Admin API;
@@ -298,7 +298,7 @@ against the internal CA mounted from `keycloak-internal-ca`.
 
 ### Waiting for the Job
 
-`deploy-prod.sh` and the E2E script poll both terminal Job conditions. They
+`deploy.sh prod` and the E2E script poll both terminal Job conditions. They
 proceed only when `Complete=True`; when `Failed=True`, they immediately print
 the Job description, pod status, and all container logs before exiting
 non-zero. The same diagnostics are printed if neither condition is reached
