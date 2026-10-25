@@ -13,7 +13,6 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.ConsumerGroupDescription;
 import org.apache.kafka.clients.admin.GroupListing;
-import org.apache.kafka.clients.admin.ListGroupsOptions;
 import org.apache.kafka.common.GroupState;
 import org.apache.kafka.common.GroupType;
 import org.junit.jupiter.api.Test;
@@ -24,8 +23,8 @@ class ConsumerProtocolIntegrationTest extends AbstractIntegrationTest {
     void verifiesConsumerProtocolGroupType() {
         String bootstrapServers = String.join(",", kafkaConnectionDetails.getBootstrapServers());
         try (Admin admin =
-                     Admin.create(
-                             Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+                Admin.create(
+                        Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
             await().atMost(Duration.ofSeconds(60))
                     .pollInterval(Duration.ofMillis(500))
                     .untilAsserted(
@@ -38,13 +37,7 @@ class ConsumerProtocolIntegrationTest extends AbstractIntegrationTest {
                                 assertThat(paymentGroup.groupState())
                                         .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
 
-                                Collection<GroupListing> listings =
-                                        admin.listGroups(
-                                                        new ListGroupsOptions()
-                                                                .withTypes(
-                                                                        Set.of(GroupType.CONSUMER)))
-                                                .all()
-                                                .get();
+                                Collection<GroupListing> listings = admin.listGroups().all().get();
                                 assertThat(listings)
                                         .filteredOn(group -> group.groupId().startsWith("payment-"))
                                         .isNotEmpty()
