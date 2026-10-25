@@ -64,6 +64,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Trace-Id")
+                .expectHeader()
+                .valueEquals("X-Response-Header", "Transformed")
                 .expectBody()
                 .jsonPath("$.headers.Myheader")
                 .isEqualTo("MyURI");
