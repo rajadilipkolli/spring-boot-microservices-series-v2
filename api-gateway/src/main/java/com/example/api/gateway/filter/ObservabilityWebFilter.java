@@ -88,6 +88,6 @@ class ObservabilityWebFilter implements WebFilter {
         if (span.getSpanContext().isValid()) {
             return span.getSpanContext().getTraceId();
         }
-        return UUID.randomUUID().toString();
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }

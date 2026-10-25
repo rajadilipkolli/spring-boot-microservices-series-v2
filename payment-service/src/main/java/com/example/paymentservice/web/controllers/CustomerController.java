@@ -14,6 +14,7 @@ import com.example.paymentservice.utils.AppConstants;
 import com.example.paymentservice.web.api.CustomerApi;
 import jakarta.validation.Valid;
 import java.net.URI;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +41,7 @@ class CustomerController implements CustomerApi {
         this.orderProxyService = orderProxyService;
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public PagedResult<CustomerResponse> getAllCustomers(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
@@ -143,7 +144,7 @@ class CustomerController implements CustomerApi {
      * @throws io.github.resilience4j.circuitbreaker.CallNotPermittedException if the order circuit
      *     breaker rejects the call
      */
-    @GetMapping("/{id}/orders")
+    @GetMapping(value = "/{id}/orders", produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public ResponseEntity<PagedResult<OrderResponse>> getOrdersByCustomerId(
             @PathVariable Long id,

@@ -30,11 +30,15 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/customers/by-email'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/customers/{id}/orders'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/customers/name/{name}'].get").exists())
-                // Check paginated 200 schema resolves concrete element type CustomerResponse
+                // Check paginated 200 schema resolves concrete element types
                 .andExpect(jsonPath("$.components.schemas.CustomerResponse").exists())
                 .andExpect(
                         jsonPath(
-                                        "$.components.schemas.PagedResultCustomerResponse.properties.data.items.$ref")
-                                .value(containsString("CustomerResponse")));
+                                        "$.paths['/api/customers'].get.responses['200'].content['application/json'].schema.$ref")
+                                .value(containsString("PagedResultCustomerResponse")))
+                .andExpect(
+                        jsonPath(
+                                        "$.paths['/api/customers/{id}/orders'].get.responses['200'].content['application/json'].schema.$ref")
+                                .value(containsString("PagedResultOrderResponse")));
     }
 }
