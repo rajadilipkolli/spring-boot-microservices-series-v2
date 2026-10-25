@@ -24,8 +24,8 @@ class ConsumerProtocolIntegrationTest extends AbstractIntegrationTest {
     void verifiesConsumerProtocolGroupType() {
         String bootstrapServers = String.join(",", kafkaConnectionDetails.getBootstrapServers());
         try (Admin admin =
-                Admin.create(
-                        Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+                     Admin.create(
+                             Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
             await().atMost(Duration.ofSeconds(60))
                     .pollInterval(Duration.ofMillis(500))
                     .untilAsserted(
