@@ -18,12 +18,6 @@ spring:
     gateway:
       server:
         webflux:
-          global-filter:
-            local-response-cache:
-              enabled: false
-          filter:
-            local-response-cache:
-              enabled: true
           discovery:
             locator:
               enabled: true
@@ -57,10 +51,6 @@ spring:
               predicates:
                 - Path=/catalog-service/**
               filters:
-                - name: LocalResponseCache
-                  args:
-                    size: 10MB
-                    timeToLive: 1m
                 - name: Retry
                   args:
                     retries: 3

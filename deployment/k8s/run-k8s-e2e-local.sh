@@ -199,12 +199,82 @@ fi
 # 9. Validate Network Policies (Mirrors CI: Validate Network Policies)
 # ---------------------------------------------------------------------------
 echo "=> Step 9: Validating Network Policies..."
-kubectl run test-api-gateway --rm -i --image=busybox:1.36 --labels="app=api-gateway" -n "$NAMESPACE" --restart=Never -- nc -z catalog-service 18080 || (echo "Allowed path failed" && exit 1)
-if kubectl run test-catalog-service --rm -i --image=busybox:1.36 --labels="app=catalog-service" -n "$NAMESPACE" --restart=Never -- nc -w 3 -z api-gateway 8765; then
+run_probe() {
+  local pod_name="$1"
+  local app_label="$2"
+  local target_host="$3"
+  local target_port="$4"
+  local timeout_flag="${5:-}"
+
+  # Clean up any leftover probe pod before starting
+  kubectl delete pod "$pod_name" -n "$NAMESPACE" --ignore-not-found --wait=true >/dev/null 2>&1 || true
+
+  # Ensure the probe pod is deleted upon function exit
+  trap 'kubectl delete pod "$pod_name" -n "$NAMESPACE" --ignore-not-found --wait=true >/dev/null 2>&1 || true' RETURN
+
+  echo "Creating probe pod $pod_name..."
+  if ! kubectl run "$pod_name" \
+    --image=busybox:1.36 \
+    --labels="app=$app_label" \
+    -n "$NAMESPACE" \
+    --restart=Never \
+    --attach=false \
+    --command -- sh -c "nc $timeout_flag -z $target_host $target_port; echo \"NC_STATUS:\$?\""; then
+    echo "Error: Failed to create probe pod $pod_name" >&2
+    return 2
+  fi
+
+  echo "Waiting for probe pod $pod_name to complete..."
+  if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/"$pod_name" -n "$NAMESPACE" --timeout=60s; then
+    echo "Error: Probe pod $pod_name failed to complete or timed out" >&2
+    kubectl describe pod "$pod_name" -n "$NAMESPACE" >&2 || true
+    return 2
+  fi
+
+  local pod_logs
+  pod_logs=$(kubectl logs "$pod_name" -n "$NAMESPACE" 2>&1) || {
+    echo "Error: Failed to retrieve logs for probe pod $pod_name" >&2
+    return 2
+  }
+
+  local nc_status
+  nc_status=$(echo "$pod_logs" | sed -n 's/^NC_STATUS://p' | tr -d '\r')
+  if [[ -z "$nc_status" ]]; then
+    echo "Error: Could not parse NC_STATUS from probe pod $pod_name logs:" >&2
+    echo "$pod_logs" >&2
+    return 2
+  fi
+
+  return "$nc_status"
+}
+
+set +e
+run_probe test-api-gateway api-gateway catalog-service 18080
+status_allowed=$?
+set -e
+
+if [ "$status_allowed" -eq 2 ]; then
+  echo "Allowed path probe test execution failed (pod lifecycle/wait/log error)" >&2
+  exit 1
+elif [ "$status_allowed" -ne 0 ]; then
+  echo "Allowed path failed (nc status: $status_allowed)" >&2
+  exit 1
+fi
+echo "Allowed path succeeded."
+
+set +e
+run_probe test-catalog-service catalog-service api-gateway 8765 "-w 3"
+status_disallowed=$?
+set -e
+
+if [ "$status_disallowed" -eq 2 ]; then
+  echo "Disallowed path probe test execution failed (pod lifecycle/wait/log error)" >&2
+  exit 1
+elif [ "$status_disallowed" -eq 0 ]; then
   echo "Disallowed path succeeded!" >&2
   exit 1
 else
-  echo "Disallowed path blocked."
+  echo "Disallowed path blocked (nc status: $status_disallowed)."
 fi
 
 # ---------------------------------------------------------------------------

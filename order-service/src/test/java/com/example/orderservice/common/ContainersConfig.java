@@ -20,7 +20,6 @@ public class ContainersConfig {
     @ServiceConnection
     @RestartScope
     KafkaContainer kafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.4.0"))
-                .withReuse(true);
+        return new KafkaContainer(DockerImageName.parse("apache/kafka-native").withTag("4.4.0"));
     }
 }

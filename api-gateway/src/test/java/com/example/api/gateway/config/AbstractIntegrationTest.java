@@ -56,22 +56,7 @@ public abstract class AbstractIntegrationTest {
                             "correlation-test",
                             ObservabilityWebFilterIntegrationTest.class,
                             ObservabilityWebFilterIntegrationTest.class.getSimpleName()
-                                    + "/correlation-test.json")
-                    .withMappingFromResource(
-                            "catalog-service-cache",
-                            CacheAndTransformationIntegrationTest.class,
-                            CacheAndTransformationIntegrationTest.class.getSimpleName()
-                                    + "/catalog-service-cache.json")
-                    .withMappingFromResource(
-                            "catalog-service-cache-second",
-                            CacheAndTransformationIntegrationTest.class,
-                            CacheAndTransformationIntegrationTest.class.getSimpleName()
-                                    + "/catalog-service-cache-second.json")
-                    .withMappingFromResource(
-                            "transform-service",
-                            CacheAndTransformationIntegrationTest.class,
-                            CacheAndTransformationIntegrationTest.class.getSimpleName()
-                                    + "/transform-service.json");
+                                    + "/correlation-test.json");
 
     static {
         wireMockServer.start();
