@@ -1,30 +1,49 @@
 #!/usr/bin/env bash
-set -e
+# ---------------------------------------------------------------------------
+# undeploy.sh — Unified Kubernetes undeployment script for all overlays
+#
+# Usage:
+#   ./undeploy.sh [dev|ci|staging|prod]
+# ---------------------------------------------------------------------------
+set -euo pipefail
 
-echo "Destroying dev overlay..."
-kubectl delete -k overlays/dev/ --ignore-not-found=true
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+OVERLAY="${1:-dev}"
+UNDEPLOY_TIMEOUT="${UNDEPLOY_TIMEOUT:-300}"
+
+echo "=== Destroying overlay: '${OVERLAY}' ==="
+
+if [[ -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
+  kubectl delete -k "${SCRIPT_DIR}/overlays/${OVERLAY}/" --ignore-not-found=true
+fi
+
+if [[ "$OVERLAY" == "prod" ]]; then
+  echo "Destroying Strimzi operator..."
+  kubectl delete -f "${SCRIPT_DIR}/overlays/prod/strimzi-operator.yaml" --ignore-not-found=true
+  echo "Cleaning up persistent volumes..."
+  kubectl delete pvc --all -n retailstore --ignore-not-found=true
+fi
 
 echo "Waiting for namespace deletion to complete..."
-UNDEPLOY_TIMEOUT="${UNDEPLOY_TIMEOUT:-300}"
 elapsed=0
 while true; do
-  output=$(kubectl get namespace retailstore 2>&1)
-  status=$?
-  if [ $status -eq 0 ]; then
-    if [ "$elapsed" -ge "$UNDEPLOY_TIMEOUT" ]; then
-      echo "Timed out after ${UNDEPLOY_TIMEOUT}s waiting for namespace deletion." >&2
-      exit 1
-    fi
-    echo "Namespace still terminating, waiting..."
-    sleep 5
-    elapsed=$((elapsed + 5))
-    continue
-  fi
+  output=$(kubectl get namespace retailstore 2>&1 || true)
   if echo "$output" | grep -qi "NotFound"; then
     break
   fi
-  echo "Failed to check namespace status: $output" >&2
-  exit 1
+  if [ "$elapsed" -ge "$UNDEPLOY_TIMEOUT" ]; then
+    echo "Timed out after ${UNDEPLOY_TIMEOUT}s waiting for namespace deletion." >&2
+    if command -v jq >/dev/null 2>&1; then
+      echo "Force clearing namespace finalizers..."
+      kubectl get namespace retailstore -o json | jq '.spec.finalizers=[]' > ns-without-finalizers.json
+      kubectl replace --raw /api/v1/namespaces/retailstore/finalize -f ./ns-without-finalizers.json || true
+      rm -f ns-without-finalizers.json
+    fi
+    exit 1
+  fi
+  echo "Namespace still terminating, waiting..."
+  sleep 5
+  elapsed=$((elapsed + 5))
 done
 
-echo "Undeployment complete."
+echo "=== Undeployment of '${OVERLAY}' complete ==="

@@ -1,7 +1,9 @@
 # ---------------------------------------------------------------------------
-# Keycloak provider — authenticates against the master realm using admin-cli
-# which supports the Resource Owner Password Credentials grant without
-# requiring a client secret.
+# Keycloak provider (keycloak/keycloak) — authenticates against the master
+# realm using admin-cli which supports the Resource Owner Password Credentials
+# grant without requiring a client secret.
+#
+# The empty default base_path is intentional for Quarkus-based Keycloak 26.8.1.
 # ---------------------------------------------------------------------------
 provider "keycloak" {
   url       = var.keycloak_url

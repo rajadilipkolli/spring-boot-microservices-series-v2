@@ -56,7 +56,8 @@ resource "keycloak_user_roles" "retail_roles" {
 
   role_ids = [
     data.keycloak_role.default_roles_retailstore.id,
-    # Client role ADMIN — dependency graph: realm → client → client role → user role assignment
+    # Client roles ADMIN and OPERATOR — dependency graph: realm → client → client role → user role assignment
     keycloak_role.webapp_admin_role.id,
+    keycloak_role.webapp_operator_role.id,
   ]
 }
