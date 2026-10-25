@@ -20,6 +20,7 @@ spring:
       key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
+        group.protocol: consumer
         spring:
           deserializer:
             key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
