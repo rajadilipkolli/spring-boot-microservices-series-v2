@@ -14,6 +14,7 @@ import com.example.inventoryservice.inventory.shared.NonSQLContainersConfig;
 import com.example.inventoryservice.inventory.shared.SQLContainersConfig;
 import com.example.inventoryservice.inventory.shared.TestStockOrderListenerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -45,6 +46,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected ProcessedOrderEventRepository processedOrderEventRepository;
 
     @Autowired protected TestStockOrderListenerConfig stockOrderListener;
+
+    @Autowired protected KafkaConnectionDetails kafkaConnectionDetails;
 
     @Autowired protected InventoryOrderManageService inventoryOrderManageService;
 }

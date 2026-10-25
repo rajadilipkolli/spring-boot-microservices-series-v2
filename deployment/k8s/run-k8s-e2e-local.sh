@@ -196,6 +196,30 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 8b. Validate Kafka Consumer Groups Protocol
+# ---------------------------------------------------------------------------
+echo "=> Step 8b: Validating Kafka Consumer Groups Protocol..."
+groups_output=$(kubectl exec -n "$NAMESPACE" statefulset/kafka -- /bin/bash -c "/opt/kafka/bin/kafka-groups.sh --bootstrap-server localhost:9092 --list")
+echo "Current Kafka groups:"
+echo "$groups_output"
+
+for group in payment stock product; do
+  if ! echo "$groups_output" | grep -E "^${group}[[:space:]]+.*[[:space:]]+consumer([[:space:]]|$)"; then
+    echo "Error: Group '$group' is not using protocol 'consumer'." >&2
+    echo "$groups_output" >&2
+    exit 1
+  fi
+  echo "Group '$group' verified with protocol 'consumer'."
+done
+
+if ! echo "$groups_output" | grep -E "^order-service[[:space:]]+.*[[:space:]]+classic([[:space:]]|$)"; then
+  echo "Error: 'order-service' is not using classic protocol." >&2
+  echo "$groups_output" >&2
+  exit 1
+fi
+echo "Group 'order-service' verified with classic Streams protocol."
+
+# ---------------------------------------------------------------------------
 # 9. Validate Network Policies (Mirrors CI: Validate Network Policies)
 # ---------------------------------------------------------------------------
 echo "=> Step 9: Validating Network Policies..."

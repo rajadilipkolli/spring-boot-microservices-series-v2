@@ -20,6 +20,7 @@ import com.example.paymentservice.services.listener.KafkaListenerConfig;
 import com.example.paymentservice.services.provider.InternalLedgerAdapter;
 import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -74,6 +75,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected PlatformTransactionManager transactionManager;
 
     @Autowired protected InternalLedgerAdapter ledgerAdapter;
+
+    @Autowired protected KafkaConnectionDetails kafkaConnectionDetails;
 
     @MockitoSpyBean protected OutboxEventRepository outboxRepositorySpy;
 }

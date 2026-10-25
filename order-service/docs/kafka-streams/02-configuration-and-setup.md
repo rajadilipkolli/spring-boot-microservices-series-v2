@@ -477,6 +477,10 @@ Materialized.<Long, OrderDto>as(store)
 
 ## 🏭 Production Configuration
 
+> [!IMPORTANT]
+> **Consumer Protocol Boundary & Streams Compatibility**:
+> `order-service` stays on the `classic` group protocol for Kafka Streams. Setting `group.protocol=consumer` is invalid for Streams and will result in `StreamsConfig` configuration rejection. Migrating Streams to the new group coordinator protocol requires a separate offline migration with `group.protocol=streams` once supported. Note that configuration settings like `session.timeout.ms` (shown below) apply only to classic Streams.
+
 ### Complete Production Configuration
 
 ```yaml

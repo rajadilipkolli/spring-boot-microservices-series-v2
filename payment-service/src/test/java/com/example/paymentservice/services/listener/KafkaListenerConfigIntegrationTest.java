@@ -23,6 +23,7 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
+
     private CustomersRecord customer;
 
     /** Replaces existing customers with a uniquely named customer and verifies it was persisted. */
@@ -85,9 +86,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
 
         // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        await().pollInterval(Duration.ofMillis(100))
+                .atMost(Duration.ofSeconds(30))
                 .untilAsserted(
                         () -> {
                             CustomersRecord persistedCustomer =
@@ -111,10 +111,9 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 String.valueOf(orderDto.orderId()),
                 TestData.withCustomerId(nonExistentCustomerId, orderDto));
 
-        // Then
-        await().pollDelay(3, TimeUnit.SECONDS)
-                .pollInterval(Duration.ofSeconds(1))
-                .atMost(Duration.ofSeconds(5))
+        // Allow asynchronous consumer delivery and match this order, since the latch is shared.
+        await().pollInterval(Duration.ofMillis(100))
+                .atMost(Duration.ofSeconds(30))
                 .untilAsserted(
                         () ->
                                 assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
