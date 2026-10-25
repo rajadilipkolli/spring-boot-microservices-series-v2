@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-        info = @Info(title = "payment-service", version = "v1"),
+        info =
+                @Info(
+                        title = "payment-service",
+                        version = "v1",
+                        description = "APIs related to Payment"),
         servers = @Server(url = "${server.servlet.contextPath}"))
 class SwaggerConfig {}

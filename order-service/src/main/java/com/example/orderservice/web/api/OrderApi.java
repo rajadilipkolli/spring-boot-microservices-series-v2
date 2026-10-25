@@ -9,7 +9,10 @@ package com.example.orderservice.web.api;
 import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.request.OrderPaginationRequest;
+import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.services.OrderGeneratorService;
+import com.example.orderservice.web.controllers.OrderController.GenericResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -18,6 +21,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,6 +30,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Validated
 @Tag(name = "order-controller", description = "the order-controller API")
@@ -49,37 +58,212 @@ public interface OrderApi {
                             + "precedence when both forms are supplied. Pages start at zero; "
                             + "page sizes must be positive and are capped at 2000.",
             tags = {"order-controller"},
+            responses = {@ApiResponse(responseCode = "200", description = "Success")})
+    PagedResult<OrderResponse> getAllOrders(
+            @Valid OrderPaginationRequest pagination, @Parameter(hidden = true) Sort sort);
+
+    /**
+     * Retrieves an order, using an HTTP 503 response with an empty order for failures handled by
+     * the circuit-breaker fallback. A missing order remains an error.
+     *
+     * @param delay optional pause in seconds before lookup; null or non-positive values do not
+     *     pause. Interruption restores the thread's interrupt flag and lookup continues.
+     * @return HTTP 200 with the order, or the HTTP 503 fallback response
+     * @throws com.example.orderservice.exception.OrderNotFoundException if no order matches
+     */
+    @Operation(
+            summary = "fetches order by id",
+            description = "Retrieves an order by its unique ID.",
+            tags = {"order-controller"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
-                        description = "Success",
+                        description = "Order found",
                         content = {
                             @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PagedResult.class))
+                                    schema = @Schema(implementation = OrderResponse.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Order not found",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "503",
+                        description = "Service unavailable fallback",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = OrderResponse.class))
                         })
             })
-    PagedResult<OrderResponse> getAllOrders(
-            @Valid OrderPaginationRequest pagination, @Parameter(hidden = true) Sort sort);
+    ResponseEntity<OrderResponse> getOrderById(
+            @Parameter(name = "id", description = "Order ID", example = "1") @PathVariable Long id,
+            @Parameter(name = "delay", description = "Simulated delay in seconds")
+                    @RequestParam(required = false)
+                    Integer delay);
+
+    /**
+     * Checks requested product codes against the catalog, saves the order, and publishes its
+     * persisted representation as an event. Catalog request, persistence, and event publication
+     * failures propagate.
+     *
+     * @return HTTP 201 with the saved order and its resource URI in the Location header
+     * @throws com.example.orderservice.exception.ProductNotFoundException if the catalog reports
+     *     that the requested products do not all exist
+     */
+    @Operation(
+            summary = "creates a new order",
+            description = "Creates a new order from the supplied request.",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "201",
+                        description = "Order created",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = OrderResponse.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Invalid order request",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        })
+            })
+    ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest);
+
+    /**
+     * Updates an order's customer, delivery address, and items and saves the result. Persistence
+     * failures propagate.
+     *
+     * @return HTTP 200 with the updated order
+     * @throws com.example.orderservice.exception.OrderNotFoundException if no order matches
+     */
+    @Operation(
+            summary = "updates an existing order",
+            description = "Updates an order by its ID.",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Order updated",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = OrderResponse.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Invalid order request",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Order not found",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        })
+            })
+    ResponseEntity<OrderResponse> updateOrder(
+            @Parameter(name = "id", description = "Order ID", example = "1") @PathVariable Long id,
+            @RequestBody @Valid OrderRequest orderRequest);
+
+    /**
+     * Soft deletes an active order while retaining its items and status. Persistence failures
+     * propagate.
+     *
+     * @return HTTP 202 with no body
+     * @throws com.example.orderservice.exception.OrderNotFoundException if the order is absent or
+     *     already deleted
+     */
+    @Operation(
+            summary = "deletes an order",
+            description = "Soft-deletes an active order.",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "202",
+                        description = "Order deletion accepted",
+                        content = @Content),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "Order not found",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        })
+            })
+    ResponseEntity<Void> deleteOrder(
+            @Parameter(name = "id", description = "Order ID", example = "1") @PathVariable Long id);
+
+    /**
+     * Schedules sample order generation in the background. Generation failures do not propagate to
+     * this response.
+     *
+     * @param idempotencyKey identifies a batch; keys already seen by this service instance skip
+     *     generation, including keys retained after a failed attempt
+     * @param batchSize number of orders from 1 through 10,000, or null for 10,000
+     * @return an acknowledgement with success set to true, without waiting for generation to
+     *     complete
+     */
+    @Operation(
+            summary = "generates mock orders",
+            description =
+                    "Asynchronously triggers sample order generation in the background and immediately returns HTTP 200 with an acknowledgement.",
+            tags = {"order-controller"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Order generation initiated",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = GenericResponse.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Validation error",
+                        content = {
+                            @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetail.class))
+                        })
+            })
+    GenericResponse createMockOrders(
+            @Parameter(name = "Idempotency-Key", description = "Idempotency key for generation")
+                    @RequestHeader(name = "Idempotency-Key", required = true)
+                    String idempotencyKey,
+            @Parameter(name = "batchSize", description = "Batch size between 1 and 10000")
+                    @RequestParam(required = false)
+                    @Min(1)
+                    @Max(OrderGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize);
 
     @Operation(
             summary = "fetches all orders for a customer",
             tags = {"order-controller"},
             responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = {
-                            @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PagedResult.class))
-                        }),
+                @ApiResponse(responseCode = "200", description = "Success"),
                 @ApiResponse(
                         responseCode = "400",
                         description = "Bad Request",
                         content = {
                             @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ProblemDetail.class))
                         })
             })
@@ -105,20 +289,13 @@ public interface OrderApi {
             summary = "searches orders based on a term and filters",
             tags = {"order-controller"},
             responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Success",
-                        content = {
-                            @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PagedResult.class))
-                        }),
+                @ApiResponse(responseCode = "200", description = "Success"),
                 @ApiResponse(
                         responseCode = "400",
                         description = "Bad Request",
                         content = {
                             @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ProblemDetail.class))
                         })
             })

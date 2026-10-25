@@ -15,6 +15,7 @@ import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
 import com.example.common.dto.PagedResult;
 import com.example.common.logging.Loggable;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -50,6 +51,7 @@ public class ProductController implements ProductApi {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<PagedResult<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
@@ -67,11 +69,13 @@ public class ProductController implements ProductApi {
     //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     //  @RateLimiter(name="default")
     //  @Bulkhead(name = "product-api")
+    @Override
     public Mono<ResponseEntity<ProductResponse>> getProductById(@PathVariable Long id) {
         return productService.findProductById(id).map(ResponseEntity::ok);
     }
 
     @GetMapping(value = "/product-code/{productCode}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> getProductByProductCode(
             @PathVariable String productCode,
             @RequestParam(required = false) Boolean fetchInStock,
@@ -85,6 +89,7 @@ public class ProductController implements ProductApi {
     }
 
     @GetMapping(value = "/exists", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductExistsResponse>> productExistsByProductCodes(
             @RequestParam List<String> productCodes) {
         return productService
@@ -101,6 +106,7 @@ public class ProductController implements ProductApi {
      * @return the generation result after saves complete
      */
     @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<GenerateProductsResponse> createRandomProducts(
             @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
             @RequestParam(required = false)
@@ -113,6 +119,7 @@ public class ProductController implements ProductApi {
     @PostMapping(
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> createProduct(
             @RequestBody @Valid ProductRequest productRequest) {
         return productService
@@ -133,6 +140,7 @@ public class ProductController implements ProductApi {
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> updateProduct(
             @PathVariable Long id, @RequestBody @Valid ProductRequest productRequest) {
         return productService
@@ -142,6 +150,7 @@ public class ProductController implements ProductApi {
     }
 
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findByIdWithMapping(id)
@@ -202,7 +211,13 @@ public class ProductController implements ProductApi {
         return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
 
-    public record ProductExistsResponse(boolean exists) {}
+    @Schema(description = "Response indicating whether product exists")
+    public record ProductExistsResponse(
+            @Schema(description = "True if product exists, false otherwise", example = "true")
+                    boolean exists) {}
 
-    public record GenerateProductsResponse(boolean success) {}
+    @Schema(description = "Response indicating success of product generation")
+    public record GenerateProductsResponse(
+            @Schema(description = "True if products were generated successfully", example = "true")
+                    boolean success) {}
 }

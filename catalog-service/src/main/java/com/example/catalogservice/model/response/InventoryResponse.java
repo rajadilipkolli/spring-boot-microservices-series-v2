@@ -6,7 +6,12 @@
 
 package com.example.catalogservice.model.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 
-public record InventoryResponse(String productCode, Integer availableQuantity)
+@Schema(description = "Inventory availability response")
+public record InventoryResponse(
+        @Schema(description = "Product code", example = "P100") String productCode,
+        @Schema(description = "Available quantity in stock", example = "50")
+                Integer availableQuantity)
         implements Serializable {}

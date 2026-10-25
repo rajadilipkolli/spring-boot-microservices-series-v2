@@ -3,20 +3,25 @@ package com.example.paymentservice.model.response;
 
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
+@Schema(description = "Customer details response")
 public record CustomerResponse(
-        @JsonFormat(shape = JsonFormat.Shape.STRING) Long customerId,
-        String name,
-        String email,
-        String phone,
-        String addressLine1,
-        String addressLine2,
-        String city,
-        String state,
-        String zipCode,
-        String country,
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
+        @Schema(type = "string", description = "Customer ID", example = "1")
+                @JsonFormat(shape = JsonFormat.Shape.STRING)
+                Long customerId,
+        @Schema(description = "Customer name", example = "John Doe") String name,
+        @Schema(description = "Customer email", example = "john.doe@example.com") String email,
+        @Schema(description = "Customer phone number", example = "+1234567890") String phone,
+        @Schema(description = "Address line 1", example = "123 Main St") String addressLine1,
+        @Schema(description = "Address line 2", example = "Suite 100") String addressLine2,
+        @Schema(description = "City", example = "San Francisco") String city,
+        @Schema(description = "State", example = "CA") String state,
+        @Schema(description = "Zip code", example = "94105") String zipCode,
+        @Schema(description = "Country", example = "USA") String country,
+        @Schema(description = "Available funds amount", example = "1000.00")
+                @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
                 BigDecimal amountAvailable) {
 
     /**

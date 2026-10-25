@@ -11,6 +11,7 @@ import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,6 +21,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.List;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,23 +47,33 @@ public interface InventoryApi {
     @Operation(
             summary = "Returns inventory records using requested pagination and sort options",
             tags = {"inventory-controller"},
-            responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Successful retrieval",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema = @Schema(implementation = PagedResult.class)))
-            })
+            responses = {@ApiResponse(responseCode = "200", description = "Successful retrieval")})
     PagedResult<InventoryResponse> getAllInventories(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+            @Parameter(
+                            name = "pageNo",
+                            description = "Page number (0-based)",
+                            example = AppConstants.DEFAULT_PAGE_NUMBER)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+            @Parameter(
+                            name = "pageSize",
+                            description = "Number of items per page",
+                            example = AppConstants.DEFAULT_PAGE_SIZE)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
                     int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+            @Parameter(
+                            name = "sortBy",
+                            description = "Field to sort by",
+                            example = AppConstants.DEFAULT_SORT_BY)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
                     String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+            @Parameter(
+                            name = "sortDir",
+                            description = "Sort direction (asc or desc)",
+                            example = AppConstants.DEFAULT_SORT_DIRECTION)
+                    @RequestParam(
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
                     String sortDir);
 
     /**
@@ -85,10 +97,15 @@ public interface InventoryApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Inventory not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content = @Content)
             })
     ResponseEntity<InventoryResponse> getInventoryByProductCode(
-            @PathVariable String productCode, @RequestParam(required = false) Integer delay);
+            @Parameter(name = "productCode", description = "Product code", example = "P001")
+                    @PathVariable
+                    String productCode,
+            @Parameter(name = "delay", description = "Simulated delay in seconds before lookup")
+                    @RequestParam(required = false)
+                    Integer delay);
 
     /**
      * Returns HTTP 200 with a sorted inventory page restricted to the supplied product codes.
@@ -105,23 +122,36 @@ public interface InventoryApi {
             summary = "Returns inventory matching supplied product codes",
             tags = {"inventory-controller"},
             responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Inventory list retrieved",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema = @Schema(implementation = PagedResult.class)))
+                @ApiResponse(responseCode = "200", description = "Inventory list retrieved")
             })
     ResponseEntity<PagedResult<InventoryResponse>> getInventoryByProductCodes(
-            @RequestParam List<String> codes,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+            @Parameter(name = "codes", description = "List of product codes") @RequestParam
+                    List<String> codes,
+            @Parameter(
+                            name = "pageNo",
+                            description = "Page number (0-based)",
+                            example = AppConstants.DEFAULT_PAGE_NUMBER)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+            @Parameter(
+                            name = "pageSize",
+                            description = "Number of items per page",
+                            example = AppConstants.DEFAULT_PAGE_SIZE)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
                     int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+            @Parameter(
+                            name = "sortBy",
+                            description = "Field to sort by",
+                            example = AppConstants.DEFAULT_SORT_BY)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
                     String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+            @Parameter(
+                            name = "sortDir",
+                            description = "Sort direction (asc or desc)",
+                            example = AppConstants.DEFAULT_SORT_DIRECTION)
+                    @RequestParam(
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
                     String sortDir);
 
     /**
@@ -139,11 +169,30 @@ public interface InventoryApi {
             summary = "Updates a generated batch using idempotency key",
             tags = {"inventory-controller"},
             responses = {
-                @ApiResponse(responseCode = "200", description = "Batch update completed")
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Batch update completed",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                        schema = @Schema(type = "boolean"))),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Validation error",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
     boolean updateInventoryWithRandomValue(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) @Min(1) @Max(10000) Integer batchSize);
+            @Parameter(name = "Idempotency-Key", description = "Idempotency key for batch update")
+                    @RequestHeader(name = "Idempotency-Key")
+                    String idempotencyKey,
+            @Parameter(name = "batchSize", description = "Batch size between 1 and 10000")
+                    @RequestParam(required = false)
+                    @Min(1)
+                    @Max(10000)
+                    Integer batchSize);
 
     /**
      * Creates inventory or restores deleted inventory from a validated request and returns its
@@ -161,7 +210,22 @@ public interface InventoryApi {
                         content =
                                 @Content(
                                         mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema = @Schema(implementation = InventoryResponse.class)))
+                                        schema =
+                                                @Schema(implementation = InventoryResponse.class))),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Invalid request content",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "Inventory already exists for product code",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
     InventoryResponse createInventory(@RequestBody @Valid InventoryRequest inventoryRequest);
 
@@ -182,12 +246,21 @@ public interface InventoryApi {
                                         schema =
                                                 @Schema(implementation = InventoryResponse.class))),
                 @ApiResponse(
+                        responseCode = "400",
+                        description = "Invalid request content",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(
                         responseCode = "404",
                         description = "Inventory not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content = @Content)
             })
     ResponseEntity<InventoryResponse> updateInventory(
-            @PathVariable Long id, @RequestBody @Valid InventoryRequest inventoryRequest);
+            @Parameter(name = "id", description = "Inventory ID", example = "1") @PathVariable
+                    Long id,
+            @RequestBody @Valid InventoryRequest inventoryRequest);
 
     /**
      * Updates inventory by product code and returns its representation with HTTP 200, or HTTP 404
@@ -209,14 +282,19 @@ public interface InventoryApi {
                 @ApiResponse(
                         responseCode = "400",
                         description = "Bad request",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE)),
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
                 @ApiResponse(
                         responseCode = "404",
                         description = "Inventory not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content = @Content)
             })
     ResponseEntity<InventoryResponse> updateInventoryByProductCode(
-            @PathVariable String productCode,
+            @Parameter(name = "productCode", description = "Product code", example = "P001")
+                    @PathVariable
+                    String productCode,
             @RequestBody @Valid InventoryRequest inventoryRequest);
 
     /**
@@ -238,7 +316,9 @@ public interface InventoryApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Inventory not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content = @Content)
             })
-    ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id);
+    ResponseEntity<InventoryResponse> deleteInventory(
+            @Parameter(name = "id", description = "Inventory ID", example = "1") @PathVariable
+                    Long id);
 }

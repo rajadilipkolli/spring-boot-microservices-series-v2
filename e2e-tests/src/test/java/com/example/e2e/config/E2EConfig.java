@@ -8,10 +8,15 @@ package com.example.e2e.config;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.config.HttpClientConfig;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +27,8 @@ public final class E2EConfig {
     private static final String DEFAULT_BASE_URL = "http://localhost:8765";
     private static final String DEFAULT_KEYCLOAK_URL = "http://localhost:9191";
     private static final String DEFAULT_WEBAPP_URL = "http://localhost:8080";
+
+    private static final AtomicBoolean WARMED_UP = new AtomicBoolean(false);
 
     private E2EConfig() {}
 
@@ -107,7 +114,12 @@ public final class E2EConfig {
                                     trustStore,
                                     System.getProperty("e2e.trustStorePassword", "changeit"));
         }
-        return RestAssuredConfig.config().sslConfig(sslConfig);
+        return RestAssuredConfig.config()
+                .sslConfig(sslConfig)
+                .httpClient(
+                        HttpClientConfig.httpClientConfig()
+                                .connectTimeout(Duration.ofSeconds(10))
+                                .readTimeout(Duration.ofSeconds(30)));
     }
 
     public static void initRestAssured() {
@@ -116,5 +128,45 @@ public final class E2EConfig {
         RestAssured.baseURI = baseUrl;
         RestAssured.config = restAssuredConfig();
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        warmupServicesIfEnabled();
+    }
+
+    private static void warmupServicesIfEnabled() {
+        boolean warmupEnabled =
+                Boolean.parseBoolean(System.getProperty("e2e.warmup.enabled", "true"));
+        if (!warmupEnabled || !WARMED_UP.compareAndSet(false, true)) {
+            return;
+        }
+
+        String batchId = UUID.randomUUID().toString();
+        log.info(
+                "Warming up services via API Gateway /api/v1/generate?batchSize=1 (batchId: {})...",
+                batchId);
+        try {
+            Response response =
+                    RestAssured.given()
+                            .spec(defaultRequestSpec())
+                            .header("Idempotency-Key", batchId)
+                            .queryParam("batchSize", 1)
+                            .when()
+                            .post("/api/v1/generate")
+                            .then()
+                            .extract()
+                            .response();
+
+            if (response.statusCode() == 200) {
+                log.info("Warm-up completed successfully: {}", response.asString());
+            } else {
+                log.warn(
+                        "Warm-up call returned status {}: {}. Continuing with test execution.",
+                        response.statusCode(),
+                        response.asString());
+            }
+        } catch (Exception ex) {
+            log.warn(
+                    "Warm-up call to /api/v1/generate encountered an error: {}. Continuing with test"
+                            + " execution.",
+                    ex.getMessage());
+        }
     }
 }

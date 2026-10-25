@@ -7,12 +7,14 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
 import com.example.paymentservice.utils.AppConstants;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,23 +39,33 @@ public interface CustomerApi {
     @Operation(
             summary = "Returns paginated customers",
             tags = {"customer-controller"},
-            responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Successful retrieval",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema = @Schema(implementation = PagedResult.class)))
-            })
+            responses = {@ApiResponse(responseCode = "200", description = "Successful retrieval")})
     PagedResult<CustomerResponse> getAllCustomers(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+            @Parameter(
+                            name = "pageNo",
+                            description = "Page number (0-based)",
+                            example = AppConstants.DEFAULT_PAGE_NUMBER)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+            @Parameter(
+                            name = "pageSize",
+                            description = "Number of items per page",
+                            example = AppConstants.DEFAULT_PAGE_SIZE)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
                     int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+            @Parameter(
+                            name = "sortBy",
+                            description = "Field to sort by",
+                            example = AppConstants.DEFAULT_SORT_BY)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
                     String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+            @Parameter(
+                            name = "sortDir",
+                            description = "Sort direction (asc or desc)",
+                            example = AppConstants.DEFAULT_SORT_DIRECTION)
+                    @RequestParam(
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
                     String sortDir);
 
     /**
@@ -76,9 +88,14 @@ public interface CustomerApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
-    ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id);
+    ResponseEntity<CustomerResponse> getCustomerById(
+            @Parameter(name = "id", description = "Customer ID", example = "1") @PathVariable
+                    Long id);
 
     /**
      * Retrieves a customer by an exact name match.
@@ -100,9 +117,15 @@ public interface CustomerApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
-    ResponseEntity<CustomerResponse> getCustomerByName(@PathVariable String name);
+    ResponseEntity<CustomerResponse> getCustomerByName(
+            @Parameter(name = "name", description = "Customer name", example = "John Doe")
+                    @PathVariable
+                    String name);
 
     /**
      * Retrieves a customer after lowercasing the email using the root locale.
@@ -124,9 +147,18 @@ public interface CustomerApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
-    ResponseEntity<CustomerResponse> getCustomerByEmail(@RequestParam String email);
+    ResponseEntity<CustomerResponse> getCustomerByEmail(
+            @Parameter(
+                            name = "email",
+                            description = "Customer email address",
+                            example = "john.doe@example.com")
+                    @RequestParam
+                    String email);
 
     /**
      * Creates a customer with a lowercase email address and the requested opening balance.
@@ -151,7 +183,17 @@ public interface CustomerApi {
                 @ApiResponse(
                         responseCode = "400",
                         description = "Invalid input",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "Customer already exists",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
     ResponseEntity<CustomerResponse> createCustomer(
             @RequestBody @Valid CustomerRequest customerRequest);
@@ -176,12 +218,24 @@ public interface CustomerApi {
                                         mediaType = MediaType.APPLICATION_JSON_VALUE,
                                         schema = @Schema(implementation = CustomerResponse.class))),
                 @ApiResponse(
+                        responseCode = "400",
+                        description = "Invalid input",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
     ResponseEntity<CustomerResponse> updateCustomer(
-            @PathVariable Long id, @RequestBody @Valid CustomerRequest customerRequest);
+            @Parameter(name = "id", description = "Customer ID", example = "1") @PathVariable
+                    Long id,
+            @RequestBody @Valid CustomerRequest customerRequest);
 
     /**
      * Deletes a customer after retrieving its details.
@@ -203,9 +257,14 @@ public interface CustomerApi {
                 @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
-    ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id);
+    ResponseEntity<CustomerResponse> deleteCustomer(
+            @Parameter(name = "id", description = "Customer ID", example = "1") @PathVariable
+                    Long id);
 
     /**
      * Retrieves customer orders after validating pagination and confirming the customer exists.
@@ -229,26 +288,56 @@ public interface CustomerApi {
             summary = "Returns customer orders",
             tags = {"customer-controller"},
             responses = {
+                @ApiResponse(responseCode = "200", description = "Orders retrieved"),
                 @ApiResponse(
-                        responseCode = "200",
-                        description = "Orders retrieved",
+                        responseCode = "400",
+                        description = "Invalid pagination parameters",
                         content =
                                 @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema = @Schema(implementation = PagedResult.class))),
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
                 @ApiResponse(
                         responseCode = "404",
                         description = "Customer not found",
-                        content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(
+                        responseCode = "503",
+                        description = "Order service unavailable",
+                        content =
+                                @Content(
+                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                        schema = @Schema(implementation = ProblemDetail.class)))
             })
     ResponseEntity<PagedResult<OrderResponse>> getOrdersByCustomerId(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
+            @Parameter(name = "id", description = "Customer ID", example = "1") @PathVariable
+                    Long id,
+            @Parameter(
+                            name = "pageNo",
+                            description = "Page number (0-based)",
+                            example = AppConstants.DEFAULT_PAGE_NUMBER)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
+            @Parameter(
+                            name = "pageSize",
+                            description = "Number of items per page",
+                            example = AppConstants.DEFAULT_PAGE_SIZE)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
                     int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
+            @Parameter(
+                            name = "sortBy",
+                            description = "Field to sort by",
+                            example = AppConstants.DEFAULT_SORT_BY)
+                    @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
                     String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
+            @Parameter(
+                            name = "sortDir",
+                            description = "Sort direction (asc or desc)",
+                            example = AppConstants.DEFAULT_SORT_DIRECTION)
+                    @RequestParam(
+                            defaultValue = AppConstants.DEFAULT_SORT_DIRECTION,
+                            required = false)
                     String sortDir);
 }

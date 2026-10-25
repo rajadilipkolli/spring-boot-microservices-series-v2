@@ -6,6 +6,7 @@
 
 package com.example.orderservice.model.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import java.util.Set;
 import org.springframework.data.domain.PageRequest;
@@ -13,13 +14,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 /** Raw pagination values, validated before creating a pageable. */
+@Schema(description = "Pagination and sorting request parameters")
 public record OrderPaginationRequest(
-        @Min(0) Integer page,
-        @Min(1) Integer size,
-        @Min(0) Integer pageNo,
-        @Min(1) Integer pageSize,
-        String sortBy,
-        String sortDir) {
+        @Schema(description = "Zero-based page index", example = "0") @Min(0) Integer page,
+        @Schema(description = "Page size (number of items)", example = "10") @Min(1) Integer size,
+        @Schema(description = "Zero-based page index alias", example = "0") @Min(0) Integer pageNo,
+        @Schema(description = "Page size alias", example = "10") @Min(1) Integer pageSize,
+        @Schema(description = "Property name to sort by", example = "id") String sortBy,
+        @Schema(description = "Sort direction (asc or desc)", example = "asc") String sortDir) {
 
     // Preserve Spring Data's default limit on the number of rows requested per page.
     private static final int MAX_PAGE_SIZE = 2000;

@@ -6,6 +6,7 @@ resources:
 patches:
   - target:
       kind: Deployment
+      name: "^(api-gateway|catalog-service|config-server|inventory-service|order-service|payment-service|retail-store-webapp|service-registry|keycloak)$"
     patch: |-
       - op: add
         path: /spec/template/spec/containers/0/env/-

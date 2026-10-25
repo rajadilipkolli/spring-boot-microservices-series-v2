@@ -20,6 +20,7 @@ import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -50,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @Validated
 @Loggable
-class OrderController implements OrderApi {
+public class OrderController implements OrderApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
@@ -73,7 +74,8 @@ class OrderController implements OrderApi {
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     @RateLimiter(name = "default")
     @Bulkhead(name = "order-api")
-    ResponseEntity<OrderResponse> getOrderById(
+    @Override
+    public ResponseEntity<OrderResponse> getOrderById(
             @PathVariable Long id, @RequestParam(required = false) Integer delay) {
         // Allow tests to simulate slow responses by sleeping for `delay` seconds
         if (delay != null && delay > 0) {
@@ -99,14 +101,17 @@ class OrderController implements OrderApi {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
+    @Override
+    public ResponseEntity<OrderResponse> createOrder(
+            @RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
                 .body(orderResponse);
     }
 
     @PutMapping("/{id}")
-    ResponseEntity<OrderResponse> updateOrder(
+    @Override
+    public ResponseEntity<OrderResponse> updateOrder(
             @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
@@ -123,13 +128,15 @@ class OrderController implements OrderApi {
      * @throws OrderNotFoundException if the order is absent or already deleted
      */
     @DeleteMapping("/{id}")
-    ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
+    @Override
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrderById(id);
         return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/generate")
-    GenericResponse createMockOrders(
+    @Override
+    public GenericResponse createMockOrders(
             @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
             @RequestParam(required = false)
                     @Min(1)
@@ -177,5 +184,10 @@ class OrderController implements OrderApi {
                 orderService.searchOrders(term, mode, customerId, status, threshold, pageable));
     }
 
-    private record GenericResponse(boolean success) {}
+    @Schema(description = "Generic operation response")
+    public record GenericResponse(
+            @Schema(
+                            description = "Indicates whether the operation was successful",
+                            example = "true")
+                    boolean success) {}
 }

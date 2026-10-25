@@ -83,11 +83,15 @@ class ObservabilityWebFilter implements WebFilter {
                         });
     }
 
+    /**
+     * Returns the current span's trace ID, or a new random UUID without hyphens when the span
+     * context is invalid.
+     */
     private String getTraceId() {
         Span span = Span.current();
         if (span.getSpanContext().isValid()) {
             return span.getSpanContext().getTraceId();
         }
-        return UUID.randomUUID().toString();
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }
