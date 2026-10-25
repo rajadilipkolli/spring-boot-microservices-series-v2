@@ -36,6 +36,18 @@ import reactor.core.publisher.Mono;
 @Tag(name = "product")
 public interface ProductApi {
 
+    /**
+     * Returns a sorted page of active products with inventory availability. Redis failures are
+     * tolerated; database, cache-generation, and unhandled inventory errors propagate through the
+     * returned Mono.
+     *
+     * @param pageNo zero-based page index
+     * @param pageSize positive maximum number of products per page
+     * @param sortBy product property to sort by
+     * @param sortDir ascending for {@code asc}, ignoring case; descending otherwise
+     * @return the cached or loaded page; invalid pagination emits IllegalArgumentException on a
+     *     cache miss
+     */
     @Operation(
             summary = "Get all products",
             description = "Retrieves a paginated list of products.",
@@ -71,6 +83,14 @@ public interface ProductApi {
                             required = false)
                     String sortDir);
 
+    /**
+     * Retrieves product details and inventory availability, which may be cached for five minutes.
+     * Redis failures are tolerated; database, cache-generation, and unhandled inventory errors
+     * propagate through the returned Mono.
+     *
+     * @return HTTP 200 with the product, or ProductNotFoundException as an error if absent or
+     *     deleted on a cache miss
+     */
     @Operation(
             summary = "Get product by ID",
             description = "Retrieves a single product by its database ID.",
@@ -95,6 +115,18 @@ public interface ProductApi {
             @Parameter(name = "id", description = "Product ID", example = "1") @PathVariable
                     Long id);
 
+    /**
+     * Retrieves a product by case-insensitive code, optionally refreshing inventory availability.
+     * Redis failures are tolerated; database, cache-generation, and unhandled inventory errors
+     * propagate through the returned Mono.
+     *
+     * @param fetchInStock true to refresh availability even on cache hits; null or false leaves it
+     *     false
+     * @param delay optional delay in seconds applied to a successful result; null or non-positive
+     *     values add no delay
+     * @return HTTP 200 with the product, or ProductNotFoundException as an error if absent or
+     *     deleted on a cache miss
+     */
     @Operation(
             summary = "Get product by code",
             description = "Retrieves a single product by its unique product code.",
@@ -128,6 +160,13 @@ public interface ProductApi {
                     @RequestParam(required = false)
                     Integer delay);
 
+    /**
+     * Checks whether the distinct count of active products matching the codes equals the input list
+     * size. Matching ignores case; repeated codes can make the result false, and an empty list
+     * yields true. Database errors propagate through the returned Mono.
+     *
+     * @return HTTP 200 with the existence result
+     */
     @Operation(
             summary = "Check products exist by codes",
             description = "Verifies if products exist for the given list of product codes.",
@@ -149,6 +188,17 @@ public interface ProductApi {
                     @RequestParam
                     List<String> productCodes);
 
+    /**
+     * Generates and saves sample products, reusing products with matching codes. New or restored
+     * products produce creation outbox events, and product caches are invalidated. Save and
+     * cache-generation errors propagate through the returned Mono; Redis deletion failures are
+     * suppressed.
+     *
+     * @param idempotencyKey included in each product code with its zero-based batch index
+     * @param batchSize number of products from 1 through 10,000, or null for 101
+     * @return a successful generation result after all saves complete
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     */
     @Operation(
             summary = "Generate random products",
             description = "Generates and saves sample products in batches.",
@@ -184,6 +234,16 @@ public interface ProductApi {
                     @RequestParam(required = false)
                     @Min(1) @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE) Integer batchSize);
 
+    /**
+     * Returns an active product with the same case-insensitive code, restores a deleted product, or
+     * creates a new one. New or restored products produce a creation outbox event, and product
+     * caches are invalidated. Redis deletion failures are suppressed; database, outbox, and
+     * cache-generation errors propagate through the returned Mono.
+     *
+     * @return HTTP 201 with the product and its resource URI in the Location header, including when
+     *     an existing product is reused; an unresolved duplicate-key race emits
+     *     ProductAlreadyExistsException
+     */
     @Operation(
             summary = "Create product",
             description = "Creates a new product in the catalog.",
@@ -214,6 +274,14 @@ public interface ProductApi {
     Mono<ResponseEntity<ProductResponse>> createProduct(
             @RequestBody @Valid ProductRequest productRequest);
 
+    /**
+     * Updates an active product, records an update outbox event, and invalidates product caches.
+     * Redis deletion failures are suppressed; database, outbox, cache-generation, and optimistic
+     * locking errors propagate through the returned Mono.
+     *
+     * @return HTTP 200 with the updated product, or ProductNotFoundException as an error if absent
+     *     or deleted
+     */
     @Operation(
             summary = "Update product",
             description = "Updates an existing product by its ID.",
@@ -253,6 +321,15 @@ public interface ProductApi {
                     Long id,
             @RequestBody @Valid ProductRequest productRequest);
 
+    /**
+     * Soft deletes an active product, records a deletion outbox event, and invalidates product
+     * caches. Redis deletion failures are suppressed; database, outbox, and cache-generation errors
+     * propagate through the returned Mono.
+     *
+     * @return HTTP 200 with the details retrieved before deletion, or an empty HTTP 404 response if
+     *     the initial lookup is empty; ProductNotFoundException is emitted if the product is absent
+     *     or deleted during the subsequent deletion lookup
+     */
     @Operation(
             summary = "Delete product",
             description = "Soft-deletes a product by its ID.",

@@ -62,6 +62,15 @@ public interface OrderApi {
     PagedResult<OrderResponse> getAllOrders(
             @Valid OrderPaginationRequest pagination, @Parameter(hidden = true) Sort sort);
 
+    /**
+     * Retrieves an order, using an HTTP 503 response with an empty order for failures handled by
+     * the circuit-breaker fallback. A missing order remains an error.
+     *
+     * @param delay optional pause in seconds before lookup; null or non-positive values do not
+     *     pause. Interruption restores the thread's interrupt flag and lookup continues.
+     * @return HTTP 200 with the order, or the HTTP 503 fallback response
+     * @throws com.example.orderservice.exception.OrderNotFoundException if no order matches
+     */
     @Operation(
             summary = "fetches order by id",
             description = "Retrieves an order by its unique ID.",
@@ -98,6 +107,15 @@ public interface OrderApi {
                     @RequestParam(required = false)
                     Integer delay);
 
+    /**
+     * Checks requested product codes against the catalog, saves the order, and publishes its
+     * persisted representation as an event. Catalog request, persistence, and event publication
+     * failures propagate.
+     *
+     * @return HTTP 201 with the saved order and its resource URI in the Location header
+     * @throws com.example.orderservice.exception.ProductNotFoundException if the catalog reports
+     *     that the requested products do not all exist
+     */
     @Operation(
             summary = "creates a new order",
             description = "Creates a new order from the supplied request.",
@@ -122,6 +140,13 @@ public interface OrderApi {
             })
     ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest);
 
+    /**
+     * Updates an order's customer, delivery address, and items and saves the result. Persistence
+     * failures propagate.
+     *
+     * @return HTTP 200 with the updated order
+     * @throws com.example.orderservice.exception.OrderNotFoundException if no order matches
+     */
     @Operation(
             summary = "updates an existing order",
             description = "Updates an order by its ID.",
@@ -156,6 +181,14 @@ public interface OrderApi {
             @Parameter(name = "id", description = "Order ID", example = "1") @PathVariable Long id,
             @RequestBody @Valid OrderRequest orderRequest);
 
+    /**
+     * Soft deletes an active order while retaining its items and status. Persistence failures
+     * propagate.
+     *
+     * @return HTTP 202 with no body
+     * @throws com.example.orderservice.exception.OrderNotFoundException if the order is absent or
+     *     already deleted
+     */
     @Operation(
             summary = "deletes an order",
             description = "Soft-deletes an active order.",
@@ -177,6 +210,16 @@ public interface OrderApi {
     ResponseEntity<Void> deleteOrder(
             @Parameter(name = "id", description = "Order ID", example = "1") @PathVariable Long id);
 
+    /**
+     * Schedules sample order generation in the background. Generation failures do not propagate to
+     * this response.
+     *
+     * @param idempotencyKey identifies a batch; keys already seen by this service instance skip
+     *     generation, including keys retained after a failed attempt
+     * @param batchSize number of orders from 1 through 10,000, or null for 10,000
+     * @return an acknowledgement with success set to true, without waiting for generation to
+     *     complete
+     */
     @Operation(
             summary = "generates mock orders",
             description =
