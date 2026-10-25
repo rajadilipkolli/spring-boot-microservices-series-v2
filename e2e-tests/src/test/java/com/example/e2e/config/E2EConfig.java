@@ -8,11 +8,13 @@ package com.example.e2e.config;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.config.HttpClientConfig;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.config.SSLConfig;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
@@ -112,7 +114,12 @@ public final class E2EConfig {
                                     trustStore,
                                     System.getProperty("e2e.trustStorePassword", "changeit"));
         }
-        return RestAssuredConfig.config().sslConfig(sslConfig);
+        return RestAssuredConfig.config()
+                .sslConfig(sslConfig)
+                .httpClient(
+                        HttpClientConfig.httpClientConfig()
+                                .connectTimeout(Duration.ofSeconds(10))
+                                .readTimeout(Duration.ofSeconds(30)));
     }
 
     public static void initRestAssured() {
