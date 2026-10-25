@@ -18,7 +18,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-KIND_CONFIG="$SCRIPT_ROOT/deployment/k8s/kind-config.yaml" 2>/dev/null || KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
+KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
@@ -173,6 +173,7 @@ set -e
 
 if (( mvn_exit != 0 )); then
   echo "E2E Maven tests encountered failures." >&2
+  exit "$mvn_exit"
 fi
 
 # Request webapp via Ingress (best-effort smoke check)
@@ -184,11 +185,11 @@ fi
 
 # OAuth2 Keycloak Test (best-effort smoke check)
 if curl -s -f -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
-  -d "client_id=retailstore-webapp" \
-  -d "client_secret=demo-throwaway-oauth-secret" \
-  -d "grant_type=password" \
-  -d "username=retail" \
-  -d "password=retail1234" | grep -q access_token; then
+  --data-urlencode "client_id=retailstore-webapp" \
+  --data-urlencode "client_secret=${TF_VAR_webapp_client_secret}" \
+  --data-urlencode "grant_type=password" \
+  --data-urlencode "username=retail" \
+  --data-urlencode "password=${KEYCLOAK_RETAIL_PASSWORD}" | grep -q access_token; then
   echo "Keycloak token endpoint returned access_token."
 else
   echo "Warning: Keycloak smoke check failed to obtain access_token."

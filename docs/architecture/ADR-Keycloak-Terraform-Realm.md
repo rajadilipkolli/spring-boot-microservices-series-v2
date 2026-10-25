@@ -125,7 +125,7 @@ ADR or ticket should:
 - **Startup ordering dependency**: The Terraform Job must complete before
   Keycloak-dependent services can authenticate users. A failed Job blocks the
   deployment until `backoffLimit` is exhausted.
-- **Keycloak provider lag**: The `keycloak/keycloak ~> 4.4` provider lags behind the
+- **Keycloak provider lag**: The `keycloak/keycloak 5.1.0` provider lags behind the
   Keycloak release cycle. Keycloak 27+ API changes may require a provider update.
 
 ### Production validation

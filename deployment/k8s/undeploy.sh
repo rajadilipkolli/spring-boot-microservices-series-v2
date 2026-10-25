@@ -11,11 +11,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY="${1:-dev}"
 UNDEPLOY_TIMEOUT="${UNDEPLOY_TIMEOUT:-300}"
 
-echo "=== Destroying overlay: '${OVERLAY}' ==="
-
-if [[ -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
-  kubectl delete -k "${SCRIPT_DIR}/overlays/${OVERLAY}/" --ignore-not-found=true
+if [[ ! -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
+  echo "ERROR: Unknown overlay '${OVERLAY}'. Directory '${SCRIPT_DIR}/overlays/${OVERLAY}' does not exist." >&2
+  exit 1
 fi
+
+echo "=== Destroying overlay: '${OVERLAY}' ==="
+kubectl delete -k "${SCRIPT_DIR}/overlays/${OVERLAY}/" --ignore-not-found=true
 
 if [[ "$OVERLAY" == "prod" ]]; then
   echo "Destroying Strimzi operator..."
