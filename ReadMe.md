@@ -385,7 +385,7 @@ For a local Kubernetes deployment, use Kind with the manifests under
 the complete setup and validation flow.
 
 ```bash
-./deployment/scripts/run-local-kubernetes-e2e.sh
+./deployment/k8s/run-k8s-e2e-local.sh
 ```
 
 The same Kubernetes end-to-end gate runs in
@@ -439,14 +439,14 @@ Access all microservice APIs through a unified interface:
 > See [KUBERNETES_DEPLOYMENT_GUIDE.md](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#terraform-managed-keycloak-realm-prod)
 > and the [ADR](docs/architecture/ADR-Keycloak-Terraform-Realm.md) for details.
 
-To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+To fully access all features of the application (such as the Inventory UI or Prometheus/metrics actuator endpoints), users require the appropriate client roles (`ADMIN` or `OPERATOR`). When using the Terraform runner (`deployment/terraform/`), both roles are created and mapped automatically. If configuring manually:
 
-### 1. Create the ADMIN Client Role
+### 1. Create the ADMIN and OPERATOR Client Roles
 1. Open the Keycloak Admin Console (`http://localhost:9191`).
 2. Select the `retailstore` realm.
 3. Go to **Clients** -> click on **`retailstore-webapp`**.
 4. Go to the **Roles** tab and click **Create Role**.
-5. Name the role **`ADMIN`** and click **Save**.
+5. Name the role **`ADMIN`** (for application administration) or **`OPERATOR`** (for `/actuator/metrics` & `/actuator/prometheus` access) and click **Save**.
 
 ### 2. Map the Client Role to the ID Token
 By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
