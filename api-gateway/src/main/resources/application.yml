@@ -23,6 +23,9 @@ spring:
               enabled: true
           metrics:
             enabled: true
+          global-filter:
+            local-response-cache:
+              enabled: false
           httpclient:
             connect-timeout: 1000
             response-timeout: 5s
