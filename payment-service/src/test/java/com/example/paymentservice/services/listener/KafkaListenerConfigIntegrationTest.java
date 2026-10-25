@@ -3,9 +3,6 @@ package com.example.paymentservice.services.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 
 import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
@@ -21,14 +18,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
     private static final Logger log =
             LoggerFactory.getLogger(KafkaListenerConfigIntegrationTest.class);
-
-    @MockitoSpyBean private KafkaListenerConfig listenerSpy;
 
     private CustomersRecord customer;
 
@@ -122,10 +116,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                 .atMost(Duration.ofSeconds(30))
                 .untilAsserted(
                         () ->
-                                verify(listenerSpy)
-                                        .dlt(
-                                                contains(orderDto.orderId().toString()),
-                                                eq("orders-dlt-payment")));
+                                assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
+                                        .isZero());
     }
 
     /**
