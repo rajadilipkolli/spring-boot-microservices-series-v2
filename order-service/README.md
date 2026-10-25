@@ -23,8 +23,8 @@ You can also run the application using Maven as follows:
 
 ### Useful Links
 * Swagger UI: http://localhost:18282/order-service/swagger-ui.html
+* OpenAPI Docs: http://localhost:18282/order-service/v3/api-docs
 * Actuator Endpoint: http://localhost:18282/order-service/actuator
-* Catalog Service : http://localhost:18080/catalog-service/swagger-ui.html
 * JobRunr Dashboard : http://localhost:28282/dashboard/overview
 
 ## Running only this Service Locally - Tips

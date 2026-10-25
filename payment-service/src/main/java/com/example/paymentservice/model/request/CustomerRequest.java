@@ -2,6 +2,7 @@
 package com.example.paymentservice.model.request;
 
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -9,18 +10,35 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 
+@Schema(description = "Customer creation request")
 public record CustomerRequest(
-        @NotBlank(message = "Name cannot be Blank") String name,
-        @NotBlank(message = "Email cannot be Blank") @Email(message = "supplied email is not valid")
+        @Schema(description = "Customer full name", example = "John Doe")
+                @NotBlank(message = "Name cannot be Blank")
+                String name,
+        @Schema(description = "Customer email address", example = "john.doe@example.com")
+                @NotBlank(message = "Email cannot be Blank")
+                @Email(message = "supplied email is not valid")
                 String email,
-        @NotBlank(message = "Customer Phone number is required") String phone,
-        @NotBlank(message = "Address Line 1 cannot be Blank") String addressLine1,
-        String addressLine2,
-        @NotBlank(message = "City cannot be Blank") String city,
-        @NotBlank(message = "State cannot be Blank") String state,
-        @NotBlank(message = "Zip Code cannot be Blank") String zipCode,
-        @NotBlank(message = "Country cannot be Blank") String country,
-        @NotNull
+        @Schema(description = "Customer phone number", example = "+1234567890")
+                @NotBlank(message = "Customer Phone number is required")
+                String phone,
+        @Schema(description = "Address Line 1", example = "123 Main St")
+                @NotBlank(message = "Address Line 1 cannot be Blank")
+                String addressLine1,
+        @Schema(description = "Address Line 2", example = "Suite 100") String addressLine2,
+        @Schema(description = "City", example = "San Francisco")
+                @NotBlank(message = "City cannot be Blank")
+                String city,
+        @Schema(description = "State", example = "CA") @NotBlank(message = "State cannot be Blank")
+                String state,
+        @Schema(description = "Zip Code", example = "94105")
+                @NotBlank(message = "Zip Code cannot be Blank")
+                String zipCode,
+        @Schema(description = "Country", example = "USA")
+                @NotBlank(message = "Country cannot be Blank")
+                String country,
+        @Schema(description = "Initial available funds", example = "1000.00")
+                @NotNull
                 @Positive(message = "AmountAvailable must be greater than 0")
                 @Digits(
                         integer = 17,

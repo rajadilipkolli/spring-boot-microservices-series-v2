@@ -38,4 +38,5 @@ SPRING_PROFILES_ACTIVE=local
 
 ### Useful Links
 * Swagger UI: http://localhost:18085/payment-service/swagger-ui.html
+* OpenAPI Docs: http://localhost:18085/payment-service/v3/api-docs
 * Actuator Endpoint: http://localhost:18085/payment-service/actuator
