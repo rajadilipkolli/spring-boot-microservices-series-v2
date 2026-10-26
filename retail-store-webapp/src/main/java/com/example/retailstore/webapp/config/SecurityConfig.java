@@ -23,10 +23,15 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
-class SecurityConfig {
+public class SecurityConfig {
     private final ClientRegistrationRepository clientRegistrationRepository;
 
-    SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
+    /**
+     * Creates security configuration using the client registrations for OIDC logout.
+     *
+     * @param clientRegistrationRepository registered OAuth2 clients
+     */
+    public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }
 

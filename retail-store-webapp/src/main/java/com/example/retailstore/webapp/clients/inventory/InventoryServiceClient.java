@@ -1,6 +1,7 @@
 package com.example.retailstore.webapp.clients.inventory;
 
 import com.example.common.dto.PagedResult;
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -9,6 +10,7 @@ import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PutExchange;
 
 @HttpExchange("/inventory-service")
+@ClientRegistrationId("retailstore-webapp")
 public interface InventoryServiceClient {
 
     @GetExchange("/api/inventory")

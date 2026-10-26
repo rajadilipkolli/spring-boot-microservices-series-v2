@@ -7,6 +7,7 @@ import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.wiremock.spring.ConfigureWireMock;
@@ -30,6 +31,9 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     protected KeycloakContainer keycloakContainer;
+
+    @Autowired
+    protected ClientRegistrationRepository clientRegistrationRepository;
 
     @InjectWireMock("gateway-service")
     protected WireMockServer gatewayServiceMock;

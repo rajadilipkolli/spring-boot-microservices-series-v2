@@ -13,7 +13,6 @@ import com.example.retailstore.webapp.exception.InvalidRequestException;
 import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import jakarta.validation.Valid;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -56,12 +55,21 @@ class OrderController {
         return "order_details";
     }
 
+    /**
+     * Retrieves an order only if it belongs to the customer identified by the current user's
+     * email, and adds that customer's details to the returned order.
+     *
+     * @param orderNumber value forwarded as the downstream order ID
+     * @return the customer's order with customer details populated
+     * @throws ResourceNotFoundException if ownership does not match or any exception occurs while
+     *     retrieving or enriching the order
+     */
     @GetMapping("/api/orders/{orderNumber}")
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", LogSanitizer.sanitizeForLog(orderNumber));
         try {
-            OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
+            OrderResponse orderResponse = orderServiceClient.getOrder(orderNumber);
             String email = securityHelper.getLoggedInUserEmail();
             CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
 
@@ -92,28 +100,29 @@ class OrderController {
         return "orders";
     }
 
+    /**
+     * Retrieves orders for the customer identified by the current user's email using downstream
+     * default pagination. Customer lookup and order retrieval failures propagate to the caller.
+     *
+     * @return the customer's order page returned by the order service
+     */
     @GetMapping("/api/orders")
     @ResponseBody
     PagedResult<OrderResponse> getOrders() {
         log.info("Fetching orders");
         String email = securityHelper.getLoggedInUserEmail();
         CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
-        return orderServiceClient.getOrdersByCustomer(getHeaders(), loggedInCustomer.customerId());
+        return orderServiceClient.getOrdersByCustomer(loggedInCustomer.customerId());
     }
 
     /**
-     * Builds downstream request headers from the current user's access token.
+     * Creates an order using the customer ID resolved from the current user's email.
      *
-     * @return a bearer authorization header, or an empty map when no token is available
+     * @param orderRequest items and delivery address to submit; customer details are not forwarded
+     * @return the downstream order confirmation
+     * @throws InvalidRequestException if customer lookup, request conversion, or order creation
+     *     fails; existing instances propagate and other exceptions are converted to this type
      */
-    private Map<String, ?> getHeaders() {
-        String accessToken = securityHelper.getAccessToken();
-        if (accessToken == null) {
-            return Map.of();
-        }
-        return Map.of("Authorization", "Bearer " + accessToken);
-    }
-
     @PostMapping("/api/orders")
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {
@@ -123,7 +132,7 @@ class OrderController {
             CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
 
             OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(loggedInCustomer.customerId());
-            return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+            return orderServiceClient.createOrder(orderRequestExternal);
         } catch (InvalidRequestException e) {
             throw e;
         } catch (Exception e) {

@@ -15,10 +15,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
-import com.example.retailstore.webapp.config.TestSecurityConfig;
+import com.example.retailstore.webapp.config.SecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
+import com.example.retailstore.webapp.services.SecurityHelper;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,13 +32,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(RegistrationController.class)
-@Import({TestSecurityConfig.class})
+@Import({SecurityConfig.class, SecurityHelper.class})
 class RegistrationControllerTest {
 
     private static final String REGISTER_ENDPOINT = "/api/register";
@@ -50,6 +52,9 @@ class RegistrationControllerTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+
+    @MockitoBean
+    private ClientRegistrationRepository clientRegistrationRepository;
 
     @MockitoBean
     private KeycloakRegistrationService registrationService;

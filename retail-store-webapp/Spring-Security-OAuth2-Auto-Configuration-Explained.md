@@ -448,7 +448,7 @@ redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore
 
 ## 🚀 **Downstream Token Propagation with RestClient**
 
-Use the following Spring Security configuration to resolve the client registration and attach the user's bearer token to imported HTTP service requests:
+For declarative HTTP interfaces, configure token propagation by installing `OAuth2RestClientHttpServiceGroupConfigurer` alongside the base RestClient settings:
 
 ```java
 import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
@@ -478,40 +478,62 @@ class ClientsConfig {
     @Bean
     OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
             OAuth2AuthorizedClientManager authorizedClientManager) {
-        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        // Installs both the OAuth2ClientHttpRequestInterceptor and ClientRegistrationIdProcessor
         return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
     }
 }
 ```
 
-Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+### Client Annotations and Public Route Safety
+
+`ClientRegistrationIdProcessor` copies the `@ClientRegistrationId` annotation value into request attributes, which `OAuth2ClientHttpRequestInterceptor` uses to resolve the authorized client and attach the Bearer token.
+
+When placing `@ClientRegistrationId("retailstore-webapp")`, consider whether the client methods are accessed by public (unauthenticated) routes:
+
+1. **Interface-Level Annotation**: Used when all methods require authentication (e.g., `OrderServiceClient`, `InventoryServiceClient`).
+2. **Method-Level Annotation**: Used when an HTTP client contains both authenticated and public endpoints. Because public routes allow unauthenticated/anonymous access, decorating the entire interface with `@ClientRegistrationId` would cause token resolution failures or unauthorized exceptions when anonymous users invoke public methods.
+   - `CatalogServiceClient`: Only `createProduct` is annotated with `@ClientRegistrationId("retailstore-webapp")` because `getProducts` is called by public unauthenticated routes.
+   - `CustomerServiceClient`: Methods `getCustomerByName`, `getCustomerById`, and `getCustomerByEmail` are annotated at the method level, while `getOrCreateCustomer` remains unannotated as it is invoked during user registration/public onboarding flows.
 
 ```java
 import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
 
-@ClientRegistrationId("retailstore-webapp")
-@HttpExchange("/catalog-service")
-public interface CatalogServiceClient { /* existing methods */ }
-
+// Whole interface requires authentication
 @ClientRegistrationId("retailstore-webapp")
 @HttpExchange("/order-service")
-public interface OrderServiceClient { /* existing methods */ }
-
-@ClientRegistrationId("retailstore-webapp")
-@HttpExchange("/payment-service")
-public interface CustomerServiceClient { /* existing methods */ }
+public interface OrderServiceClient { /* ... */ }
 
 @ClientRegistrationId("retailstore-webapp")
 @HttpExchange("/inventory-service")
-public interface InventoryServiceClient { /* existing methods */ }
+public interface InventoryServiceClient { /* ... */ }
+
+// Mixed routes: annotate only authenticated operations
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient {
+    PagedResult<ProductResponse> getProducts(int page); // Unannotated (public)
+
+    @ClientRegistrationId("retailstore-webapp")
+    @PostExchange("/api/catalog")
+    ProductResponse createProduct(@Valid @RequestBody ProductRequest product);
+}
+
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient {
+    CustomerResponse getOrCreateCustomer(@Valid @RequestBody CustomerRequest request); // Unannotated (public registration)
+
+    @ClientRegistrationId("retailstore-webapp")
+    CustomerResponse getCustomerByName(String name);
+
+    @ClientRegistrationId("retailstore-webapp")
+    CustomerResponse getCustomerById(Long id);
+
+    @ClientRegistrationId("retailstore-webapp")
+    CustomerResponse getCustomerByEmail(String email);
+}
 ```
 
-`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
-
-**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
-
 With an authenticated user and an authorized client:
-1. User identity and roles (`ADMIN`, `OPERATOR`, `user`) are forwarded to API Gateway (`http://localhost:8765`) and downstream microservices.
+1. `OAuth2RestClientHttpServiceGroupConfigurer` configures the interceptor and registration processor to propagate user identity and Bearer tokens to the API Gateway (`http://localhost:8765`) and downstream microservices.
 2. `OAuth2AuthorizedClientManager` can refresh tokens when its provider supports refresh tokens and one is available; otherwise reauthorization may be required.
 
 ---
@@ -595,7 +617,7 @@ public class OAuth2InspectionController {
 3. **Authorization code requests** are handled by **`OAuth2AuthorizationRequestRedirectFilter`**.
 4. **Token exchange** is handled by **`OAuth2AuthorizationCodeAuthenticationProvider`**.
 5. **Role Mapping**: Keycloak client roles (`ADMIN`, `OPERATOR`) in the token's `resource_access` claim are mapped to `ROLE_ADMIN` and `ROLE_OPERATOR` via `GrantedAuthoritiesMapper`.
-6. **Token Propagation**: Spring Boot 4.1.2 declarative HTTP interfaces use `OAuth2ClientHttpRequestInterceptor` to seamlessly propagate the Bearer token to API Gateway and downstream microservices.
+6. **Token Propagation**: Spring Boot 4.1.2 declarative HTTP interfaces use `OAuth2RestClientHttpServiceGroupConfigurer` to seamlessly propagate the Bearer token to API Gateway and downstream microservices.
 
 ### **The Magic Formula:**
 ```

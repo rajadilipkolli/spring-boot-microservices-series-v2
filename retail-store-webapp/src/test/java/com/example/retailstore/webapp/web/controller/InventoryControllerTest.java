@@ -14,20 +14,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.common.dto.PagedResult;
 import com.example.retailstore.webapp.clients.inventory.InventoryResponse;
 import com.example.retailstore.webapp.clients.inventory.InventoryServiceClient;
-import com.example.retailstore.webapp.config.TestSecurityConfig;
+import com.example.retailstore.webapp.config.SecurityConfig;
+import com.example.retailstore.webapp.services.SecurityHelper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = InventoryController.class)
-@Import(TestSecurityConfig.class)
+@Import({SecurityConfig.class, SecurityHelper.class})
 class InventoryControllerTest {
     private static final String INVENTORY_PATH = "/inventory";
     private static final String INVENTORY_API_PATH = "/api/inventory";
@@ -37,6 +39,9 @@ class InventoryControllerTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+
+    @MockitoBean
+    private ClientRegistrationRepository clientRegistrationRepository;
 
     @MockitoBean
     private InventoryServiceClient inventoryServiceClient;

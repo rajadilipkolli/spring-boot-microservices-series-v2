@@ -3,7 +3,6 @@ package com.example.retailstore.webapp.web.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -26,7 +25,7 @@ import com.example.retailstore.webapp.clients.order.OrderItemResponse;
 import com.example.retailstore.webapp.clients.order.OrderRequestExternal;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
-import com.example.retailstore.webapp.config.TestSecurityConfig;
+import com.example.retailstore.webapp.config.SecurityConfig;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +37,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,7 +46,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(controllers = OrderController.class)
-@Import(TestSecurityConfig.class)
+@Import(SecurityConfig.class)
 class OrderControllerTest {
 
     @Autowired
@@ -56,12 +56,15 @@ class OrderControllerTest {
     private MockMvcTester mockMvcTester;
 
     @MockitoBean
+    private ClientRegistrationRepository clientRegistrationRepository;
+
+    @MockitoBean
     private OrderServiceClient orderServiceClient;
 
     @MockitoBean
     private CustomerServiceClient customerServiceClient;
 
-    @MockitoBean
+    @MockitoBean(name = "securityHelper")
     private SecurityHelper securityHelper;
 
     @Autowired
@@ -128,7 +131,6 @@ class OrderControllerTest {
         orderConfirmation = new OrderConfirmationDTO(123L, 1L, "NEW");
 
         // Mock security helper
-        when(securityHelper.getAccessToken()).thenReturn("test-token");
         when(securityHelper.getLoggedInUserEmail()).thenReturn("test@example.com");
 
         // Mock static SecurityHelper.getUsername()
@@ -174,7 +176,7 @@ class OrderControllerTest {
         // Manually set the customer for the test case
         orderResponse.setCustomer(customerResponse);
 
-        when(orderServiceClient.getOrder(anyMap(), anyString())).thenReturn(orderResponse);
+        when(orderServiceClient.getOrder(anyString())).thenReturn(orderResponse);
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
                 .andExpect(status().isOk())
@@ -195,7 +197,7 @@ class OrderControllerTest {
         OrderResponse orderResponse = orderResponseList.getFirst();
         // The mock user has customerId = 1 (from setUp), we mock the order to belong to customerId = 999
         orderResponse.setCustomerId(999L);
-        when(orderServiceClient.getOrder(anyMap(), anyString())).thenReturn(orderResponse);
+        when(orderServiceClient.getOrder(anyString())).thenReturn(orderResponse);
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
                 .andExpect(status().isNotFound()); // OrderController converts mismatch to 404 ResourceNotFoundException
@@ -214,7 +216,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrders_shouldReturnPagedOrders() throws Exception {
-        when(orderServiceClient.getOrdersByCustomer(anyMap(), any(Long.class))).thenReturn(pagedResult);
+        when(orderServiceClient.getOrdersByCustomer(any(Long.class))).thenReturn(pagedResult);
 
         mockMvc.perform(get("/api/orders").with(csrf()))
                 .andExpect(status().isOk())
@@ -255,8 +257,7 @@ class OrderControllerTest {
 
         // Mock client responses
         when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
-        when(orderServiceClient.createOrder(anyMap(), any(OrderRequestExternal.class)))
-                .thenReturn(orderConfirmation);
+        when(orderServiceClient.createOrder(any(OrderRequestExternal.class))).thenReturn(orderConfirmation);
 
         // Perform test
         mockMvc.perform(post("/api/orders")
@@ -273,7 +274,7 @@ class OrderControllerTest {
     @WithMockUser
     void getOrder_shouldHandleErrorWhenServiceFails() throws Exception {
         String orderNumber = "ORDER-INVALID";
-        when(orderServiceClient.getOrder(anyMap(), anyString()))
+        when(orderServiceClient.getOrder(anyString()))
                 .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders/{orderNumber}", orderNumber).with(csrf()))
@@ -283,7 +284,7 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getOrders_shouldHandleErrorWhenServiceFails() throws Exception {
-        when(orderServiceClient.getOrdersByCustomer(anyMap(), any(Long.class)))
+        when(orderServiceClient.getOrdersByCustomer(any(Long.class)))
                 .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Service unavailable"));
 
         mockMvc.perform(get("/api/orders").with(csrf())).andExpect(status().isInternalServerError());
