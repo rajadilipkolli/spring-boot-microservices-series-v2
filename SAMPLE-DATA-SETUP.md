@@ -34,14 +34,16 @@ docker-compose build
 
 ### Method 3: Using Liquibase Contexts (After Rebuild)
 
-Add the following to your `application.properties`:
+You can supply the `sample-data` Liquibase context using one of the following approaches:
+
+#### Via `application.properties`:
 
 ```properties
 # Enable sample data loading
 spring.liquibase.contexts=sample-data
 ```
 
-### Method 2: Environment Variable
+#### Via Environment Variable:
 
 ```bash
 # Set environment variable
@@ -52,7 +54,7 @@ environment:
   - SPRING_LIQUIBASE_CONTEXTS=sample-data
 ```
 
-### Method 3: Application Startup
+#### Via Application Startup:
 
 ```bash
 # Run with sample data context

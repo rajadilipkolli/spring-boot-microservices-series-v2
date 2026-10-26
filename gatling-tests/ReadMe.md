@@ -1,56 +1,78 @@
-# Gatling Performance Tests Suite for Microservices
+# Gatling Performance Tests Suite (`gatling-tests`)
 
-This module contains a Gatling performance testing suite designed for high-concurrency validation of the Spring Boot microservices architecture.
+This module contains a **Gatling performance testing suite** designed for high-concurrency load and resilience validation of the Spring Boot microservices architecture.
 
-## Overview
+---
+
+## 🛠️ Tech Stack & Key Technologies
+
+- **Java**: Java 25
+- **Gatling**: 3.16.0 (`io.gatling.highcharts:gatling-charts-highcharts`)
+- **Gatling Maven Plugin**: 4.21.12 (`io.gatling:gatling-maven-plugin`)
+- **Code Style**: Spotless 3.10.4 with Google Java Format (AOSP style)
+
+---
+
+## 📋 Overview
 
 The test suite uses a **three-phase injection profile** (Ramp-up, Steady-state, Ramp-down). All pre-flight health checks and the service warm-up request are handled by the `run-tests.sh` (or `run-tests.ps1`) orchestration scripts before Gatling starts, ensuring a stable environment for performance measurements.
 
-## Prerequisites
+---
 
-1. **Microservices Environment**: Ensure all services (Catalog, Inventory, Order, Payment) and the API Gateway are running.
+## ⚙️ Prerequisites
+
+1. **Microservices Environment**: Ensure all services (Catalog, Inventory, Order, Payment) and the API Gateway are running (e.g. via `docker compose -f deployment/docker-compose.yml up -d`).
 2. **API Gateway**: Must be accessible at `http://localhost:8765` (default).
-3. **Java 25**: Required for Gatling and the microservices.
-4. **Maven**: Used for test execution and dependency management.
+3. **Java 25**: Required for Gatling and the microservices stack.
+4. **Maven Wrapper**: Use `./mvnw` (Linux/macOS) or `mvnw.cmd` (Windows).
 
-## Available Simulations
+---
 
-| Simulation                       | Description                                 | Use Case                                                                                          |
-|----------------------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `CreateProductSimulation`        | Single-user end-to-end workflow validation. | Verifies core business logic: Create Product -> Get Product -> Update Inventory -> Place Order.   |
-| `StressTestSimulation`           | High-load multi-path user journey testing.  | Simulates realistic user behavior including browsing, searching, and purchasing under heavy load. |
-| `ResilienceTestSimulation`       | Service resilience and error handling.      | Tests how the system handles invalid data and high concurrency on shared resources.               |
-| `ApiGatewayResilienceSimulation` | Gateway-level resilience patterns.          | Specifically targets rate limiting and circuit breaker behavior at the API Gateway level.         |
+## 📊 Available Simulations
 
-## Load Profiles
+| Simulation | Description | Use Case |
+| :--- | :--- | :--- |
+| `CreateProductSimulation` | Single-user end-to-end workflow validation | Verifies core business logic: Create Product $\to$ Get Product $\to$ Update Inventory $\to$ Place Order. |
+| `StressTestSimulation` | High-load multi-path user journey testing | Simulates realistic user behavior including browsing, searching, and purchasing under heavy load. |
+| `ResilienceTestSimulation` | Service resilience and error handling | Tests how the system handles invalid data and high concurrency on shared resources. |
+| `ApiGatewayResilienceSimulation` | Gateway-level resilience patterns | Specifically targets rate limiting and circuit breaker behavior at the API Gateway level. |
+| `ServiceHealthCheckSimulation` | Automated health check probe simulation | Validates health endpoint response times and availability across all services under load. |
+
+---
+
+## ⏱️ Load Profiles
 
 All simulations follow a standard three-phase load pattern to provide reliable and repeatable metrics:
 
-1. **Ramp-up Phase**: Gradually increases user injection from 0 to the target rate over a specified duration (default: 30-60s). This allows the JVM and connection pools to warm up.
+1. **Ramp-up Phase**: Gradually increases user injection from 0 to the target rate over a specified duration (default: 15-60s). This allows the JVM and connection pools to warm up.
 2. **Steady-state Phase**: Maintains a constant load for a fixed duration (default: 2-10m) to measure sustained performance and stability.
 3. **Ramp-down Phase**: Gradually reduces the load to 0, allowing for clean termination and final metric collection.
 
-## Configuration Properties
+---
+
+## ⚙️ Configuration Properties
 
 The following properties can be customized via Maven system properties. Note that the **runner scripts** (`run-tests.sh` and `run-tests.ps1`) provide their own high-load defaults, which override the baseline defaults defined in the Java code.
 
-| Property           | Description                                 | Script Default          | Simulation Default      |
-|--------------------|---------------------------------------------|-------------------------|-------------------------|
-| `baseUrl`          | Base URL for the API Gateway                | `http://localhost:8765` | `http://localhost:8765` |
-| `constantUsers`    | Target users per second during steady-state | `50`                    | `10`                    |
-| `rampDuration`     | Duration of ramp-up phase (seconds)         | `30`                    | `30`                    |
-| `testDuration`     | Duration of steady-state phase (seconds)    | `300`                   | `60`                    |
-| `burstUsersPerSec` | Target rate for API Gateway tests           | `50`                    | `30`                    |
+| Property | Description | Script Default | Simulation Default |
+| :--- | :--- | :--- | :--- |
+| `baseUrl` | Base URL for the API Gateway | `http://localhost:8765` | `http://localhost:8765` |
+| `constantUsers` | Target users per second during steady-state | `20` (`run-tests.sh`) / `50` (`run-tests.ps1`) | `10` |
+| `rampDuration` | Duration of ramp-up phase (seconds) | `30` | `30` |
+| `testDuration` | Duration of steady-state phase (seconds) | `300` | `60` |
+| `burstUsersPerSec` | Target rate for API Gateway tests | `50` | `30` |
 
-## Running the Tests
+---
+
+## 🚀 Running the Tests
 
 ### Using the Shell Scripts (Recommended)
 
-The provided scripts perform automatic pre-flight health checks before starting Gatling.
+The provided scripts perform automatic pre-flight health checks and test data warm-up before starting Gatling.
 
 #### Windows (PowerShell):
 ```powershell
-# Standard test run (3-5 minutes)
+# From the gatling-tests directory
 .\run-tests.ps1
 
 # Quick smoke test (1-2 minutes)
@@ -73,28 +95,40 @@ chmod +x run-tests.sh
 
 ### Using Maven Directly
 
+From the project root:
 ```bash
-mvn clean gatling:test -Dgatling.simulationClass=simulation.StressTestSimulation -DconstantUsers=20
+./mvnw -pl gatling-tests clean gatling:test -Dgatling.simulationClass=simulation.StressTestSimulation -DconstantUsers=20
+```
+*(On Windows Command Prompt or PowerShell: `mvnw.cmd -pl gatling-tests clean gatling:test -Dgatling.simulationClass=simulation.StressTestSimulation -DconstantUsers=20`)*
+
+Or from within the `gatling-tests` directory:
+```bash
+./mvnw clean gatling:test -Dgatling.simulationClass=simulation.StressTestSimulation -DconstantUsers=20
 ```
 
-## Troubleshooting
+---
+
+## 🔍 Troubleshooting
 
 ### Pre-flight Health Checks Failed
 If the runner scripts abort, check if the services are healthy at the actuator endpoints:
-- Gateway: `http://localhost:8765/actuator/health`
-- Catalog: `http://localhost:8765/catalog-service/actuator/health`
+- **API Gateway**: `http://localhost:8765/actuator/health`
+- **Catalog Service**: `http://localhost:8765/catalog-service/actuator/health`
+- **Inventory Service**: `http://localhost:8765/inventory-service/actuator/health`
+- **Order Service**: `http://localhost:8765/order-service/actuator/health`
+- **Payment Service**: `http://localhost:8765/payment-service/actuator/health`
 
 Common causes:
-- Service not registered with Discovery (wait 30-60s after startup).
+- Service not registered with Eureka Service Discovery (wait 30-60s after startup).
 - Database connection issues (check microservice logs).
 
-### Kafka Initialization Issues
-The warm-up `POST /api/v1/generate` call in `run-tests.sh` initialises Kafka topics before Gatling starts. If you see timeouts in the first few requests of a run:
-- Ensure Kafka/Zookeeper containers are healthy.
-- Increase the `sleep 10` delay after the warm-up call in `run-tests.sh` if Kafka is slow to initialise.
+### Kafka Warmup Issues
+The warm-up `POST /api/v1/generate` call in `run-tests.sh` initializes Kafka topics before Gatling starts. If you see timeouts in the first few requests of a run:
+- Ensure the Kafka broker (KRaft mode) container is healthy.
+- Increase the `sleep 10` delay after the warm-up call in `run-tests.sh` if Kafka needs additional time to initialize topics.
 
 ### High Error Rate (503/504)
-During `StressTestSimulation`, 503 (Service Unavailable) or 504 (Gateway Timeout) errors are often intentional indicators of system capacity limits. Check the Gatling reports for the specific bottleneck.
+During `StressTestSimulation`, 503 (Service Unavailable) or 504 (Gateway Timeout) errors are often intentional indicators of system capacity limits. Check the generated HTML reports in `target/gatling/` for detailed bottleneck metrics.
 
 ---
 *Note: While Apache JMeter plans are provided in the `jmeter/` directory, **Gatling is the primary load testing tool** for this project and provides the most comprehensive resilience metrics.*

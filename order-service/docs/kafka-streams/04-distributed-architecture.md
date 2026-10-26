@@ -422,7 +422,7 @@ Kubernetes Pod Definition:
 ### JVM Process Components
 
 ```java
-// Each pod runs a complete Spring Boot application containing:
+// Each pod runs a complete Spring Boot 4.1.2 application (Java 25) containing:
 
 @SpringBootApplication
 public class OrderServiceApplication {
@@ -431,18 +431,18 @@ public class OrderServiceApplication {
     
     // 2. Business Logic Layer  
     @Service OrderService                  // Business operations
-    @Service OrderManageService           // Stream processing logic
+    @Service OrderManageService           // Stream processing logic & metrics
     
-    // 3. Kafka Streams Layer
-    @Configuration KafkaStreamsConfig     // Stream topology
-    @Service OrderKafkaStreamService      // Interactive queries
-    @Service KafkaOrderProducer          // Event publishing
+    // 3. Kafka & Streaming Layer
+    @Configuration KafkaStreamsConfig     // Stream topology & DLQ recoverer
+    @Configuration EventExternalizationConfig // Spring Modulith outbox event routing
+    @Configuration KafkaConfig            // Topic administration
     
     // 4. Data Layer
-    @Repository OrderRepository           // Database access
+    @Repository OrderRepository           // Database access with TSID
     
     // 5. Background Processing
-    @Component JobRunr                    // Scheduled jobs
+    @Component Initializer                // JobRunr scheduled recurring jobs
 }
 ```
 

@@ -2,16 +2,21 @@
 
 ## 📖 Overview
 
-This document provides an in-depth analysis of the authentication and registration flows in the RetailStore WebApp, mapping each sequence step to specific code components, configurations, and Keycloak integration points.
+This document provides an in-depth analysis of the authentication and registration flows in the RetailStore WebApp built on **Java 25** and **Spring Boot 4.1.2**, mapping each sequence step to specific code components, configurations, and Keycloak integration points.
 
 ## 🏗️ Architecture Components
 
 ### Core Security Stack
-- **Spring Security 6.x** with OAuth2/OIDC support
-- **Keycloak 24.x** as Identity Provider
-- **JWT Tokens** for stateless authentication
-- **CSRF Protection** with cookie-based tokens
-- **Role-based Access Control** (RBAC)
+- **Java 25**
+- **Spring Boot 4.1.2** with **Spring Security** (OAuth2 Client & OIDC support)
+- **Keycloak 26.x** as Identity Provider (Port `9191`)
+- **RetailStore WebApp** (Port `8080`)
+- **Keycloak Admin Client** (`keycloak-admin-client:26.0.12`) for user management
+- **JWT Tokens** for stateless authorization
+- **CSRF Protection** with cookie-based tokens (`CookieCsrfTokenRepository.withHttpOnlyFalse()`)
+- **Role-based Access Control** (RBAC):
+  - Client Roles on `retailstore-webapp`: `ADMIN` and `OPERATOR`
+  - Realm Role: `user` (assigned on registration)
 
 ---
 
@@ -21,10 +26,10 @@ This document provides an in-depth analysis of the authentication and registrati
 sequenceDiagram
     participant User as 👤 User
     participant Browser as 🌐 Browser
-    participant WebApp as 🛒 RetailStore WebApp
-    participant KC as 🔐 Keycloak
-    participant Gateway as 🌐 API Gateway
-    participant Payment as 💳 Payment Service
+    participant WebApp as 🛒 RetailStore WebApp (Port 8080)
+    participant KC as 🔐 Keycloak (Port 9191)
+    participant Gateway as 🌐 API Gateway (Port 8765)
+    participant Payment as 💳 Payment Service (Port 18085)
 
     Note over User, Payment: 📝 Registration Flow with Code References
 
@@ -32,7 +37,7 @@ sequenceDiagram
     Note right of Browser: URL: http://localhost:8080/registration
     
     Browser->>WebApp: GET /registration
-    Note right of WebApp: RegistrationController.showRegistrationPage()<br/>File: RegistrationController.java:29<br/>Returns: "registration" template
+    Note right of WebApp: RegistrationController.showRegistrationPage()<br/>File: RegistrationController.java<br/>Returns: "registration" template
     
     WebApp-->>Browser: Registration Form (Thymeleaf)
     Note right of Browser: Template: registration.html<br/>Form fields: username, email, firstName,<br/>lastName, password, phone, address
@@ -41,35 +46,26 @@ sequenceDiagram
     Note right of Browser: JavaScript validation:<br/>- Email format<br/>- Password complexity<br/>- Password confirmation match
     
     Browser->>WebApp: POST /api/register (JSON)
-    Note right of WebApp: RegistrationController.register()<br/>File: RegistrationController.java:35<br/>@Valid @RequestBody RegistrationRequest
+    Note right of WebApp: RegistrationController.register()<br/>File: RegistrationController.java<br/>@Valid @RequestBody RegistrationRequest
     
-    WebApp->>WebApp: Validate Request
-    Note right of WebApp: Bean Validation annotations<br/>in RegistrationRequest record
+    WebApp->>WebApp: Validate Request (Bean Validation)
     
-    WebApp->>KC: Register user via Admin API
-    Note right of WebApp: KeycloakRegistrationService.registerUser()<br/>File: KeycloakRegistrationService.java:67<br/>Uses admin token for user creation
+    WebApp->>KC: Create user via keycloak-admin-client
+    Note right of WebApp: KeycloakRegistrationService.registerUser()<br/>keycloakClient.realm(realm).users().create(user)
+    KC-->>WebApp: Returns HTTP 201 Created with User ID
     
-    rect rgb(255, 245, 238)
-        Note over WebApp, KC: Keycloak Admin API Flow
-        WebApp->>KC: POST /realms/master/protocol/openid-connect/token
-        Note right of KC: Get admin access token<br/>Method: getAdminToken()<br/>Credentials: admin/admin1234
-        
-        KC-->>WebApp: Admin access token
-        
-        WebApp->>KC: POST /admin/realms/retailstore/users
-        Note right of KC: Create user with:<br/>- Basic info (username, email, name)<br/>- Password (non-temporary)<br/>- Role: "user"<br/>Headers: Authorization: Bearer {adminToken}
-        
-        KC-->>WebApp: User created (201)
-    end
+    WebApp->>KC: Assign "user" realm role
+    Note right of WebApp: realmResource.users().get(userId)<br/>.roles().realmLevel().add(...)
+    KC-->>WebApp: Role assigned
     
     WebApp->>Gateway: POST /payment-service/api/customers
-    Note right of WebApp: CustomerServiceClient.getOrCreateCustomer()<br/>Creates customer record with $10,000 balance
+    Note right of WebApp: CustomerServiceClient.getOrCreateCustomer()
     
     Gateway->>Payment: Create customer record
     Payment-->>Gateway: CustomerResponse
     Gateway-->>WebApp: Customer created
     
-    WebApp-->>Browser: Registration success JSON
+    WebApp-->>Browser: Registration success JSON (200 OK)
     Note right of Browser: JavaScript redirects to:<br/>window.location.href = '/login?registrationSuccess=true'
 ```
 
@@ -86,9 +82,17 @@ public String showRegistrationPage() {
 
 @PostMapping("/api/register")
 public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
+    logger.info("Received registration request for user: {}", request.username());
     registrationService.registerUser(request);
-    CustomerRequest customerRequest = new CustomerRequest(/*...*/);
+    CustomerRequest customerRequest = new CustomerRequest(
+            request.username(),
+            request.firstName(),
+            request.lastName(),
+            request.email(),
+            request.phone(),
+            request.address());
     CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+    logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
     return ResponseEntity.ok(Map.of("message", "User registered successfully"));
 }
 ```
@@ -98,19 +102,31 @@ public ResponseEntity<Map<String, String>> register(@Valid @RequestBody Registra
 // Location: src/main/java/com/example/retailstore/webapp/services/KeycloakRegistrationService.java
 
 public void registerUser(RegistrationRequest request) {
-    String adminToken = getAdminToken(); // Get admin access token
-    
-    // Create user in Keycloak with USER role
-    restClient.post()
-        .uri(keycloakUrl + "/admin/realms/" + keycloakProperties.getRealm() + "/users")
-        .header("Authorization", "Bearer " + adminToken)
-        .body(Map.of(
-            "username", request.username(),
-            "email", request.email(),
-            "enabled", true,
-            "credentials", List.of(Map.of("type", "password", "value", request.password())),
-            "realmRoles", List.of("user")
-        ));
+    UserRepresentation user = getUserRepresentation(request);
+    RealmResource realmResource = keycloakClient.realm(realm);
+    try (Response response = realmResource.users().create(user)) {
+        if (response.getStatus() == 409) {
+            throw new UserAlreadyExistsException("Username or email is already taken.");
+        } else if (response.getStatus() >= 400) {
+            throw new KeyCloakException("Failed to register user. Status: " + response.getStatus());
+        }
+        String userId = CreatedResponseUtil.getCreatedId(response);
+        try {
+            realmResource
+                    .users()
+                    .get(userId)
+                    .roles()
+                    .realmLevel()
+                    .add(List.of(realmResource.roles().get("user").toRepresentation()));
+        } catch (Exception e) {
+            try {
+                realmResource.users().get(userId).remove();
+            } catch (Exception cleanupException) {
+                e.addSuppressed(cleanupException);
+            }
+            throw e;
+        }
+    }
 }
 ```
 
@@ -119,6 +135,16 @@ public void registerUser(RegistrationRequest request) {
 // Location: src/main/java/com/example/retailstore/webapp/config/SecurityConstants.java
 
 public static final String[] PUBLIC_URLS = {
+    "/js/**",
+    "/css/**",
+    "/images/**",
+    "/error",
+    "/webjars/**",
+    "/",
+    "/actuator/health/**",
+    "/actuator/info",
+    "/products/**",
+    "/api/products/**",
     "/api/register",  // Registration endpoint is public
     "/registration",  // Registration page is public
     "/login"         // Login page is public
@@ -198,27 +224,94 @@ sequenceDiagram
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/config/SecurityConfig.java
 
-@Bean
-SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(c -> c
-            .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
-            .anyRequest().authenticated())
-        .oauth2Login(oauth2 -> oauth2
-            .loginPage("/login")
-            .defaultSuccessUrl("/", true))
-        .logout(logout -> logout
-            .logoutSuccessHandler(oidcLogoutSuccessHandler()));
-    return http.build();
+@Configuration(proxyBeanMethods = false)
+@EnableWebSecurity
+@EnableMethodSecurity
+class SecurityConfig {
+    private final ClientRegistrationRepository clientRegistrationRepository;
+
+    SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
+        this.clientRegistrationRepository = clientRegistrationRepository;
+    }
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
+        http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
+                        .permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
+                        .hasRole("OPERATOR")
+                        .anyRequest()
+                        .authenticated())
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .oauth2Login(oauth2 -> oauth2.loginPage("/login")
+                        .defaultSuccessUrl("/", true)
+                        .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))
+                .logout(logout -> logout.clearAuthentication(true)
+                        .invalidateHttpSession(true)
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler()))
+                .headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives(
+                        "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
+
+        return http.build();
+    }
+
+    private LogoutSuccessHandler oidcLogoutSuccessHandler() {
+        OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+                new OidcClientInitiatedLogoutSuccessHandler(this.clientRegistrationRepository);
+        oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/");
+        return oidcLogoutSuccessHandler;
+    }
+
+    @Bean
+    GrantedAuthoritiesMapper userAuthoritiesMapper() {
+        return authorities -> {
+            Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+            authorities.forEach(authority -> {
+                if (authority instanceof OidcUserAuthority oidcAuth) {
+                    Map<String, Object> resourceAccess = oidcAuth.getIdToken().getClaimAsMap("resource_access");
+                    if (resourceAccess == null && oidcAuth.getUserInfo() != null) {
+                        resourceAccess = oidcAuth.getUserInfo().getClaimAsMap("resource_access");
+                    }
+                    if (resourceAccess != null) {
+                        String clientId = oidcAuth.getIdToken().getClaimAsString("azp");
+                        if (clientId == null) {
+                            clientId = "retailstore-webapp";
+                        }
+                        Object clientAccess = resourceAccess.get(clientId);
+                        if (clientAccess instanceof Map<?, ?> client) {
+                            Object roles = client.get("roles");
+                            if (roles instanceof Collection<?> roleCollection) {
+                                roleCollection.stream()
+                                        .filter(String.class::isInstance)
+                                        .map(String.class::cast)
+                                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                                        .forEach(mappedAuthorities::add);
+                            }
+                        }
+                    }
+                }
+                mappedAuthorities.add(authority);
+            });
+            return mappedAuthorities;
+        };
+    }
 }
 ```
 
 #### 2. **OAuth2 Configuration (application.properties)**
 ```properties
+OAUTH2_SERVER_URL=http://localhost:9191
+REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
+
 # OAuth2 Client Registration
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
-spring.security.oauth2.client.registration.retailstore-webapp.scope=openid, profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
+spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[2]=roles
 spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={baseUrl}/login/oauth2/code/retailstore-webapp
 
 # OAuth2 Provider Configuration
@@ -231,17 +324,30 @@ spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=${REALM_URL
 
 public String getUsername() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication.getPrincipal() instanceof DefaultOidcUser principal) {
+    if (authentication != null && authentication.getPrincipal() instanceof DefaultOidcUser principal) {
         return principal.getAttribute("preferred_username");
     }
     return null;
 }
 
+public String getLoggedInUserEmail() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null && authentication.getPrincipal() instanceof DefaultOidcUser principal) {
+        return principal.getAttribute("email");
+    }
+    return null;
+}
+
 public String getAccessToken() {
-    OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-    OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
-        oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
-    return client.getAccessToken().getTokenValue();
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
+                oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
+        if (client != null && client.getAccessToken() != null) {
+            return client.getAccessToken().getTokenValue();
+        }
+    }
+    return null;
 }
 ```
 
@@ -290,27 +396,37 @@ sequenceDiagram
 
 ### 🔍 Token Management Code
 
-#### 1. **API Client Configuration**
+#### 1. **API Client Configuration (Spring Boot 4.1.2 RestClient & Interceptor)**
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/clients/ClientsConfig.java
 
-@Bean
-OrderServiceClient orderServiceClient(WebClient.Builder webClientBuilder, SecurityHelper securityHelper) {
-    WebClient webClient = webClientBuilder
-        .baseUrl(applicationProperties.apiGatewayUrl())
-        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-        .filter((request, next) -> {
-            String token = securityHelper.getAccessToken();
-            if (token != null) {
-                request.headers().setBearerAuth(token);
-            }
-            return next.exchange(request);
-        })
-        .build();
-    
-    return HttpServiceProxyFactory.builderFor(WebClientAdapter.create(webClient))
-        .build()
-        .createClient(OrderServiceClient.class);
+@Configuration(proxyBeanMethods = false)
+@ImportHttpServices({
+    CatalogServiceClient.class,
+    OrderServiceClient.class,
+    CustomerServiceClient.class,
+    InventoryServiceClient.class
+})
+class ClientsConfig {
+
+    @Bean
+    RestClientHttpServiceGroupConfigurer groupConfigurer(
+            ObservationRegistry observationRegistry,
+            ApplicationProperties applicationProperties,
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+
+        OAuth2ClientHttpRequestInterceptor interceptor =
+                new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
+
+        return groups -> groups.forEachClient((group, builder) -> builder.baseUrl(applicationProperties.apiGatewayUrl())
+                .defaultHeaders(httpHeaders -> {
+                    httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                    httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                })
+                .requestInterceptor(interceptor)
+                .observationRegistry(observationRegistry)
+                .build());
+    }
 }
 ```
 
@@ -322,8 +438,8 @@ OrderServiceClient orderServiceClient(WebClient.Builder webClientBuilder, Securi
 sequenceDiagram
     participant User as 👤 User
     participant Browser as 🌐 Browser
-    participant WebApp as 🛒 RetailStore WebApp
-    participant KC as 🔐 Keycloak
+    participant WebApp as 🛒 RetailStore WebApp (Port 8080)
+    participant KC as 🔐 Keycloak (Port 9191)
     participant Spring as 🔧 Spring Security
 
     Note over User, Spring: 🚪 OIDC Logout Flow
@@ -338,16 +454,14 @@ sequenceDiagram
     Note right of Spring: - Invalidate HTTP session<br/>- Clear SecurityContext<br/>- Remove authentication
     
     Spring->>KC: OIDC logout request
-    Note right of KC: OidcClientInitiatedLogoutSuccessHandler<br/>POST /realms/retailstore/protocol/openid-connect/logout<br/>Parameters:<br/>- id_token_hint={id_token}<br/>- post_logout_redirect_uri=http://localhost:8080
+    Note right of KC: OidcClientInitiatedLogoutSuccessHandler<br/>POST /realms/retailstore/protocol/openid-connect/logout<br/>Parameters:<br/>- id_token_hint={id_token}<br/>- post_logout_redirect_uri=http://localhost:8080/
     
     KC->>KC: Invalidate SSO session
     Note right of KC: - Remove Keycloak session<br/>- Invalidate refresh tokens<br/>- Clear user session
     
-    KC-->>Browser: Redirect to post-logout URI
-    Note right of Browser: Redirect to: http://localhost:8080
-    
-    Browser->>WebApp: GET / (unauthenticated)
-    WebApp-->>Browser: Redirect to /login
+    KC-->>Browser: Redirect to post-logout URI (http://localhost:8080/)
+    Browser->>WebApp: GET /
+    WebApp-->>Browser: Render public home / products page
 ```
 
 ### 🔍 Logout Configuration
@@ -357,7 +471,7 @@ sequenceDiagram
 private LogoutSuccessHandler oidcLogoutSuccessHandler() {
     OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
         new OidcClientInitiatedLogoutSuccessHandler(this.clientRegistrationRepository);
-    oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}");
+    oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/");
     return oidcLogoutSuccessHandler;
 }
 ```
@@ -368,71 +482,92 @@ private LogoutSuccessHandler oidcLogoutSuccessHandler() {
 
 ```mermaid
 flowchart TD
-    A[🔐 User Authentication] --> B{Check User Roles}
+    A["🔐 User Authentication (Keycloak OIDC)"] --> B{"Check User Roles"}
     
-    B -->|Has 'ADMIN' role| C[🔧 Admin Access]
-    B -->|Has 'USER' role| D[👤 User Access]
-    B -->|No roles| E[❌ Access Denied]
+    B -->|"Client Role: ADMIN"| C["🔧 Admin Features"]
+    B -->|"Client Role: OPERATOR"| D["📊 Observability & Metrics"]
+    B -->|"Realm Role: user"| E["👤 Shopper Access"]
     
-    C --> F[📦 Inventory Management]
-    C --> G[👥 User Management]
-    C --> H[📊 Admin Dashboard]
+    C --> F["📦 Inventory Management (/inventory)"]
+    C --> G["➕ Product Creation (/api/products)"]
+    D --> H["📈 Prometheus (/actuator/prometheus)"]
+    D --> I["📊 Metrics (/actuator/metrics)"]
+    E --> J["🛒 Shopping Cart (/cart)"]
+    E --> K["📋 Order Processing & History (/orders)"]
+    E --> L["📚 Browse Products (/products)"]
     
-    D --> I[🛒 Shopping Cart]
-    D --> J[📋 Order History]
-    D --> K[📚 Product Catalog]
-    
-    F --> L[PreAuthorize hasRole ADMIN]
-    G --> M[PreAuthorize hasRole ADMIN]
-    I --> N[PreAuthorize authenticated]
-    J --> O[PreAuthorize authenticated]
-    
-    style C fill:#ffcccc
-    style D fill:#ccffcc
-    style E fill:#ffcccc
-    style L fill:#ffe6cc
-    style M fill:#ffe6cc
-    style N fill:#e6f3ff
-    style O fill:#e6f3ff
+    F --> M["@PreAuthorize('hasRole(\'ADMIN\')')"]
+    G --> N["@PreAuthorize('hasRole(\'ADMIN\')')"]
+    H --> O["hasRole('OPERATOR') in SecurityConfig"]
+    I --> O
+    J --> P["Authenticated Session"]
+    K --> P
 ```
 
 ### 🔍 Role-Based Security Code
 
-#### 1. **Method-Level Security**
+#### 1. **Method-Level Security (ADMIN Role)**
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/web/controller/InventoryController.java
 
-@GetMapping("/inventory")
 @PreAuthorize("hasRole('ADMIN')")
-public String inventoryPage() {
+@GetMapping("/inventory")
+String showInventoriesPage(@RequestParam(defaultValue = "0") int page, Model model) {
+    model.addAttribute("pageNo", page);
     return "inventory";
 }
 
-@PutMapping("/inventory")
+@PutMapping(value = "/inventory", consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
 @PreAuthorize("hasRole('ADMIN')")
-public ResponseEntity<InventoryResponse> updateInventory(@RequestBody InventoryUpdateRequest request) {
-    // Only admins can update inventory
+InventoryResponse updateInventory(@Valid @RequestBody InventoryResponse inventoryResponse) {
+    return inventoryServiceClient.updateInventory(
+            inventoryResponse.id(), inventoryResponse.createInventoryUpdateRequest());
+}
+
+// Location: src/main/java/com/example/retailstore/webapp/web/controller/ProductController.java
+
+@PreAuthorize("hasRole('ADMIN')")
+@PostMapping(value = "/api/products", consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
+    return catalogServiceClient.createProduct(productRequest);
 }
 ```
 
-#### 2. **Keycloak Role Configuration**
-```json
-// Location: deployment/realm-config/retailstore-realm.json
-{
-  "roles": {
-    "realm": [
-      {
-        "name": "user",
-        "description": "User role"
-      }
-    ]
-  },
-  "users": [
-    {
-      "username": "raja",
-      "realmRoles": ["default-roles-retailstore"]
-    }
-  ]
+#### 2. **Filter Chain Authorization (OPERATOR Role)**
+```java
+// Location: src/main/java/com/example/retailstore/webapp/config/SecurityConfig.java
+
+http.authorizeHttpRequests(c -> c
+    .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
+    .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").hasRole("OPERATOR")
+    .anyRequest().authenticated()
+);
+```
+
+#### 3. **Keycloak Role Configuration (Terraform / JSON)**
+```hcl
+# Location: deployment/terraform/keycloak/roles.tf
+
+resource "keycloak_role" "webapp_admin_role" {
+  realm_id    = keycloak_realm.retailstore.id
+  client_id   = keycloak_openid_client.retailstore_webapp.id
+  name        = "ADMIN"
+  description = "retail store Administrator"
+}
+
+resource "keycloak_role" "webapp_operator_role" {
+  realm_id    = keycloak_realm.retailstore.id
+  client_id   = keycloak_openid_client.retailstore_webapp.id
+  name        = "OPERATOR"
+  description = "retail store Operator"
+}
+
+resource "keycloak_role" "user_realm_role" {
+  realm_id    = keycloak_realm.retailstore.id
+  name        = "user"
+  description = "User role"
 }
 ```
 
@@ -464,19 +599,26 @@ public ResponseEntity<InventoryResponse> updateInventory(@RequestBody InventoryU
   "header": {
     "alg": "RS256",
     "typ": "JWT",
-    "kid": "..."
+    "kid": "rsa-generated-key-id"
   },
   "payload": {
     "exp": 1640995200,
     "iat": 1640991600,
     "iss": "http://localhost:9191/realms/retailstore",
     "aud": "retailstore-webapp",
+    "azp": "retailstore-webapp",
     "sub": "362b5bb3-0e0a-4ee6-9b59-53e2ca1adeac",
-    "preferred_username": "raja",
-    "email": "rajakolli@gmail.com",
+    "preferred_username": "retail",
+    "email": "retailstore@gmail.com",
     "realm_access": {
-      "roles": ["default-roles-retailstore"]
-    }
+      "roles": ["default-roles-retailstore", "user"]
+    },
+    "resource_access": {
+      "retailstore-webapp": {
+        "roles": ["ADMIN", "OPERATOR"]
+      }
+    },
+    "scope": "openid profile roles"
   }
 }
 ```
@@ -542,7 +684,7 @@ public ResponseEntity<Map<String, String>> handleKeycloakException(KeyCloakExcep
 2. **🛡️ CSRF Protection**: Cookie-based CSRF tokens for form submissions
 3. **⏰ Token Expiry**: Short-lived access tokens (5 minutes) with refresh capability
 4. **🚪 Proper Logout**: OIDC-compliant logout with SSO session termination
-5. **🔒 Role Separation**: Clear distinction between USER and ADMIN roles
+5. **🔒 Role Separation**: Clear distinction between `user` (shopper), `ADMIN` (inventory/products), and `OPERATOR` (actuator metrics/Prometheus) roles
 6. **📝 Audit Trail**: Comprehensive logging of authentication events
 7. **🌐 CORS Configuration**: Proper cross-origin resource sharing setup
 8. **🔧 Configuration Security**: Sensitive configs externalized via environment variables

@@ -80,22 +80,22 @@ sequenceDiagram
     Controller-->>Client: Optimized paginated response
     
     Note over Client, KafkaPool: 📦 Batch Processing Example
-    Client->>Controller: POST /api/orders/batch (List<OrderRequest>)
-    Controller->>Service: saveBatchOrders(orderRequests)
+    Client->>Controller: POST /api/orders/generate?batchSize=100 (Header: Idempotency-Key)
+    Controller->>Service: generateOrders(idempotencyKey, batchSize) -> saveBatchOrders(orderRequests)
     
     Service->>Service: Extract distinct product codes
-    Service->>Service: Single catalog validation call
-    Service->>Repository: saveAll(List<Order>) - Batch insert
+    Service->>Service: Chunked catalog validation (batches of 25)
+    Service->>Repository: saveAll(List<Order>) - Batch insert with TSID
     
-    Service->>KafkaPool: parallelStream().forEach(sendOrder)
-    par Parallel Kafka Publishing
-        KafkaPool->>KafkaPool: Send order1 to Kafka
-        KafkaPool->>KafkaPool: Send order2 to Kafka
-        KafkaPool->>KafkaPool: Send order3 to Kafka
+    Service->>KafkaPool: forEach(publishEvent) with unique attempt IDs
+    par Spring Modulith Outbox Dispatch
+        KafkaPool->>KafkaPool: Outbox dispatch order1 to Kafka
+        KafkaPool->>KafkaPool: Outbox dispatch order2 to Kafka
+        KafkaPool->>KafkaPool: Outbox dispatch order3 to Kafka
     end
     
-    Service-->>Controller: List<OrderResponse>
-    Controller-->>Client: Batch creation success
+    Service-->>Controller: GenericResponse(success=true)
+    Controller-->>Client: 200 OK
 ```
 
 ## 📋 Code Implementation Mapping
@@ -182,41 +182,57 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 ```
 
 ### 3. Batch Processing Implementation
-**File:** `OrderService.java` (Lines 95-125)
+**File:** `OrderService.java`
 ```java
-@Transactional
 public List<OrderResponse> saveBatchOrders(List<OrderRequest> orderRequests) {
-    // OPTIMIZATION: Collect all product codes for single validation
-    List<String> allProductCodes = orderRequests.stream()
-        .flatMap(order -> order.items().stream())
-        .map(OrderItemRequest::productCode)
-        .map(String::toUpperCase)
-        .distinct()  // Remove duplicates
-        .toList();
-    
-    if (productsExistsAndInStock(allProductCodes)) {
-        log.debug("All ProductCodes exist, proceeding with batch save");
-        
-        // OPTIMIZATION: Batch entity mapping
-        List<Order> orderEntities = orderRequests.stream()
-            .map(this.orderMapper::orderRequestToEntity)
-            .toList();
-        
-        // OPTIMIZATION: Single batch database operation
-        List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
-        
-        // OPTIMIZATION: Parallel Kafka publishing
-        savedOrders.parallelStream()
-            .map(this.orderMapper::toDto)
-            .forEach(kafkaOrderProducer::sendOrder);
-        
-        // OPTIMIZATION: Parallel response mapping
-        return savedOrders.parallelStream()
-            .map(this.orderMapper::toResponse)
-            .toList();
+    // Collect all product codes to validate
+    List<String> allProductCodes =
+            orderRequests.stream()
+                    .flatMap(order -> order.items().stream())
+                    .map(OrderItemRequest::productCode)
+                    .map(String::toUpperCase)
+                    .distinct()
+                    .toList();
+
+    // Chunked validation against catalog-service in batches of 25
+    boolean allProductsExist =
+            IntStream.iterate(
+                            0,
+                            index -> index < allProductCodes.size(),
+                            index -> index + PRODUCT_VALIDATION_BATCH_SIZE)
+                    .mapToObj(
+                            start ->
+                                    allProductCodes.subList(
+                                            start,
+                                            Math.min(
+                                                    start + PRODUCT_VALIDATION_BATCH_SIZE,
+                                                    allProductCodes.size())))
+                    .allMatch(productBatch -> productsExistsAndInStock(productBatch).exists());
+
+    if (allProductsExist) {
+        log.debug("All ProductCodes exist in db, proceeding with batch save: {}", allProductCodes);
+        return transactionTemplate.execute(_ -> persistBatchOrders(orderRequests));
     } else {
         throw new ProductNotFoundException(allProductCodes);
     }
+}
+
+private List<OrderResponse> persistBatchOrders(List<OrderRequest> orderRequests) {
+    List<Order> orderEntities =
+            orderRequests.stream().map(this.orderMapper::orderRequestToEntity).toList();
+
+    // Single batch database insert
+    List<Order> savedOrders = this.orderRepository.saveAll(orderEntities);
+
+    // Publish an OrderDto event per saved order via Spring Modulith outbox
+    savedOrders.forEach(
+            order -> {
+                OrderDto dto =
+                        orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
+                eventPublisher.publishEvent(dto);
+            });
+
+    return savedOrders.stream().map(this.orderMapper::toResponse).toList();
 }
 ```
 
@@ -556,7 +572,7 @@ public OrderResponse saveOrderOptimized(OrderRequest orderRequest) {
     // Wait for validation and proceed
     if (validationFuture.join()) {
         Order savedOrder = orderRepository.save(orderEntity);
-        kafkaOrderProducer.sendOrder(orderMapper.toDto(savedOrder));
+        eventPublisher.publishEvent(orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString()));
         return orderMapper.toResponse(savedOrder);
     } else {
         throw new ProductNotFoundException(extractProductCodes(orderRequest));

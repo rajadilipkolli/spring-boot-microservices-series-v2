@@ -2,54 +2,49 @@
 
 ## 📖 Overview
 
-JWKS (JSON Web Key Set) are cryptographic keys used to verify JWT token signatures. This document explains how they work in the RetailStore project.
+JWKS (JSON Web Key Set) are cryptographic keys used to verify JWT token signatures. This document explains how they operate within the RetailStore architecture built on **Java 25** and **Spring Boot 4.1.2**, using **Keycloak 26.x** as the OAuth2 / OpenID Connect Identity Provider.
 
 ---
 
 ## 🎯 What are JWKS Keys?
 
 ### 🔍 **Definition**
-**JWKS** = **JSON Web Key Set** - A set of public keys used to verify JWT signatures
+**JWKS** = **JSON Web Key Set** - A set of public keys used to verify JWT signatures.
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor': '#ffffff', 'primaryTextColor': '#000000', 'primaryBorderColor': '#000000', 'lineColor': '#000000', 'secondaryColor': '#f8f9fa', 'tertiaryColor': '#ffffff', 'background': '#ffffff', 'mainBkg': '#ffffff', 'secondBkg': '#f8f9fa', 'tertiaryBkg': '#ffffff'}}}%%
 flowchart TD
-    A[🔐 Keycloak] --> B[🔑 Private Key]
-    A --> C[🔓 Public Key]
+    A["🔐 Keycloak (Port 9191)"] --> B["🔑 Private Key (RS256)"]
+    A --> C["🔓 Public Key"]
     
-    B --> D[📝 Signs JWT Tokens]
-    C --> E[📋 JWKS Endpoint]
+    B --> D["📝 Signs JWT Tokens (Access & ID Tokens)"]
+    C --> E["📋 JWKS Endpoint (/certs)"]
     
-    E --> F[🛒 retailstore-webapp]
-    E --> G[📚 catalog-service]
-    E --> H[🛍️ order-service]
-    E --> I[💳 payment-service]
-    E --> J[🌐 api-gateway]
+    E --> F["🛒 retailstore-webapp (Port 8080)"]
+    E --> G["📚 catalog-service (Port 18080)"]
+    E --> H["🛍️ order-service (Port 18282)"]
+    E --> I["💳 payment-service (Port 18085)"]
+    E --> J["🌐 api-gateway (Port 8765)"]
     
-    F --> K[✅ Verify JWT Signature]
+    F --> K["✅ Verify JWT Signatures & Map Roles"]
     G --> K
     H --> K
     I --> K
     J --> K
-    
-    style A fill:#e3f2fd
-    style B fill:#ffebee
-    style C fill:#e8f5e8
-    style E fill:#fff3e0
 ```
 
 ### 🔍 **Key Concepts**
 
 1. **Asymmetric Cryptography**: 
-   - Keycloak uses **private key** to sign JWT tokens
-   - Services use **public key** to verify signatures
+   - Keycloak uses its **private key** to sign JWT tokens.
+   - Applications and resource services use Keycloak's **public key** to verify token authenticity and integrity.
 
 2. **JWKS Endpoint**: 
-   - Public keys exposed at: `http://localhost:9191/realms/retailstore/protocol/openid-connect/certs`
+   - Public keys are exposed at: `http://localhost:9191/realms/retailstore/protocol/openid-connect/certs`
 
-3. **Automatic Key Rotation**: 
-   - Keycloak can rotate keys for security
-   - Services automatically fetch new keys
+3. **Automatic Key Rotation & Discovery**: 
+   - OpenID configuration is auto-discovered via: `http://localhost:9191/realms/retailstore/.well-known/openid-configuration`
+   - Services cache public keys locally and auto-refresh them upon rotation.
 
 ---
 
@@ -58,32 +53,29 @@ flowchart TD
 ### ✅ **YES - Extensively Used**
 
 ```mermaid
-%%{init: {'theme':'dark', 'themeVariables': {'primaryColor': '#333333', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#ffffff', 'lineColor': '#ffffff', 'secondaryColor': '#444444', 'tertiaryColor': '#555555', 'background': '#000000', 'mainBkg': '#333333', 'secondBkg': '#444444', 'tertiaryBkg': '#555555', 'noteBkgColor': '#444444', 'noteTextColor': '#ffffff'}}}%%sequenceDiagram
-    participant KC as 🔐 Keycloak
-    participant Service as 🔧 Microservice
-    participant JWKS as 🔑 JWKS Endpoint
-    participant JWT as 🎫 JWT Token
+%%{init: {'theme':'dark', 'themeVariables': {'primaryColor': '#333333', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#ffffff', 'lineColor': '#ffffff', 'secondaryColor': '#444444', 'tertiaryColor': '#555555', 'background': '#000000', 'mainBkg': '#333333', 'secondBkg': '#444444', 'tertiaryBkg': '#555555', 'noteBkgColor': '#444444', 'noteTextColor': '#ffffff'}}}%%
+sequenceDiagram
+    participant KC as 🔐 Keycloak (Port 9191)
+    participant WebApp as 🛒 retailstore-webapp (Port 8080)
+    participant Service as 🔧 Resource Server
+    participant JWKS as 🔑 JWKS Endpoint (/certs)
 
-    Note over KC, JWT: JWT Signature Verification Flow
+    Note over KC, Service: JWT Signature Verification Flow (Java 25 / Spring Boot 4.1.2)
 
-    KC->>JWT: Sign with Private Key
-    Note right of KC: RS256 Algorithm<br/>Private Key: Hidden in Keycloak
-
-    Service->>JWKS: GET /protocol/openid-connect/certs
-    Note right of JWKS: Fetch Public Keys<br/>Cached for performance
-
-    JWKS-->>Service: Return Public Keys (JWKS)
-    Note right of Service: Keys cached locally<br/>Auto-refresh on expiry
-
-    Service->>JWT: Verify Signature
-    Note right of Service: Use Public Key from JWKS<br/>Validate: signature, expiry, issuer
-
+    KC->>KC: Sign Token with Private Key (RS256)
+    KC-->>WebApp: Returns Access Token + ID Token
+    WebApp->>JWKS: GET /realms/retailstore/protocol/openid-connect/certs
+    JWKS-->>WebApp: Returns Public Keys (Cached)
+    WebApp->>WebApp: Verify Signature, Extract azp & Map Roles (ADMIN, OPERATOR)
+    
+    WebApp->>Service: Forward Bearer JWT via RestClient
+    Service->>JWKS: GET /certs (discovers via issuer-uri)
+    JWKS-->>Service: Returns Public Keys (Cached)
+    Service->>Service: Validate Signature & Claims
     alt Signature Valid
-        JWT-->>Service: ✅ Token Verified
-        Service->>Service: Extract User Claims
-    else Signature Invalid
-        JWT-->>Service: ❌ Token Rejected
-        Service->>Service: Return 401 Unauthorized
+        Service-->>WebApp: 200 OK (Process Request)
+    else Signature Invalid / Expired
+        Service-->>WebApp: 401 Unauthorized
     end
 ```
 
@@ -112,29 +104,44 @@ flowchart TD
 }
 ```
 
-### 2. **Spring Security Auto-Configuration**
+### 2. **Spring Security Auto-Configuration (Spring Boot 4.1.2 & Java 25)**
 
-**All services automatically use JWKS via `issuer-uri`**:
-
+**In `retailstore-webapp` (OAuth2 Client)**:
 ```properties
-# application.properties (all backend services)
+# retail-store-webapp/src/main/resources/application.properties
+OAUTH2_SERVER_URL=http://localhost:9191
+REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
+
+spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
+spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
+spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
+spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[2]=roles
+
+spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=${REALM_URL}
+```
+
+**In backend services (Resource Servers)**:
+```properties
+# backend services (order-service, catalog-service, etc.)
 spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:9191/realms/retailstore
 ```
 
 **What happens automatically**:
-1. Spring Security calls `/.well-known/openid-configuration`
+1. Spring Security calls `/.well-known/openid-configuration` on `http://localhost:9191/realms/retailstore`
 2. Discovers JWKS endpoint: `/protocol/openid-connect/certs`
 3. Fetches public keys and caches them
-4. Uses keys to verify JWT signatures
+4. Uses public keys to verify JWT signatures on incoming/outgoing tokens
 
-### 3. **JWT Header with Key ID**
+### 3. **JWT Header with Key ID (`kid`)**
 
 **JWT Header includes `kid` (Key ID)**:
 ```json
 {
   "alg": "RS256",
   "typ": "JWT",
-  "kid": "rsa-generated-key-id"  // References JWKS key
+  "kid": "rsa-generated-key-id"
 }
 ```
 
@@ -143,6 +150,30 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:9191/realm
 2. Finds matching key in cached JWKS
 3. Uses public key to verify signature
 
+### 4. **Roles Claim in Verified JWT**
+
+When the `roles` scope is requested, Keycloak includes both realm roles and client roles:
+```json
+{
+  "iss": "http://localhost:9191/realms/retailstore",
+  "aud": "retailstore-webapp",
+  "sub": "user-uuid",
+  "preferred_username": "retail",
+  "realm_access": {
+    "roles": ["default-roles-retailstore", "user"]
+  },
+  "resource_access": {
+    "retailstore-webapp": {
+      "roles": ["ADMIN", "OPERATOR"]
+    }
+  }
+}
+```
+
+Spring Security in `retail-store-webapp` maps these claims into `GrantedAuthority`:
+- `ADMIN` -> `ROLE_ADMIN` (guards `/inventory` and `/api/products` creation)
+- `OPERATOR` -> `ROLE_OPERATOR` (guards `/actuator/prometheus` and `/actuator/metrics`)
+
 ---
 
 ## 🔍 **Code Implementation**
@@ -150,24 +181,55 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:9191/realm
 ### 1. **Automatic JWKS Configuration**
 
 ```java
-// Spring Security automatically creates this configuration
-@Configuration
-public class JwtDecoderConfig {
-    
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        // Automatically configured from issuer-uri
-        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
-            .withJwkSetUri("http://localhost:9191/realms/retailstore/protocol/openid-connect/certs")
-            .cache(Duration.ofMinutes(5)) // Cache JWKS for 5 minutes
-            .build();
-        
-        return jwtDecoder;
-    }
+// Spring Security internally creates NimbusJwtDecoder from issuer-uri:
+@Bean
+public JwtDecoder jwtDecoder() {
+    return NimbusJwtDecoder
+        .withJwkSetUri("http://localhost:9191/realms/retailstore/protocol/openid-connect/certs")
+        .cache(Duration.ofMinutes(5)) // Cache JWKS for 5 minutes
+        .build();
 }
 ```
 
-### 2. **JWT Validation in Services**
+### 2. **Role Mapping in `retailstore-webapp` (SecurityConfig.java)**
+
+```java
+@Bean
+GrantedAuthoritiesMapper userAuthoritiesMapper() {
+    return authorities -> {
+        Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+        authorities.forEach(authority -> {
+            if (authority instanceof OidcUserAuthority oidcAuth) {
+                Map<String, Object> resourceAccess = oidcAuth.getIdToken().getClaimAsMap("resource_access");
+                if (resourceAccess == null && oidcAuth.getUserInfo() != null) {
+                    resourceAccess = oidcAuth.getUserInfo().getClaimAsMap("resource_access");
+                }
+                if (resourceAccess != null) {
+                    String clientId = oidcAuth.getIdToken().getClaimAsString("azp");
+                    if (clientId == null) {
+                        clientId = "retailstore-webapp";
+                    }
+                    Object clientAccess = resourceAccess.get(clientId);
+                    if (clientAccess instanceof Map<?, ?> client) {
+                        Object roles = client.get("roles");
+                        if (roles instanceof Collection<?> roleCollection) {
+                            roleCollection.stream()
+                                    .filter(String.class::isInstance)
+                                    .map(String.class::cast)
+                                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                                    .forEach(mappedAuthorities::add);
+                        }
+                    }
+                }
+            }
+            mappedAuthorities.add(authority);
+        });
+        return mappedAuthorities;
+    };
+}
+```
+
+### 3. **JWT Validation in Services**
 
 ```java
 // Example: order-service JWT validation
@@ -183,7 +245,7 @@ public class OrderController {
 }
 ```
 
-### 3. **Manual JWKS Validation (if needed)**
+### 4. **Manual JWKS Validation (if needed)**
 
 ```java
 @Service

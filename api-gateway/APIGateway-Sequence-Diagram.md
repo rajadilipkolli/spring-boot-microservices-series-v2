@@ -358,7 +358,7 @@ graph TB
 resilience4j:
   circuitbreaker:
     instances:
-      catalogService:
+      exampleSlowCircuitBreaker:
         slidingWindowSize: 10
         permittedNumberOfCallsInHalfOpenState: 5
         failureRateThreshold: 50

@@ -275,13 +275,17 @@ sequenceDiagram
 ```
 config-repository/
 ├── application.yml                    # Global configuration for all services
+├── application-docker.yml             # Global overrides for Docker Compose
+├── application-kubernetes.yml         # Global overrides for Kubernetes
+├── application-native.yml             # Native build configurations
 ├── api-gateway.properties            # API Gateway specific settings
 ├── catalog-service.yml               # Catalog service configuration
 ├── catalog-service-docker.properties # Catalog service Docker overrides
 ├── inventory-service.properties      # Inventory service settings
+├── naming-server-docker.yml          # Service registry Docker config
 ├── order-service.properties          # Order service configuration
-├── order-service-docker.properties   # Order service Docker overrides
-└── naming-server-docker.yml          # Service registry Docker config
+├── payment-service.properties        # Payment service configuration
+└── payment-service-docker.properties # Payment service Docker overrides
 ```
 
 ## Configuration Endpoints

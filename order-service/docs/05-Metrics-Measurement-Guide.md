@@ -96,8 +96,8 @@ order_processing_time{quantile="0.99"}  // P99: 0.500 (500ms)
 
 #### **Method 2: Spring Boot Actuator**
 ```bash
-# Access metrics endpoint
-curl http://localhost:18282/actuator/metrics/order.processing.time
+# Access metrics endpoint (contextPath: /order-service)
+curl http://localhost:18282/order-service/actuator/metrics/order.processing.time
 
 # Response:
 {
@@ -468,15 +468,15 @@ public class PerformanceComparison {
 
 #### **Method 2: Load Testing Results**
 ```bash
-# Before optimization (using Apache Bench)
-ab -n 10000 -c 100 http://localhost:18282/api/orders
+# Single order creation (using Apache Bench)
+ab -n 10000 -c 100 http://localhost:18282/order-service/api/orders
 
 # Results:
 # Requests per second: 250 [#/sec]
 # Time per request: 400ms [mean]
 
-# After optimization
-ab -n 10000 -c 100 http://localhost:18282/api/orders/batch
+# Batch mock order generation (via /generate)
+ab -n 100 -c 10 -H "Idempotency-Key: test-key-1" -p post_data.json -T application/json http://localhost:18282/order-service/api/orders/generate?batchSize=100
 
 # Results:
 # Requests per second: 1000 [#/sec]

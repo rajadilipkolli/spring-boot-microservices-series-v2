@@ -1,14 +1,24 @@
 # Retail Store
 
-Building RetailStore WebApp using Thymeleaf and Alpine.js
+Building RetailStore WebApp using Thymeleaf and Alpine.js.
 
 Refer :: [YouTube Tutorial](https://www.youtube.com/watch?v=_2e7nfgH-u8)
+
+## 🛠️ Tech Stack & Overview
+
+- **Java Version**: Java 25
+- **Spring Boot Version**: Spring Boot 4.1.2
+- **Security**: Spring Security with OAuth2 Client & OpenID Connect (OIDC)
+- **Identity Provider**: Keycloak 26.x (Port `9191`)
+- **Web Application**: RetailStore WebApp (Port `8080`)
+- **API Gateway**: Spring Cloud Gateway (Port `8765`)
+- **Templating & Frontend**: Thymeleaf, Alpine.js, Tailwind CSS / Bootstrap
 
 ## Prerequisites and Startup Steps
 
 Before starting the retailstore-webapp, ensure that the following prerequisites are met:
 
-1. Make sure Docker and Docker Compose are installed on your system
+1. Java 25 and Docker / Docker Compose are installed on your system.
 2. Build all services with Maven (if not already built):
    ```shell
    ./mvnw clean install -DskipTests
@@ -18,7 +28,7 @@ Before starting the retailstore-webapp, ensure that the following prerequisites 
    cd deployment
    docker-compose up -d
    ```
-   This will start all required services with proper dependencies and health checks.
+   This will start all required services (including PostgreSQL, Keycloak on port 9191, API Gateway on port 8765, Kafka, and backend microservices) with proper dependencies and health checks.
 
 4. Monitor the startup progress:
    ```shell
@@ -28,31 +38,35 @@ Before starting the retailstore-webapp, ensure that the following prerequisites 
 
 5. Access the webapp at [http://localhost:8080](http://localhost:8080)
 
-Note: The docker-compose configuration has been updated to include health checks and proper dependency ordering, ensuring that retailstore-webapp starts only when all required services are ready.
+Note: The docker-compose configuration includes health checks and dependency ordering, ensuring that retailstore-webapp starts only when Keycloak and dependent backend services are healthy.
 
 ## Keycloak Admin console
 
-For accessing the Admin Console, hit [Admin Console](http://localhost:9191)
-and key in the below credentials as per docker
+For accessing the Keycloak Admin Console, visit [Admin Console](http://localhost:9191) (or `http://localhost:9191/admin`) and log in with the admin credentials:
 
 ```plaintext
 username: admin
-password : admin1234
+password: admin1234
 ```
 
 ## 🔐 Keycloak Security Configuration
 
-To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+To fully access all features of the application, users require specific client roles configured under the `retailstore-webapp` client:
+- **`ADMIN`**: Grants administrative access to the Inventory UI (`/inventory`, `PUT /inventory`) and product creation (`POST /api/products`).
+- **`OPERATOR`**: Grants access to Prometheus and Micrometer metrics Actuator endpoints (`/actuator/prometheus`, `/actuator/metrics`, `/actuator/metrics/**`).
+- **`user`** (Realm Role): Assigned automatically upon self-registration (`/registration`, `/api/register`).
 
-### 1. Create the ADMIN Client Role
+When using the Terraform manager (`deployment/terraform/keycloak/` or `docker compose --profile terraform up terraform`), both client roles (`ADMIN`, `OPERATOR`), seed users (`retail`, `raja`), and token mappers are provisioned automatically. If configuring manually in Keycloak:
+
+### 1. Create the ADMIN and OPERATOR Client Roles
 1. Open the Keycloak Admin Console (`http://localhost:9191`).
-2. Select the `retailstore` realm.
+2. Select the **`retailstore`** realm.
 3. Go to **Clients** -> click on **`retailstore-webapp`**.
 4. Go to the **Roles** tab and click **Create Role**.
-5. Name the role **`ADMIN`** and click **Save**.
+5. Name the role **`ADMIN`** (for application administration) or **`OPERATOR`** (for `/actuator/metrics` & `/actuator/prometheus` access) and click **Save**.
 
 ### 2. Map the Client Role to the ID Token
-By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
+By default, Keycloak places client roles only inside the Access Token. To ensure `retailstore-webapp` can extract client roles into Spring Security `GrantedAuthority` during login:
 1. On the left menu, go to **Client Scopes**.
 2. Select and click on the **`roles`** scope in the list.
 3. Go to the **Mappers** tab.
@@ -62,54 +76,59 @@ By default, Keycloak only puts client roles inside the Access Token. To ensure t
 
 ### 3. Assign the Role to Your User
 1. On the left menu, go to **Users**.
-2. Search for your user (e.g., `raja` or `retail`) and click on the username.
+2. Search for your user (e.g., `retail` or `raja`) and click on the username.
 3. Go to the **Role mapping** tab.
 4. Click **Assign role**.
-5. From the dropdown at the top, select **Filter by client roles**.
-6. Find `ADMIN`, check the box, and click **Assign**.
+5. From the dropdown at the top, select **Filter by client roles** (or **Filter by clients**).
+6. Find `ADMIN` (and/or `OPERATOR`), check the box, and click **Assign**.
+   - Note: The pre-seeded `retail` user is granted both `ADMIN` and `OPERATOR` roles.
 
-## Export realm
+## Realm Configuration & Import
 
-### Automated Import (Recommended)
-The realm configuration is automatically imported when Keycloak starts up through the volume mount configuration in docker-compose.yml. The existing realm configuration file is located at `./deployment/realm-config/retailstore-realm.json`.
-
-If you need to export an updated realm configuration after making changes in the Keycloak admin console, you can use the manual export method below.
-
-### Manual Export (Alternative)
-If you need to manually export the realm configuration, you can use the following steps:
-
+### Automated Provisioning via Terraform (Recommended)
+Keycloak realm settings, clients, roles, and users are managed via Terraform scripts located in `deployment/terraform/keycloak/`. You can execute Terraform via Docker Compose:
 ```shell
-# export the realm configuration along with users info
-# Since the deployment mounts the ./realm-config directory to /opt/keycloak/data/import inside the container,
-# running this command will directly update the retailstore-realm.json file in your project!
-$ docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
+docker compose --profile terraform up terraform
 ```
 
-## UI
+### Reference Realm File & Manual Export
+A reference export of the realm configuration is maintained at:
+`retail-store-webapp/src/test/resources/docker/realm-config/retailstore-realm.json`
 
-[Local UI](http://localhost:8080)
-
-To login, use the below credentials
-
-```plaintext
-username: retail
-password : retail1234
+If you need to manually export the realm configuration from the running Keycloak container:
+```shell
+# Export the realm configuration along with users
+docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
 ```
 
-## OIDC Sequence Diagram
+## UI & Default Credentials
+
+- **Web Application URL**: [http://localhost:8080](http://localhost:8080)
+- **Keycloak Server URL**: [http://localhost:9191](http://localhost:9191)
+
+Pre-configured credentials:
+
+| Username | Password                   | Assigned Roles                                                  | Permissions / Purpose                                                                     |
+|----------|----------------------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| `retail` | `retail1234`               | `ADMIN`, `OPERATOR` (Client Roles), `default-roles-retailstore` | Full access: Storefront, Cart, Orders, Inventory (`ADMIN`), Actuator Metrics (`OPERATOR`) |
+| `raja`   | `demo-throwaway-raja-pass` | `default-roles-retailstore` (Realm Role)                        | Standard shopper: Storefront, Cart, Order creation and history                            |
+| `admin`  | `admin1234`                | Master Realm Admin                                              | Keycloak Admin Console (`http://localhost:9191`)                                          |
+
+## OIDC Authentication Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    participant User as User
-    participant WebApp as RetailStore WebApp
-    participant AuthServer as OAuth2 Server
+    participant User as 👤 User / Browser
+    participant WebApp as 🛒 RetailStore WebApp (Port 8080)
+    participant Keycloak as 🔐 Keycloak (Port 9191)
 
-    User->>WebApp: Requests Login
-    WebApp->>AuthServer: OAuth2 Authorization Request
-    AuthServer-->>User: Authorization Consent Page
-    User->>AuthServer: Provides Consent
-    AuthServer-->>WebApp: Authorization Code
-    WebApp->>AuthServer: Exchanges Code for Token
-    AuthServer-->>WebApp: Access Token
-    WebApp-->>User: User Data and UI
+    User->>WebApp: 1. Requests Login (/login or /oauth2/authorization/retailstore-webapp)
+    WebApp->>Keycloak: 2. Redirect to Authorization Endpoint (/realms/retailstore/protocol/openid-connect/auth)
+    Keycloak-->>User: 3. Presents Keycloak Login & Consent Page
+    User->>Keycloak: 4. Submits Credentials (e.g. retail / retail1234)
+    Keycloak-->>WebApp: 5. Redirects to callback with Authorization Code (/login/oauth2/code/retailstore-webapp?code=...)
+    WebApp->>Keycloak: 6. Exchanges Code for Tokens (/protocol/openid-connect/token)
+    Keycloak-->>WebApp: 7. Returns Access Token & ID Token (contains client roles)
+    WebApp->>WebApp: 8. GrantedAuthoritiesMapper maps roles (ROLE_ADMIN, ROLE_OPERATOR)
+    WebApp-->>User: 9. Session Established -> Redirect to / (Home Page)
 ```

@@ -1,50 +1,86 @@
-# API-GATEWAY
+# API Gateway (`api-gateway`)
 
-Spring Cloud Gateway is a web application gateway built on top of the Spring framework. It provides a simple, yet powerful way to route requests to different services based on various criteria, such as URI, host, and header values. It also offers features such as load balancing, rate limiting, and circuit breaking to help manage the flow of traffic to your services. Spring Cloud Gateway can be easily integrated with other Spring Cloud services, such as Eureka and Hystrix, to provide a robust, scalable, and secure platform for building microservices-based applications.
+**Spring Cloud Gateway** serves as the intelligent single entry point for all incoming external and client requests in the microservices platform. Built on the reactive Spring WebFlux stack, it provides dynamic routing, client-side load balancing, distributed rate limiting, circuit breaker protection with fallbacks, automated retry logic, and end-to-end request tracing.
 
-### Run tests
+---
+
+## 🛠️ Tech Stack & Key Technologies
+
+- **Java**: Java 25
+- **Spring Boot**: 4.1.2
+- **Spring Cloud**: 2025.1.4
+- **Gateway Framework**: Spring Cloud Gateway (Reactive / WebFlux)
+- **Service Discovery**: Spring Cloud Netflix Eureka Client (`lb://` protocol routing)
+- **Load Balancer**: Spring Cloud LoadBalancer
+- **Distributed Rate Limiting**: Redis Reactive (`RequestRateLimiter` filter backed by Redis)
+- **Circuit Breaking & Resilience**: Resilience4j CircuitBreaker with forward fallback
+- **Retry Mechanism**: Spring Cloud Gateway Retry filter with exponential backoff
+- **Observability & Tracing**: Micrometer Tracing, OpenTelemetry, Prometheus metrics
+- **Documentation**: SpringDoc OpenAPI (v3.2.0) aggregating Swagger endpoints across microservices
+
+---
+
+## 🛣️ Route & Resilience Configuration
+
+| Route ID | Path Predicate | Target URI | Resilience & Filters |
+| :--- | :--- | :--- | :--- |
+| `catalog-service` | `/catalog-service/**` | `lb://catalog-service` | **Retry**: 3 retries on GET methods with exponential backoff (50ms to 500ms, factor 2) |
+| `inventory-service` | `/inventory-service/**` | `lb://inventory-service` | **Circuit Breaker**: `exampleSlowCircuitBreaker` with fallback forwarding to `/fallback/api/inventory` |
+| `order-service` | `/order-service/**` | `lb://order-service` | **RequestRateLimiter**: Redis-based rate limiting (replenishRate: 60/min, burstCapacity: 10) |
+| `payment-service` | `/payment-service/**` | `lb://payment-service` | Dynamic load balancing via Eureka (`lb://`) |
+
+---
+
+## 🚀 Running the Service
+
+### Prerequisites & Dependencies via Docker Compose
+
+Start the supporting infrastructure (Redis, Config Server, Eureka Service Registry, Grafana LGTM):
 
 ```shell
-./mvnw clean verify
+# From the api-gateway directory
+docker compose up -d
 ```
 
-### Run locally
+### Run Locally (Spring Boot)
 
 ```shell
-docker-compose -f docker/docker-compose.yml up -d
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
+*(On Windows Command Prompt or PowerShell, use `mvnw.cmd`)*
 
 ### Using Testcontainers at Development Time
-You can run `TestAPIGatewayApplication.java` from your IDE directly.
-You can also run the application using Maven as follows:
+
+Run `TestAPIGatewayApplication.java` directly from your IDE, or launch it with Maven:
 
 ```shell
 ./mvnw spotless:apply spring-boot:test-run
 ```
 
-## URL's
+### Run Tests & Verification
 
-Make sure you are using the right URLs when calling ?
+```shell
+./mvnw clean verify
+```
 
-### Discovery (spring.cloud.gateway.discovery.locator.enabled=true)
+---
 
-http://localhost:8765/CATALOG-SERVICE/catalog-service/api/
+## 🌐 Useful URLs & Endpoints
 
-###LowerCase (spring.cloud.gateway.discovery.locator.lower-case-service-id=true)
+- **Gateway Base URL**: `http://localhost:8765`
+- **Swagger UI (Aggregated APIs)**: `http://localhost:8765/swagger-ui.html`
+- **OpenAPI v3 Docs**: `http://localhost:8765/v3/api-docs`
+- **Actuator Health**: `http://localhost:8765/actuator/health`
+- **Actuator Info**: `http://localhost:8765/actuator/info`
+- **Gateway Routes**: `http://localhost:8765/actuator/gateway/routes`
+- **Gateway Global Filters**: `http://localhost:8765/actuator/gateway/globalfilters`
+- **Gateway Route Filters**: `http://localhost:8765/actuator/gateway/routefilters`
+- **Route Detail (`catalog-service`)**: `http://localhost:8765/actuator/gateway/routes/catalog-service`
+- **Orchestrated Data Generation Endpoint**: `POST http://localhost:8765/api/v1/generate` (Requires `Idempotency-Key` header)
 
-http://localhost:8765/catalog-service/catalog-service/api/
+### Calling Microservices Through Gateway
 
-### Discovery Disabled and Custom Routes Configured
-
-http://localhost:8765/catalog-service/api/
-
-### Swagger URL
-http://localhost:8765/api-gateway/swagger-ui.html
-
-#### useful URLS
-
- - http://localhost:8765/api-gateway/actuator/gateway/routes - find all defined routes
- - http://localhost:8765/api-gateway/actuator/gateway/globalfilters - list global filters
- - http://localhost:8765/api-gateway/actuator/gateway/routefilters - list route filters
- - http://localhost:8765/api-gateway/actuator/gateway/routes/catalog-service - Details about the service
+- **Catalog Service**: `http://localhost:8765/catalog-service/api/catalog`
+- **Inventory Service**: `http://localhost:8765/inventory-service/api/inventory`
+- **Order Service**: `http://localhost:8765/order-service/api/orders`
+- **Payment Service**: `http://localhost:8765/payment-service/api/payments`

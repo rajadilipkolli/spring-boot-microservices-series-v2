@@ -327,14 +327,19 @@ This project uses **PostgreSQL-backed queues** (not in-memory).
 <!-- pom.xml -->
 <dependency>
     <groupId>org.jobrunr</groupId>
-    <artifactId>jobrunr-spring-boot-3-starter</artifactId>
-    <version>8.1.0</version>
+    <artifactId>jobrunr-spring-boot-4-starter</artifactId>
+    <version>9.0.2</version>
+</dependency>
+<dependency>
+    <groupId>org.springframework.modulith</groupId>
+    <artifactId>spring-modulith-starter-jobrunr</artifactId>
 </dependency>
 
 <!-- PostgreSQL datasource -->
 <dependency>
     <groupId>org.postgresql</groupId>
     <artifactId>postgresql</artifactId>
+    <scope>runtime</scope>
 </dependency>
 ```
 
@@ -351,10 +356,13 @@ jobrunr:
     enabled: true
   background-job-server:
     enabled: true
+    poll-interval-in-seconds: 5
+    metrics.enabled: true
   dashboard:
     enabled: true
     port: 28282
-  # No explicit storage config needed!
+  miscellaneous:
+    allow-anonymous-data-usage: false
   # JobRunr auto-detects PostgreSQL datasource
 ```
 

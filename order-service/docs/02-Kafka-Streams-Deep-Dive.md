@@ -63,7 +63,7 @@ graph TB
 4. [Dead Letter Queue (DLQ) Usage](#dead-letter-queue-dlq-usage)
 5. [Critical Kafka Streams Configurations](#critical-kafka-streams-configurations)
 6. [Advanced Kafka Streams Concepts](#advanced-kafka-streams-concepts)
-7. [Monitoring & Observability](#monitoring--observability)
+7. [Monitoring & Observability](#monitoring-observability)
 8. [Performance Optimization Tips](#performance-optimization-tips)
 9. [Error Handling Strategies](#error-handling-strategies)
 10. [Testing Kafka Streams](#testing-kafka-streams)
@@ -90,15 +90,14 @@ flowchart TD
         STREAM2[🌊 KStream: Stock Events]
         
         JOIN[🔗 Stream Join]
-        WINDOW[⏰ 10s Time Window]
+        WINDOW[⏰ 30s Window + 30s Grace]
         
         PROCESSOR[⚙️ Business Logic Processor]
         
         SINK1[📤 Sink: orders]
         SINK2[📤 Sink: recovererDLQ]
         
-        STORE[💾 State Store: orders-store]
-        TABLE[📋 KTable: Materialized View]
+        STORE[💾 State Store: join-store]
     end
     
     SOURCE1 --> STREAM1
@@ -112,26 +111,25 @@ flowchart TD
     PROCESSOR --> SINK1
     PROCESSOR --> SINK2
     
-    SINK1 --> STORE
-    STORE --> TABLE
-    
     style JOIN fill:#ec4899,color:#ffffff
     style WINDOW fill:#f59e0b,color:#ffffff
     style PROCESSOR fill:#22c55e,color:#ffffff
     style STORE fill:#8b5cf6,color:#ffffff
 ```
 ```java
-// Stream processing pipeline
-KStream<Long, OrderDto> paymentStream = builder.stream("payment-orders");
-KStream<Long, OrderDto> stockStream = builder.stream("stock-orders");
+// Stream processing pipeline with attempt correlation
+KStream<String, OrderDto> paymentStream = builder.stream("payment-orders", Consumed.with(Serdes.String(), orderSerde));
+KStream<String, OrderDto> stockStream = builder.stream("stock-orders", Consumed.with(Serdes.String(), orderSerde));
 
-// Join two streams within a time window
-paymentStream
-    .join(stockStream, 
-          this::processOrder,           // Value joiner function
-          JoinWindows.of(Duration.ofSeconds(10)),  // Time window
-          StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-    .to("orders");                    // Output topic
+// Correlate by orderId:attemptId and join within a 30s window + 30s grace
+correlateByAttempt(paymentStream)
+    .join(correlateByAttempt(stockStream), 
+          orderManageService::confirm,           // Value joiner function
+          JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30)),
+          StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+    .filter((key, order) -> order != null)
+    .selectKey((key, order) -> order.orderId().toString())
+    .to("orders", Produced.with(Serdes.String(), orderSerde));
 ```
 
 #### 2. **KStream vs KTable**
@@ -277,28 +275,30 @@ public void handlePayment(OrderDto payment) {
 ### Kafka Streams Approach
 ```java
 // ✅ Advantages:
-// 1. Automatic event correlation
-// 2. Built-in windowing and time semantics
-// 3. Exactly-once processing
-// 4. Automatic state management
-// 5. Fault tolerance and recovery
+// 1. Automatic event correlation by attempt ID
+// 2. Built-in windowing (30s window + 30s grace)
+// 3. Exactly-once processing (EXACTLY_ONCE_V2)
+// 4. Automatic state management via RocksDB
+// 5. Fault tolerance, changelog topics, and dead letter recovery
 
-paymentStream
-    .join(stockStream,
-          this::processOrder,                    // Business logic only
-          JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-          StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-    .to("orders");
+correlateByAttempt(paymentStream)
+    .join(correlateByAttempt(stockStream),
+          orderManageService::confirm,                    // Business logic only
+          JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30)),
+          StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+    .filter((key, order) -> order != null)
+    .selectKey((key, order) -> order.orderId().toString())
+    .to("orders", Produced.with(Serdes.String(), orderSerde));
 ```
 
 ### Key Benefits in This Project
 
 1. **Automatic Event Correlation**
-    - No manual caching or correlation logic
+    - Correlates by `orderId:attemptId` to prevent cross-attempt collisions
     - Built-in join operations handle complexity
 
 2. **Time Window Management**
-    - 10-second window for payment + inventory events
+    - 30-second window with 30-second grace period for payment + inventory events
     - Automatic cleanup of expired windows
 
 3. **Exactly-Once Processing**
@@ -492,7 +492,7 @@ graph TD
         subgraph "💾 State Management"
             STORE[Persistent Store]
             CHANGELOG[Changelog Topic]
-            WINDOW_CONFIG[Join Window: 10s]
+            WINDOW_CONFIG[Join Window: 30s + 30s Grace]
         end
     end
     
@@ -587,25 +587,27 @@ Materialized.<Long, OrderDto>as(store)
 
 ### 5. Join Window Configuration
 ```java
-// 10-second window for payment + inventory correlation
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10))
+// 30-second window with 30-second grace period for payment + inventory correlation
+JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30))
 ```
 
 **Window Considerations:**
 - **Too small**: Messages may arrive after window closes
 - **Too large**: Higher memory usage, delayed processing
-- **No grace period**: Strict time boundaries
-- **10 seconds**: Reasonable for microservice response times
+- **Grace period**: Handles late arriving out-of-order records
+- **30 seconds + 30s grace**: Generous tolerance for downstream microservices (Payment and Inventory)
 
 ### 6. Serialization Configuration
 ```java
-// JSON serialization for OrderDto
-JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+// JSON serialization for OrderDto without type info headers
+@Bean
+Serde<@NonNull OrderDto> orderDtoSerde() {
+    return new JacksonJsonSerde<>(OrderDto.class).noTypeInfo();
+}
 
-// Trusted packages for security
-streamsConfiguration.put(
-    "spring.json.trusted.packages", 
-    "com.example.common.dtos");
+// Trusted packages and disabled type headers in application.yml
+// spring.json.trusted.packages: '*'
+// spring.json.use.type.headers: false
 ```
 
 ---
@@ -751,8 +753,8 @@ TimeWindows.of(Duration.ofMinutes(5))
 // Session Window (activity-based)
 SessionWindows.with(Duration.ofMinutes(5))
 
-// Join Window (used in project)
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10))
+// Join Window (used in project: 30s difference + 30s grace)
+JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30))
 ```
 
 ---

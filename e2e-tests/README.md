@@ -1,13 +1,23 @@
-# 🧪 End-to-End (E2E) Test Suite
+# 🧪 End-to-End (E2E) Test Suite (`e2e-tests`)
 
 This module provides end-to-end integration tests for the **Spring Boot Microservices Series V2** platform. It validates the deployed system as a black box through the **API Gateway** and **Keycloak**.
+
+---
+
+## 🛠️ Tech Stack & Key Technologies
+
+- **Java**: Java 25
+- **Spring Boot**: 4.1.2 (`spring-boot-starter-parent`)
+- **HTTP Testing Framework**: REST Assured 6.3.0 (`io.rest-assured:rest-assured`)
+- **Assertions & Execution**: JUnit Jupiter & AssertJ
+- **Security Validation**: OAuth2 / OIDC token exchange against Keycloak
 
 ---
 
 ## 📋 Test Coverage
 
 1. **Service Health Checks (`ActuatorHealthE2ETest`)**:
-   - Validates `/actuator/health` on `api-gateway`, `catalog-service`, `inventory-service`, `order-service`, and `payment-service`.
+   - Validates `/actuator/health` on `api-gateway` (8765), `catalog-service` (18080), `inventory-service` (18181), `order-service` (18282), and `payment-service` (18085).
 2. **Catalog & Inventory Flow (`CatalogAndInventoryE2ETest`)**:
    - Product creation, inventory updates, and cross-service inventory queries via catalog service (`?fetchInStock=true`).
 3. **Order Fulfillment Saga (`OrderSagaFulfillmentE2ETest`)**:
@@ -34,10 +44,13 @@ From the project root:
 ```bash
 # Run all E2E tests
 ./mvnw test -pl e2e-tests -DskipE2E=false
+```
+*(On Windows Command Prompt or PowerShell: `mvnw.cmd test -pl e2e-tests -DskipE2E=false`)*
 
-# Or from within the e2e-tests directory
+Or from within the `e2e-tests` directory:
+```bash
 cd e2e-tests
-../mvnw test
+../mvnw test -DskipE2E=false
 ```
 
 ### 3. Execute Against Custom Host / Kubernetes Ingress
@@ -57,7 +70,7 @@ Override target URLs using system properties:
 | `webapp.url` | `WEBAPP_URL` | `http://localhost:8080` | Retail Store WebApp URL |
 | `keycloak.client.secret` | `TF_VAR_webapp_client_secret` | `demo-throwaway-oauth-secret` | Keycloak OAuth2 client secret |
 | `keycloak.password` | `KEYCLOAK_RETAIL_PASSWORD` | `retail1234` | Keycloak retail user password |
-| `skipE2E` | `SKIP_E2E` | `false` (in module) | Set to `true` to skip test execution |
+| `skipE2E` | `SKIP_E2E` | `true` | Set to `false` to execute E2E tests (skipped by default in regular builds) |
 
 The Bash Kubernetes runners load credentials from Kubernetes Secrets when no
 environment override is set, then export `TF_VAR_webapp_client_secret` and

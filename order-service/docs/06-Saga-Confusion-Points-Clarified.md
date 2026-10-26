@@ -247,14 +247,14 @@ sequenceDiagram
 
 ---
 
-## 2️⃣ The 10-Second Window - Deep Dive
+## 2️⃣ The 30-Second Window & Grace Period - Deep Dive
 
 ### ❓ The Question
-"What happens in the 10-second window? What is its use? What happens after the window? What could go wrong?"
+"What happens in the join window? What is its use? What happens after the window? What could go wrong?"
 
 ### ✅ The Answer
 
-The 10-second window is a **time-based join window** that determines how long Kafka Streams will wait to match payment and inventory responses for the same order.
+The 30-second window (with a 30-second grace period) is a **time-based join window** that determines how long Kafka Streams will wait to match payment and inventory responses for the same order and attempt.
 
 ---
 
@@ -264,37 +264,38 @@ The 10-second window is a **time-based join window** that determines how long Ka
 **File:** `KafkaStreamsConfig.java`
 
 ```java
-paymentStream
+correlateByAttempt(paymentStream)
     .join(
-        stockStream,
+        correlateByAttempt(stockStream),
         orderManageService::confirm,
-        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),  // ← THE WINDOW
-        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde)
+        JoinWindows.ofTimeDifferenceAndGrace(
+                Duration.ofSeconds(30), Duration.ofSeconds(30)),  // ← 30s Window + 30s Grace
+        StreamJoined.with(Serdes.String(), orderSerde, orderSerde)
     )
 ```
 
 ---
 
-## 📊 Visual Timeline: What Happens in 10 Seconds
+## 📊 Visual Timeline: What Happens in 30 Seconds (+ Grace Period)
 
 ```mermaid
 gantt
-    title Order Processing Timeline (10-Second Window)
+    title Order Processing Timeline (30-Second Window + 30s Grace)
     dateFormat ss
     axisFormat %S sec
     
     section Order 123
     Payment arrives (t=0)     :milestone, m1, 00, 0s
-    Window opens              :active, w1, 00, 10s
-    Stock arrives (t=3)       :milestone, m2, 03, 0s
-    Join happens              :crit, j1, 03, 1s
-    Window closes (t=10)      :milestone, m3, 10, 0s
+    Window active             :active, w1, 00, 30s
+    Stock arrives (t=5)       :milestone, m2, 05, 0s
+    Join happens              :crit, j1, 05, 1s
+    Grace period ends (t=60)  :milestone, m3, 60, 0s
     
-    section Order 456
+    section Order 456 (Expired)
     Payment arrives (t=0)     :milestone, m4, 00, 0s
-    Window opens              :active, w2, 00, 10s
-    Window closes (t=10)      :milestone, m5, 10, 0s
-    Stock arrives (t=12) ❌   :milestone, m6, 12, 0s
+    Window closes (t=30)      :milestone, m5, 30, 0s
+    Grace closes (t=60)       :milestone, m6, 60, 0s
+    Stock arrives (t=65) ❌   :milestone, m7, 65, 0s
 ```
 
 ---
@@ -503,10 +504,10 @@ t=11: Stock message arrives → TOO LATE
 Result: Order stuck in NEW status, requires retry
 ```
 
-**Solution:**
+**Solution (implemented in codebase):**
 ```java
-// Increase window size for slow services
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
+// Window and grace period for slow services and network latency
+JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30))
 ```
 
 ---
@@ -586,22 +587,18 @@ TimestampExtractor.FAIL_ON_INVALID_TIMESTAMP
 ### Current Configuration Analysis
 
 ```java
-// Current: 10 seconds with NO grace period
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10))
+// Production configuration in KafkaStreamsConfig.java:
+JoinWindows.ofTimeDifferenceAndGrace(
+    Duration.ofSeconds(30),  // Main window difference
+    Duration.ofSeconds(30)   // Grace period for out-of-order records
+)
 
 // Breakdown:
-// - Window size: 10 seconds
-// - Grace period: 0 seconds (no late arrivals accepted)
+// - Window size: 30 seconds
+// - Grace period: 30 seconds (accommodates late arrivals and retries)
 // - Bidirectional: Yes (payment→stock or stock→payment)
+// - Attempt Correlation: Keyed by orderId:attemptId
 ```
-
-**Recommendation:** Add grace period for late messages
-```java
-// Better configuration
-JoinWindows.ofTimeDifferenceAndGrace(
-    Duration.ofSeconds(10),  // Main window
-    Duration.ofSeconds(5)    // Grace period for late arrivals
-)
 ```
 
 ---
@@ -654,11 +651,12 @@ rate(saga_window_timeout_total[5m])
 2. **Transactional processing** - atomic commits
 3. **State store deduplication** - track processed messages
 
-### 10-Second Window
-✅ Purpose: Wait for both payment and stock responses
+### 30-Second Window & Grace Period
+✅ Purpose: Wait for both payment and stock responses for the same attempt
 ✅ Bidirectional: Works regardless of arrival order
-✅ Persisted: Survives restarts via RocksDB
-⚠️ Risk: Late arrivals cause timeouts → retry needed
+✅ Persisted: Survives restarts via RocksDB and changelog
+✅ Grace Period: 30-second extra grace window for late out-of-order records
+⚠️ Risk: Late arrivals beyond window + grace cause timeouts → JobRunr retry needed
 
 ### Key Takeaway
 The window is a **trade-off**:
