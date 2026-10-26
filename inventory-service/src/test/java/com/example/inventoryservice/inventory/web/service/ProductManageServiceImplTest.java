@@ -39,7 +39,8 @@ class ProductManageServiceImplTest {
         // Arrange
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
 
-        given(inventoryJOOQRepository.existsByProductCode(productDto.code())).willReturn(false);
+        given(inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(productDto.code()))
+                .willReturn(false);
         given(inventoryRepository.save(argumentCaptor.capture()))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
@@ -103,7 +104,7 @@ class ProductManageServiceImplTest {
     void manageWhenNotDeletedAndSoftDeletedExistsShouldNotRecreate() {
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
 
-        given(inventoryJOOQRepository.existsByProductCode("P001")).willReturn(true);
+        given(inventoryJOOQRepository.existsByProductCodeAndDeletedFalse("P001")).willReturn(true);
 
         productManageService.manage(productDto);
 

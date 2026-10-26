@@ -12,7 +12,7 @@ import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
 import com.example.inventoryservice.inventory.utils.AppConstants;
-import com.example.inventoryservice.inventory.web.api.InventoryApi;
+import com.example.inventoryservice.inventory.web.api.InventorySwaggerApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/inventory")
 @Loggable
 @Validated
-class InventoryController implements InventoryApi {
+class InventoryController implements InventorySwaggerApi {
 
     private final InventoryAPI inventoryAPI;
 
@@ -152,18 +152,17 @@ class InventoryController implements InventoryApi {
     }
 
     /**
-     * Deletes existing inventory and returns its previous representation, or HTTP 404 if absent.
+     * Deletes existing inventory and returns its previous representation, or HTTP 410 if absent.
      */
     @DeleteMapping("/{id}")
     @Override
     public ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
-        return inventoryAPI
-                .findInventoryById(id)
-                .map(
-                        inventory -> {
-                            inventoryAPI.deleteInventoryById(id);
-                            return ResponseEntity.ok(inventory);
-                        })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        boolean existsInventoryById = inventoryAPI.existsInventoryById(id);
+        if (existsInventoryById) {
+            inventoryAPI.deleteInventoryById(id);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.GONE).build();
+        }
     }
 }

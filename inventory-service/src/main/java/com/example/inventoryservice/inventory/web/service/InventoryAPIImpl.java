@@ -45,10 +45,9 @@ class InventoryAPIImpl implements InventoryAPI {
         return inventoryService.findAllInventories(pageNo, pageSize, sortBy, sortDir);
     }
 
-    /** Maps inventory found by identifier to a response, preserving an absent result. */
     @Override
-    public Optional<InventoryResponse> findInventoryById(Long id) {
-        return inventoryService.findInventoryById(id).map(inventoryMapper::toResponse);
+    public boolean existsInventoryById(Long id) {
+        return inventoryService.existsByIdAndDeletedFalse(id);
     }
 
     /** Maps inventory found by product code to a response, preserving an absent result. */

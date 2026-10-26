@@ -9,6 +9,7 @@ package com.example.inventoryservice.inventory.web.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.common.dto.OrderDto;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -80,13 +81,14 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Verify each product's changes
         for (String productCode : expectedChanges.keySet()) {
             Inventory initial = initialState.get(productCode);
-            Inventory updated = inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
+            InventoryRecord updated =
+                    inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
 
             int[] changes = expectedChanges.get(productCode);
             int availableQtyChange = changes[0];
             int reservedItemsChange = changes[1];
 
-            assertThat(updated.getAvailableQuantity())
+            assertThat(updated.getQuantity())
                     .isEqualTo(initial.getAvailableQuantity() + availableQtyChange);
             assertThat(updated.getReservedItems())
                     .isEqualTo(initial.getReservedItems() + reservedItemsChange);
@@ -331,12 +333,14 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         OrderDto orderDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item1));
 
         inventoryOrderManageService.confirm(orderDto);
-        Inventory afterFirst = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        InventoryRecord afterFirst =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
         assertThat(afterFirst.getReservedItems()).isEqualTo(40);
 
         // Duplicate confirm should be skipped and not deduct reserved items again
         inventoryOrderManageService.confirm(orderDto);
-        Inventory afterSecond = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        InventoryRecord afterSecond =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
         assertThat(afterSecond.getReservedItems()).isEqualTo(40);
     }
 
@@ -366,15 +370,17 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         // Unfiltered confirm should successfully deduct reserved items on soft-deleted row
         inventoryOrderManageService.confirm(confirmDto);
-        Inventory afterConfirm = inventoryRepository.findById(product1.getId()).orElseThrow();
+        InventoryRecord afterConfirm =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
         assertThat(afterConfirm.getReservedItems()).isEqualTo(40);
 
         Long rollbackOrderId = orderIdGenerator.incrementAndGet();
         OrderDto rollbackDto = new OrderDto(rollbackOrderId, 2L, "ROLLBACK", "TEST", List.of(item));
         // Unfiltered rollback should successfully release reserved items
         inventoryOrderManageService.confirm(rollbackDto);
-        Inventory afterRollback = inventoryRepository.findById(product1.getId()).orElseThrow();
-        assertThat(afterRollback.getAvailableQuantity()).isEqualTo(110);
+        InventoryRecord afterRollback =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterRollback.getQuantity()).isEqualTo(110);
         assertThat(afterRollback.getReservedItems()).isEqualTo(30);
     }
 }

@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -15,15 +16,18 @@ import org.springframework.stereotype.Repository;
 @Repository
 interface InventoryJOOQRepository {
 
-    Optional<Inventory> findById(Long customerId);
+    Optional<InventoryRecord> findById(Long inventoryId);
 
-    Page<Inventory> findAll(Pageable pageable);
+    Page<InventoryRecord> findAllAndDeletedFalse(Pageable pageable);
 
-    Optional<Inventory> findByProductCode(String productCode);
+    Optional<InventoryRecord> findByProductCodeAndDeletedFalse(String productCode);
 
-    Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable);
+    Page<InventoryRecord> findByProductCodeInAndDeletedFalse(
+            List<String> productCodes, Pageable pageable);
 
-    boolean existsByProductCode(String productCode);
+    boolean existsByProductCodeAndDeletedFalse(String productCode);
 
-    int deleteByProductCode(String productCode);
+    Optional<InventoryRecord> findByIdAndDeletedFalse(Long inventoryId);
+
+    boolean existsByIdAndDeletedFalse(Long inventoryId);
 }

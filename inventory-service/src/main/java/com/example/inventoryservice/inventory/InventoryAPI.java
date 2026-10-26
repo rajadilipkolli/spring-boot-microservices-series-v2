@@ -28,14 +28,6 @@ public interface InventoryAPI {
             int pageNo, int pageSize, String sortBy, String sortDir);
 
     /**
-     * Finds inventory by its identifier.
-     *
-     * @param id inventory identifier
-     * @return the matching inventory, or an empty optional when absent
-     */
-    Optional<InventoryResponse> findInventoryById(Long id);
-
-    /**
      * Finds inventory by its product code.
      *
      * @param productCode product code to look up
@@ -130,4 +122,12 @@ public interface InventoryAPI {
      * @param productDto product whose code identifies the inventory record
      */
     void manage(ProductDto productDto);
+
+    /**
+     * Checks if inventory exists by its identifier.
+     *
+     * @param id inventory identifier
+     * @return true if the inventory exists, false otherwise
+     */
+    boolean existsInventoryById(Long id);
 }

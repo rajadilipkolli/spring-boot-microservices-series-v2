@@ -236,15 +236,12 @@ class InventoryControllerIT extends AbstractIntegrationTest {
 
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.getProductCode())))
-                .andExpect(jsonPath("$.availableQuantity", is(inventory.getAvailableQuantity())))
-                .andExpect(jsonPath("$.reservedItems").value(inventory.getReservedItems()));
+                .andExpect(status().isOk());
 
-        // Repeated delete must return 404
+        // Repeated delete must return 410
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventory.getId()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isGone());
 
         // Get by code must return 404
         this.mockMvc

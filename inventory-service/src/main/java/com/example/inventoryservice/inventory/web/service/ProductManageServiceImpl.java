@@ -65,7 +65,7 @@ class ProductManageServiceImpl implements ProductManageService {
         }
 
         // avoid inserting duplicate inventory records when retries or duplicate events arrive
-        if (this.inventoryJOOQRepository.existsByProductCode(productCode)) {
+        if (this.inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(productCode)) {
             return;
         }
 
@@ -73,7 +73,7 @@ class ProductManageServiceImpl implements ProductManageService {
         try {
             this.inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
-            if (!this.inventoryJOOQRepository.existsByProductCode(productCode)) {
+            if (!this.inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(productCode)) {
                 throw ex;
             }
             // Another thread created the same product_code concurrently; ignore to keep

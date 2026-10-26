@@ -11,6 +11,7 @@ import static org.awaitility.Awaitility.await;
 
 import com.example.common.dto.OrderDto;
 import com.example.common.dto.ProductDto;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
     @Test
     void onNewOrderEvent() {
-        inventoryJOOQRepository.deleteByProductCode("JUNIT_000");
+        inventoryRepository.deleteByProductCode("JUNIT_000");
         // Create inventory ensuring quantity is available
         Inventory inventory =
                 inventoryRepository.save(
@@ -38,15 +39,14 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
         await().untilAsserted(
                         () -> {
-                            Optional<Inventory> optionalInventory =
+                            Optional<InventoryRecord> optionalInventory =
                                     inventoryJOOQRepository.findById(inventory.getId());
                             assertThat(optionalInventory).isPresent();
-                            Inventory inventoryFromDB = optionalInventory.get();
+                            InventoryRecord inventoryFromDB = optionalInventory.get();
                             assertThat(inventoryFromDB)
                                     .satisfies(
                                             inventory1 -> {
-                                                assertThat(inventory1.getAvailableQuantity())
-                                                        .isEqualTo(990);
+                                                assertThat(inventory1.getQuantity()).isEqualTo(990);
                                                 assertThat(inventory1.getReservedItems())
                                                         .isEqualTo(10);
                                             });
@@ -57,7 +57,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
     /** Verifies a catalog product event with a decimal price creates an inventory entry. */
     @Test
     void onSaveProductEvent() {
-        inventoryJOOQRepository.deleteByProductCode("P001");
+        inventoryRepository.deleteByProductCode("P001");
 
         // Simulating the catalog-service product shape which is a flat JSON without __TypeId__
         ProductDto productDto =
@@ -67,13 +67,15 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
         await().untilAsserted(
                         () ->
-                                assertThat(inventoryJOOQRepository.findByProductCode("P001"))
+                                assertThat(
+                                                inventoryJOOQRepository
+                                                        .findByProductCodeAndDeletedFalse("P001"))
                                         .isPresent());
     }
 
     @Test
     void onDeleteProductEvent() {
-        inventoryJOOQRepository.deleteByProductCode("P_DEL_001");
+        inventoryRepository.deleteByProductCode("P_DEL_001");
         // Create active inventory
         inventoryRepository.save(
                 new Inventory().setProductCode("P_DEL_001").setAvailableQuantity(100));
@@ -93,14 +95,16 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                             assertThat(opt.get().isDeleted()).isTrue();
 
                             // Filtered lookup returns empty
-                            assertThat(inventoryJOOQRepository.findByProductCode("P_DEL_001"))
+                            assertThat(
+                                            inventoryJOOQRepository
+                                                    .findByProductCodeAndDeletedFalse("P_DEL_001"))
                                     .isEmpty();
                         });
     }
 
     @Test
     void onProductEventWithUnknownFields() {
-        inventoryJOOQRepository.deleteByProductCode("P_UNKNOWN_001");
+        inventoryRepository.deleteByProductCode("P_UNKNOWN_001");
 
         // JSON payload containing unknown fields
         String rawJson =
@@ -113,8 +117,9 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         await().untilAsserted(
                         () ->
                                 assertThat(
-                                                inventoryJOOQRepository.findByProductCode(
-                                                        "P_UNKNOWN_001"))
+                                                inventoryJOOQRepository
+                                                        .findByProductCodeAndDeletedFalse(
+                                                                "P_UNKNOWN_001"))
                                         .isPresent());
     }
 }

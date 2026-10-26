@@ -33,4 +33,6 @@ interface InventoryRepository extends JpaRepository<Inventory, Long> {
      * propagate.
      */
     Optional<Inventory> findByIdAndDeletedFalse(Long id);
+
+    void deleteByProductCode(String productCode);
 }

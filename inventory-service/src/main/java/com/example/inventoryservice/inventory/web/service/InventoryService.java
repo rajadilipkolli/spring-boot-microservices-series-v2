@@ -34,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 class InventoryService {
 
     private static final SecureRandom RAND = new SecureRandom();
-    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
     private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final Set<String> processedIdempotencyKeys = ConcurrentHashMap.newKeySet();
@@ -67,16 +66,10 @@ class InventoryService {
                         : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
         Page<InventoryResponse> page =
-                inventoryJOOQRepository.findAll(pageable).map(inventoryMapper::toResponse);
+                inventoryJOOQRepository
+                        .findAllAndDeletedFalse(pageable)
+                        .map(inventoryMapper::toResponse);
         return new PagedResult<>(page);
-    }
-
-    /**
-     * Returns active inventory by ID, or empty if absent or deleted; persistence failures
-     * propagate.
-     */
-    public Optional<Inventory> findInventoryById(Long id) {
-        return inventoryRepository.findByIdAndDeletedFalse(id);
     }
 
     /**
@@ -108,7 +101,8 @@ class InventoryService {
         try {
             return inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
-            if (inventoryJOOQRepository.existsByProductCode(inventoryRequest.productCode())) {
+            if (inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(
+                    inventoryRequest.productCode())) {
                 throw new ProductAlreadyExistsException(inventoryRequest.productCode());
             }
             throw ex;
@@ -153,13 +147,12 @@ class InventoryService {
         Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
         Page<InventoryResponse> page =
                 this.inventoryJOOQRepository
-                        .findByProductCodeIn(productCodes, pageable)
+                        .findByProductCodeInAndDeletedFalse(productCodes, pageable)
                         .map(inventoryMapper::toResponse);
         return new PagedResult<>(page);
     }
 
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
-        validateBatchSize(batchSize);
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
@@ -191,16 +184,10 @@ class InventoryService {
                         });
     }
 
-    private static void validateBatchSize(Integer batchSize) {
-        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
-            throw new IllegalArgumentException(
-                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
-        }
-    }
-
     @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
-        return findInventoryById(id)
+        return inventoryRepository
+                .findByIdAndDeletedFalse(id)
                 .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
     }
 
@@ -209,5 +196,9 @@ class InventoryService {
             String productCode, InventoryRequest inventoryRequest) {
         return findInventoryByProductCode(productCode)
                 .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
+    }
+
+    public boolean existsByIdAndDeletedFalse(Long id) {
+        return inventoryJOOQRepository.existsByIdAndDeletedFalse(id);
     }
 }

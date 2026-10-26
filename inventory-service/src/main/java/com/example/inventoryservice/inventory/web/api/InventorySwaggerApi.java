@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Validated
 @Tag(name = "inventory-controller", description = "the inventory-controller API")
-public interface InventoryApi {
+public interface InventorySwaggerApi {
 
     /**
      * Returns a sorted inventory page with pagination metadata using one-based page numbers. Lookup

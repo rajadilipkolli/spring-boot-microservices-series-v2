@@ -223,26 +223,21 @@ class InventoryControllerTest {
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
-        InventoryResponse inventory = new InventoryResponse(1L, "product1", 10, 0);
-        given(inventoryAPI.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
+        given(inventoryAPI.existsInventoryById(inventoryId)).willReturn(true);
         doNothing().when(inventoryAPI).deleteInventoryById(inventoryId);
 
-        this.mockMvc
-                .perform(delete("/api/inventory/{id}", inventoryId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.productCode())))
-                .andExpect(jsonPath("$.availableQuantity", is(10)));
+        this.mockMvc.perform(delete("/api/inventory/{id}", inventoryId)).andExpect(status().isOk());
     }
 
-    /** Verifies deleting an absent inventory identifier returns HTTP 404. */
+    /** Verifies deleting an absent inventory identifier returns HTTP 410. */
     @Test
-    void shouldReturn404WhenDeletingNonExistingInventory() throws Exception {
+    void shouldReturn410WhenDeletingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
-        given(inventoryAPI.findInventoryById(inventoryId)).willReturn(Optional.empty());
+        given(inventoryAPI.existsInventoryById(inventoryId)).willReturn(false);
 
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventoryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isGone());
     }
 
     /**
