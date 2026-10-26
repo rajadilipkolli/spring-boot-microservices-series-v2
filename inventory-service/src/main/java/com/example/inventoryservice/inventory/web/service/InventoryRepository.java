@@ -35,6 +35,10 @@ interface InventoryRepository extends JpaRepository<Inventory, Long> {
      */
     Optional<Inventory> findByIdAndDeletedFalse(Long id);
 
+    /**
+     * Physically deletes inventory with the exact product code, including soft-deleted inventory,
+     * within a transaction. Does nothing if absent; persistence failures propagate.
+     */
     @Transactional
     void deleteByProductCode(String productCode);
 }

@@ -38,13 +38,17 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     /**
-     * Returns active inventory by ID, or empty if absent or deleted; database failures propagate.
+     * Returns inventory by ID, including soft-deleted records, or empty if absent. Database
+     * failures propagate.
      */
     @Override
     public Optional<InventoryRecord> findById(Long inventoryId) {
         return dslContext.selectFrom(INVENTORY).where(INVENTORY.ID.eq(inventoryId)).fetchOptional();
     }
 
+    /**
+     * Returns active inventory by ID, or empty if absent or deleted; database failures propagate.
+     */
     @Override
     public Optional<InventoryRecord> findByIdAndDeletedFalse(Long inventoryId) {
         return dslContext
@@ -53,6 +57,7 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                 .fetchOptional();
     }
 
+    /** Returns whether active inventory exists for the ID; database failures propagate. */
     @Override
     public boolean existsByIdAndDeletedFalse(Long inventoryId) {
         return dslContext.fetchExists(
@@ -118,6 +123,10 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                         INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse())));
     }
 
+    /**
+     * Returns whether active inventory exists for the exact product code; database failures
+     * propagate.
+     */
     @Override
     public boolean existsByProductCodeAndDeletedFalse(String productCode) {
         return dslContext.fetchExists(

@@ -124,10 +124,10 @@ public interface InventoryAPI {
     void manage(ProductDto productDto);
 
     /**
-     * Checks if inventory exists by its identifier.
+     * Checks whether active inventory exists by its identifier. Persistence failures propagate.
      *
      * @param id inventory identifier
-     * @return true if the inventory exists, false otherwise
+     * @return true if the inventory exists and is not soft deleted, false otherwise
      */
     boolean existsInventoryById(Long id);
 }

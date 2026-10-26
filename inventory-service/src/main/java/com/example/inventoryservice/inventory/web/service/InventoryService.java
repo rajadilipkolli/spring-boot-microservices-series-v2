@@ -57,6 +57,15 @@ class InventoryService {
         this.self = self;
     }
 
+    /**
+     * Returns a sorted page of active inventory with pagination metadata. Persistence failures and
+     * invalid sort properties propagate.
+     *
+     * @param pageNo zero-based page index; the result reports a one-based page number
+     * @param sortDir {@code asc}, ignoring case, for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
     public PagedResult<InventoryResponse> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir) {
 
@@ -78,9 +87,9 @@ class InventoryService {
      *
      * @return the saved inventory
      * @throws ProductAlreadyExistsException if active inventory already exists for the code, or an
-     *     integrity failure is followed by finding that code in storage
+     *     integrity failure is followed by finding active inventory for that code
      * @throws DataIntegrityViolationException if saving fails an integrity constraint and the
-     *     product code is still absent
+     *     product code has no active inventory
      */
     @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
@@ -138,6 +147,16 @@ class InventoryService {
         return this.inventoryRepository.findByProductCodeAndDeletedFalse(productCode);
     }
 
+    /**
+     * Returns a sorted page of active inventory matching the supplied codes, with pagination
+     * metadata. Missing or deleted products are omitted. Persistence failures and invalid sort
+     * properties propagate.
+     *
+     * @param pageNo zero-based page index; the result reports a one-based page number
+     * @param sortDir {@code asc}, ignoring case, for ascending order; otherwise descending
+     * @throws IllegalArgumentException if the page index is negative or the page size is not
+     *     positive
+     */
     public PagedResult<InventoryResponse> getInventoryByProductCodes(
             List<String> productCodes, int pageNo, int pageSize, String sortBy, String sortDir) {
         Sort sort =
@@ -152,6 +171,20 @@ class InventoryService {
         return new PagedResult<>(page);
     }
 
+    /**
+     * Assigns random available quantities from 1 through 10,000 to active inventory with codes
+     * {@code ProductCode_<key>_<index>}, visiting indexes from zero through batch size minus one.
+     * Missing or deleted inventory is skipped; reserved quantities are preserved.
+     *
+     * <p>Batch size is validated before claiming the key. Repeated keys are ignored for this
+     * service instance's lifetime, even after a partial failure. Optimistic locking failures are
+     * ignored per item; other persistence failures propagate and stop the batch.
+     *
+     * @param idempotencyKey non-null key identifying the batch and preventing repeated processing
+     * @param batchSize number of codes to visit, or {@code null} for 101
+     * @throws IllegalArgumentException if the batch size is outside 1 through 10,000
+     * @throws NullPointerException if the idempotency key is null
+     */
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
         int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
         if (resolvedBatchSize < 1 || resolvedBatchSize > 10_000) {
@@ -187,6 +220,12 @@ class InventoryService {
                         });
     }
 
+    /**
+     * Updates active inventory with the request's available quantity, preserving reserved quantity.
+     * Persistence failures propagate.
+     *
+     * @return the saved inventory, or empty if the ID is absent or soft deleted
+     */
     @Transactional
     public Optional<Inventory> updateInventoryById(Long id, InventoryRequest inventoryRequest) {
         return inventoryRepository
@@ -201,6 +240,7 @@ class InventoryService {
                 .map(inventoryFromDB -> self.updateInventory(inventoryFromDB, inventoryRequest));
     }
 
+    /** Returns whether active inventory exists for the ID; persistence failures propagate. */
     public boolean existsByIdAndDeletedFalse(Long id) {
         return inventoryJOOQRepository.existsByIdAndDeletedFalse(id);
     }

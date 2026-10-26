@@ -27,6 +27,7 @@ interface InventoryMapper {
 
     InventoryResponse toResponse(Inventory inventory);
 
+    /** Maps stored quantity to available quantity in the response; returns null for null input. */
     @Mapping(target = "availableQuantity", source = "quantity")
     InventoryResponse toResponse(InventoryRecord inventoryRecord);
 }

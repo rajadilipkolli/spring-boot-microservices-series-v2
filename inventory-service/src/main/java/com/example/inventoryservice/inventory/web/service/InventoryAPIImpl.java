@@ -45,6 +45,7 @@ class InventoryAPIImpl implements InventoryAPI {
         return inventoryService.findAllInventories(pageNo, pageSize, sortBy, sortDir);
     }
 
+    /** Returns whether active inventory exists for the ID; persistence failures propagate. */
     @Override
     public boolean existsInventoryById(Long id) {
         return inventoryService.existsByIdAndDeletedFalse(id);
