@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Validated
 @Tag(name = "inventory-controller", description = "the inventory-controller API")
-public interface InventoryApi {
+public interface InventorySwaggerApi {
 
     /**
      * Returns a sorted inventory page with pagination metadata using one-based page numbers. Lookup
@@ -298,8 +298,8 @@ public interface InventoryApi {
             @RequestBody @Valid InventoryRequest inventoryRequest);
 
     /**
-     * Deletes inventory by identifier and returns its previous representation with HTTP 200, or
-     * HTTP 404 when absent. Persistence failures propagate.
+     * Deletes inventory by identifier and returns an empty HTTP 200 response, or HTTP 410 when
+     * absent. Persistence failures propagate.
      */
     @Operation(
             summary = "Deletes inventory record by identifier",
@@ -308,14 +308,10 @@ public interface InventoryApi {
                 @ApiResponse(
                         responseCode = "200",
                         description = "Inventory deleted",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema =
-                                                @Schema(implementation = InventoryResponse.class))),
+                        content = @Content),
                 @ApiResponse(
-                        responseCode = "404",
-                        description = "Inventory not found",
+                        responseCode = "410",
+                        description = "Inventory absent or already deleted",
                         content = @Content)
             })
     ResponseEntity<InventoryResponse> deleteInventory(

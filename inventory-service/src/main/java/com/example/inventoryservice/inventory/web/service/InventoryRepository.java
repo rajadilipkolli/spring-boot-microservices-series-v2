@@ -9,6 +9,7 @@ package com.example.inventoryservice.inventory.web.service;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
@@ -33,4 +34,11 @@ interface InventoryRepository extends JpaRepository<Inventory, Long> {
      * propagate.
      */
     Optional<Inventory> findByIdAndDeletedFalse(Long id);
+
+    /**
+     * Physically deletes inventory with the exact product code, including soft-deleted inventory,
+     * within a transaction. Does nothing if absent; persistence failures propagate.
+     */
+    @Transactional
+    void deleteByProductCode(String productCode);
 }

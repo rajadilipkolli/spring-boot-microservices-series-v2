@@ -16,6 +16,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException;
@@ -23,6 +24,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -122,6 +125,31 @@ class InventoryServiceTest {
         assertThat(savedInventory).isNotNull();
         assertThat(savedInventory.getId()).isEqualTo(1L);
         assertThat(savedInventory.getProductCode()).isEqualTo("ProductCode1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 0, 10_001})
+    void shouldRejectInvalidBatchSizeWithoutConsumingIdempotencyKey(int batchSize) {
+        String idempotencyKey = "invalid-batch";
+
+        assertThatThrownBy(
+                        () -> inventoryService.updateGeneratedInventory(idempotencyKey, batchSize))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(inventoryRepository, inventoryMapper, inventoryJOOQRepository);
+
+        inventoryService.updateGeneratedInventory(idempotencyKey, 1);
+
+        verify(inventoryRepository)
+                .findByProductCodeAndDeletedFalse("ProductCode_" + idempotencyKey + "_0");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 10_000})
+    void shouldAcceptBatchSizeBoundariesAndIgnoreRepeatedKeys(int batchSize) {
+        inventoryService.updateGeneratedInventory("boundary-batch", batchSize);
+        inventoryService.updateGeneratedInventory("boundary-batch", batchSize);
+
+        verify(inventoryRepository, times(batchSize)).findByProductCodeAndDeletedFalse(anyString());
     }
 
     @Test

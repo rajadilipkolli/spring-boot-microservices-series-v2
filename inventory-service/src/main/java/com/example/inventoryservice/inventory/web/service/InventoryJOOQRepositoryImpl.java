@@ -38,14 +38,30 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
     }
 
     /**
+     * Returns inventory by ID, including soft-deleted records, or empty if absent. Database
+     * failures propagate.
+     */
+    @Override
+    public Optional<InventoryRecord> findById(Long inventoryId) {
+        return dslContext.selectFrom(INVENTORY).where(INVENTORY.ID.eq(inventoryId)).fetchOptional();
+    }
+
+    /**
      * Returns active inventory by ID, or empty if absent or deleted; database failures propagate.
      */
     @Override
-    public Optional<Inventory> findById(Long inventoryId) {
+    public Optional<InventoryRecord> findByIdAndDeletedFalse(Long inventoryId) {
         return dslContext
                 .selectFrom(INVENTORY)
                 .where(INVENTORY.ID.eq(inventoryId).and(INVENTORY.DELETED.isFalse()))
-                .fetchOptionalInto(Inventory.class);
+                .fetchOptional();
+    }
+
+    /** Returns whether active inventory exists for the ID; database failures propagate. */
+    @Override
+    public boolean existsByIdAndDeletedFalse(Long inventoryId) {
+        return dslContext.fetchExists(
+                INVENTORY, INVENTORY.ID.eq(inventoryId).and(INVENTORY.DELETED.isFalse()));
     }
 
     /**
@@ -55,21 +71,15 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
      * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
      */
     @Override
-    public Page<Inventory> findAll(Pageable pageable) {
+    public Page<InventoryRecord> findAllAndDeletedFalse(Pageable pageable) {
         return new PageImpl<>(
                 dslContext
-                        .select(
-                                INVENTORY.ID,
-                                INVENTORY.PRODUCT_CODE,
-                                INVENTORY.QUANTITY,
-                                INVENTORY.RESERVED_ITEMS,
-                                INVENTORY.VERSION)
-                        .from(INVENTORY)
+                        .selectFrom(INVENTORY)
                         .where(INVENTORY.DELETED.isFalse())
                         .orderBy(getSortFields(pageable.getSort()))
                         .limit(pageable.getPageSize())
                         .offset(pageable.getOffset())
-                        .fetchInto(Inventory.class),
+                        .fetch(),
                 pageable,
                 dslContext.fetchCount(INVENTORY, INVENTORY.DELETED.isFalse()));
     }
@@ -79,17 +89,11 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
      * failures propagate.
      */
     @Override
-    public Optional<Inventory> findByProductCode(String productCode) {
+    public Optional<InventoryRecord> findByProductCodeAndDeletedFalse(String productCode) {
         return dslContext
-                .select(
-                        INVENTORY.ID,
-                        INVENTORY.PRODUCT_CODE,
-                        INVENTORY.QUANTITY,
-                        INVENTORY.RESERVED_ITEMS,
-                        INVENTORY.VERSION)
-                .from(INVENTORY)
+                .selectFrom(INVENTORY)
                 .where(INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()))
-                .fetchOptionalInto(Inventory.class);
+                .fetchOptional();
     }
 
     /**
@@ -99,16 +103,11 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
      * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
      */
     @Override
-    public Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable) {
+    public Page<InventoryRecord> findByProductCodeInAndDeletedFalse(
+            List<String> productCodes, Pageable pageable) {
         return new PageImpl<>(
                 dslContext
-                        .select(
-                                INVENTORY.ID,
-                                INVENTORY.PRODUCT_CODE,
-                                INVENTORY.QUANTITY,
-                                INVENTORY.RESERVED_ITEMS,
-                                INVENTORY.VERSION)
-                        .from(INVENTORY)
+                        .selectFrom(INVENTORY)
                         .where(
                                 INVENTORY
                                         .PRODUCT_CODE
@@ -117,29 +116,21 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                         .orderBy(getSortFields(pageable.getSort()))
                         .limit(pageable.getPageSize())
                         .offset(pageable.getOffset())
-                        .fetchInto(Inventory.class),
+                        .fetch(),
                 pageable,
                 dslContext.fetchCount(
                         INVENTORY,
                         INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse())));
     }
 
+    /**
+     * Returns whether active inventory exists for the exact product code; database failures
+     * propagate.
+     */
     @Override
-    public boolean existsByProductCode(String productCode) {
+    public boolean existsByProductCodeAndDeletedFalse(String productCode) {
         return dslContext.fetchExists(
-                dslContext
-                        .selectOne()
-                        .from(INVENTORY)
-                        .where(INVENTORY.PRODUCT_CODE.eq(productCode)));
-    }
-
-    @Override
-    @Transactional
-    public int deleteByProductCode(String productCode) {
-        return dslContext
-                .deleteFrom(INVENTORY)
-                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
-                .execute();
+                INVENTORY, INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()));
     }
 
     private Collection<SortField<?>> getSortFields(Sort sortSpecification) {
