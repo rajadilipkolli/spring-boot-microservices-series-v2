@@ -13,7 +13,6 @@ import com.example.retailstore.webapp.exception.InvalidRequestException;
 import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import jakarta.validation.Valid;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -61,7 +60,7 @@ class OrderController {
     OrderResponse getOrder(@PathVariable String orderNumber) {
         log.info("Fetching order details for orderNumber: {}", LogSanitizer.sanitizeForLog(orderNumber));
         try {
-            OrderResponse orderResponse = orderServiceClient.getOrder(getHeaders(), orderNumber);
+            OrderResponse orderResponse = orderServiceClient.getOrder(orderNumber);
             String email = securityHelper.getLoggedInUserEmail();
             CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
 
@@ -98,20 +97,7 @@ class OrderController {
         log.info("Fetching orders");
         String email = securityHelper.getLoggedInUserEmail();
         CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
-        return orderServiceClient.getOrdersByCustomer(getHeaders(), loggedInCustomer.customerId());
-    }
-
-    /**
-     * Builds downstream request headers from the current user's access token.
-     *
-     * @return a bearer authorization header, or an empty map when no token is available
-     */
-    private Map<String, ?> getHeaders() {
-        String accessToken = securityHelper.getAccessToken();
-        if (accessToken == null) {
-            return Map.of();
-        }
-        return Map.of("Authorization", "Bearer " + accessToken);
+        return orderServiceClient.getOrdersByCustomer(loggedInCustomer.customerId());
     }
 
     @PostMapping("/api/orders")
@@ -123,7 +109,7 @@ class OrderController {
             CustomerResponse loggedInCustomer = customerServiceClient.getCustomerByEmail(email);
 
             OrderRequestExternal orderRequestExternal = orderRequest.withCustomerId(loggedInCustomer.customerId());
-            return orderServiceClient.createOrder(getHeaders(), orderRequestExternal);
+            return orderServiceClient.createOrder(orderRequestExternal);
         } catch (InvalidRequestException e) {
             throw e;
         } catch (Exception e) {

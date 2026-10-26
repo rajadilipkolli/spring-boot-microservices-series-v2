@@ -6,7 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 
 import com.example.common.dto.PagedResult;
 import com.example.retailstore.webapp.clients.catalog.ProductRequest;
@@ -17,8 +17,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 
 class ProductControllerIT extends AbstractIntegrationTest {
+
+    private ClientRegistration clientRegistration() {
+        return clientRegistrationRepository.findByRegistrationId("retailstore-webapp");
+    }
 
     /**
      * Verifies that a numeric catalog ID is exposed as a string while product and page details are
@@ -120,7 +126,9 @@ class ProductControllerIT extends AbstractIntegrationTest {
                 .post()
                 .uri("/api/products")
                 .with(csrf())
-                .with(user("admin").roles("ADMIN")) // Authenticate as admin
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonMapper.writeValueAsString(productRequest)) // Serialize request body to JSON
                 .assertThat()

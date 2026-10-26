@@ -11,8 +11,7 @@ import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 
 class SecurityHelperTest {
 
-    SecurityHelper securityHelper =
-            new SecurityHelper(null); // OAuth2AuthorizedClientService is not used in this method
+    SecurityHelper securityHelper = new SecurityHelper();
 
     @Test
     void testGetLoggedInUserEmail_Success() {

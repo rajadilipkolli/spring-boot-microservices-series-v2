@@ -23,8 +23,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 
 class OrderControllerIT extends AbstractIntegrationTest {
+
+    private ClientRegistration clientRegistration() {
+        return clientRegistrationRepository.findByRegistrationId("retailstore-webapp");
+    }
 
     /** Verifies that an authenticated order request returns the confirmation from the order service. */
     @Test
@@ -79,7 +84,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .content(jsonMapper.writeValueAsString(createOrderRequest))
                 .contentType(MediaType.APPLICATION_JSON)
                 .with(csrf())
-                .with(oidcLogin().idToken(token -> token.claim("email", "test@example.com")))
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "test@example.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -126,7 +133,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders/1")
-                .with(oidcLogin().idToken(token -> token.claim("email", "testemail@gmail.com")))
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "testemail@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -205,7 +214,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders/102")
-                .with(oidcLogin().idToken(token -> token.claim("email", "testemail@gmail.com")))
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "testemail@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -268,7 +279,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders")
-                .with(oidcLogin().idToken(token -> token.claim("email", "empty@gmail.com")))
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "empty@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .hasContentType(MediaType.APPLICATION_JSON)
@@ -334,7 +347,9 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvcTester
                 .get()
                 .uri("/api/orders/1")
-                .with(oidcLogin().idToken(token -> token.claim("email", "other@gmail.com")))
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "other@gmail.com")))
                 .assertThat()
                 .hasStatus(HttpStatus.NOT_FOUND);
     }
