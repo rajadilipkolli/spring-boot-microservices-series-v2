@@ -151,9 +151,7 @@ class InventoryController implements InventorySwaggerApi {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /**
-     * Deletes existing inventory and returns its previous representation, or HTTP 410 if absent.
-     */
+    /** Deletes existing inventory and returns an empty HTTP 200 response, or HTTP 410 if absent. */
     @DeleteMapping("/{id}")
     @Override
     public ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {

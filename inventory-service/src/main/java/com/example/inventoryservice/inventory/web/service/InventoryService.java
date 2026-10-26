@@ -153,11 +153,14 @@ class InventoryService {
     }
 
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
+        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
+        if (resolvedBatchSize < 1 || resolvedBatchSize > 10_000) {
+            throw new IllegalArgumentException("Batch size must be between 1 and 10,000");
+        }
+
         if (!processedIdempotencyKeys.add(idempotencyKey)) {
             return;
         }
-
-        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
 
         IntStream.range(0, resolvedBatchSize)
                 .forEach(

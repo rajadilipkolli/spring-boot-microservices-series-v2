@@ -21,14 +21,10 @@ class ProductManageServiceImpl implements ProductManageService {
     private static final Logger log = LoggerFactory.getLogger(ProductManageServiceImpl.class);
 
     private final InventoryRepository inventoryRepository;
-    private final InventoryJOOQRepository inventoryJOOQRepository;
 
-    /** Creates the product handler with repositories for duplicate checks and inventory writes. */
-    public ProductManageServiceImpl(
-            InventoryRepository inventoryRepository,
-            InventoryJOOQRepository inventoryJOOQRepository) {
+    /** Creates the product handler with a repository for duplicate checks and inventory writes. */
+    public ProductManageServiceImpl(InventoryRepository inventoryRepository) {
         this.inventoryRepository = inventoryRepository;
-        this.inventoryJOOQRepository = inventoryJOOQRepository;
     }
 
     /**
@@ -65,7 +61,7 @@ class ProductManageServiceImpl implements ProductManageService {
         }
 
         // avoid inserting duplicate inventory records when retries or duplicate events arrive
-        if (this.inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(productCode)) {
+        if (this.inventoryRepository.findByProductCode(productCode).isPresent()) {
             return;
         }
 
@@ -73,7 +69,7 @@ class ProductManageServiceImpl implements ProductManageService {
         try {
             this.inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
-            if (!this.inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(productCode)) {
+            if (this.inventoryRepository.findByProductCode(productCode).isEmpty()) {
                 throw ex;
             }
             // Another thread created the same product_code concurrently; ignore to keep

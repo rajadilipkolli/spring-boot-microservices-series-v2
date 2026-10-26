@@ -9,6 +9,7 @@ package com.example.inventoryservice.inventory.web.service;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
@@ -34,5 +35,6 @@ interface InventoryRepository extends JpaRepository<Inventory, Long> {
      */
     Optional<Inventory> findByIdAndDeletedFalse(Long id);
 
+    @Transactional
     void deleteByProductCode(String productCode);
 }
