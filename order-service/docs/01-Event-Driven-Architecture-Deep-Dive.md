@@ -171,9 +171,12 @@ private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> s
 **Key Configuration Features:**
 - **Correlation by Attempt:** Keyed by `orderId:attemptId` to ensure retried attempts do not collide with stale responses.
 - **Windowing:** 30-second time difference with a 30-second grace period (`JoinWindows.ofTimeDifferenceAndGrace`).
-- **Exactly-Once Processing:** `EXACTLY_ONCE_V2` guarantee.
+- **Kafka Streams Exactly-Once Processing:** `EXACTLY_ONCE_V2` atomically commits consumed offsets, state-store changelogs, and Kafka topic output. It does not provide end-to-end exactly-once processing or database atomicity.
+
 - **Error Handling:** `RecoveringDeserializationExceptionHandler` routing poison pills to `recovererDLQ`.
 - **Serde:** `JacksonJsonSerde<>(OrderDto.class).noTypeInfo()` and `Serdes.String()`.
+
+`OrderManageService.confirm()` updates PostgreSQL independently of the Kafka transaction. A database update can commit before Kafka output commits; if Kafka then aborts, replay can encounter a terminal order and return `null`, leaving the database changed without the corresponding output event. Database side effects require idempotency, and missing Kafka decisions require reconciliation (or a durable outbox design); `EXACTLY_ONCE_V2` alone cannot close this gap.
 
 ### 3. Business Logic Resolution
 **File:** `OrderManageService.java`

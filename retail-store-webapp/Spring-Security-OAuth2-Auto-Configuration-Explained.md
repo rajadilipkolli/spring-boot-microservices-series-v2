@@ -16,7 +16,7 @@ OAUTH2_SERVER_URL=http://localhost:9191
 REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
 
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
 spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
@@ -154,7 +154,7 @@ flowchart LR
 ```properties
 # Creates ClientRegistration bean with these values
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
 spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
@@ -165,10 +165,10 @@ spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={base
 **Equivalent Java Configuration:**
 ```java
 @Bean
-public ClientRegistrationRepository clientRegistrationRepository() {
+public ClientRegistrationRepository clientRegistrationRepository(Environment environment) {
     ClientRegistration registration = ClientRegistration.withRegistrationId("retailstore-webapp")
         .clientId("retailstore-webapp")
-        .clientSecret("demo-throwaway-oauth-secret")
+        .clientSecret(environment.getRequiredProperty("OAUTH2_CLIENT_SECRET"))
         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
         .scope("openid", "profile", "roles")
         .redirectUri("{baseUrl}/login/oauth2/code/retailstore-webapp")
@@ -295,7 +295,7 @@ sequenceDiagram
     
     Browser->>Keycloak: GET authorization endpoint
     Keycloak-->>Browser: Login form
-    User->>Keycloak: Submit credentials (e.g. retail / retail1234)
+    User->>Keycloak: Submit credentials (e.g. retail / {RETAIL_USER_PASSWORD})
     Keycloak-->>Browser: Redirect with authorization code
     
     Note over Browser: URL: http://localhost:8080/login/oauth2/code/retailstore-webapp?<br/>code=def456&state=abc123
@@ -308,7 +308,7 @@ sequenceDiagram
     Note over Provider: Class: OAuth2AuthorizationCodeAuthenticationProvider<br/>Makes POST to token endpoint
     
     Provider->>Keycloak: POST /protocol/openid-connect/token
-    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=demo-throwaway-oauth-secret<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
+    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=${OAUTH2_CLIENT_SECRET}<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
     
     Keycloak-->>Provider: Access Token + ID Token (with client roles: ADMIN, OPERATOR)
     Provider-->>Filter2: OAuth2LoginAuthenticationToken
@@ -438,7 +438,7 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=authorization_code&
 code=def456&
 client_id=retailstore-webapp&
-client_secret=demo-throwaway-oauth-secret&
+client_secret=${OAUTH2_CLIENT_SECRET}&
 redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp
 ```
 
@@ -446,9 +446,11 @@ redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore
 
 ## 🚀 **Downstream Token Propagation with RestClient**
 
-In Spring Boot 4.1.2, outgoing HTTP calls to backend microservices automatically attach the user's Bearer token using `OAuth2ClientHttpRequestInterceptor` configured in `ClientsConfig.java`:
+Use the following Spring Security configuration to resolve the client registration and attach the user's bearer token to imported HTTP service requests:
 
 ```java
+import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
+
 @Configuration(proxyBeanMethods = false)
 @ImportHttpServices({
     CatalogServiceClient.class,
@@ -461,27 +463,54 @@ class ClientsConfig {
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry,
-            ApplicationProperties applicationProperties,
-            OAuth2AuthorizedClientManager authorizedClientManager) {
-
-        OAuth2ClientHttpRequestInterceptor interceptor =
-                new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
-
-        return groups -> groups.forEachClient((group, builder) -> builder.baseUrl(applicationProperties.apiGatewayUrl())
+            ApplicationProperties applicationProperties) {
+        return groups -> groups.forEachClient((group, builder) -> builder
+                .baseUrl(applicationProperties.apiGatewayUrl())
                 .defaultHeaders(httpHeaders -> {
                     httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                     httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 })
-                .requestInterceptor(interceptor)
-                .observationRegistry(observationRegistry)
-                .build());
+                .observationRegistry(observationRegistry));
+    }
+
+    @Bean
+    OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
     }
 }
 ```
 
-This guarantees that:
+Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+
+```java
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/order-service")
+public interface OrderServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/inventory-service")
+public interface InventoryServiceClient { /* existing methods */ }
+```
+
+`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
+
+**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
+
+With an authenticated user and an authorized client:
 1. User identity and roles (`ADMIN`, `OPERATOR`, `user`) are forwarded to API Gateway (`http://localhost:8765`) and downstream microservices.
-2. Token refreshing is handled automatically by `OAuth2AuthorizedClientManager`.
+2. `OAuth2AuthorizedClientManager` can refresh tokens when its provider supports refresh tokens and one is available; otherwise reauthorization may be required.
 
 ---
 

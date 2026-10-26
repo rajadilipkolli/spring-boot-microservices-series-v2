@@ -39,7 +39,7 @@ flowchart TD
 ```properties
 # application.properties
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 ```
 
@@ -49,7 +49,7 @@ spring.security.oauth2.client.registration.retailstore-webapp.authorization-gran
   "clientId": "retailstore-webapp",
   "publicClient": false,
   "clientAuthenticatorType": "client-secret",
-  "secret": "demo-throwaway-oauth-secret"
+  "secret": "${OAUTH2_CLIENT_SECRET}"
 }
 ```
 
@@ -127,6 +127,8 @@ sequenceDiagram
 #### **JWT Token Forwarding (Spring Boot 4.1.2 RestClient & Interceptor)**
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/clients/ClientsConfig.java
+import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
+
 @Configuration(proxyBeanMethods = false)
 @ImportHttpServices({
     CatalogServiceClient.class,
@@ -139,23 +141,50 @@ class ClientsConfig {
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry,
-            ApplicationProperties applicationProperties,
-            OAuth2AuthorizedClientManager authorizedClientManager) {
-
-        OAuth2ClientHttpRequestInterceptor interceptor =
-                new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
-
-        return groups -> groups.forEachClient((group, builder) -> builder.baseUrl(applicationProperties.apiGatewayUrl())
+            ApplicationProperties applicationProperties) {
+        return groups -> groups.forEachClient((group, builder) -> builder
+                .baseUrl(applicationProperties.apiGatewayUrl())
                 .defaultHeaders(httpHeaders -> {
                     httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                     httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 })
-                .requestInterceptor(interceptor)
-                .observationRegistry(observationRegistry)
-                .build());
+                .observationRegistry(observationRegistry));
+    }
+
+    @Bean
+    OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
     }
 }
 ```
+
+Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+
+```java
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/order-service")
+public interface OrderServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/inventory-service")
+public interface InventoryServiceClient { /* existing methods */ }
+```
+
+`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
+
+**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
 
 #### **Service Communication Flow**
 ```
@@ -172,7 +201,7 @@ User JWT → retailstore-webapp (Port 8080) → API Gateway (Port 8765) → Back
 ```properties
 # Hypothetical client credentials setup
 spring.security.oauth2.client.registration.order-service.client-id=order-service
-spring.security.oauth2.client.registration.order-service.client-secret=service-secret-123
+spring.security.oauth2.client.registration.order-service.client-secret=${ORDER_SERVICE_CLIENT_SECRET}
 spring.security.oauth2.client.registration.order-service.authorization-grant-type=client_credentials
 spring.security.oauth2.client.registration.order-service.scope=inventory:read,payment:write
 ```

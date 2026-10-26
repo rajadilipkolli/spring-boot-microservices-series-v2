@@ -344,7 +344,9 @@ graph TB
 
 ## Database Schema
 
-Database migrations are managed by Liquibase under the `payment` schema:
+Database migrations are managed by Liquibase under the `payment` schema. The DDL below shows the required normalized-email uniqueness: `email` is stored in lowercase and is unique independently of `name`.
+
+**Migration gap:** The current `01-create_customers_table.xml` still defines `UNIQUE (name, email)`, which permits concurrent inserts of the same email under different names. Applying this correction requires a new Liquibase migration that resolves existing normalized-email duplicates, normalizes stored emails, and replaces the composite constraint. The schema below describes the corrected contract, not a migration already present in the repository.
 
 ```sql
 -- Schema: payment
@@ -365,7 +367,8 @@ CREATE TABLE payment.customers (
     amount_reserved NUMERIC(19,2) NOT NULL DEFAULT 0.00,
     version INTEGER NOT NULL DEFAULT 0,
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT uc_customers_name_email_key UNIQUE (name, email)
+    CONSTRAINT ck_customers_email_normalized CHECK (email = lower(email)),
+    CONSTRAINT uc_customers_name_email_key UNIQUE (email)
 );
 
 -- Payment operations table for durable idempotency and engine state

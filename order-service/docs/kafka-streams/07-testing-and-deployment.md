@@ -465,8 +465,8 @@ class OrderServiceIntegrationTest {
         OrderDto paymentEvent = OrderTestDataBuilder.createPaymentOrder(orderId, "ACCEPT");
         OrderDto stockEvent = OrderTestDataBuilder.createStockOrder(orderId, "REJECT");
         
-        kafkaTemplate.send("payment-orders", orderId, paymentEvent);
-        kafkaTemplate.send("stock-orders", orderId, stockEvent);
+        kafkaTemplate.send("payment-orders", String.valueOf(orderId), toJsonBytes(paymentEvent));
+        kafkaTemplate.send("stock-orders", String.valueOf(orderId), toJsonBytes(stockEvent));
         
         // Then - Should trigger rollback
         await().atMost(10, TimeUnit.SECONDS)
@@ -520,8 +520,8 @@ class OrderServiceTestContainersIT {
                     OrderDto paymentEvent = OrderTestDataBuilder.createPaymentOrder(orderId, "ACCEPT");
                     OrderDto stockEvent = OrderTestDataBuilder.createStockOrder(orderId, "ACCEPT");
                     
-                    kafkaTemplate.send("payment-orders", orderId, paymentEvent);
-                    kafkaTemplate.send("stock-orders", orderId, stockEvent);
+                    kafkaTemplate.send("payment-orders", String.valueOf(orderId), toJsonBytes(paymentEvent));
+                    kafkaTemplate.send("stock-orders", String.valueOf(orderId), toJsonBytes(stockEvent));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

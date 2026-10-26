@@ -44,7 +44,7 @@ docker compose --profile terraform up terraform
 ### 📋 **Method 2: Keycloak Admin Console**
 
 1. **Access Admin Console**: `http://localhost:9191/admin` (or `http://localhost:9191`)
-2. **Login Credentials**: `admin` / `admin1234`
+2. **Login Credentials**: Use the values supplied through `KC_BOOTSTRAP_ADMIN_USERNAME` and `KC_BOOTSTRAP_ADMIN_PASSWORD` from your environment or secret store.
 3. **Realm**: Select or create `retailstore`
 4. **Configure Clients, Users, and Roles**:
    - Client: `retailstore-webapp`
@@ -58,20 +58,18 @@ docker compose --profile terraform up terraform
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
-    command: [ 'start', '--http-port=9191' ]
+    command: [ 'start-dev', '--http-port=9191' ]
     container_name: keycloak
     hostname: keycloak
     environment:
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin1234
-      - KC_HOSTNAME=localhost
-      - KC_HOSTNAME_URL=http://localhost:9191
-      - KC_HOSTNAME_ADMIN_URL=http://localhost:9191
-      - KC_PROXY=edge
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME:?Set the bootstrap admin username}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD:?Set the bootstrap admin password}
+      - KC_HOSTNAME=http://localhost:9191
+      - KC_HOSTNAME_ADMIN=http://localhost:9191
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/appdb
       - KC_DB_USERNAME=appuser
-      - KC_DB_PASSWORD=secret
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD:?Set the Keycloak database password}
     ports:
       - "9191:9191"
       - "9000:9000"
@@ -79,6 +77,9 @@ services:
 
 **Key Points:**
 - Keycloak 26.x listens on port **`9191`** (`--http-port=9191`).
+- This direct local HTTP workflow uses `start-dev`; use a production configuration with TLS for deployed environments. No reverse proxy is configured, so proxy headers are omitted. See [Keycloak containers](https://www.keycloak.org/server/containers) and [hostname configuration](https://www.keycloak.org/server/hostname).
+- Supply credentials from your environment or secret store. Keep them consistent with PostgreSQL provisioning and the application's client registration. Rotate any previously published values used beyond isolated local development.
+- `${OAUTH2_CLIENT_SECRET}` in JSON examples is a template placeholder: render it using your provisioning tool before import; Keycloak does not automatically interpolate arbitrary JSON placeholders.
 - Management and metrics run on port **`9000`**.
 - Reference export file for test suites is maintained at: `retail-store-webapp/src/test/resources/docker/realm-config/retailstore-realm.json`.
 
@@ -111,7 +112,7 @@ sequenceDiagram
 {
   "clientId": "retailstore-webapp",
   "name": "retailstore",
-  "secret": "demo-throwaway-oauth-secret",
+  "secret": "${OAUTH2_CLIENT_SECRET}",
   "redirectUris": [
     "http://localhost:8080/login/oauth2/code/retailstore-webapp"
   ],

@@ -65,10 +65,11 @@ sequenceDiagram
     OrderService-->>Scheduler: Job completion
     Scheduler->>Dashboard: Update job status & metrics
     
-    Note over Scheduler, Dashboard: 🔄 Retry Logic (on failure)
+    Note over OrderService, Dashboard: Caught per-order failures are logged without rethrowing<br/>Unchanged stale NEW orders remain eligible at the next minutely run
+    Note over Scheduler, Dashboard: 🔄 JobRunr Retry Logic (escaping exceptions only)
     alt Job fails
         Scheduler->>Scheduler: Wait exponential backoff
-        Scheduler->>OrderService: Retry (max 2 attempts)
+        Scheduler->>OrderService: Retry (up to 2 retries)
     else Max retries exceeded
         Scheduler->>Dashboard: Mark job as failed
         Dashboard->>Dashboard: Alert/notification
@@ -128,7 +129,8 @@ public void retryNewOrders() {
 ```
 
 **Key Features:**
-- **Job Name:** `reProcessNewOrders` with maximum 2 retries
+- **Job Name:** `reProcessNewOrders` with up to 2 JobRunr retries for exceptions that escape the job (for example, a failed repository query or transaction commit).
+- **Per-order Failures:** The `catch` block logs and continues without rethrowing, so `retries = 2` does not apply to that caught failure. If the order remains `NEW` with its stale timestamp unchanged, it already meets the five-minute cutoff and may be selected again on the next minutely invocation, repeatedly. A successful timestamp update postpones selection until it is more than five minutes old again. A persistence failure may still mark the enclosing transaction rollback-only and cause the job to fail at commit.
 - **Attempt ID:** New random UUID attemptId prevents stale join collisions in Kafka Streams
 - **Spam Prevention:** `lastModifiedDate` updated to `LocalDateTime.now()` upon retry
 

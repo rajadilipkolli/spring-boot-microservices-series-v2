@@ -7,7 +7,7 @@
 
 ### ✅ The Answer
 
-Exactly-once processing is achieved through **Kafka Streams' transactional processing** combined with **idempotent producers** and **state store deduplication**.
+Kafka Streams' `exactly_once_v2` atomically commits input offsets, state-store changelogs, and Kafka output for consumed records. It does not deduplicate distinct business events or include PostgreSQL writes. `OrderManageService.confirm()` updates the database separately, so database state and Kafka output can diverge and require idempotency and reconciliation; see the [transaction boundary explanation](./01-Event-Driven-Architecture-Deep-Dive.md#2-kafka-streams-topology-configuration).
 
 ---
 
@@ -47,10 +47,9 @@ graph TB
         T6 --> |"Atomic Commit"| T7[All or Nothing]
     end
     
-    subgraph "Layer 3: State Store Deduplication"
-        S1[RocksDB State Store] --> S2[Message Key Tracking]
-        S2 --> S3[Duplicate Detection]
-        S3 --> |"Already Processed"| S4[Skip Message]
+    subgraph "Layer 3: Window State"
+        S1[RocksDB State Store] --> S2[Key: orderId:attemptId and timestamp]
+        S2 --> S3[Match responses from the same attempt]
     end
     
     P3 --> T1
@@ -98,7 +97,7 @@ Result: Message #5 appears ONCE in topic
 
 ### **Layer 2: Transactional Processing**
 
-Kafka Streams wraps all operations in a transaction:
+Kafka Streams wraps its Kafka processing operations in a Kafka transaction (external database writes are excluded):
 
 ```java
 // Conceptual view of what Kafka Streams does internally
@@ -158,47 +157,15 @@ sequenceDiagram
 
 ---
 
-### **Layer 3: State Store Deduplication**
+### **Layer 3: Window State and Attempt Correlation**
 
-Kafka Streams maintains a **RocksDB state store** that tracks processed messages:
-
-```java
-// Internal state store structure (conceptual)
-StateStore<Long, ProcessedMessage> {
-    Key: orderId (e.g., 12345)
-    Value: {
-        paymentProcessed: true,
-        stockProcessed: true,
-        joinedAt: 2024-01-15T10:30:00Z,
-        result: "CONFIRMED"
-    }
-}
-```
-
-**Deduplication Logic:**
-
-```java
-// Simplified view of what Kafka Streams does
-public OrderDto processMessage(Long orderId, OrderDto message) {
-    ProcessedMessage state = stateStore.get(orderId);
-    
-    if (state != null && state.isAlreadyProcessed(message)) {
-        log.info("Duplicate detected for order {}, skipping", orderId);
-        return state.getResult();  // Return cached result
-    }
-    
-    // Process new message
-    OrderDto result = processNewMessage(message);
-    stateStore.put(orderId, new ProcessedMessage(result));
-    return result;
-}
-```
+The join stores payment and stock records by the composite `orderId:attemptId` key and record timestamp in window state stores. For example, a payload with `orderId=123` and `attemptId=a1` is rekeyed to `123:a1` by `correlateByAttempt`. A response for `123:a2` cannot join it, even within the same time window. The stores retain records for windowed joins; they are not a business-level "already processed" cache.
 
 ---
 
-## 🧪 Proof: Exactly-Once in Action
+## 🧪 Example: Kafka and Database Commit Boundaries
 
-### Scenario: Network Failure During Processing
+### Scenario: Kafka Failure After a Database Update
 
 ```mermaid
 sequenceDiagram
@@ -207,27 +174,18 @@ sequenceDiagram
     participant KS as Kafka Streams
     participant DB as PostgreSQL
     
-    Note over P,DB: Normal Processing
-    P->>K: Publish payment result (orderId=123)
-    K->>KS: Deliver message
-    KS->>KS: BEGIN TRANSACTION
-    KS->>DB: UPDATE order SET status='CONFIRMED'
-    
-    Note over KS,DB: ⚠️ NETWORK FAILURE
-    KS--xDB: Connection lost
-    Note over KS: ROLLBACK TRANSACTION
-    Note over KS: Offset NOT committed
-    
-    Note over P,DB: Kafka Streams Restarts
-    K->>KS: Redeliver same message (orderId=123)
-    KS->>KS: Check state store
-    KS->>KS: "Not processed yet" (rollback cleared state)
-    KS->>KS: BEGIN TRANSACTION
-    KS->>DB: UPDATE order SET status='CONFIRMED'
-    DB-->>KS: Success
-    KS->>KS: COMMIT TRANSACTION
-    
-    Note over KS: ✅ Order 123 updated EXACTLY ONCE
+    P->>K: Publish payment result (orderId=123, attemptId=a1)
+    K->>KS: Deliver matching responses for key 123:a1
+    Note over KS: BEGIN Kafka transaction
+    KS->>DB: confirm() updates NEW order to CONFIRMED
+    DB-->>KS: Database update committed independently
+    KS--xK: Failure before Kafka output and offsets commit
+    Note over KS: Kafka transaction aborted, database update remains
+    K->>KS: Replay input after restart (key 123:a1)
+    KS->>DB: confirm() checks persisted terminal order
+    DB-->>KS: CONFIRMED
+    Note over KS: confirm() returns null, output can be missing
+    Note over KS,DB: Reconciliation is required to repair the missing Kafka decision
 ```
 
 ---
@@ -238,10 +196,10 @@ sequenceDiagram
 |-----------|-----------|----------|
 | **Idempotent Producer** | Sequence numbers | Duplicate messages in topics |
 | **Transactional Processing** | Atomic commit | Partial processing |
-| **State Store** | Message tracking | Reprocessing same message |
+| **Window State** | Composite attempt key and timestamps | Joining responses from different attempts |
 | **Offset Management** | Transactional commits | Skipping or duplicating messages |
 
-**Result:** Even with failures, retries, and restarts → **each order is processed exactly once**.
+**Result:** Kafka processing and Kafka output commit atomically for consumed records. Database updates and end-to-end business effects require separate idempotency and reconciliation.
 
 ---
 
@@ -271,10 +229,20 @@ correlateByAttempt(paymentStream)
         JoinWindows.ofTimeDifferenceAndGrace(
                 Duration.ofSeconds(30), Duration.ofSeconds(30)),  // ← 30s Window + 30s Grace
         StreamJoined.with(Serdes.String(), orderSerde, orderSerde)
-    )
+    );
+
+private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+    return stream.filter((key, order) -> order != null
+                    && order.orderId() != null
+                    && order.attemptId() != null
+                    && !order.attemptId().isBlank())
+            .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
+}
 ```
 
 ---
+
+Both response payloads must preserve the same nonblank `attemptId`. Missing IDs are filtered out. The composite key is used for the internal join and its state stores; after confirmation, the topology rekeys output to `orderId` for the `orders` topic while preserving `attemptId` in the payload.
 
 ## 📊 Visual Timeline: What Happens in 30 Seconds (+ Grace Period)
 
@@ -307,12 +275,12 @@ gantt
 ```mermaid
 graph LR
     subgraph "t=0: Payment Arrives"
-        P1[Payment Message<br/>orderId=123<br/>status=ACCEPT] --> SS1[State Store]
-        SS1 --> W1[Window Opens<br/>Expires at t=10]
+        P1[Payment Message<br/>orderId=123, attemptId=a1<br/>status=ACCEPT] --> SS1[State Store]
+        SS1 --> W1[Window Opens<br/>Match timestamps within 30s]
     end
     
     subgraph "State Store Contents"
-        SS1 --> |"Stores"| D1["Key: 123<br/>Payment: ACCEPT<br/>Stock: null<br/>Expires: t=10"]
+        SS1 --> |"Stores"| D1["Key: 123:a1<br/>Payment: ACCEPT<br/>Stock: null<br/>Match interval: 30s"]
     end
     
     style W1 fill:#3b82f6,color:#ffffff
@@ -320,9 +288,9 @@ graph LR
 ```
 
 **What happens:**
-1. Payment message arrives with `orderId=123`
-2. Kafka Streams stores it in **RocksDB state store**
-3. Window timer starts: "Wait until t=10 for matching stock message"
+1. Payment message arrives with `orderId=123, attemptId=a1`
+2. `correlateByAttempt` selects key `123:a1`; Kafka Streams stores the record with its timestamp in a **window state store**
+3. Only stock records within a 30-second timestamp difference are eligible; the 30-second grace permits late arrival of eligible records as stream time advances
 4. No output yet - waiting for join partner
 
 ---
@@ -332,7 +300,7 @@ graph LR
 ```mermaid
 graph LR
     subgraph "t=3: Stock Arrives (Within Window)"
-        S1[Stock Message<br/>orderId=123<br/>status=ACCEPT] --> SS2[State Store]
+        S1[Stock Message<br/>orderId=123, attemptId=a1<br/>status=ACCEPT] --> SS2[State Store]
         SS2 --> M1[Match Found!]
         M1 --> J1[Join Function Called]
     end
@@ -344,7 +312,7 @@ graph LR
     end
     
     subgraph "State Store Updated"
-        O1 --> D3["Key: 123<br/>Payment: ACCEPT<br/>Stock: ACCEPT<br/>Joined: true<br/>Result: CONFIRMED"]
+        O1 --> D3["Key: 123:a1<br/>Payment: ACCEPT<br/>Stock: ACCEPT<br/>Matching timestamps<br/>Result: CONFIRMED"]
     end
     
     style M1 fill:#10b981,color:#ffffff
@@ -352,19 +320,19 @@ graph LR
 ```
 
 **What happens:**
-1. Stock message arrives with same `orderId=123`
-2. Kafka Streams finds matching payment in state store
+1. Stock message arrives with same `orderId=123, attemptId=a1`
+2. `correlateByAttempt` selects key `123:a1`; Kafka Streams finds payment for the same key and a matching timestamp in the window state store
 3. **Join function executes:** `orderManageService.confirm(payment, stock)`
 4. Result published to `orders` topic
-5. State store marked as "joined" - prevents duplicate joins
+5. Window state remains subject to retention; distinct duplicate events for the same key can still produce additional joins
 
 ---
 
-### **Phase 3: Window Expires (t=10)**
+### **Phase 3: Window Closes After Grace**
 
 ```mermaid
 graph TB
-    subgraph "t=10: Window Closes"
+    subgraph "Stream time advances beyond window end plus grace"
         W1[Window Expires] --> C1{Check State}
     end
     
@@ -379,10 +347,10 @@ graph TB
 ```
 
 **What happens:**
-1. Window timer reaches 10 seconds
-2. Kafka Streams checks if join occurred
-3. **If joined:** State cleaned up, transaction complete
-4. **If not joined:** Partial message discarded, order stays in `NEW` status
+1. Stream time advances beyond the join window plus grace; wall-clock time alone does not close it
+2. Out-of-window timestamps cannot match, even during grace
+3. Window records are eventually removed according to store retention, independently of Kafka transaction commits
+4. **If no matching response arrived:** No join result is emitted; the order remains `NEW` for the recurring retry job
 
 ---
 
@@ -400,18 +368,18 @@ sequenceDiagram
     participant DB as Database
     
     Note over PS,DB: t=0 seconds
-    PS->>K: Publish payment (orderId=123, ACCEPT)
+    PS->>K: Publish payment (orderId=123, attemptId=a1, ACCEPT)
     K->>KS: Deliver payment message
-    KS->>SS: Store payment, open window (expires t=10)
+    KS->>SS: Store payment under orderId:attemptId, match interval 30s (30s grace)
     
     Note over PS,DB: t=3 seconds (within window)
-    IS->>K: Publish stock (orderId=123, ACCEPT)
+    IS->>K: Publish stock (orderId=123, attemptId=a1, ACCEPT)
     K->>KS: Deliver stock message
-    KS->>SS: Find matching payment
+    KS->>SS: Find matching payment for key 123:a1
     KS->>KS: Execute join: confirm(payment, stock)
     KS->>KS: Result: CONFIRMED
-    KS->>K: Publish to orders topic
-    KS->>DB: UPDATE order SET status='CONFIRMED'
+    KS->>DB: UPDATE order SET status='CONFIRMED' (independent commit)
+    KS->>K: Publish to orders topic (Kafka transaction)
     
     Note over PS,DB: ✅ Success - Order confirmed
 ```
@@ -431,27 +399,27 @@ sequenceDiagram
     participant JR as JobRunr
     
     Note over PS,DB: t=0 seconds
-    PS->>K: Publish payment (orderId=456, ACCEPT)
+    PS->>K: Publish payment (orderId=456, attemptId=a1, ACCEPT)
     K->>KS: Deliver payment message
-    KS->>SS: Store payment, open window (expires t=10)
+    KS->>SS: Store payment under orderId:attemptId, match interval 30s (30s grace)
     
-    Note over PS,DB: t=10 seconds - Window expires
+    Note over PS,DB: Stream time passes window end plus 30s grace
     KS->>SS: Check for match
     SS-->>KS: No stock message found
     KS->>KS: Discard payment message
     Note over KS: ❌ No join occurred
     
-    Note over PS,DB: t=12 seconds (TOO LATE)
-    IS->>K: Publish stock (orderId=456, ACCEPT)
+    Note over PS,DB: t=65 seconds (timestamp outside match interval)
+    IS->>K: Publish stock (orderId=456, attemptId=a1, ACCEPT)
     K->>KS: Deliver stock message
-    KS->>SS: Look for payment message
+    KS->>SS: Look for payment message for key 456:a1
     SS-->>KS: Not found (window expired)
     KS->>KS: Discard stock message
     
-    Note over PS,DB: t=300 seconds (5 minutes later)
+    Note over PS,DB: Next minutely run after order is more than 5 minutes stale
     JR->>DB: Find orders in NEW status > 5 min
     DB-->>JR: Order 456 found
-    JR->>K: Republish order event
+    JR->>K: Republish order event (orderId=456, new attemptId=a2)
     Note over PS,DB: 🔄 Retry cycle begins
 ```
 
@@ -468,19 +436,19 @@ sequenceDiagram
     participant DB as Database
     
     Note over PS,DB: t=0 seconds
-    PS->>K: Publish payment (orderId=789, ACCEPT)
+    PS->>K: Publish payment (orderId=789, attemptId=a1, ACCEPT)
     K->>KS: Store payment
     
     Note over PS,DB: t=2 seconds
     IS->>IS: Check stock
     IS->>IS: ❌ Out of stock
-    IS->>K: Publish stock (orderId=789, REJECT)
+    IS->>K: Publish stock (orderId=789, attemptId=a1, REJECT)
     K->>KS: Deliver stock message
     
     KS->>KS: Join: confirm(ACCEPT, REJECT)
     KS->>KS: Result: ROLLBACK (mixed results)
-    KS->>K: Publish ROLLBACK to orders topic
-    KS->>DB: UPDATE order SET status='ROLLBACK'
+    KS->>DB: UPDATE order SET status='ROLLBACK' (independent commit)
+    KS->>K: Publish ROLLBACK to orders topic (Kafka transaction)
     
     Note over PS,DB: Compensation Phase
     K->>PS: Deliver ROLLBACK event
@@ -497,9 +465,9 @@ sequenceDiagram
 ```
 Timeline:
 t=0:  Payment arrives → Window opens
-t=8:  Inventory service processing (slow database query)
-t=10: Window closes ❌
-t=11: Stock message arrives → TOO LATE
+t=30: Match interval ends for timestamp 0
+t=60: Stream time passes window end plus grace
+t=65: Stock timestamp 65 → Outside the 30-second match interval
 
 Result: Order stuck in NEW status, requires retry
 ```
@@ -517,8 +485,8 @@ JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(
 ```
 Scenario: Stock arrives BEFORE payment
 
-t=0:  Stock arrives (orderId=123) → Window opens
-t=3:  Payment arrives (orderId=123) → Join succeeds ✅
+t=0:  Stock arrives (orderId=123, attemptId=a1) → Window opens
+t=3:  Payment arrives (orderId=123, attemptId=a1) → Join succeeds ✅
 
 This works! Window is bidirectional.
 ```
@@ -580,7 +548,7 @@ TimestampExtractor.FAIL_ON_INVALID_TIMESTAMP
 | Service Latency | Recommended Window | Rationale |
 |-----------------|-------------------|-----------|
 | < 100ms | 5 seconds | Fast services, tight SLA |
-| 100ms - 1s | 10 seconds | **Current setting** - balanced |
+| 100ms - 1s | 10 seconds | Example for moderate service latency |
 | 1s - 5s | 30 seconds | Slow database queries |
 | > 5s | 60 seconds | External API calls |
 
@@ -598,7 +566,6 @@ JoinWindows.ofTimeDifferenceAndGrace(
 // - Grace period: 30 seconds (accommodates late arrivals and retries)
 // - Bidirectional: Yes (payment→stock or stock→payment)
 // - Attempt Correlation: Keyed by orderId:attemptId
-```
 ```
 
 ---
@@ -647,9 +614,11 @@ rate(saga_window_timeout_total[5m])
 
 ### Exactly-Once Processing
 ✅ Achieved through 3 layers:
-1. **Idempotent producers** - prevent duplicate messages
-2. **Transactional processing** - atomic commits
-3. **State store deduplication** - track processed messages
+1. **Idempotent producers** - deduplicate producer retries within Kafka
+2. **Transactional processing** - atomically commit Kafka state, offsets, and output
+3. **Window state** - correlate responses by `orderId:attemptId` and timestamp
+
+PostgreSQL updates remain independent and require idempotency and reconciliation.
 
 ### 30-Second Window & Grace Period
 ✅ Purpose: Wait for both payment and stock responses for the same attempt
@@ -662,4 +631,4 @@ rate(saga_window_timeout_total[5m])
 The window is a **trade-off**:
 - **Too short** → More timeouts, more retries
 - **Too long** → Slower transaction completion
-- **Current 10s** → Balanced for typical microservice latency
+- **Current 30s + 30s grace** → Balanced for typical microservice latency

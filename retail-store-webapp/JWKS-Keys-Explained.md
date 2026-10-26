@@ -113,7 +113,7 @@ OAUTH2_SERVER_URL=http://localhost:9191
 REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
 
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
 spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
@@ -178,18 +178,24 @@ Spring Security in `retail-store-webapp` maps these claims into `GrantedAuthorit
 
 ## 🔍 **Code Implementation**
 
-### 1. **Automatic JWKS Configuration**
+### 1. **Issuer and Audience Validation**
 
 ```java
-// Spring Security internally creates NimbusJwtDecoder from issuer-uri:
+// Explicit resource-server decoder example: validate issuer, timestamps, and audience.
 @Bean
 public JwtDecoder jwtDecoder() {
-    return NimbusJwtDecoder
-        .withJwkSetUri("http://localhost:9191/realms/retailstore/protocol/openid-connect/certs")
-        .cache(Duration.ofMinutes(5)) // Cache JWKS for 5 minutes
-        .build();
+    String issuer = "http://localhost:9191/realms/retailstore";
+    String requiredAudience = "retailstore-webapp";
+    NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(issuer).build();
+    decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<Jwt>(
+            JwtValidators.createDefaultWithIssuer(issuer),
+            new JwtClaimValidator<List<String>>("aud",
+                    audiences -> audiences != null && audiences.contains(requiredAudience))));
+    return decoder;
 }
 ```
+
+The issuer discovers the JWKS endpoint; a JWKS URI alone verifies signatures without establishing the expected issuer or audience. Configure the audience mapper in Keycloak so access tokens contain the audience required by the receiving service. This explicit resource-server example uses `retailstore-webapp`; it does not replace OAuth2 login's OIDC ID-token validation. See [Spring Security JWT validation](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html).
 
 ### 2. **Role Mapping in `retailstore-webapp` (SecurityConfig.java)**
 

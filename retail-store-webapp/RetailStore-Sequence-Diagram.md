@@ -40,7 +40,7 @@ sequenceDiagram
     Browser->>WebApp: GET /oauth2/authorization/retailstore-webapp
     WebApp->>Keycloak: Redirect to /realms/retailstore/protocol/openid-connect/auth
     Keycloak-->>Browser: Login & consent prompt
-    User->>Keycloak: Submit credentials (e.g., retail / retail1234)
+    User->>Keycloak: Submit credentials (e.g., retail / {RETAIL_USER_PASSWORD})
     Keycloak-->>WebApp: Redirect to /login/oauth2/code/retailstore-webapp with code
     WebApp->>Keycloak: Exchange code for tokens (/protocol/openid-connect/token)
     Keycloak-->>WebApp: Access Token + ID Token (with client roles: ADMIN, OPERATOR)

@@ -25,7 +25,7 @@ graph TB
     end
     
     subgraph "📡 Async Layer"
-        BP --> KP[Kafka Producer Pool]
+        BP --> KP[Spring Modulith Outbox]
         PP --> CF[CompletableFuture]
         CF --> TP[Thread Pool]
     end
@@ -46,9 +46,10 @@ sequenceDiagram
     participant Repository as 🗄️ OrderRepository
     participant Database as 💾 PostgreSQL
     participant ThreadPool as 🧵 Thread Pool
-    participant KafkaPool as 📡 Kafka Pool
+    participant Modulith as 📤 Spring Modulith Outbox
+    participant Kafka as 📡 Kafka
     
-    Note over Client, KafkaPool: 🚀 Optimized Request Processing
+    Note over Client, Kafka: 🚀 Optimized Request Processing
     Client->>Controller: GET /api/orders?pageNo=0&pageSize=10
     Controller->>Service: findAllOrders(pageNo, pageSize, sortBy, sortDir)
     
@@ -79,23 +80,27 @@ sequenceDiagram
     Service-->>Controller: PagedResult<OrderResponse>
     Controller-->>Client: Optimized paginated response
     
-    Note over Client, KafkaPool: 📦 Batch Processing Example
+    Note over Client, Kafka: 📦 Batch Processing Example
     Client->>Controller: POST /api/orders/generate?batchSize=100 (Header: Idempotency-Key)
     Controller->>Service: generateOrders(idempotencyKey, batchSize) -> saveBatchOrders(orderRequests)
     
     Service->>Service: Extract distinct product codes
     Service->>Service: Chunked catalog validation (batches of 25)
+    Service->>Database: BEGIN via transactionTemplate.execute
     Service->>Repository: saveAll(List<Order>) - Batch insert with TSID
-    
-    Service->>KafkaPool: forEach(publishEvent) with unique attempt IDs
-    par Spring Modulith Outbox Dispatch
-        KafkaPool->>KafkaPool: Outbox dispatch order1 to Kafka
-        KafkaPool->>KafkaPool: Outbox dispatch order2 to Kafka
-        KafkaPool->>KafkaPool: Outbox dispatch order3 to Kafka
+    Repository->>Database: Persist orders
+    loop Each saved order
+        Service->>Modulith: eventPublisher.publishEvent(dto.withAttemptId(UUID))
+        Modulith->>Database: Persist event publication in outbox (same transaction)
     end
-    
+    Service->>Database: COMMIT orders and event publications
     Service-->>Controller: GenericResponse(success=true)
     Controller-->>Client: 200 OK
+
+    Note over Modulith, Kafka: After commit: asynchronous externalization
+    Modulith->>Kafka: Dispatch persisted events to orders topic
+    Kafka-->>Modulith: Acknowledge delivery
+    Modulith->>Database: Mark publications completed
 ```
 
 ## 📋 Code Implementation Mapping
@@ -536,10 +541,10 @@ public class DatabaseMetrics {
    - **Location:** `OrderService.saveOrder()` line 75
    - **Impact:** Increased latency and reduced throughput
 
-2. **Sequential Kafka Publishing**
-   - **Issue:** Orders published one by one in batch operations
-   - **Location:** `OrderService.saveBatchOrders()` line 120
-   - **Impact:** Slower batch processing
+2. **Per-order Outbox Publications**
+   - **Behavior:** Each saved order records an event publication in the batch transaction
+   - **Location:** `OrderService.persistBatchOrders()`
+   - **Impact:** Publication persistence adds database work; Kafka dispatch occurs asynchronously after commit
 
 3. **Memory Usage in Large Queries**
    - **Issue:** Loading all order items into memory
@@ -571,40 +576,22 @@ public OrderResponse saveOrderOptimized(OrderRequest orderRequest) {
     
     // Wait for validation and proceed
     if (validationFuture.join()) {
-        Order savedOrder = orderRepository.save(orderEntity);
-        eventPublisher.publishEvent(orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString()));
-        return orderMapper.toResponse(savedOrder);
+        // Match persistOrder: save and outbox publication share one transaction.
+        return transactionTemplate.execute(_ -> {
+            Order savedOrder = orderRepository.save(orderEntity);
+            eventPublisher.publishEvent(
+                    orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString()));
+            return orderMapper.toResponse(savedOrder);
+        });
     } else {
         throw new ProductNotFoundException(extractProductCodes(orderRequest));
     }
 }
 ```
 
-2. **Bulk Kafka Publishing**
-```java
-@Service
-public class BulkKafkaProducer {
-    
-    public void sendOrdersBulk(List<OrderDto> orders) {
-        List<ProducerRecord<Long, OrderDto>> records = orders.stream()
-            .map(order -> new ProducerRecord<>(
-                AppConstants.ORDERS_TOPIC, 
-                order.orderId(), 
-                order))
-            .toList();
-        
-        // Send all records in parallel
-        List<CompletableFuture<SendResult<Long, OrderDto>>> futures = 
-            records.parallelStream()
-                .map(record -> kafkaTemplate.send(record))
-                .map(ListenableFuture::completable)
-                .toList();
-        
-        // Wait for all to complete
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-    }
-}
-```
+2. **Outbox Dispatch Throughput**
+
+`persistBatchOrders` records each `OrderDto` through `eventPublisher.publishEvent` in the same transaction as `saveAll`. Tune and monitor asynchronous Spring Modulith externalization separately from request latency. A direct-send `BulkKafkaProducer` would bypass the outbox's database transaction guarantee and is not the current implementation.
 
 3. **Result Set Streaming**
 ```java

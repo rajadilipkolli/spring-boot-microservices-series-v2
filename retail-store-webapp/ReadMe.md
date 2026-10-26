@@ -45,8 +45,8 @@ Note: The docker-compose configuration includes health checks and dependency ord
 For accessing the Keycloak Admin Console, visit [Admin Console](http://localhost:9191) (or `http://localhost:9191/admin`) and log in with the admin credentials:
 
 ```plaintext
-username: admin
-password: admin1234
+username: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+password: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
 ```
 
 ## 🔐 Keycloak Security Configuration
@@ -101,18 +101,18 @@ If you need to manually export the realm configuration from the running Keycloak
 docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
 ```
 
-## UI & Default Credentials
+## UI & Credential Configuration
 
 - **Web Application URL**: [http://localhost:8080](http://localhost:8080)
 - **Keycloak Server URL**: [http://localhost:9191](http://localhost:9191)
 
-Pre-configured credentials:
+Supply these values through environment variables or your secret store and apply them when provisioning Keycloak users. Rotate any previously published credentials used beyond isolated local development; replacing documentation examples does not rotate deployed credentials.
 
 | Username | Password                   | Assigned Roles                                                  | Permissions / Purpose                                                                     |
 |----------|----------------------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `retail` | `retail1234`               | `ADMIN`, `OPERATOR` (Client Roles), `default-roles-retailstore` | Full access: Storefront, Cart, Orders, Inventory (`ADMIN`), Actuator Metrics (`OPERATOR`) |
-| `raja`   | `demo-throwaway-raja-pass` | `default-roles-retailstore` (Realm Role)                        | Standard shopper: Storefront, Cart, Order creation and history                            |
-| `admin`  | `admin1234`                | Master Realm Admin                                              | Keycloak Admin Console (`http://localhost:9191`)                                          |
+| `retail` | `${RETAIL_USER_PASSWORD}`               | `ADMIN`, `OPERATOR` (Client Roles), `default-roles-retailstore` | Full access: Storefront, Cart, Orders, Inventory (`ADMIN`), Actuator Metrics (`OPERATOR`) |
+| `raja`   | `${RAJA_USER_PASSWORD}` | `default-roles-retailstore` (Realm Role)                        | Standard shopper: Storefront, Cart, Order creation and history                            |
+| `${KC_BOOTSTRAP_ADMIN_USERNAME}` | `${KC_BOOTSTRAP_ADMIN_PASSWORD}`                | Master Realm Admin                                              | Keycloak Admin Console (`http://localhost:9191`)                                          |
 
 ## OIDC Authentication Sequence Diagram
 
@@ -125,7 +125,7 @@ sequenceDiagram
     User->>WebApp: 1. Requests Login (/login or /oauth2/authorization/retailstore-webapp)
     WebApp->>Keycloak: 2. Redirect to Authorization Endpoint (/realms/retailstore/protocol/openid-connect/auth)
     Keycloak-->>User: 3. Presents Keycloak Login & Consent Page
-    User->>Keycloak: 4. Submits Credentials (e.g. retail / retail1234)
+    User->>Keycloak: 4. Submits Credentials (e.g. retail / {RETAIL_USER_PASSWORD})
     Keycloak-->>WebApp: 5. Redirects to callback with Authorization Code (/login/oauth2/code/retailstore-webapp?code=...)
     WebApp->>Keycloak: 6. Exchanges Code for Tokens (/protocol/openid-connect/token)
     Keycloak-->>WebApp: 7. Returns Access Token & ID Token (contains client roles)

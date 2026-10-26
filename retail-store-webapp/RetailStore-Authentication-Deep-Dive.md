@@ -20,7 +20,11 @@ This document provides an in-depth analysis of the authentication and registrati
 
 ---
 
-## 🔑 User Registration Flow - Code Mapping
+## 🔑 User Registration Flow - Recovery Design
+
+**Current source limitation:** `RegistrationController.register()` creates the Keycloak user before calling the payment service. If customer creation fails, the user remains in Keycloak and a repeated `/api/register` request fails with `UserAlreadyExistsException` before reaching the customer call. Despite its name, the current `CustomerServiceClient.getOrCreateCustomer()` performs a create-only POST; an existing email returns HTTP 409.
+
+The flow below is a proposed recovery design. New users retain the create-user, assign-role, and create-customer path. An existing user must sign in before resuming customer creation; a public duplicate-user response alone is not proof of ownership. The authenticated continuation route and idempotent customer helper described below still need implementation.
 
 ```mermaid
 sequenceDiagram
@@ -51,53 +55,62 @@ sequenceDiagram
     WebApp->>WebApp: Validate Request (Bean Validation)
     
     WebApp->>KC: Create user via keycloak-admin-client
-    Note right of WebApp: KeycloakRegistrationService.registerUser()<br/>keycloakClient.realm(realm).users().create(user)
-    KC-->>WebApp: Returns HTTP 201 Created with User ID
-    
-    WebApp->>KC: Assign "user" realm role
-    Note right of WebApp: realmResource.users().get(userId)<br/>.roles().realmLevel().add(...)
-    KC-->>WebApp: Role assigned
-    
-    WebApp->>Gateway: POST /payment-service/api/customers
-    Note right of WebApp: CustomerServiceClient.getOrCreateCustomer()
-    
-    Gateway->>Payment: Create customer record
-    Payment-->>Gateway: CustomerResponse
-    Gateway-->>WebApp: Customer created
-    
+    alt New Keycloak user (201 Created)
+        KC-->>WebApp: User ID
+        WebApp->>KC: Assign "user" realm role
+        KC-->>WebApp: Role assigned
+    else Existing user (409 Conflict)
+        KC-->>WebApp: Duplicate username or email
+        WebApp-->>Browser: Sign in to resume customer setup
+        Browser->>KC: Authenticate existing account (OIDC)
+        KC-->>WebApp: Verified identity through OIDC login
+        Browser->>WebApp: POST /api/registration/customer (authenticated, CSRF protected)
+        WebApp->>WebApp: Derive identity from principal and require verified email
+    end
+
+    WebApp->>Gateway: Ensure customer by normalized email
+    Note right of WebApp: Proposed idempotent helper:<br/>GET by email, POST only if missing,<br/>on duplicate-email conflict, GET again
+    Gateway->>Payment: Lookup or create customer record
+    Payment-->>Gateway: Existing or newly created CustomerResponse
+    Gateway-->>WebApp: Customer ready
+
     WebApp-->>Browser: Registration success JSON (200 OK)
     Note right of Browser: JavaScript redirects to:<br/>window.location.href = '/login?registrationSuccess=true'
 ```
 
 ### 🔍 Registration Code Components
 
-#### 1. **RegistrationController.java**
-```java
-// Location: src/main/java/com/example/retailstore/webapp/web/controller/RegistrationController.java
+#### 1. **Controller and Customer Recovery (Proposed Pseudocode)**
 
-@GetMapping("/registration")
-public String showRegistrationPage() {
-    return "registration"; // Maps to registration.html template
-}
+```text
+POST /api/register(request):
+    try:
+        registrationService.registerUser(request)
+    catch UserAlreadyExistsException:
+        return "Sign in to resume customer setup"  // Do not provision anonymously
+    return ensureCustomer(request)                // Preserve the new-user path
 
-@PostMapping("/api/register")
-public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
-    logger.info("Received registration request for user: {}", request.username());
-    registrationService.registerUser(request);
-    CustomerRequest customerRequest = new CustomerRequest(
-            request.username(),
-            request.firstName(),
-            request.lastName(),
-            request.email(),
-            request.phone(),
-            request.address());
-    CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
-    logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
-    return ResponseEntity.ok(Map.of("message", "User registered successfully"));
-}
+POST /api/registration/customer(addressAndPhone):
+    require authenticated OIDC session and valid CSRF token
+    require email_verified == true
+    derive username and normalized email from the authenticated principal
+    build CustomerRequest using that identity and the validated contact details
+    return ensureCustomer(customerRequest)
+
+ensureCustomer(customerRequest):
+    try GET /payment-service/api/customers/by-email?email=<normalized email>
+    if found: return existing customer without changing its balance or profile
+    if error other than 404: propagate failure
+    try CustomerServiceClient.getOrCreateCustomer(customerRequest)  // POST create
+    if duplicate-email 409: GET by normalized email and return the existing customer
+    if another error: propagate it so authenticated completion can be retried
 ```
 
-#### 2. **KeycloakRegistrationService.java**
+Do not add the continuation endpoint to `SecurityConstants.PUBLIC_URLS`. Use the verified session identity for lookup and creation; never trust a submitted email to identify an existing account. Preserve the structured `CustomerRequest` address fields and apply the initial balance only on first creation. Outgoing calls from authenticated completion use the user's authorized client; the public new-user path also needs a separately authorized provisioning call, which the current authorization-code-only client configuration does not supply.
+
+A database uniqueness rule on normalized email is required to handle concurrent creation across different names; see the [customer schema migration gap](../payment-service/PaymentService-Sequence-Diagram.md#database-schema). Lookup followed by POST alone is not atomic. Retry a transient failure through the authenticated continuation, including when the original POST committed but its response was lost.
+
+#### 2. **KeycloakRegistrationService.java (Current New-user Path)**
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/services/KeycloakRegistrationService.java
 
@@ -202,7 +215,7 @@ sequenceDiagram
         Note right of Spring: OAuth2LoginAuthenticationFilter<br/>Handles the callback
         
         Spring->>KC: Exchange code for tokens
-        Note right of KC: POST /realms/retailstore/protocol/openid-connect/token<br/>Parameters:<br/>- grant_type=authorization_code<br/>- code={authorization_code}<br/>- client_id=retailstore-webapp<br/>- client_secret=demo-throwaway-oauth-secret
+        Note right of KC: POST /realms/retailstore/protocol/openid-connect/token<br/>Parameters:<br/>- grant_type=authorization_code<br/>- code={authorization_code}<br/>- client_id=retailstore-webapp<br/>- client_secret=${OAUTH2_CLIENT_SECRET}
         
         KC-->>Spring: Access Token + ID Token
         Note right of Spring: JWT tokens containing:<br/>- User info (preferred_username, email)<br/>- Roles and permissions<br/>- Token expiry (300 seconds)
@@ -307,7 +320,7 @@ REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
 
 # OAuth2 Client Registration
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
 spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
@@ -400,6 +413,8 @@ sequenceDiagram
 ```java
 // Location: src/main/java/com/example/retailstore/webapp/clients/ClientsConfig.java
 
+import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
+
 @Configuration(proxyBeanMethods = false)
 @ImportHttpServices({
     CatalogServiceClient.class,
@@ -412,23 +427,50 @@ class ClientsConfig {
     @Bean
     RestClientHttpServiceGroupConfigurer groupConfigurer(
             ObservationRegistry observationRegistry,
-            ApplicationProperties applicationProperties,
-            OAuth2AuthorizedClientManager authorizedClientManager) {
-
-        OAuth2ClientHttpRequestInterceptor interceptor =
-                new OAuth2ClientHttpRequestInterceptor(authorizedClientManager);
-
-        return groups -> groups.forEachClient((group, builder) -> builder.baseUrl(applicationProperties.apiGatewayUrl())
+            ApplicationProperties applicationProperties) {
+        return groups -> groups.forEachClient((group, builder) -> builder
+                .baseUrl(applicationProperties.apiGatewayUrl())
                 .defaultHeaders(httpHeaders -> {
                     httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
                     httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 })
-                .requestInterceptor(interceptor)
-                .observationRegistry(observationRegistry)
-                .build());
+                .observationRegistry(observationRegistry));
+    }
+
+    @Bean
+    OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
     }
 }
 ```
+
+Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+
+```java
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/order-service")
+public interface OrderServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/inventory-service")
+public interface InventoryServiceClient { /* existing methods */ }
+```
+
+`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
+
+**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
 
 ---
 
@@ -579,7 +621,7 @@ resource "keycloak_role" "user_realm_role" {
 ```json
 {
   "clientId": "retailstore-webapp",
-  "secret": "demo-throwaway-oauth-secret",
+  "secret": "${OAUTH2_CLIENT_SECRET}",
   "redirectUris": [
     "http://localhost:8080/login/oauth2/code/retailstore-webapp"
   ],
@@ -588,7 +630,7 @@ resource "keycloak_role" "user_realm_role" {
   "directAccessGrantsEnabled": true,
   "frontchannelLogout": true,
   "attributes": {
-    "post.logout.redirect.uris": "http://localhost:8080"
+    "post.logout.redirect.uris": "http://localhost:8080/"
   }
 }
 ```
