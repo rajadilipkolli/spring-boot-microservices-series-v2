@@ -14,6 +14,13 @@ public interface CatalogServiceClient {
     @GetExchange("/api/catalog")
     PagedResult<ProductResponse> getProducts(@RequestParam int pageNo);
 
+    /**
+     * Creates a catalog product using the {@code retailstore-webapp} OAuth2 registration.
+     * Authorization and downstream request failures propagate to the caller.
+     *
+     * @param productRequest product details to submit
+     * @return the created product returned by the catalog service
+     */
     @ClientRegistrationId("retailstore-webapp")
     @PostExchange("/api/catalog")
     ProductResponse createProduct(@RequestBody ProductRequest productRequest);

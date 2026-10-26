@@ -55,6 +55,15 @@ class OrderController {
         return "order_details";
     }
 
+    /**
+     * Retrieves an order only if it belongs to the customer identified by the current user's
+     * email, and adds that customer's details to the returned order.
+     *
+     * @param orderNumber value forwarded as the downstream order ID
+     * @return the customer's order with customer details populated
+     * @throws ResourceNotFoundException if ownership does not match or any exception occurs while
+     *     retrieving or enriching the order
+     */
     @GetMapping("/api/orders/{orderNumber}")
     @ResponseBody
     OrderResponse getOrder(@PathVariable String orderNumber) {
@@ -91,6 +100,12 @@ class OrderController {
         return "orders";
     }
 
+    /**
+     * Retrieves orders for the customer identified by the current user's email using downstream
+     * default pagination. Customer lookup and order retrieval failures propagate to the caller.
+     *
+     * @return the customer's order page returned by the order service
+     */
     @GetMapping("/api/orders")
     @ResponseBody
     PagedResult<OrderResponse> getOrders() {
@@ -100,6 +115,14 @@ class OrderController {
         return orderServiceClient.getOrdersByCustomer(loggedInCustomer.customerId());
     }
 
+    /**
+     * Creates an order using the customer ID resolved from the current user's email.
+     *
+     * @param orderRequest items and delivery address to submit; customer details are not forwarded
+     * @return the downstream order confirmation
+     * @throws InvalidRequestException if customer lookup, request conversion, or order creation
+     *     fails; existing instances propagate and other exceptions are converted to this type
+     */
     @PostMapping("/api/orders")
     @ResponseBody
     OrderConfirmationDTO createOrder(@Valid @RequestBody CreateOrderRequest orderRequest) {

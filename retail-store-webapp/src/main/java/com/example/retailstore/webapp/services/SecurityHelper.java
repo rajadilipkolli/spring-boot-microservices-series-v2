@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 @Service("securityHelper")
 public class SecurityHelper {
 
+    /** Creates a helper that reads the current thread's security context. */
     public SecurityHelper() {}
 
     public String getUsername() {

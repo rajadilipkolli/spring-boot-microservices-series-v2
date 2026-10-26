@@ -26,6 +26,11 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 public class SecurityConfig {
     private final ClientRegistrationRepository clientRegistrationRepository;
 
+    /**
+     * Creates security configuration using the client registrations for OIDC logout.
+     *
+     * @param clientRegistrationRepository registered OAuth2 clients
+     */
     public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }

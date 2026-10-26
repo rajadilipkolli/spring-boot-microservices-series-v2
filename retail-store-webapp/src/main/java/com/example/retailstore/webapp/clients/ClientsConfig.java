@@ -43,6 +43,13 @@ class ClientsConfig {
                 .build());
     }
 
+    /**
+     * Configures OAuth2 authorization and {@code @ClientRegistrationId} processing for imported
+     * HTTP service clients.
+     *
+     * @param authorizedClientManager manager used to authorize outgoing OAuth2 requests
+     * @return configurer that resolves the annotated registration and attaches available bearer tokens
+     */
     @Bean
     OAuth2RestClientHttpServiceGroupConfigurer oauth2RestClientHttpServiceGroupConfigurer(
             OAuth2AuthorizedClientManager authorizedClientManager) {
