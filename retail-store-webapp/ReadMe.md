@@ -95,11 +95,18 @@ docker compose --profile terraform up terraform
 A reference export of the realm configuration is maintained at:
 `retail-store-webapp/src/test/resources/docker/realm-config/retailstore-realm.json`
 
-If you need to manually export the realm configuration from the running Keycloak container:
+To manually export the realm configuration, stop all Keycloak server instances first and keep PostgreSQL running. From the repository root, use a one-off container with the service's existing database settings and network:
 ```shell
-# Export the realm configuration along with users
-docker exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import --realm retailstore --users realm_file
+docker compose -f deployment/docker-compose.yml stop keycloak
+# Export the realm configuration and users while the server is stopped.
+docker compose -f deployment/docker-compose.yml run --no-deps --name keycloak-export keycloak export --dir /tmp/keycloak-export --realm retailstore --users realm_file
+# Copy the export from the exited container before removing it.
+docker cp keycloak-export:/tmp/keycloak-export ./keycloak-export
+docker rm keycloak-export
+docker compose -f deployment/docker-compose.yml start keycloak
 ```
+
+The export command exits when finished. Restart Keycloak after the export and copy succeed. See [Keycloak import and export](https://www.keycloak.org/server/importExport#_import_export_commands).
 
 ## UI & Credential Configuration
 

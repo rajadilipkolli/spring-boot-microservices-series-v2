@@ -15,16 +15,13 @@ This document explains the realm configuration, client registration process, and
 flowchart TD
     A["🎯 Realm Provisioning Methods"] --> B["🏗️ Terraform (Recommended)"]
     A --> C["🖥️ Keycloak Admin Console (Port 9191)"]
-    A --> D["🚀 Docker Compose Realm Import"]
     A --> E["🔧 Keycloak Admin CLI (kcadm.sh)"]
     
     B --> F["deployment/terraform/keycloak/"]
     C --> G["Manual Setup via Web UI"]
-    D --> H["retailstore-realm.json Import"]
     E --> I["Scripted CLI Administration"]
     
     F --> J["Provisions Realm, Clients, Roles (ADMIN, OPERATOR) & Users"]
-    H --> J
 ```
 
 ### 📋 **Method 1: Terraform Realm Manager (Primary & Recommended)**
@@ -79,7 +76,7 @@ services:
 - Keycloak 26.x listens on port **`9191`** (`--http-port=9191`).
 - This direct local HTTP workflow uses `start-dev`; use a production configuration with TLS for deployed environments. No reverse proxy is configured, so proxy headers are omitted. See [Keycloak containers](https://www.keycloak.org/server/containers) and [hostname configuration](https://www.keycloak.org/server/hostname).
 - Supply credentials from your environment or secret store. Keep them consistent with PostgreSQL provisioning and the application's client registration. Rotate any previously published values used beyond isolated local development.
-- `${OAUTH2_CLIENT_SECRET}` in JSON examples is a template placeholder: render it using your provisioning tool before import; Keycloak does not automatically interpolate arbitrary JSON placeholders.
+- Keycloak resolves `${OAUTH2_CLIENT_SECRET}` in realm JSON from the environment during both startup with `--import-realm` and offline `kc.sh import`. Set `OAUTH2_CLIENT_SECRET` in the Keycloak process or container environment for the selected import path. Pre-rendering is only needed for provisioning tools that do not perform Keycloak environment substitution. See [Keycloak import environment variables](https://www.keycloak.org/server/importExport#_using_environment_variables_within_the_realm_configuration_files).
 - Management and metrics run on port **`9000`**.
 - Reference export file for test suites is maintained at: `retail-store-webapp/src/test/resources/docker/realm-config/retailstore-realm.json`.
 

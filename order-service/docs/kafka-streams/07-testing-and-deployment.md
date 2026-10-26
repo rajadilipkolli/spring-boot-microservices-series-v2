@@ -411,8 +411,16 @@ public class OrderTestDataBuilder {
 
 ### EmbeddedKafka Integration Tests
 
+Configure the `test` profile in `src/test/resources/application-test.properties` so `kafkaTemplate.send` writes the JSON bytes unchanged. Keep the existing consumer deserializers unchanged.
+
+```properties
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.ByteArraySerializer
+```
+
 ```java
 @SpringBootTest
+@ActiveProfiles("test")
 @EmbeddedKafka(
     partitions = 3,
     topics = {"orders", "payment-orders", "stock-orders", "recovererDLQ"},

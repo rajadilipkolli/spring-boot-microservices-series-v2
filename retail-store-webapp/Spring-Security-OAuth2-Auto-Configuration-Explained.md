@@ -308,7 +308,7 @@ sequenceDiagram
     Note over Provider: Class: OAuth2AuthorizationCodeAuthenticationProvider<br/>Makes POST to token endpoint
     
     Provider->>Keycloak: POST /protocol/openid-connect/token
-    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=${OAUTH2_CLIENT_SECRET}<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
+    Note over Provider, Keycloak: Authorization: Basic {base64(formEncode(client_id):formEncode(client_secret))}<br/>Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
     
     Keycloak-->>Provider: Access Token + ID Token (with client roles: ADMIN, OPERATOR)
     Provider-->>Filter2: OAuth2LoginAuthenticationToken
@@ -430,15 +430,17 @@ Host: localhost:9191
 ```
 
 #### **Step 2: Token Exchange**
+
+Spring defaults to `client_secret_basic` for this registration. The `Authorization` header below contains the Base64 encoding of the form-encoded client ID (`retailstore-webapp`), a colon, and the form-encoded client secret (the value of `OAUTH2_CLIENT_SECRET`). See [Spring Security client authentication](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/client-authentication.html#oauth2-client-authentication-client-credentials-client-secret-basic).
+
 ```http
 POST /realms/retailstore/protocol/openid-connect/token HTTP/1.1
 Host: localhost:9191
+Authorization: Basic {base64(formEncode(client_id):formEncode(client_secret))}
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&
 code=def456&
-client_id=retailstore-webapp&
-client_secret=${OAUTH2_CLIENT_SECRET}&
 redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp
 ```
 

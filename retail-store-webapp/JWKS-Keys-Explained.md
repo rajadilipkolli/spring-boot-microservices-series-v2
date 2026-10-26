@@ -113,7 +113,8 @@ OAUTH2_SERVER_URL=http://localhost:9191
 REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
 
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
+# Local-only fallback; set OAUTH2_CLIENT_SECRET for deployed environments.
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET:demo-throwaway-oauth-secret}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
 spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
