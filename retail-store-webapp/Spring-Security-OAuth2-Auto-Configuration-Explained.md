@@ -2,7 +2,7 @@
 
 ## 📖 Overview
 
-This document explains the "magic" behind Spring Security OAuth2 auto-configuration, revealing how properties automatically create endpoints, filters, and authentication flows.
+This document explains the mechanics behind Spring Security OAuth2 auto-configuration in the RetailStore WebApp built on **Java 25** and **Spring Boot 4.1.2**, revealing how properties automatically configure endpoints, filters, token exchange, and role mappings with **Keycloak 26.x**.
 
 ---
 
@@ -10,15 +10,29 @@ This document explains the "magic" behind Spring Security OAuth2 auto-configurat
 
 ### 🔧 **Spring Boot Auto-Configuration Magic**
 
-When you add these properties:
+When you define OAuth2 client registration properties in `application.properties`:
 ```properties
+OAUTH2_SERVER_URL=http://localhost:9191
+REALM_URL=${OAUTH2_SERVER_URL}/realms/retailstore
+
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
+spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
+spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
+spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[2]=roles
+spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={baseUrl}/login/oauth2/code/retailstore-webapp
+
+spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=${REALM_URL}
 ```
 
-Spring Boot **automatically creates** the OAuth2 authorization endpoint pattern:
+Spring Boot **automatically registers** the OAuth2 authorization endpoint pattern:
 ```
 /oauth2/authorization/{registrationId}
+```
+For registration ID `retailstore-webapp`, this produces:
+```
+/oauth2/authorization/retailstore-webapp
 ```
 
 ### 📍 **Auto-Generated Endpoints**
@@ -140,21 +154,23 @@ flowchart LR
 ```properties
 # Creates ClientRegistration bean with these values
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
-spring.security.oauth2.client.registration.retailstore-webapp.scope=openid, profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[0]=openid
+spring.security.oauth2.client.registration.retailstore-webapp.scope[1]=profile
+spring.security.oauth2.client.registration.retailstore-webapp.scope[2]=roles
 spring.security.oauth2.client.registration.retailstore-webapp.redirect-uri={baseUrl}/login/oauth2/code/retailstore-webapp
 ```
 
 **Equivalent Java Configuration:**
 ```java
 @Bean
-public ClientRegistrationRepository clientRegistrationRepository() {
+public ClientRegistrationRepository clientRegistrationRepository(Environment environment) {
     ClientRegistration registration = ClientRegistration.withRegistrationId("retailstore-webapp")
         .clientId("retailstore-webapp")
-        .clientSecret("demo-throwaway-oauth-secret")
+        .clientSecret(environment.getRequiredProperty("OAUTH2_CLIENT_SECRET"))
         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-        .scope("openid", "profile")
+        .scope("openid", "profile", "roles")
         .redirectUri("{baseUrl}/login/oauth2/code/retailstore-webapp")
         .authorizationUri("http://localhost:9191/realms/retailstore/protocol/openid-connect/auth")
         .tokenUri("http://localhost:9191/realms/retailstore/protocol/openid-connect/token")
@@ -168,14 +184,14 @@ public ClientRegistrationRepository clientRegistrationRepository() {
 
 #### 2. **Provider Configuration**
 ```properties
-# Auto-discovers OAuth2 endpoints from issuer
-spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=${REALM_URL}
+# Auto-discovers OAuth2 endpoints from Keycloak issuer
+spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=http://localhost:9191/realms/retailstore
 ```
 
 **What happens automatically:**
-```java
-// Spring makes HTTP GET to: http://localhost:9191/realms/retailstore/.well-known/openid-configuration
-// Response contains:
+Spring makes HTTP GET to: `http://localhost:9191/realms/retailstore/.well-known/openid-configuration`
+Response contains:
+```json
 {
   "authorization_endpoint": "http://localhost:9191/realms/retailstore/protocol/openid-connect/auth",
   "token_endpoint": "http://localhost:9191/realms/retailstore/protocol/openid-connect/token",
@@ -184,20 +200,66 @@ spring.security.oauth2.client.provider.retailstore-webapp.issuer-uri=${REALM_URL
 }
 ```
 
-### 🔄 **Auto-Created Security Filter Chain**
+### 🔄 **Project Security Filter Chain & Role Mapping (`SecurityConfig.java`)**
+
+In `retailstore-webapp`, the application customizes the security filter chain to enforce RBAC:
 
 ```java
-// This is what Spring Security automatically creates
 @Bean
-public SecurityFilterChain oauth2SecurityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .addFilterBefore(oauth2AuthorizationRequestRedirectFilter(), UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(oauth2LoginAuthenticationFilter(), OAuth2AuthorizationRequestRedirectFilter.class)
-        .oauth2Login(oauth2 -> oauth2
-            .clientRegistrationRepository(clientRegistrationRepository())
-            .authorizedClientService(authorizedClientService())
-        );
+SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
+    http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
+                    .permitAll()
+                    .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
+                    .hasRole("OPERATOR")
+                    .anyRequest()
+                    .authenticated())
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register")
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+            .oauth2Login(oauth2 -> oauth2.loginPage("/login")
+                    .defaultSuccessUrl("/", true)
+                    .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))
+            .logout(logout -> logout.clearAuthentication(true)
+                    .invalidateHttpSession(true)
+                    .logoutSuccessHandler(oidcLogoutSuccessHandler()))
+            .headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'")));
+
     return http.build();
+}
+
+@Bean
+GrantedAuthoritiesMapper userAuthoritiesMapper() {
+    return authorities -> {
+        Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+        authorities.forEach(authority -> {
+            if (authority instanceof OidcUserAuthority oidcAuth) {
+                Map<String, Object> resourceAccess = oidcAuth.getIdToken().getClaimAsMap("resource_access");
+                if (resourceAccess == null && oidcAuth.getUserInfo() != null) {
+                    resourceAccess = oidcAuth.getUserInfo().getClaimAsMap("resource_access");
+                }
+                if (resourceAccess != null) {
+                    String clientId = oidcAuth.getIdToken().getClaimAsString("azp");
+                    if (clientId == null) {
+                        clientId = "retailstore-webapp";
+                    }
+                    Object clientAccess = resourceAccess.get(clientId);
+                    if (clientAccess instanceof Map<?, ?> client) {
+                        Object roles = client.get("roles");
+                        if (roles instanceof Collection<?> roleCollection) {
+                            roleCollection.stream()
+                                    .filter(String.class::isInstance)
+                                    .map(String.class::cast)
+                                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                                    .forEach(mappedAuthorities::add);
+                        }
+                    }
+                }
+            }
+            mappedAuthorities.add(authority);
+        });
+        return mappedAuthorities;
+    };
 }
 ```
 
@@ -229,11 +291,11 @@ sequenceDiagram
     Builder-->>Filter1: OAuth2AuthorizationRequest
     Filter1-->>Browser: Redirect to Keycloak
     
-    Note over Browser, Keycloak: URL: http://localhost:9191/realms/retailstore/protocol/openid-connect/auth?<br/>client_id=retailstore-webapp&<br/>response_type=code&<br/>scope=openid%20profile&<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp&<br/>state=abc123
+    Note over Browser, Keycloak: URL: http://localhost:9191/realms/retailstore/protocol/openid-connect/auth?<br/>client_id=retailstore-webapp&<br/>response_type=code&<br/>scope=openid%20profile%20roles&<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp&<br/>state=abc123
     
     Browser->>Keycloak: GET authorization endpoint
     Keycloak-->>Browser: Login form
-    User->>Keycloak: Submit credentials
+    User->>Keycloak: Submit credentials (e.g. retail / {RETAIL_USER_PASSWORD})
     Keycloak-->>Browser: Redirect with authorization code
     
     Note over Browser: URL: http://localhost:8080/login/oauth2/code/retailstore-webapp?<br/>code=def456&state=abc123
@@ -246,11 +308,12 @@ sequenceDiagram
     Note over Provider: Class: OAuth2AuthorizationCodeAuthenticationProvider<br/>Makes POST to token endpoint
     
     Provider->>Keycloak: POST /protocol/openid-connect/token
-    Note over Provider, Keycloak: Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>client_id=retailstore-webapp<br/>client_secret=demo-throwaway-oauth-secret<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
+    Note over Provider, Keycloak: Authorization: Basic {base64(formEncode(client_id):formEncode(client_secret))}<br/>Parameters:<br/>grant_type=authorization_code<br/>code=def456<br/>redirect_uri=http://localhost:8080/login/oauth2/code/retailstore-webapp
     
-    Keycloak-->>Provider: Access Token + ID Token
+    Keycloak-->>Provider: Access Token + ID Token (with client roles: ADMIN, OPERATOR)
     Provider-->>Filter2: OAuth2LoginAuthenticationToken
-    Filter2-->>Browser: Redirect to success URL
+    Filter2->>Filter2: userAuthoritiesMapper maps client roles to ROLE_ADMIN, ROLE_OPERATOR
+    Filter2-->>Browser: Redirect to success URL (/)
 ```
 
 ### 🔍 **Exact Classes and Methods**
@@ -362,22 +425,94 @@ public class OAuth2AuthorizationCodeAuthenticationProvider implements Authentica
 
 #### **Step 1: Authorization Request**
 ```http
-GET /realms/retailstore/protocol/openid-connect/auth?client_id=retailstore-webapp&response_type=code&scope=openid%20profile&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp&state=abc123 HTTP/1.1
+GET /realms/retailstore/protocol/openid-connect/auth?client_id=retailstore-webapp&response_type=code&scope=openid%20profile%20roles&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp&state=abc123 HTTP/1.1
 Host: localhost:9191
 ```
 
 #### **Step 2: Token Exchange**
+
+Spring defaults to `client_secret_basic` for this registration. The `Authorization` header below contains the Base64 encoding of the form-encoded client ID (`retailstore-webapp`), a colon, and the form-encoded client secret (the value of `OAUTH2_CLIENT_SECRET`). See [Spring Security client authentication](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/client-authentication.html#oauth2-client-authentication-client-credentials-client-secret-basic).
+
 ```http
 POST /realms/retailstore/protocol/openid-connect/token HTTP/1.1
 Host: localhost:9191
+Authorization: Basic {base64(formEncode(client_id):formEncode(client_secret))}
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&
 code=def456&
-client_id=retailstore-webapp&
-client_secret=demo-throwaway-oauth-secret&
 redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fretailstore-webapp
 ```
+
+---
+
+## 🚀 **Downstream Token Propagation with RestClient**
+
+Use the following Spring Security configuration to resolve the client registration and attach the user's bearer token to imported HTTP service requests:
+
+```java
+import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
+
+@Configuration(proxyBeanMethods = false)
+@ImportHttpServices({
+    CatalogServiceClient.class,
+    OrderServiceClient.class,
+    CustomerServiceClient.class,
+    InventoryServiceClient.class
+})
+class ClientsConfig {
+
+    @Bean
+    RestClientHttpServiceGroupConfigurer groupConfigurer(
+            ObservationRegistry observationRegistry,
+            ApplicationProperties applicationProperties) {
+        return groups -> groups.forEachClient((group, builder) -> builder
+                .baseUrl(applicationProperties.apiGatewayUrl())
+                .defaultHeaders(httpHeaders -> {
+                    httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                    httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                })
+                .observationRegistry(observationRegistry));
+    }
+
+    @Bean
+    OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
+    }
+}
+```
+
+Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+
+```java
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/order-service")
+public interface OrderServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/inventory-service")
+public interface InventoryServiceClient { /* existing methods */ }
+```
+
+`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
+
+**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
+
+With an authenticated user and an authorized client:
+1. User identity and roles (`ADMIN`, `OPERATOR`, `user`) are forwarded to API Gateway (`http://localhost:8765`) and downstream microservices.
+2. `OAuth2AuthorizedClientManager` can refresh tokens when its provider supports refresh tokens and one is available; otherwise reauthorization may be required.
 
 ---
 
@@ -455,15 +590,16 @@ public class OAuth2InspectionController {
 
 ### **Key Takeaways:**
 
-1. **`/oauth2/authorization/{registrationId}`** is **auto-generated** by Spring Security based on your properties
-2. **OAuth2 properties** automatically create **beans, filters, and endpoints** - no manual configuration needed
-3. **Authorization code requests** are handled by **`OAuth2AuthorizationRequestRedirectFilter`**
-4. **Token exchange** is handled by **`OAuth2AuthorizationCodeAuthenticationProvider`**
-5. **All HTTP calls** to Keycloak are made by Spring Security's built-in classes
+1. **`/oauth2/authorization/{registrationId}`** is **auto-generated** by Spring Security based on your properties.
+2. **OAuth2 properties** automatically create **beans, filters, and endpoints** - no manual configuration needed.
+3. **Authorization code requests** are handled by **`OAuth2AuthorizationRequestRedirectFilter`**.
+4. **Token exchange** is handled by **`OAuth2AuthorizationCodeAuthenticationProvider`**.
+5. **Role Mapping**: Keycloak client roles (`ADMIN`, `OPERATOR`) in the token's `resource_access` claim are mapped to `ROLE_ADMIN` and `ROLE_OPERATOR` via `GrantedAuthoritiesMapper`.
+6. **Token Propagation**: Spring Boot 4.1.2 declarative HTTP interfaces use `OAuth2ClientHttpRequestInterceptor` to seamlessly propagate the Bearer token to API Gateway and downstream microservices.
 
 ### **The Magic Formula:**
 ```
-Properties → Auto-Configuration → Beans → Filters → Endpoints → OAuth2 Flow
+Properties → Auto-Configuration → Beans → Filters → Endpoints → OAuth2 Flow & Downstream Propagation
 ```
 
-This auto-configuration is what makes Spring Security OAuth2 so powerful - you get a complete OAuth2 client implementation with just a few properties!
+This auto-configuration is what makes Spring Security OAuth2 in Spring Boot 4.1.2 so powerful - you get an enterprise-grade OAuth2 client implementation with role mapping and token propagation with minimal boilerplate!

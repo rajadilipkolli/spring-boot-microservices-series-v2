@@ -33,15 +33,14 @@ flowchart TD
         STREAM2[🌊 KStream: Stock Events]
         
         JOIN[🔗 Stream Join]
-        WINDOW[⏰ 10s Time Window]
+        WINDOW[⏰ 30s Window + 30s Grace]
         
         PROCESSOR[⚙️ Business Logic Processor]
         
         SINK1[📤 Sink: orders]
         SINK2[📤 Sink: recovererDLQ]
         
-        STORE[💾 State Store: orders-store]
-        TABLE[📋 KTable: Materialized View]
+        STORE[💾 State Store]
     end
     
     SOURCE1 --> STREAM1
@@ -56,7 +55,6 @@ flowchart TD
     PROCESSOR --> SINK2
     
     SINK1 --> STORE
-    STORE --> TABLE
     
     style JOIN fill:#ec4899,color:#ffffff
     style WINDOW fill:#f59e0b,color:#ffffff
@@ -220,12 +218,14 @@ public void handlePayment(OrderDto payment) {
 // 4. Automatic state management
 // 5. Fault tolerance and recovery
 
-paymentStream
-    .join(stockStream,
-          this::processOrder,                    // Business logic only
-          JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-          StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-    .to("orders");
+correlateByAttempt(paymentStream)
+    .join(correlateByAttempt(stockStream),
+          orderManageService::confirm,                    // Business logic only
+          JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30)),
+          StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+    .filter((key, order) -> order != null)
+    .selectKey((key, order) -> order.orderId().toString())
+    .to("orders", Produced.with(Serdes.String(), orderSerde));
 ```
 
 ## ⚖️ Stream vs Consumer Differences
@@ -254,7 +254,7 @@ paymentStream
 #### **Use Kafka Streams when:**
 - Event correlation needed ✅ **Our use case**
 - Complex transformations
-- Windowed operations ✅ **10-second join window**
+- Windowed operations ✅ **30-second join window (+ 30s grace)**
 - Stateful processing ✅ **Order state management**
 - Exactly-once processing ✅ **Financial transactions**
 
@@ -294,86 +294,82 @@ sequenceDiagram
         Inventory->>Streams: Publish to 'stock-orders' (ACCEPT/REJECT)
     end
     
-    Note over Streams: Join payment + stock events within 10s window
+    Note over Streams: Join payment + stock events within 30s window + 30s grace
     
     Streams->>Streams: Apply business logic:<br/>ACCEPT+ACCEPT=CONFIRMED<br/>REJECT+REJECT=REJECTED<br/>ACCEPT+REJECT=ROLLBACK
     
-    Streams->>DB: Update order status
+    Streams->>DB: Update order status & source
     Streams->>Streams: Publish final result to 'orders'
 ```
 
 ### Stream Processing Benefits
 
-1. **Automatic Correlation**: No manual cache management
-2. **Time Windows**: 10-second window for event correlation
-3. **Exactly-Once**: Prevents duplicate order processing
-4. **Fault Tolerance**: Automatic recovery from failures
+1. **Automatic Correlation**: Correlates by `orderId:attemptId` to avoid stale retry collisions
+2. **Time Windows**: 30-second window with 30-second grace period for event correlation
+3. **Exactly-Once**: Prevents duplicate order processing via `EXACTLY_ONCE_V2`
+4. **Fault Tolerance**: Automatic recovery from failures via RocksDB & changelog topics
 5. **Scalability**: Horizontal scaling through partitioning
 
 ## 🔄 Stream Processing Topology
 
 ### Complete Topology Implementation
+**File:** `KafkaStreamsConfig.java`
 
 ```java
 @Bean
-KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-    Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-    
-    // Create streams for payment and inventory responses
-    KStream<Long, OrderDto> paymentStream = kafkaStreamBuilder.stream(
-        PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-    
-    // Join payment and inventory streams within time window
-    paymentStream
-        .join(
-            kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
-            orderManageService::confirm,  // Business logic
-            JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-            StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-        .peek((k, o) -> log.info("Processed order: {} with status: {}", k, o.status()))
-        .to(ORDERS_TOPIC);  // Publish final result
-    
+KStream<String, OrderDto> stream(
+        StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
+
+    KStream<String, OrderDto> paymentStream =
+            kafkaStreamBuilder.stream(
+                    PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+
+    correlateByAttempt(paymentStream)
+            .join(
+                    correlateByAttempt(
+                            kafkaStreamBuilder.stream(
+                                    STOCK_ORDERS_TOPIC,
+                                    Consumed.with(Serdes.String(), orderSerde))),
+                    orderManageService::confirm,
+                    JoinWindows.ofTimeDifferenceAndGrace(
+                            Duration.ofSeconds(30), Duration.ofSeconds(30)),
+                    StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+            .filter((key, order) -> order != null)
+            .selectKey((key, order) -> order.orderId().toString())
+            .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
+            .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
+
+    paymentStream.print(Printed.toSysOut());
+
     return paymentStream;
 }
-```
 
-### Materialized View for Queries
-
-```java
-@Bean
-KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
-    KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-    JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-    
-    KStream<Long, OrderDto> stream = streamsBuilder.stream(
-        ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-    
-    return stream.toTable(
-        Materialized.<Long, OrderDto>as(store)
-            .withKeySerde(Serdes.Long())
-            .withValueSerde(orderSerde));
+private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+    return stream.filter(
+                    (key, order) ->
+                            order != null
+                                    && order.orderId() != null
+                                    && order.attemptId() != null
+                                    && !order.attemptId().isBlank())
+            .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
 }
 ```
 
-### Interactive Queries
+### Dead Letter Queue Recoverer
 
 ```java
-public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
-    ReadOnlyKeyValueStore<Long, OrderDto> store = 
-        kafkaStreamsFactory.getKafkaStreams()
-            .store(StoreQueryParameters.fromNameAndType(
-                ORDERS_TOPIC, 
-                QueryableStoreTypes.keyValueStore()));
-    
-    // Query materialized view directly
-    long from = (long) pageNo * pageSize;
-    long to = from + pageSize;
-    
-    List<OrderDto> orders = new ArrayList<>();
-    try (KeyValueIterator<Long, OrderDto> it = store.range(from + 1, to)) {
-        it.forEachRemaining(kv -> orders.add(kv.value));
-    }
-    return orders;
+@Bean
+DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaProperties properties) {
+    Map<String, Object> props = properties.buildProducerProperties();
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+
+    DefaultKafkaProducerFactory<byte[], byte[]> factory =
+            new DefaultKafkaProducerFactory<>(props);
+
+    return new DeadLetterPublishingRecoverer(
+            new KafkaTemplate<>(factory),
+            (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
 }
 ```
 
@@ -381,13 +377,13 @@ public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
 
 ### Why Kafka Streams for Order Service?
 
-1. **Event Correlation**: Automatically correlates payment and inventory events
-2. **Time Windows**: Built-in 10-second window for event matching
-3. **Business Logic**: Clean separation of stream processing and business rules
+1. **Event Correlation**: Automatically correlates payment and inventory events by `orderId:attemptId`
+2. **Time Windows**: Built-in 30-second window with 30-second grace period for event matching
+3. **Business Logic**: Clean separation of stream processing and business rules in `OrderManageService`
 4. **State Management**: Automatic state store management with RocksDB
-5. **Exactly-Once**: Critical for financial transaction processing
+5. **Exactly-Once**: Critical for financial transaction processing (`EXACTLY_ONCE_V2`)
 6. **Scalability**: Horizontal scaling through partition assignment
-7. **Fault Tolerance**: Automatic recovery and rebalancing
+7. **Fault Tolerance**: Automatic recovery, rebalancing, and DLQ handling via `recovererDLQ`
 
 ### Architecture Benefits
 

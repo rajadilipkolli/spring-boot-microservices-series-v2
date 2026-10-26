@@ -22,7 +22,7 @@ Based on comprehensive analysis of the Order Service microservices architecture 
 ## 🌊 **Kafka Streams & Stream Processing**
 
 ### **Advanced Stream Processing**
-- **Engineered complex stream joins** with **10-second time windows** correlating payment and inventory events, processing **5,660 spans** across **457 batches** with zero data loss
+- **Engineered complex stream joins** with **30-second time windows and 30-second grace period** correlating payment and inventory events with distinct attempt IDs, processing **5,660 spans** across **457 batches** with zero data loss
 - **Implemented stateful stream processing** with **10MB cache** and **persistent RocksDB storage**, achieving **85%+ cache hit rates** and **1-second commit intervals**
 - **Built materialized views** for real-time queryable state, enabling **interactive queries** with **<100ms response times** for order status lookups
 
@@ -49,7 +49,7 @@ Based on comprehensive analysis of the Order Service microservices architecture 
 ## ⏰ **Background Processing & Job Management**
 
 ### **Reliable Job Processing**
-- **Implemented JobRunr-based background processing** with **cron scheduling (*/5 * * * *)** and **maximum 2 retry attempts**, achieving **95%+ job success rate**
+- **Implemented JobRunr-based background processing** with **recurrent minutely scheduling** and **maximum 2 retry attempts**, achieving **95%+ job success rate**
 - **Built stuck order detection** querying orders in **NEW status for >5 minutes**, automatically republishing to Kafka for reprocessing
 - **Designed job monitoring dashboard** (port 28282) providing **real-time visibility** into job execution, queue status, and performance metrics
 
@@ -109,7 +109,7 @@ Based on comprehensive analysis of the Order Service microservices architecture 
 ## 🔧 **Technical Leadership & Architecture**
 
 ### **Technology Stack Mastery**
-- **Led adoption** of **Java 21+ Virtual Threads**, **Spring Boot 3.x**, **Kafka Streams**, **PostgreSQL**, and **Docker** for modern microservices architecture
+- **Led adoption** of **Java 25 (Virtual Threads)**, **Spring Boot 4.1.2**, **Spring Cloud 2025.1.4**, **Spring Modulith 2.1.2**, **Kafka Streams**, **PostgreSQL 18**, and **JobRunr 9.0.2** for modern microservices architecture
 - **Architected data serialization** using **JSON with trusted packages**, **RocksDB storage**, and **changelog topics** for **durability** and **performance**
 - **Implemented comprehensive testing** strategy with **TopologyTestDriver**, **TestContainers**, and **integration tests**, achieving **>90% code coverage**
 

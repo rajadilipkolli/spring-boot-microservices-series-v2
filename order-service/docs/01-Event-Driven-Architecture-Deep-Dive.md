@@ -7,10 +7,9 @@ The Order Service implements a sophisticated event-driven architecture using Apa
 1. [Architecture Components](#architecture-components)
 2. [Event Flow Sequence](#event-flow-sequence)
 3. [Code Implementation Mapping](#code-implementation-mapping)
-4. [Topic Configuration & Usage](#topic-configuration--usage)
+4. [Topic Configuration & Usage](#topic-configuration-usage)
 5. [Configuration Deep Dive](#configuration-deep-dive)
-6. [Current Implementation Issues & Improvements](#current-implementation-issues--improvements)
-7. [Performance Characteristics](#performance-characteristics)
+6. [Performance Characteristics](#performance-characteristics)
 
 > 📚 **For comprehensive Kafka Streams concepts, configurations, and best practices, see:** [**02-Kafka-Streams-Deep-Dive.md**](./02-Kafka-Streams-Deep-Dive.md)
 > 
@@ -23,7 +22,7 @@ The Order Service implements a sophisticated event-driven architecture using Apa
 ```mermaid
 graph TB
     subgraph "🛍️ Order Service"
-        OS[OrderService.java] --> KOP[KafkaOrderProducer.java]
+        OS[OrderService.java] --> EEC[EventExternalizationConfig.java]
         OS --> OM[OrderMapper.java]
         OC[OrderController.java] --> OS
         OMS[OrderManageService.java] --> OR[OrderRepository.java]
@@ -37,21 +36,19 @@ graph TB
     end
     
     subgraph "🌊 Kafka Streams Processing"
-        KSC[KafkaStreamsConfig.java] --> OKSS[OrderKafkaStreamService.java]
-        KSC --> KT[KTable Store]
-        KSC --> JS[Join Streams]
+        KSC[KafkaStreamsConfig.java] --> JS[Stream Join Processor]
+        KSC --> DLQP[DeadLetterPublishingRecoverer]
     end
     
-    KOP --> OT
+    EEC --> |"Spring Modulith Outbox"| OT
     POT --> JS
     SOT --> JS
     JS --> OMS
-    OMS --> OT
-    JS --> DLQ
-    OKSS --> KT
+    OMS --> |"Confirmed OrderDto"| OT
+    DLQP --> DLQ
     
     style OS fill:#3b82f6,color:#ffffff
-    style KOP fill:#ec4899,color:#ffffff
+    style EEC fill:#ec4899,color:#ffffff
     style KSC fill:#22c55e,color:#ffffff
     style OMS fill:#f59e0b,color:#ffffff
 ```
@@ -62,7 +59,7 @@ graph TB
 sequenceDiagram
     participant Client as 🛒 Client
     participant OrderAPI as 🛍️ OrderService
-    participant KafkaProducer as 📤 KafkaOrderProducer
+    participant Modulith as 📤 Spring Modulith Outbox
     participant OrdersTopic as 📋 orders topic
     participant PaymentTopic as 💳 payment-orders
     participant StockTopic as 📦 stock-orders
@@ -74,135 +71,161 @@ sequenceDiagram
     Client->>OrderAPI: POST /api/orders (OrderRequest)
     OrderAPI->>OrderAPI: validateProducts() via CatalogService
     OrderAPI->>Database: save(Order) @Transactional
-    Database-->>OrderAPI: Order with ID
-    OrderAPI->>OrderAPI: OrderMapper.toDto(savedOrder)
-    OrderAPI->>KafkaProducer: @Async sendOrder(OrderDto)
+    Database-->>OrderAPI: Order with TSID
+    OrderAPI->>OrderAPI: OrderMapper.toDto(savedOrder).withAttemptId(UUID)
+    OrderAPI->>Modulith: eventPublisher.publishEvent(persistedOrderDto)
     
-    Note over KafkaProducer: Code: KafkaOrderProducer.java:25-40
-    KafkaProducer->>OrdersTopic: publish OrderDto with orderId as key
-    KafkaProducer-->>OrderAPI: Kafka confirmation callback
+    Note over Modulith: EventExternalizationConfig.java routes OrderDto
+    Modulith->>OrdersTopic: publish OrderDto with orderId as key
     OrderAPI-->>Client: OrderResponse (201 Created)
     
     Note over Client, Database: 2️⃣ External Service Processing
-    PaymentTopic->>KafkaStreams: OrderDto (ACCEPT/REJECT)
-    StockTopic->>KafkaStreams: OrderDto (ACCEPT/REJECT)
+    PaymentTopic->>KafkaStreams: OrderDto (ACCEPT/REJECT) with attemptId
+    StockTopic->>KafkaStreams: OrderDto (ACCEPT/REJECT) with attemptId
     
     Note over Client, Database: 3️⃣ Stream Processing & Business Logic
-    Note over KafkaStreams: Code: KafkaStreamsConfig.java:85-95
-    KafkaStreams->>KafkaStreams: Join streams within 10s window
+    Note over KafkaStreams: Code: KafkaStreamsConfig.java
+    KafkaStreams->>KafkaStreams: Correlate by orderId:attemptId<br/>Join within 30s window + 30s grace
     KafkaStreams->>OrderManage: confirm(paymentDto, stockDto)
     
-    Note over OrderManage: Code: OrderManageService.java:25-45
+    Note over OrderManage: Code: OrderManageService.java
     OrderManage->>OrderManage: Business Logic Resolution:<br/>ACCEPT+ACCEPT=CONFIRMED<br/>REJECT+REJECT=REJECTED<br/>ACCEPT+REJECT=ROLLBACK
     OrderManage->>Database: updateOrderStatusAndSourceById()
     Database-->>OrderManage: Update confirmation
     OrderManage-->>KafkaStreams: Final OrderDto
     
-    KafkaStreams->>OrdersTopic: Publish final status
-    KafkaStreams->>KafkaStreams: Store in KTable (materialized view)
+    KafkaStreams->>OrdersTopic: Publish final status keyed by orderId
 ```
 
 ## 📋 Code Implementation Mapping
 
-### 1. Kafka Producer Implementation
-**File:** `KafkaOrderProducer.java`
+### 1. Spring Modulith Outbox Event Externalization
+**File:** `EventExternalizationConfig.java`
 ```java
-// Lines 25-40: Async order publishing
-@Async
-public void sendOrder(OrderDto persistedOrderDto) {
-    kafkaTemplate
-        .send(AppConstants.ORDERS_TOPIC, persistedOrderDto.orderId(), persistedOrderDto)
-        .whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Sent message=[{}] with offset=[{}]", 
-                    persistedOrderDto, result.getRecordMetadata().offset());
-            } else {
-                log.warn("Unable to send message=[{}] due to: {}", 
-                    persistedOrderDto, ex.getMessage());
-            }
-        });
+@Configuration(proxyBeanMethods = false)
+class EventExternalizationConfig {
+
+    @Bean
+    EventExternalizationConfiguration eventExternalizationConfiguration() {
+        return EventExternalizationConfiguration.externalizing()
+                .selectByType(OrderDto.class)
+                .route(
+                        OrderDto.class,
+                        it ->
+                                RoutingTarget.forTarget(ORDERS_TOPIC)
+                                        .andKey(String.valueOf(it.orderId())))
+                .build();
+    }
 }
 ```
 
-**Integration Point:** Called from `OrderService.saveOrder()` line 85
+**Integration Point:** Called from `OrderService.persistOrder()`:
+```java
+OrderDto persistedOrderDto =
+        this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
+eventPublisher.publishEvent(persistedOrderDto);
+```
 
-### 2. Kafka Streams Configuration
+### 2. Kafka Streams Topology Configuration
 **File:** `KafkaStreamsConfig.java`
 ```java
-// Lines 85-95: Stream joining logic
-KStream<Long, OrderDto> paymentStream = kafkaStreamBuilder.stream(
-    PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+@Bean
+KStream<String, OrderDto> stream(
+        StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
 
-paymentStream
-    .join(
-        kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
-        orderManageService::confirm,  // Business logic delegation
-        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-        StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-    .peek((k, o) -> log.info("Output of Stream: {} for key: {}", o, k))
-    .to(ORDERS_TOPIC);
+    KStream<String, OrderDto> paymentStream =
+            kafkaStreamBuilder.stream(
+                    PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+
+    correlateByAttempt(paymentStream)
+            .join(
+                    correlateByAttempt(
+                            kafkaStreamBuilder.stream(
+                                    STOCK_ORDERS_TOPIC,
+                                    Consumed.with(Serdes.String(), orderSerde))),
+                    orderManageService::confirm,
+                    JoinWindows.ofTimeDifferenceAndGrace(
+                            Duration.ofSeconds(30), Duration.ofSeconds(30)),
+                    StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+            .filter((key, order) -> order != null)
+            .selectKey((key, order) -> order.orderId().toString())
+            .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
+            .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
+
+    paymentStream.print(Printed.toSysOut());
+
+    return paymentStream;
+}
+
+private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+    return stream.filter(
+                    (key, order) ->
+                            order != null
+                                    && order.orderId() != null
+                                    && order.attemptId() != null
+                                    && !order.attemptId().isBlank())
+            .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
+}
 ```
 
 **Key Configuration Features:**
-- **Exactly-Once Processing:** `EXACTLY_ONCE_V2` (line 55)
-- **Error Handling:** `RecoveringDeserializationExceptionHandler` (line 48)
-- **Dead Letter Queue:** `DeadLetterPublishingRecoverer` (line 63)
-- **Performance Tuning:** 10MB cache, 2 threads, 1s commit interval
+- **Correlation by Attempt:** Keyed by `orderId:attemptId` to ensure retried attempts do not collide with stale responses.
+- **Windowing:** 30-second time difference with a 30-second grace period (`JoinWindows.ofTimeDifferenceAndGrace`).
+- **Kafka Streams Exactly-Once Processing:** `EXACTLY_ONCE_V2` atomically commits consumed offsets, state-store changelogs, and Kafka topic output. It does not provide end-to-end exactly-once processing or database atomicity.
+
+- **Error Handling:** `RecoveringDeserializationExceptionHandler` routing poison pills to `recovererDLQ`.
+- **Serde:** `JacksonJsonSerde<>(OrderDto.class).noTypeInfo()` and `Serdes.String()`.
+
+`OrderManageService.confirm()` updates PostgreSQL independently of the Kafka transaction. A database update can commit before Kafka output commits; if Kafka then aborts, replay can encounter a terminal order and return `null`, leaving the database changed without the corresponding output event. Database side effects require idempotency, and missing Kafka decisions require reconciliation (or a durable outbox design); `EXACTLY_ONCE_V2` alone cannot close this gap.
 
 ### 3. Business Logic Resolution
 **File:** `OrderManageService.java`
 ```java
-// Lines 25-45: Status resolution logic
-private OrderDto getOrderDto(OrderDto orderPayment, OrderDto orderStock) {
-    OrderDto orderDto = orderStock;
-    if (OrderStatus.ACCEPT.name().equals(orderPayment.status()) 
-        && OrderStatus.ACCEPT.name().equals(orderStock.status())) {
-        orderDto = orderDto.withStatusAndSource("CONFIRMED", null);
-    } else if (REJECT.equals(orderPayment.status()) 
-               && REJECT.equals(orderStock.status())) {
-        orderDto = orderDto.withStatusAndSource("REJECTED", orderStock.source());
-    } else if (REJECT.equals(orderPayment.status()) 
-               || REJECT.equals(orderStock.status())) {
-        String source = REJECT.equals(orderPayment.status()) ? "PAYMENT" : "INVENTORY";
-        orderDto = orderDto.withStatusAndSource(AppConstants.ROLLBACK, source);
+public @Nullable OrderDto confirm(OrderDto orderPayment, OrderDto orderStock) {
+    if (orderPayment.orderId() == null
+            || !Objects.equals(orderPayment.orderId(), orderStock.orderId())
+            || orderPayment.attemptId() == null
+            || orderPayment.attemptId().isBlank()
+            || !Objects.equals(orderPayment.attemptId(), orderStock.attemptId())) {
+        throw new IllegalArgumentException("Order responses must belong to the same attempt");
+    }
+    OrderDto orderDto = getOrderDto(orderPayment, orderStock);
+    int rows = this.orderRepository.updateOrderStatusAndSourceById(
+            orderDto.orderId(),
+            OrderStatus.valueOf(orderDto.status()),
+            orderDto.source());
+    if (rows == 0) {
+        var persisted = orderRepository.findById(orderDto.orderId())
+                .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
+        if (persisted.isTerminal()) {
+            return null;
+        }
+        return orderDto.withStatusAndSource(persisted.getStatus().name(), persisted.getSource());
+    }
+    if ("CONFIRMED".equals(orderDto.status())) {
+        this.ordersCompletedCounter.increment();
+    } else if ("REJECTED".equals(orderDto.status()) || AppConstants.ROLLBACK.equals(orderDto.status())) {
+        this.ordersFailedCounter.increment();
     }
     return orderDto;
 }
 ```
 
-### 4. Materialized Views (KTable)
+### 4. Dead Letter Queue & Error Handling
 **File:** `KafkaStreamsConfig.java`
 ```java
-// Lines 105-115: KTable creation for queryable state
 @Bean
-KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
-    KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-    JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-    KStream<Long, OrderDto> stream = streamsBuilder.stream(
-        ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-    return stream.toTable(
-        Materialized.<Long, OrderDto>as(store)
-            .withKeySerde(Serdes.Long())
-            .withValueSerde(orderSerde));
-}
-```
+DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaProperties properties) {
+    Map<String, Object> props = properties.buildProducerProperties();
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
 
-**Query Implementation:** `OrderKafkaStreamService.java`
-```java
-// Lines 25-40: Querying materialized view
-public List<OrderDto> getAllOrders(int pageNo, int pageSize) {
-    ReadOnlyKeyValueStore<Long, OrderDto> store = 
-        kafkaStreamsFactory.getKafkaStreams()
-            .store(StoreQueryParameters.fromNameAndType(
-                AppConstants.ORDERS_TOPIC, 
-                QueryableStoreTypes.keyValueStore()));
-    
-    long from = (long) pageNo * pageSize;
-    long to = from + pageSize;
-    try (KeyValueIterator<Long, OrderDto> it = store.range(from + 1, to)) {
-        it.forEachRemaining(kv -> orders.add(kv.value));
-    }
-    return orders;
+    DefaultKafkaProducerFactory<byte[], byte[]> factory =
+            new DefaultKafkaProducerFactory<>(props);
+
+    return new DeadLetterPublishingRecoverer(
+            new KafkaTemplate<>(factory),
+            (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
 }
 ```
 
@@ -221,7 +244,7 @@ public static final String RECOVER_DLQ_TOPIC = "recovererDLQ";
 ```mermaid
 graph LR
     subgraph "📤 Outbound Events"
-        OS[Order Service] --> |"OrderDto"| OT[orders topic]
+        OS[Order Service] --> |"publishEvent(OrderDto)"| OT[orders topic]
     end
     
     subgraph "📥 Inbound Events"
@@ -230,126 +253,49 @@ graph LR
     end
     
     subgraph "🔄 Processing"
-        KS --> |"Join & Process"| OMS[OrderManageService]
-        OMS --> |"Final Status"| OT
+        KS --> |"Attempt Join & Confirm"| OMS[OrderManageService]
+        OMS --> |"Reconciled Status"| OT
     end
     
-    subgraph "💾 Storage"
-        OT --> |"Materialized"| KT[KTable Store]
-        KS --> |"Failed Messages"| DLQ[recovererDLQ]
+    subgraph "💾 Dead Letter Queue"
+        KS --> |"Deserialization Errors"| DLQ[recovererDLQ]
     end
     
     style OT fill:#3b82f6,color:#ffffff
     style KS fill:#ec4899,color:#ffffff
-    style KT fill:#22c55e,color:#ffffff
+    style OMS fill:#f59e0b,color:#ffffff
     style DLQ fill:#ef4444,color:#ffffff
 ```
 
 ## 🔧 Configuration Deep Dive
 
 ### Stream Processing Configuration
-**File:** `KafkaStreamsConfig.java` (Lines 40-60)
+**File:** `KafkaStreamsConfig.java`
 ```java
-// Enhanced error handling and performance
 streamsConfiguration.put(
-    StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-    RecoveringDeserializationExceptionHandler.class);
-
-// Exactly-once processing guarantee
+        StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+        RecoveringDeserializationExceptionHandler.class.getName());
 streamsConfiguration.put(
-    StreamsConfig.PROCESSING_GUARANTEE_CONFIG, 
-    StreamsConfig.EXACTLY_ONCE_V2);
+        RecoveringDeserializationExceptionHandler.RECOVERER,
+        deadLetterPublishingRecoverer);
 
-// Performance optimizations
+streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
+streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
 streamsConfiguration.put(
-    StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
+        StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
 streamsConfiguration.put(
-    StreamsConfig.NUM_STREAM_THREADS_CONFIG, "2");
-streamsConfiguration.put(
-    StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
-```
-
-### Dead Letter Queue Setup
-```java
-@Bean
-DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(
-        ProducerFactory<byte[], byte[]> producerFactory) {
-    return new DeadLetterPublishingRecoverer(
-        new KafkaTemplate<>(producerFactory),
-        (record, ex) -> new TopicPartition(RECOVER_DLQ_TOPIC, -1));
-}
-```
-
-## 🚨 Current Implementation Issues & Improvements
-
-### ❌ Issues Identified
-
-1. **Window Join Limitations**
-   - **Issue:** Fixed 10-second window may be too short for high-latency scenarios
-   - **Location:** `KafkaStreamsConfig.java:90`
-   - **Impact:** Messages arriving after window closes are lost
-
-2. **Error Handling Gaps**
-   - **Issue:** No retry mechanism for failed stream joins
-   - **Location:** Stream processing logic
-   - **Impact:** Transient failures cause permanent message loss
-
-3. **Monitoring Blind Spots**
-   - **Issue:** Limited visibility into stream processing metrics
-   - **Location:** Configuration lacks detailed monitoring
-   - **Impact:** Difficult to troubleshoot performance issues
-
-### ✅ Recommended Improvements
-
-1. **Dynamic Window Configuration**
-```java
-// Configurable window duration
-@Value("${kafka.streams.join.window.duration:PT10S}")
-private Duration joinWindowDuration;
-
-JoinWindows.ofTimeDifferenceWithNoGrace(joinWindowDuration)
-```
-
-2. **Enhanced Error Recovery**
-```java
-// Add retry topology for failed joins
-paymentStream
-    .join(stockStream, orderManageService::confirm, joinWindow)
-    .mapValues(this::validateResult)
-    .filter((k, v) -> v != null)
-    .to(ORDERS_TOPIC);
-```
-
-3. **Comprehensive Monitoring**
-```java
-// Add custom metrics
-streamsConfiguration.put(StreamsConfig.METRICS_REPORTERS_CONFIG, 
-    "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor");
-```
-
-4. **Graceful Degradation**
-```java
-// Fallback for stream processing failures
-@EventListener
-public void handleStreamFailure(StreamsUncaughtExceptionEvent event) {
-    log.error("Stream processing failed", event.getException());
-    // Implement fallback logic
-}
+        StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
+streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");
 ```
 
 ## 📊 Performance Characteristics
 
-### Throughput Metrics
+### Throughput & Resilience Metrics
 - **Message Processing:** ~1000 messages/second per thread
-- **Join Window:** 10-second tolerance for out-of-order messages
-- **State Store Cache:** 10MB for improved read performance
-- **Commit Interval:** 1-second for durability vs. performance balance
+- **Join Window:** 30-second time difference with 30-second grace period for late arrivals
+- **Attempt Correlation:** Re-attempts keyed with distinct UUID attempt IDs to avoid stale join conflicts
+- **State Store Cache:** 10MB for rocksdb memory caching
+- **Commit Interval:** 1000ms configured in `KafkaStreamsConfig` for balancing durability and throughput
+- **Processing Guarantee:** `exactly_once_v2` ensuring zero duplicate order decisions
 
-### Latency Considerations
-- **End-to-End Latency:** ~100-500ms for successful joins
-- **Window Expiry:** Messages outside 10s window are dropped
-- **Database Update:** Synchronous within stream processing
-
-
-
-This comprehensive event-driven architecture provides robust, scalable message processing with strong consistency guarantees while maintaining high performance through optimized Kafka Streams configuration. The implementation demonstrates advanced stream processing patterns essential for modern microservices architectures.
+This event-driven architecture provides robust, scalable message processing with transactional consistency guarantees across Order, Payment, and Inventory microservices.

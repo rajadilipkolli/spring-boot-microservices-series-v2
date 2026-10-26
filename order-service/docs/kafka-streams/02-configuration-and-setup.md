@@ -37,7 +37,7 @@ graph TD
         subgraph "💾 State Management"
             STORE[Persistent Store]
             CHANGELOG[Changelog Topic]
-            WINDOW_CONFIG[Join Window: 10s]
+            WINDOW_CONFIG[Join Window: 30s + 30s Grace]
         end
     end
     
@@ -77,15 +77,12 @@ graph TD
 ```yaml
 spring:
   kafka:
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
       properties:
-        spring:
-          json:
-            add:
-              type:
-                headers: true
+        group.protocol: consumer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
@@ -93,21 +90,26 @@ spring:
         acks: all
       application-id: ${spring.application.name}
       properties:
-        # ⏰ COMMIT INTERVAL - Controls flush frequency
         commit:
           interval:
-            ms: 1000  # Flush dirty cache every 1 second
-        
-        # 🕐 TIMESTAMP EXTRACTION
+            ms: 100
+        num:
+          stream:
+            threads: 2
         default:
           timestamp:
             extractor: org.apache.kafka.streams.processor.WallclockTimestampExtractor
           key:
-            serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+            serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
             serde: org.springframework.kafka.support.serializer.JsonSerde
-
-        # 🎯 PROCESSING GUARANTEE
+        spring:
+          json:
+            trusted:
+              packages: '*'
+            use:
+              type:
+                headers: false
         processing.guarantee: exactly_once_v2
 ```
 
@@ -115,29 +117,37 @@ spring:
 
 ```java
 @Bean
+@Order(Ordered.HIGHEST_PRECEDENCE)
 StreamsBuilderFactoryBeanConfigurer configurer(
         DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
     return factoryBean -> {
+        factoryBean.setStateListener(
+                (newState, oldState) ->
+                        log.info(
+                                "Kafka Streams state transition from {} to {}",
+                                oldState,
+                                newState));
+
         Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
-        
+        Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
+
         // 🛡️ ENHANCED ERROR HANDLING
         streamsConfiguration.put(
-            StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
-            RecoveringDeserializationExceptionHandler.class);
+                StreamsConfig.DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+                RecoveringDeserializationExceptionHandler.class.getName());
         streamsConfiguration.put(
-            RecoveringDeserializationExceptionHandler.KSTREAM_DESERIALIZATION_RECOVERER,
-            deadLetterPublishingRecoverer);
+                RecoveringDeserializationExceptionHandler.RECOVERER,
+                deadLetterPublishingRecoverer);
 
-        // 🚀 PERFORMANCE OPTIMIZATIONS
+        // 🚀 PERFORMANCE & RELIABILITY OPTIMIZATIONS
         streamsConfiguration.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, "60000");
         streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "1000");
-        streamsConfiguration.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, 
-            StreamsConfig.EXACTLY_ONCE_V2);
+        streamsConfiguration.put(
+                StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
 
         // 💾 MEMORY MANAGEMENT
-        streamsConfiguration.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 
-            "10485760"); // 10MB
-        streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "2");
+        streamsConfiguration.put(
+                StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "10485760"); // 10MB
 
         // 📊 MONITORING
         streamsConfiguration.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "INFO");

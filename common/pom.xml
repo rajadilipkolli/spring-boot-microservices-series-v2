@@ -46,6 +46,9 @@
         <spotless.version>3.10.4</spotless.version>
         <maven-install-plugin.version>3.1.2</maven-install-plugin.version>
         <hypersistence-tsid.version>2.1.4</hypersistence-tsid.version>
+
+        <properties-maven-plugin.version>1.3.1</properties-maven-plugin.version>
+        <sonar-maven-plugin.version>5.8.0.7211</sonar-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -153,6 +156,36 @@
                             <!-- Keep common as a library while enabling nativeTest AOT processing. -->
                             <skip>true</skip>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>properties-maven-plugin</artifactId>
+                <version>${properties-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>read-project-properties</goal>
+                        </goals>
+                        <configuration>
+                            <files>
+                                <file>sonar-project.properties</file>
+                            </files>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>sonar</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

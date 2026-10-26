@@ -264,10 +264,12 @@ sequenceDiagram
 ## Key Architecture Components
 
 ### 🏗️ **Core Service Architecture**
-- **REST API**: Spring Boot with comprehensive inventory CRUD operations
-- **Database**: PostgreSQL with jOOQ integration for type-safe queries
+- **REST API**: Spring Boot WebMVC with comprehensive inventory CRUD operations
+- **Persistence**: Hybrid Spring Data JPA (entities & optimistic locking) and jOOQ (type-safe SQL queries & batch updates)
+- **Database**: PostgreSQL with Liquibase schema management using JSON changelogs
+- **Transactional Outbox**: Spring Modulith outbox event externalization (`event_publication` & `event_publication_archive`)
 - **Event Processing**: Dual Kafka consumers for orders and product events
-- **Observability**: Comprehensive logging aspects and method tracing
+- **Observability**: OpenTelemetry, Micrometer Tracing, Prometheus metrics, and execution logging
 
 ### 📦 **Inventory Management Logic**
 - **Stock Reservation**: Two-phase validation and mutation pattern
@@ -345,15 +347,33 @@ graph TB
 ## Database Schema
 
 ```sql
--- Inventory table with stock tracking
+-- Inventory table with stock tracking (managed by Liquibase JSON changelogs)
 CREATE TABLE inventory (
-    id BIGSERIAL PRIMARY KEY,
-    product_code VARCHAR(255) UNIQUE NOT NULL,
-    quantity INTEGER DEFAULT 0,           -- Available stock
-    reserved_items INTEGER DEFAULT 0,     -- Reserved for pending orders
-    version SMALLINT DEFAULT 0,           -- Optimistic locking
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id BIGINT PRIMARY KEY,
+    product_code VARCHAR(255) UNIQUE NOT NULL, -- TEXT in PostgreSQL
+    quantity INTEGER DEFAULT 0,                 -- Available stock
+    reserved_items INTEGER DEFAULT 0,           -- Reserved for pending orders
+    version SMALLINT DEFAULT 0,                 -- Optimistic locking (@Version)
+    deleted BOOLEAN DEFAULT false               -- Soft delete flag
+);
+
+-- Spring Modulith Transactional Outbox Event Publication
+CREATE TABLE event_publication (
+    id UUID PRIMARY KEY,
+    listener_id VARCHAR(512) NOT NULL,
+    event_type VARCHAR(512) NOT NULL,
+    serialized_event TEXT NOT NULL,
+    publication_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    completion_date TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE event_publication_archive (
+    id UUID PRIMARY KEY,
+    listener_id VARCHAR(512) NOT NULL,
+    event_type VARCHAR(512) NOT NULL,
+    serialized_event TEXT NOT NULL,
+    publication_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    completion_date TIMESTAMP WITH TIME ZONE
 );
 
 -- Indexes for performance

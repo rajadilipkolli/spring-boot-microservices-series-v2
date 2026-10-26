@@ -12,7 +12,7 @@ This document provides a comprehensive analysis of data flow, storage, and trans
 6. [Changelog Topic Analysis](#changelog-topic-analysis)
 7. [Cache Layer Data](#cache-layer-data)
 8. [Data Transformation Pipeline](#data-transformation-pipeline)
-9. [Serialization & Deserialization](#serialization--deserialization)
+9. [Serialization & Deserialization](#serialization-deserialization)
 10. [Data Lifecycle Management](#data-lifecycle-management)
 
 ---
@@ -256,7 +256,7 @@ sequenceDiagram
     PaymentTopic->>Streams: Payment event
     StockTopic->>Streams: Stock event
     
-    Note over Streams: Join within 10s window<br/>Business logic processing
+    Note over Streams: Correlate by orderId:attemptId<br/>Join within 30s window + 30s grace<br/>Business logic processing
     Streams->>Streams: Process join result
     Streams->>OrdersTopic: Final OrderDto (status: CONFIRMED)
     Note right of OrdersTopic: Key: 12345<br/>Partition: 0<br/>Offset: 1002
@@ -582,8 +582,8 @@ graph TB
     end
     
     subgraph "🔄 Join Processing"
-        JOIN_WINDOW[10-Second Join Window]
-        CORRELATION[Key-based Correlation<br/>orderId: 12345]
+        JOIN_WINDOW[30-Second Join Window + 30s Grace]
+        CORRELATION[Attempt-based Correlation<br/>orderId:attemptId]
         BUSINESS_LOGIC[Business Logic<br/>OrderManageService.confirm]
     end
     

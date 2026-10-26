@@ -94,17 +94,20 @@ class node_shopper,node_prometheus,node_grafana toneIndigo
 
 - [🎯 Overview](#-overview)
 - [✨ Key Features](#-key-features)
-- [🏗️ Architecture](#️-architecture)
+- [🏗️ Architecture](#-architecture)
+- [📦 Services Overview](#-services-overview)
 - [🔧 Tech Stack](#-tech-stack)
 - [🚀 Quick Start](#-quick-start)
-- [🎛️ Service Discovery & API Access](#️-service-discovery--api-access)
+- [🎛️ Service Discovery & API Access](#service-discovery-api-access)
+- [🔐 Keycloak Security Configuration](#-keycloak-security-configuration)
 - [📊 Observability](#-observability)
-- [🗃️ Database Management](#️-database-management)
-- [📦 Services Overview](#-services-overview)
+- [🗃️ Database Management](#-database-management)
 - [💡 Development Tips](#-development-tips)
+- [📋 Kubernetes Commands Cheat-Sheet](#-kubernetes-commands-cheat-sheet)
 - [🚀 Publishing Common to Maven Central](#-publishing-common-to-maven-central)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
+- [🙏 Acknowledgements & References](#acknowledgements-references)
 
 ## 🎯 Overview
 
@@ -240,9 +243,9 @@ graph TB
 <summary><strong>🖥️ Core Technologies</strong></summary>
 
 ### Languages & Frameworks
-* ![Java](https://img.shields.io/badge/Java-21+-orange?style=flat-square&logo=java) [Java 21+](https://www.java.com)
-* ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-green?style=flat-square&logo=spring) [Spring Framework](https://spring.io/projects/spring-framework)
-* ![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2023.x-green?style=flat-square&logo=spring) [Spring Cloud](https://spring.io/projects/spring-cloud)
+* ![Java](https://img.shields.io/badge/Java-25+-orange?style=flat-square&logo=java) [Java 25+](https://www.java.com)
+* ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.2-green?style=flat-square&logo=spring) [Spring Framework](https://spring.io/projects/spring-framework)
+* ![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.1.4-green?style=flat-square&logo=spring) [Spring Cloud](https://spring.io/projects/spring-cloud)
 * ![Project Reactor](https://img.shields.io/badge/Project_Reactor-3.x-purple?style=flat-square) [Project Reactor](https://projectreactor.io/)
 
 </details>
@@ -253,7 +256,6 @@ graph TB
 ### Message Brokers & Streaming
 * ![Kafka](https://img.shields.io/badge/Apache_Kafka-Latest-black?style=flat-square&logo=apache-kafka) [Apache Kafka](http://kafka.apache.org/)
 * ![Kafka Streams](https://img.shields.io/badge/Kafka_Streams-Latest-black?style=flat-square) [Kafka Streams](https://kafka.apache.org/documentation/streams/)
-* ![Kafka REST](https://img.shields.io/badge/Kafka_REST-Latest-black?style=flat-square) [Kafka REST](https://github.com/confluentinc/kafka-rest)
 
 </details>
 
@@ -262,12 +264,11 @@ graph TB
 
 ### Databases
 * ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=flat-square&logo=postgresql) [PostgreSQL](http://www.postgresql.org/)
-* ![MongoDB](https://img.shields.io/badge/MongoDB-6.x-green?style=flat-square&logo=mongodb) MongoDB
-* ![Redis](https://img.shields.io/badge/Redis-7.x-red?style=flat-square&logo=redis) [Redis](http://redis.io/)
+* ![Redis](https://img.shields.io/badge/Redis-7.x-red?style=flat-square&logo=redis) [Redis](http://redis.io/) (Caching)
 
 ### Database Tools
 * ![Liquibase](https://img.shields.io/badge/Liquibase-4.x-orange?style=flat-square) [Liquibase](https://www.liquibase.com)
-* ![Spring Data](https://img.shields.io/badge/Spring_Data-3.x-green?style=flat-square&logo=spring) [Spring Data](https://spring.io/projects/spring-data)
+* ![Spring Data](https://img.shields.io/badge/Spring_Data-4.x-green?style=flat-square&logo=spring) [Spring Data](https://spring.io/projects/spring-data)
 * ![jOOQ](https://img.shields.io/badge/jOOQ-3.x-blue?style=flat-square) [jOOQ](http://www.jooq.org)
 
 </details>
@@ -306,8 +307,6 @@ graph TB
 * ![Testcontainers](https://img.shields.io/badge/Testcontainers-Latest-blue?style=flat-square) Testcontainers
 
 </details>
-
-> 📋 For complete tech stack details, see [techstack.md](./techstack.md)
 
 ## 🚀 Quick Start
 
@@ -636,7 +635,7 @@ docker-compose logs | grep ERROR
 
 </details>
 
-## 📋 Kubernetes Commands Cheat‑Sheet
+## 📋 Kubernetes Commands Cheat-Sheet
 
 This guide provides a concise reference of useful `kubectl` commands for everyday debugging, maintenance, and inspection of the **retailstore** namespace used by this project. Each command includes a short description of when to use it.
 
@@ -722,12 +721,12 @@ sudo fuser -k 18080/tcp
 ### ⚠️ Important Notes & Best Practices
 
 <details>
-<summary><strong>🔄 Spring Boot 3.x Migration Notes</strong></summary>
+<summary><strong>🔄 Spring Boot 4.x Notes</strong></summary>
 
-- **📦 Jakarta EE Namespace:** Migration from `javax.*` to `jakarta.*`
-- **📊 Observability:** Spring Cloud Sleuth → Micrometer Tracing
-- **🔧 Configuration:** Updated property names and patterns
-- **🛡️ Security:** Enhanced OAuth2/OIDC integration
+- **📦 Jakarta EE Namespace:** Standardized on `jakarta.*` packages
+- **📊 Observability:** Uses Micrometer Tracing integrated with OpenTelemetry
+- **🔧 Configuration:** Updated property names and modern Spring Boot 4.x patterns
+- **🛡️ Security:** Modern OAuth2/OIDC integration with Keycloak
 
 </details>
 
@@ -795,12 +794,12 @@ Before publishing to Maven Central:
 
 The following repository secrets must be configured in GitHub under **Settings → Secrets and variables → Actions → Repository secrets**:
 
-| Secret Name | Description | Source |
-| --- | --- | --- |
-| `CENTRAL_USERNAME` | Sonatype Central Portal token username | Generated in Central Portal user account |
-| `CENTRAL_PASSWORD` | Sonatype Central Portal token password | Generated in Central Portal user account |
-| `GPG_PRIVATE_KEY` | ASCII-armored private GPG key | Exported from local GPG keyring (`gpg --armor --export-secret-keys`) |
-| `GPG_PASSPHRASE` | Passphrase for the GPG private key | Chosen during GPG key generation |
+| Secret Name        | Description                            | Source                                                               |
+|--------------------|----------------------------------------|----------------------------------------------------------------------|
+| `CENTRAL_USERNAME` | Sonatype Central Portal token username | Generated in Central Portal user account                             |
+| `CENTRAL_PASSWORD` | Sonatype Central Portal token password | Generated in Central Portal user account                             |
+| `GPG_PRIVATE_KEY`  | ASCII-armored private GPG key          | Exported from local GPG keyring (`gpg --armor --export-secret-keys`) |
+| `GPG_PASSPHRASE`   | Passphrase for the GPG private key     | Chosen during GPG key generation                                     |
 
 #### 1. How to get `CENTRAL_USERNAME` and `CENTRAL_PASSWORD`
 Sonatype requires a **User Token** instead of your portal password:

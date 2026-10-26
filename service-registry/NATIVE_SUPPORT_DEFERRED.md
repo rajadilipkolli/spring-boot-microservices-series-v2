@@ -1,6 +1,6 @@
 # Native Support Deferred for Service Registry (Eureka Server)
 
-Native compilation for the `service-registry` module has been deferred.
+Native compilation for the `service-registry` module has been deferred under **Java 25**, **Spring Boot 4.1.2**, and **Spring Cloud 2025.1.4**.
 
 ## Reason for Deferral
 

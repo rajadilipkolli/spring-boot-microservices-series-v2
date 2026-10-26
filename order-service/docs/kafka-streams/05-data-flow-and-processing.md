@@ -5,9 +5,9 @@
 2. [Sample Data Structures](#sample-data-structures)
 3. [Stream Processing Pipeline](#stream-processing-pipeline)
 4. [Data Transformations](#data-transformations)
-5. [Serialization & Deserialization](#serialization--deserialization)
+5. [Serialization & Deserialization](#serialization-deserialization)
 6. [Window Processing](#window-processing)
-7. [Interactive Queries](#interactive-queries)
+7. [Interactive Queries](#interactive-queries-architectural-pattern)
 
 ## 🏗️ Complete Data Flow Architecture
 
@@ -43,7 +43,7 @@ graph TB
     subgraph "🌊 Stream Processing"
         PAYMENT_STREAM[Payment KStream]
         STOCK_STREAM[Stock KStream]
-        JOIN[Stream Join<br/>10s window]
+        JOIN[Stream Join<br/>30s window + 30s grace]
         BUSINESS[Business Logic<br/>OrderManageService]
         OUTPUT[Output Stream]
     end
@@ -287,11 +287,11 @@ sequenceDiagram
     Kafka->>Streams: Payment event (ACCEPT)
     Kafka->>Streams: Stock event (ACCEPT)
     
-    Streams->>Streams: Join events within 10s window<br/>Key: 12345 (same order)
+    Streams->>Streams: Correlate by orderId:attemptId<br/>Join events within 30s window + 30s grace
     Streams->>Streams: OrderManageService.confirm()<br/>ACCEPT + ACCEPT = CONFIRMED
     
-    Streams->>StateStore: Update materialized view<br/>put(12345, confirmedOrder)
-    Streams->>Kafka: Publish final result to 'orders'<br/>Key: 12345, Status: CONFIRMED
+    Streams->>StateStore: Store join state in RocksDB
+    Streams->>Kafka: Publish final result to 'orders'<br/>Key: orderId, Status: CONFIRMED
     
     Note over Client, StateStore: 4️⃣ State Persistence
     StateStore->>StateStore: Cache: mark entry dirty
@@ -303,29 +303,41 @@ sequenceDiagram
 
 ```java
 @Bean
-KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-    Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-    
-    // Create input streams
-    KStream<Long, OrderDto> paymentStream = kafkaStreamBuilder.stream(
-        PAYMENT_ORDERS_TOPIC, 
-        Consumed.with(Serdes.Long(), orderSerde));
-    
-    KStream<Long, OrderDto> stockStream = kafkaStreamBuilder.stream(
-        STOCK_ORDERS_TOPIC, 
-        Consumed.with(Serdes.Long(), orderSerde));
-    
-    // Join streams with business logic
-    paymentStream
-        .join(stockStream,
-              orderManageService::confirm,  // Value joiner
-              JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-              StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-        .peek((orderId, result) -> 
-            log.info("Processed order {} with final status: {}", orderId, result.status()))
-        .to(ORDERS_TOPIC);  // Output to orders topic
-    
+KStream<String, OrderDto> stream(
+        StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
+
+    KStream<String, OrderDto> paymentStream =
+            kafkaStreamBuilder.stream(
+                    PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+
+    correlateByAttempt(paymentStream)
+            .join(
+                    correlateByAttempt(
+                            kafkaStreamBuilder.stream(
+                                    STOCK_ORDERS_TOPIC,
+                                    Consumed.with(Serdes.String(), orderSerde))),
+                    orderManageService::confirm,
+                    JoinWindows.ofTimeDifferenceAndGrace(
+                            Duration.ofSeconds(30), Duration.ofSeconds(30)),
+                    StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+            .filter((key, order) -> order != null)
+            .selectKey((key, order) -> order.orderId().toString())
+            .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
+            .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
+
+    paymentStream.print(Printed.toSysOut());
+
     return paymentStream;
+}
+
+private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+    return stream.filter(
+                    (key, order) ->
+                            order != null
+                                    && order.orderId() != null
+                                    && order.attemptId() != null
+                                    && !order.attemptId().isBlank())
+            .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
 }
 ```
 
@@ -526,52 +538,41 @@ Decoded: {"orderId":12345,"customerId":67890,...}
 ### Join Window Configuration
 
 ```java
-// 10-second join window configuration
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10))
+// 30-second join window with 30-second grace period
+JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30))
 ```
 
 ### Window Behavior Visualization
 
 ```mermaid
 timeline
-    title Stream Join Window Processing (10 seconds)
+    title Stream Join Window Processing (30 seconds + 30s grace)
     
     section T+0s
-        Payment Event : orderId: 12345 : status: ACCEPT : Window opens
+        Payment Event : orderId:attemptId : status: ACCEPT : Window opens
     
-    section T+3s
-        Stock Event : orderId: 12345 : status: ACCEPT : Join triggered
+    section T+5s
+        Stock Event : orderId:attemptId : status: ACCEPT : Join triggered
         
-    section T+3.1s
+    section T+5.1s
         Join Result : Business logic applied : Status: CONFIRMED : Window continues
         
-    section T+10s
-        Window Closes : No more joins possible : Late events dropped
+    section T+30s
+        Window Closes : Grace period active (late arrivals accepted)
         
-    section T+15s
-        Late Stock Event : orderId: 12345 : status: REJECT : ❌ Dropped (outside window)
+    section T+60s
+        Grace Closes : Join window completely expired
 ```
 
 ### Window Processing Implementation
 
 ```java
-// Window join with business logic
-paymentStream.join(
-    stockStream,
-    (payment, stock) -> {
-        log.info("Joining events for order {} within window", payment.orderId());
-        
-        // Apply business logic
-        OrderDto result = orderManageService.confirm(payment, stock);
-        
-        // Log join result
-        log.info("Join result for order {}: status={}, source={}", 
-            result.orderId(), result.status(), result.source());
-        
-        return result;
-    },
-    JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-    StreamJoined.with(Serdes.Long(), orderSerde, orderSerde)
+// Window join with business logic correlated by attempt
+correlateByAttempt(paymentStream).join(
+    correlateByAttempt(stockStream),
+    orderManageService::confirm,
+    JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30)),
+    StreamJoined.with(Serdes.String(), orderSerde, orderSerde)
 )
 ```
 
@@ -596,35 +597,36 @@ Performance Characteristics:
   late_event_handling: Drop with warning log
 ```
 
-## 🔍 Interactive Queries
+## 🔍 Interactive Queries (Architectural Pattern)
 
-### Materialized View Implementation
+> **Note**: In the current Order Service production implementation, finalized order statuses are persisted to PostgreSQL via `OrderRepository` and published to the `orders` topic. The snippet below demonstrates how interactive queries using a materialized `KTable` can be added if direct in-memory state store querying is required.
+
+### Materialized View Pattern
 
 ```java
+// Optional KTable pattern for queryable state store
 @Bean
-KTable<Long, OrderDto> orderTable(StreamsBuilder streamsBuilder) {
-    // Persistent store for queryable state
+KTable<String, OrderDto> orderTable(StreamsBuilder streamsBuilder, Serde<OrderDto> orderSerde) {
     KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-    JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
     
-    // Create KTable from orders stream
-    KStream<Long, OrderDto> orderStream = streamsBuilder.stream(
-        ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
+    KStream<String, OrderDto> orderStream = streamsBuilder.stream(
+        ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
     
     return orderStream.toTable(
-        Materialized.<Long, OrderDto>as(store)
-            .withKeySerde(Serdes.Long())
+        Materialized.<String, OrderDto>as(store)
+            .withKeySerde(Serdes.String())
             .withValueSerde(orderSerde)
-            .withCachingEnabled()     // Enable caching
-            .withLoggingEnabled());   // Enable changelog
+            .withCachingEnabled()
+            .withLoggingEnabled());
 }
 ```
 
-### Query Service Implementation
+### Query Service Pattern Example
 
 ```java
+// Example interactive query service pattern
 @Service
-public class OrderKafkaStreamService {
+public class OrderStreamQueryService {
     
     private final StreamsBuilderFactoryBean kafkaStreamsFactory;
     

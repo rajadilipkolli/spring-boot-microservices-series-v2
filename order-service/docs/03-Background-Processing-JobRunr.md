@@ -16,14 +16,14 @@ graph TB
         JR --> JS[Job Scheduler]
         JR --> JE[Job Executor]
         JR --> JM[Job Monitor]
-        JS --> |"Cron: */5 * * * *"| RT[Retry Task]
+        JS --> |"Cron.minutely()"| RT[Retry Task]
         JE --> |"Process Jobs"| JQ[Job Queue]
         JM --> |"Web UI :28282"| WUI[Dashboard]
     end
     
     subgraph "📡 Integration Points"
-        RT --> |"Republish Events"| KP[Kafka Producer]
-        JQ --> |"Update Status"| DB
+        RT --> |"Spring Modulith Outbox"| KP[Kafka 'orders' Topic]
+        JQ --> |"Update Status & Date"| DB
         WUI --> |"Monitor Jobs"| DEV[Developer]
     end
     
@@ -36,34 +36,40 @@ graph TB
 
 ```mermaid
 sequenceDiagram
+    participant Initializer as 🚀 Initializer
     participant Scheduler as ⏰ JobRunr Scheduler
     participant OrderService as 🛍️ OrderService
     participant Database as 🗄️ PostgreSQL
-    participant KafkaProducer as 📤 Kafka Producer
+    participant Modulith as 📤 Spring Modulith Outbox
     participant Dashboard as 📊 JobRunr Dashboard
     
+    Note over Initializer, Scheduler: Recurring Schedule Setup
+    Initializer->>Scheduler: scheduleRecurrently("retry-new-orders", Cron.minutely())
+    
     Note over Scheduler, Dashboard: 🚀 Scheduled Job Execution
-    Scheduler->>Scheduler: Cron trigger: */5 * * * * (every 5 min)
+    Scheduler->>Scheduler: Cron trigger: minutely
     Scheduler->>OrderService: Execute @Job("reProcessNewOrders")
     
-    Note over OrderService: Code: OrderService.java:180-195
-    OrderService->>Database: SELECT orders WHERE status='NEW'<br/>AND created_date < now() - 5min
+    Note over OrderService: Code: OrderService.java
+    OrderService->>Database: SELECT orders WHERE status='NEW'<br/>AND last_modified_date < now() - 5min
     Database-->>OrderService: List<Order> stuckOrders
     
     loop For each stuck order
-        OrderService->>OrderService: OrderMapper.toDto(order)
-        OrderService->>KafkaProducer: sendOrder(orderDto)
-        KafkaProducer-->>OrderService: Async confirmation
+        OrderService->>OrderService: OrderMapper.toDto(order).withAttemptId(UUID)
+        OrderService->>Modulith: eventPublisher.publishEvent(persistedOrderDto)
+        Modulith->>Modulith: Route to 'orders' topic
+        OrderService->>Database: UPDATE order SET lastModifiedDate = now()
         OrderService->>Dashboard: Log job progress
     end
     
     OrderService-->>Scheduler: Job completion
     Scheduler->>Dashboard: Update job status & metrics
     
-    Note over Scheduler, Dashboard: 🔄 Retry Logic (on failure)
+    Note over OrderService, Dashboard: Caught per-order failures are logged without rethrowing<br/>Unchanged stale NEW orders remain eligible at the next minutely run
+    Note over Scheduler, Dashboard: 🔄 JobRunr Retry Logic (escaping exceptions only)
     alt Job fails
         Scheduler->>Scheduler: Wait exponential backoff
-        Scheduler->>OrderService: Retry (max 2 attempts)
+        Scheduler->>OrderService: Retry (up to 2 retries)
     else Max retries exceeded
         Scheduler->>Dashboard: Mark job as failed
         Dashboard->>Dashboard: Alert/notification
@@ -72,94 +78,111 @@ sequenceDiagram
 
 ## 📋 Code Implementation Mapping
 
-### 1. Job Definition & Configuration
-**File:** `OrderService.java` (Lines 180-195)
+### 1. Job Definition & Scheduling
+**File:** `Initializer.java`
+```java
+@Component
+class Initializer implements CommandLineRunner {
+
+    private final OrderService orderService;
+
+    public Initializer(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+    @Override
+    public void run(String... args) {
+        BackgroundJob.scheduleRecurrently(
+                "retry-new-orders", Cron.minutely(), orderService::retryNewOrders);
+    }
+}
+```
+
+**File:** `OrderService.java`
 ```java
 @Job(name = "reProcessNewOrders", retries = 2)
+@Transactional
 public void retryNewOrders() {
-    // Query orders stuck in NEW status for more than 5 minutes
-    List<Order> byStatusOrderByIdAsc = orderRepository
-        .findByStatusAndCreatedDateLessThanOrderByIdAsc(
-            OrderStatus.NEW, 
-            LocalDateTime.now().minusMinutes(5));
-    
-    // Republish each stuck order to Kafka
-    byStatusOrderByIdAsc.forEach(order -> {
-        OrderDto persistedOrderDto = this.orderMapper.toDto(order);
-        log.info("Retrying Order: {}", persistedOrderDto);
-        kafkaOrderProducer.sendOrder(persistedOrderDto);
-    });
+    // Query orders stuck in NEW status with last modified date older than 5 minutes
+    List<Order> byStatusOrderByIdAsc =
+            orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+                    OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
+
+    byStatusOrderByIdAsc.forEach(
+            order -> {
+                try {
+                    OrderDto persistedOrderDto =
+                            this.orderMapper
+                                    .toDto(order)
+                                    .withAttemptId(UUID.randomUUID().toString());
+                    log.info("Retrying Order :{}", persistedOrderDto);
+                    eventPublisher.publishEvent(persistedOrderDto);
+
+                    // Update lastModifiedDate to prevent immediate repolling and endless spam
+                    order.setLastModifiedDate(LocalDateTime.now());
+                    orderRepository.save(order);
+                } catch (Exception e) {
+                    log.error("Failed to retry publishing order :{}", order.getId(), e);
+                }
+            });
 }
 ```
 
 **Key Features:**
-- **Job Name:** `reProcessNewOrders` for identification
-- **Retry Policy:** Maximum 2 retry attempts
-- **Execution Logic:** Query + republish pattern
-- **Logging:** Comprehensive job execution tracking
+- **Job Name:** `reProcessNewOrders` with up to 2 JobRunr retries for exceptions that escape the job (for example, a failed repository query or transaction commit).
+- **Per-order Failures:** The `catch` block logs and continues without rethrowing, so `retries = 2` does not apply to that caught failure. If the order remains `NEW` with its stale timestamp unchanged, it already meets the five-minute cutoff and may be selected again on the next minutely invocation, repeatedly. A successful timestamp update postpones selection until it is more than five minutes old again. A persistence failure may still mark the enclosing transaction rollback-only and cause the job to fail at commit.
+- **Attempt ID:** New random UUID attemptId prevents stale join collisions in Kafka Streams
+- **Spam Prevention:** `lastModifiedDate` updated to `LocalDateTime.now()` upon retry
 
 ### 2. Repository Query for Stuck Orders
-**File:** `OrderRepository.java` (Custom Query)
+**File:** `OrderRepository.java`
 ```java
-// Method signature (inferred from usage)
-List<Order> findByStatusAndCreatedDateLessThanOrderByIdAsc(
-    OrderStatus status, 
-    LocalDateTime cutoffTime);
-
-// Equivalent SQL query:
-// SELECT * FROM orders 
-// WHERE status = 'NEW' 
-// AND created_date < (NOW() - INTERVAL '5 minutes')
-// ORDER BY id ASC
+List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+        OrderStatus status, LocalDateTime lastModifiedDate);
 ```
 
-**Query Strategy:**
-- **Status Filter:** Only NEW orders (not yet processed)
-- **Time Filter:** Orders older than 5 minutes
-- **Ordering:** Process oldest orders first (FIFO)
+**Equivalent SQL query:**
+```sql
+SELECT * FROM orders 
+WHERE status = 'NEW' 
+  AND last_modified_date < (NOW() - INTERVAL '5 minutes')
+ORDER BY id ASC;
+```
 
 ### 3. Job Scheduling Configuration
-**Configuration:** Application properties or JobRunr auto-configuration
+**File:** `application.yml`
 ```yaml
-# JobRunr configuration (typical setup)
-org:
-  jobrunr:
-    background-job-server:
-      enabled: true
-      worker-count: 8
-    dashboard:
-      enabled: true
-      port: 28282
-    database:
-      type: postgresql
-      datasource: default
+jobrunr:
+  job-scheduler:
+    enabled: true
+  background-job-server:
+    enabled: true
+    poll-interval-in-seconds: 5  # Minimum seconds between polls for new jobs
+    metrics.enabled: true
+  dashboard:
+    enabled: true
+    port: 28282
+  miscellaneous:
+    allow-anonymous-data-usage: false
 ```
 
-> 📚 **Deep Dive:** For detailed visual explanations of `worker-count`, horizontal scaling, and database-backed queues, see [JobRunr Scalability Explained](./JobRunr-Scalability-Explained.md)
+> 📚 **Deep Dive:** For detailed visual explanations of `poll-interval-in-seconds`, horizontal scaling, and database-backed queues, see [JobRunr Scalability Explained](./JobRunr-Scalability-Explained.md)
 
-### 4. Integration with Kafka Producer
-**File:** `KafkaOrderProducer.java` (Reused from main flow)
+### 4. Integration with Spring Modulith Event Externalization
+**File:** `EventExternalizationConfig.java`
 ```java
-@Async
-public void sendOrder(OrderDto persistedOrderDto) {
-    kafkaTemplate
-        .send(AppConstants.ORDERS_TOPIC, persistedOrderDto.orderId(), persistedOrderDto)
-        .whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Retry: Sent message=[{}] with offset=[{}]", 
-                    persistedOrderDto, result.getRecordMetadata().offset());
-            } else {
-                log.warn("Retry: Failed to send message=[{}] due to: {}", 
-                    persistedOrderDto, ex.getMessage());
-            }
-        });
+@Bean
+EventExternalizationConfiguration eventExternalizationConfiguration() {
+    return EventExternalizationConfiguration.externalizing()
+            .selectByType(OrderDto.class)
+            .route(
+                    OrderDto.class,
+                    it ->
+                            RoutingTarget.forTarget(ORDERS_TOPIC)
+                                    .andKey(String.valueOf(it.orderId())))
+            .build();
 }
 ```
-
-**Reuse Benefits:**
-- **Consistent Logic:** Same producer for initial and retry attempts
-- **Error Handling:** Unified callback mechanism
-- **Monitoring:** Same metrics and logging
 
 ## 🎯 Job Execution Patterns
 

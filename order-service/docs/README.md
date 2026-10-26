@@ -1,24 +1,24 @@
 # 📚 Order Service Deep Dive Documentation
 
 ## Overview
-This documentation provides an in-depth analysis of the Order Service microservice, covering all major architectural patterns, implementation details, and code mappings to sequence diagrams.
+This documentation provides an in-depth analysis of the Order Service microservice built with **Java 25**, **Spring Boot 4.1.2**, and **Spring Cloud 2025.1.4**, covering all major architectural patterns, implementation details, and code mappings to sequence diagrams.
 
 ## 📋 Documentation Structure
 
 ### 1. [Event-Driven Architecture Deep Dive](./01-Event-Driven-Architecture-Deep-Dive.md)
-**Focus:** Kafka integration, stream processing, and materialized views
-- 📡 Kafka Producer implementation and async publishing
-- 🌊 Kafka Streams configuration and windowed joins
-- 📊 KTable materialized views for queryable state
-- 🎯 Topic management and message flow patterns
+**Focus:** Kafka integration, Spring Modulith event externalization, stream processing, and state handling
+- 📡 Spring Modulith Outbox Event Externalization for transactional publishing
+- 🌊 Kafka Streams configuration with attempt correlation and windowed joins (30s window + 30s grace)
+- 📊 Real-time event streaming and DLQ routing via `DeadLetterPublishingRecoverer`
+- 🎯 Topic management (`orders`, `payment-orders`, `stock-orders`, `recovererDLQ`)
 - 🔧 Configuration deep dive and error handling
-- 🚨 Current issues and recommended improvements
+- 🚨 Exactly-once processing (`EXACTLY_ONCE_V2`)
 
 **Key Code Files Covered:**
-- `KafkaOrderProducer.java` - Async event publishing
-- `KafkaStreamsConfig.java` - Stream processing configuration
-- `OrderKafkaStreamService.java` - Materialized view queries
-- `OrderManageService.java` - Business logic resolution
+- `EventExternalizationConfig.java` - Spring Modulith Kafka routing
+- `KafkaStreamsConfig.java` - Stream processing configuration and attempt correlation
+- `OrderManageService.java` - Business logic resolution and metric counters
+- `KafkaConfig.java` - Programmatic topic provisioning
 
 ### 2. [Distributed Transaction Management](./02-Distributed-Transaction-Management.md)
 **Focus:** Saga pattern implementation and compensation handling
@@ -30,54 +30,54 @@ This documentation provides an in-depth analysis of the Order Service microservi
 - 📈 Transaction guarantees and performance characteristics
 
 **Key Code Files Covered:**
-- `OrderService.java` - Transaction initiation
+- `OrderService.java` - Transaction initiation and outbox publishing
 - `OrderManageService.java` - Saga decision logic
-- `KafkaStreamsConfig.java` - Stream coordination
+- `KafkaStreamsConfig.java` - Stream coordination and attempt correlation
 - `DistributedTransactionFailureIT.java` - Failure testing
 
 ### 3. [Background Processing with JobRunr](./03-Background-Processing-JobRunr.md)
 **Focus:** Scheduled jobs, retry mechanisms, and monitoring
-- ⏰ Job scheduling and execution patterns
-- 🔄 Retry logic for stuck orders
-- 📊 JobRunr dashboard integration (port 28282)
+- ⏰ Job scheduling with JobRunr 9.0.2 starter
+- 🔄 Minutely retry logic for NEW orders stuck > 5 minutes
+- 📊 JobRunr dashboard integration (port 28282 at `/dashboard/overview`)
 - 🎯 Job configuration and error handling
 - 📈 Performance monitoring and metrics
-- 🚀 Advanced job patterns and improvements
+- 🚀 Advanced job patterns and scaling
 
 **Key Code Files Covered:**
-- `OrderService.java` - `@Job` annotation and retry logic
+- `Initializer.java` - Recurring minutely job schedule
+- `OrderService.java` - `@Job("reProcessNewOrders")` annotation and retry logic
 - `OrderRepository.java` - Stuck order queries
-- `KafkaOrderProducer.java` - Event republishing
 - JobRunr configuration and dashboard
 
 ### 4. [Resilience Patterns Deep Dive](./04-Resilience-Patterns-Deep-Dive.md)
 **Focus:** Circuit breaker, rate limiting, bulkhead, and DLQ
-- ⚡ Circuit breaker implementation and fallback methods
+- ⚡ Circuit breaker implementation and fallback methods (Resilience4j 2.4.0)
 - 🚦 Rate limiting configuration and adaptive strategies
 - 🏗️ Bulkhead pattern for resource isolation
 - 📡 Dead Letter Queue processing and recovery
 - 📊 Resilience monitoring and health indicators
-- 🔧 Dynamic configuration and improvements
+- 🔧 Dynamic configuration and properties
 
 **Key Code Files Covered:**
-- `OrderController.java` - Resilience annotations
-- `CatalogService.java` - Circuit breaker with fallback
-- `KafkaStreamsConfig.java` - DLQ configuration
+- `OrderController.java` - Resilience annotations (`@CircuitBreaker`, `@RateLimiter`, `@Bulkhead`)
+- `CatalogService.java` - Circuit breaker (`name = "catalog-service"`) with fallback
+- `KafkaStreamsConfig.java` - DLQ configuration with `recovererDLQ`
 - `ApplicationProperties.java` - Fallback configuration
 
 ### 5. [Performance Optimizations Deep Dive](./05-Performance-Optimizations-Deep-Dive.md)
 **Focus:** Pagination, parallel processing, and batch operations
-- 🚀 N+1 query prevention strategies
-- 🧵 Parallel processing with CompletableFuture
+- 🚀 N+1 query prevention strategies (ID-only pagination)
+- 🧵 Parallel processing with Virtual Threads and CompletableFuture
 - 📦 Batch operations and bulk processing
-- 💾 Database optimization and connection pooling
+- 💾 Database optimization, TSID identifiers, and connection pooling
 - 📊 Performance monitoring and metrics
 - 🔧 Advanced optimization techniques
 
 **Key Code Files Covered:**
-- `OrderService.java` - Pagination and parallel processing
-- `OrderRepository.java` - Optimized queries
-- `KafkaOrderProducer.java` - Async publishing
+- `OrderService.java` - Pagination, parallel processing, and batch persistence
+- `OrderRepository.java` - Optimized queries and batch updates
+- `EventExternalizationConfig.java` - Asynchronous outbox publishing
 - Database configuration and indexing strategies
 
 ## 🎯 Cross-Cutting Concerns
@@ -179,9 +179,9 @@ Each documentation file includes detailed mappings between:
 - **Reactive Streams:** Full reactive programming model
 
 ### Technology Upgrades
-- **GraalVM Native Images:** Faster startup and lower memory
-- **Project Loom:** Virtual threads for better concurrency
-- **Kafka Streams DSL:** More expressive stream processing
-- **Observability Stack:** Enhanced monitoring and tracing
+- **GraalVM Native Images:** Ahead-of-time compilation with runtime hints (`OrderServiceRuntimeHints.java`)
+- **Virtual Threads (Loom):** Enabled via `spring.threads.virtual.enabled: true` in Java 25
+- **Kafka Streams DSL:** Continuous evolution with exactly-once v2 semantics
+- **Observability Stack:** OpenTelemetry and Grafana LGTM integration
 
 This documentation serves as a comprehensive guide for understanding, maintaining, and extending the Order Service microservice architecture.

@@ -4,7 +4,7 @@ Welcome, Agent. This file serves as your primary entry point for understanding t
 
 ## 🏗️ Project Architecture
 This is a microservices-based system built with:
-- **Core**: Java 25, Spring Boot 4.1.1, Spring Cloud 2025.
+- **Core**: Java 25, Spring Boot 4.1.2, Spring Cloud 2025.1.4.
 - **Service Mesh**: Eureka (Discovery), Config Server (Centralized Config), Spring Cloud Gateway (API Gateway).
 - **Persistence**: PostgreSQL managed by Liquibase.
 - **Messaging**: Apache Kafka for event-driven communication.
