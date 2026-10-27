@@ -64,7 +64,7 @@ interface ProcessedOrderEventRepository
      * Reads the stored reservation outcome status for an order's RESERVE event.
      *
      * @param orderId unique order identifier
-     * @return the result status if present
+     * @return the result status, or empty if the reservation record is absent or its status is null
      */
     @Query(
             value =

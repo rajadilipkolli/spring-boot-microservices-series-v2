@@ -58,9 +58,12 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * Reserves available inventory for a new order and publishes the reservation outcome.
      *
      * <p>Orders whose status is not {@code NEW} are returned unchanged without publishing an event.
-     * Orders with a non-null ID and an existing {@code RESERVE} record are also returned unchanged,
-     * without stock changes or an event. Accepted and rejected reservations record processing for
-     * non-null IDs; null IDs bypass duplicate tracking.
+     * For non-null IDs, an existing {@code RESERVE} record skips stock changes. A duplicate with a
+     * nonblank attempt ID not already claimed for a reply publishes the stored outcome using the
+     * supplied order's items and attempt ID. Missing outcomes, null or blank attempt IDs, and
+     * existing reply claims return the order unchanged without an event. A new reply attempt is
+     * recorded even if the outcome is unavailable. Accepted and rejected reservations store their
+     * outcome for non-null IDs; null IDs bypass duplicate tracking.
      *
      * <p>New orders are rejected without stock changes if products are missing or deleted, product
      * codes are repeated, or any requested quantity exceeds availability. Accepted orders move the
@@ -70,8 +73,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * event publication failures propagate to the caller.
      *
      * @param orderDto order whose items should be reserved
-     * @return the order with status {@code ACCEPT} or {@code REJECT} and source {@code INVENTORY},
-     *     or the original order if its status is not {@code NEW} or its reservation was recorded
+     * @return the order with the new or stored reservation status and source {@code INVENTORY}, or
+     *     the original order if its status is not {@code NEW} or a duplicate reply is skipped
      */
     @Transactional
     @Retryable(
