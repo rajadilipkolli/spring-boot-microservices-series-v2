@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.2.0-RC1</version>
+        <version>4.1.2</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example.inventoryservice</groupId>
@@ -20,7 +20,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <java.version>25</java.version>
-        <spring-cloud.version>2026.0.0-RC1</spring-cloud.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
         <springdoc-openapi.version>3.2.0</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
