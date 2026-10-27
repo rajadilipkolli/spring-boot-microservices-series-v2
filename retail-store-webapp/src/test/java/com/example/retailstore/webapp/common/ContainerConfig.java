@@ -33,13 +33,13 @@ public class ContainerConfig {
     /**
      * Provides the Redis container used by integration tests through a Spring service connection.
      *
-     * @return a Redis 8.10.2 Alpine container
+     * @return a Redis 8.10.3 Alpine container
      */
     @Bean
     @RestartScope
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.2-alpine"));
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.3-alpine"));
     }
 
     @Bean
