@@ -6,7 +6,6 @@ import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -23,11 +22,11 @@ public class KeycloakRegistrationService {
     /**
      * Creates a registration service using an existing admin client.
      *
-     * @param props configuration containing the target registration realm
+     * @param keycloakProperties configuration containing the target registration realm
      * @param keycloakClient client used to create users and assign realm roles
      */
-    KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloakClient) {
-        this.realm = props.getRealm();
+    KeycloakRegistrationService(KeycloakProperties keycloakProperties, Keycloak keycloakClient) {
+        this.realm = keycloakProperties.getRealm();
         this.keycloakClient = keycloakClient;
     }
 
@@ -76,7 +75,7 @@ public class KeycloakRegistrationService {
      * @param request profile and password for the new account
      * @return user representation ready for creation
      */
-    private static @NonNull UserRepresentation getUserRepresentation(RegistrationRequest request) {
+    private UserRepresentation getUserRepresentation(RegistrationRequest request) {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(request.username());
         user.setEmail(request.email());

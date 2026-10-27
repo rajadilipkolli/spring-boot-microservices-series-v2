@@ -62,6 +62,12 @@ jobs:
             echo "latency_analyzer.py not found at .github/workflows/latency_analyzer.py"
           fi
 
+      - name: Build Keycloak Terraform Runner Image locally
+        run: |
+          # Build the Terraform runner locally so CI tests against the current commit.
+          # Compose default pull policy (missing) will use this local image.
+          docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
+
       - name: Start Services via Docker Compose
         run: |
           echo "Starting services using compose file: $COMPOSE_FILE"

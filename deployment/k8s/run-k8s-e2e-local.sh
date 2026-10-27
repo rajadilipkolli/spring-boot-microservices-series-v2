@@ -86,6 +86,8 @@ kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.
 
 # ---------------------------------------------------------------------------
 # 4. Image Preparation (Mirrors CI: Obtain and Load Images)
+# Build the Terraform runner image locally so Kind tests against the current commit.
+# Dedicated workflow (.github/workflows/terraform-runner-image.yml) publishes to DockerHub.
 # ---------------------------------------------------------------------------
 echo "=> Step 4: Building Terraform Runner & Loading Images into Kind..."
 docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f "$PROJECT_ROOT/deployment/terraform/Dockerfile" "$PROJECT_ROOT/deployment/terraform/"

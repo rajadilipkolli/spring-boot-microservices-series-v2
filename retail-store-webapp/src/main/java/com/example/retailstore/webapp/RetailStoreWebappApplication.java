@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 @ConfigurationPropertiesScan
 public class RetailStoreWebappApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(RetailStoreWebappApplication.class, args);
     }
 }

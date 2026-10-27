@@ -86,9 +86,21 @@ By default, Keycloak places client roles only inside the Access Token. To ensure
 ## Realm Configuration & Import
 
 ### Automated Provisioning via Terraform (Recommended)
-Keycloak realm settings, clients, roles, and users are managed via Terraform scripts located in `deployment/terraform/keycloak/`. You can execute Terraform via Docker Compose:
+Keycloak realm settings, clients, roles, and users are managed via Terraform scripts located in `deployment/terraform/keycloak/`. Docker Compose pulls the pre-built runner image (`dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT`) directly from DockerHub.
+
+To execute Terraform via Docker Compose:
 ```shell
 docker compose --profile terraform up terraform
+```
+
+To refresh the snapshot image tag from DockerHub:
+```shell
+docker compose pull terraform
+```
+
+If you are developing or testing unpublished runner changes locally, build the image manually before running Compose:
+```shell
+docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
 ```
 
 ### Reference Realm File & Manual Export
