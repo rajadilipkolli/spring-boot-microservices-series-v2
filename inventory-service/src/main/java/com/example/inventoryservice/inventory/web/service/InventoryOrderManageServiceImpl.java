@@ -58,9 +58,12 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * Reserves available inventory for a new order and publishes the reservation outcome.
      *
      * <p>Orders whose status is not {@code NEW} are returned unchanged without publishing an event.
-     * Orders with a non-null ID and an existing {@code RESERVE} record are also returned unchanged,
-     * without stock changes or an event. Accepted and rejected reservations record processing for
-     * non-null IDs; null IDs bypass duplicate tracking.
+     * For non-null IDs, an existing {@code RESERVE} record skips stock changes. A duplicate with a
+     * nonblank attempt ID not already claimed for a reply publishes the stored outcome using the
+     * supplied order's items and attempt ID. Missing outcomes, null or blank attempt IDs, and
+     * existing reply claims return the order unchanged without an event. A new reply attempt is
+     * recorded even if the outcome is unavailable. Accepted and rejected reservations store their
+     * outcome for non-null IDs; null IDs bypass duplicate tracking.
      *
      * <p>New orders are rejected without stock changes if products are missing or deleted, product
      * codes are repeated, or any requested quantity exceeds availability. Accepted orders move the
@@ -70,8 +73,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * event publication failures propagate to the caller.
      *
      * @param orderDto order whose items should be reserved
-     * @return the order with status {@code ACCEPT} or {@code REJECT} and source {@code INVENTORY},
-     *     or the original order if its status is not {@code NEW} or its reservation was recorded
+     * @return the order with the new or stored reservation status and source {@code INVENTORY}, or
+     *     the original order if its status is not {@code NEW} or a duplicate reply is skipped
      */
     @Transactional
     @Retryable(
@@ -88,14 +91,56 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             return orderDto;
         }
 
-        if (orderDto.orderId() != null
-                && processedOrderEventRepository.existsByOrderIdAndEventType(
-                        orderDto.orderId(), "RESERVE")) {
-            LOGGER.warn(
-                    "Order {} reserve event has already been processed. Skipping duplicate.",
-                    orderDto.orderId());
-            return orderDto;
+        if (orderDto.orderId() != null) {
+            int claimed =
+                    processedOrderEventRepository.claim(
+                            orderDto.orderId(), "RESERVE", Instant.now());
+            if (claimed == 0) {
+                // Duplicate reserve event path
+                if (orderDto.attemptId() == null || orderDto.attemptId().isBlank()) {
+                    LOGGER.warn(
+                            "Order {} reserve event has already been processed with blank attempt. Skipping duplicate.",
+                            orderDto.orderId());
+                    return orderDto;
+                }
+
+                int replyClaimed =
+                        processedOrderEventRepository.claim(
+                                orderDto.orderId(),
+                                "RESERVE_REPLY:" + orderDto.attemptId(),
+                                Instant.now());
+                if (replyClaimed == 0) {
+                    LOGGER.warn(
+                            "Order {} reserve reply for attempt {} has already been processed. Skipping duplicate.",
+                            orderDto.orderId(),
+                            orderDto.attemptId());
+                    return orderDto;
+                }
+
+                var storedOutcomeOpt =
+                        processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(
+                                orderDto.orderId());
+                if (storedOutcomeOpt.isEmpty() || storedOutcomeOpt.get() == null) {
+                    LOGGER.warn(
+                            "Order {} reserve outcome is not available. Skipping replay.",
+                            orderDto.orderId());
+                    return orderDto;
+                }
+
+                String outcomeStatus = storedOutcomeOpt.get();
+                OrderDto replayOrderDto =
+                        orderDto.withStatusAndSource(outcomeStatus, AppConstants.SOURCE);
+                eventPublisher.publishEvent(new InventoryProcessedEvent(replayOrderDto));
+                LOGGER.info(
+                        "Replayed Order with status {} for attempt {} : {} from inventory service to topic {}",
+                        replayOrderDto.status(),
+                        orderDto.attemptId(),
+                        replayOrderDto,
+                        AppConstants.STOCK_ORDERS_TOPIC);
+                return replayOrderDto;
+            }
         }
+
         List<String> productCodeList =
                 orderDto.items().stream().map(OrderDto.OrderItemDto::productId).toList();
 
@@ -116,8 +161,14 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             OrderDto rejectedOrderDto = orderDto.withStatusAndSource("REJECT", AppConstants.SOURCE);
             this.inventoryFailuresCounter.increment();
             if (orderDto.orderId() != null) {
-                processedOrderEventRepository.save(
-                        new ProcessedOrderEvent(orderDto.orderId(), "RESERVE", Instant.now()));
+                processedOrderEventRepository.updateResultStatus(
+                        orderDto.orderId(), "RESERVE", "REJECT");
+                if (orderDto.attemptId() != null && !orderDto.attemptId().isBlank()) {
+                    processedOrderEventRepository.claim(
+                            orderDto.orderId(),
+                            "RESERVE_REPLY:" + orderDto.attemptId(),
+                            Instant.now());
+                }
             }
             eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
@@ -152,8 +203,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             // As per review, sending REJECT status to Kafka if quantity not available
             finalOrderDto = orderDto.withStatus("REJECT");
             this.inventoryFailuresCounter.increment();
-            // No inventory changes are saved as updatedInventoryList is empty and saveAll won't be
-            // called.
+            if (orderDto.orderId() != null) {
+                processedOrderEventRepository.updateResultStatus(
+                        orderDto.orderId(), "RESERVE", "REJECT");
+            }
         } else {
             // Phase 2: Mutation pass - safe to persist
             for (OrderDto.OrderItemDto orderItemDto : orderDto.items()) {
@@ -168,6 +221,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             inventoryRepository.saveAll(updatedInventoryList);
             finalOrderDto = orderDto.withStatus("ACCEPT");
             this.inventoryReservationsCounter.increment();
+            if (orderDto.orderId() != null) {
+                processedOrderEventRepository.updateResultStatus(
+                        orderDto.orderId(), "RESERVE", "ACCEPT");
+            }
             LOGGER.info(
                     "Setting status as ACCEPT for OrderId : {}, inventoryIds updated : {}",
                     orderDto.orderId(),
@@ -176,9 +233,11 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
 
         // Send order to Kafka
         OrderDto orderWithSource = finalOrderDto.withSource(AppConstants.SOURCE);
-        if (orderDto.orderId() != null) {
-            processedOrderEventRepository.save(
-                    new ProcessedOrderEvent(orderDto.orderId(), "RESERVE", Instant.now()));
+        if (orderDto.orderId() != null
+                && orderDto.attemptId() != null
+                && !orderDto.attemptId().isBlank()) {
+            processedOrderEventRepository.claim(
+                    orderDto.orderId(), "RESERVE_REPLY:" + orderDto.attemptId(), Instant.now());
         }
         eventPublisher.publishEvent(new InventoryProcessedEvent(orderWithSource));
         LOGGER.info(
@@ -213,14 +272,17 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
 
         String eventType = "CONFIRM_" + orderDto.status();
-        if (orderDto.orderId() != null
-                && processedOrderEventRepository.existsByOrderIdAndEventType(
-                        orderDto.orderId(), eventType)) {
-            LOGGER.warn(
-                    "Order {} confirm ({}) event has already been processed. Skipping duplicate.",
-                    orderDto.orderId(),
-                    orderDto.status());
-            return;
+        if (orderDto.orderId() != null) {
+            int claimed =
+                    processedOrderEventRepository.claim(
+                            orderDto.orderId(), eventType, Instant.now());
+            if (claimed == 0) {
+                LOGGER.warn(
+                        "Order {} confirm ({}) event has already been processed. Skipping duplicate.",
+                        orderDto.orderId(),
+                        orderDto.status());
+                return;
+            }
         }
 
         List<String> productCodeList =
@@ -251,10 +313,6 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         }
 
         inventoryRepository.saveAll(inventoryMap.values());
-        if (orderDto.orderId() != null) {
-            processedOrderEventRepository.save(
-                    new ProcessedOrderEvent(orderDto.orderId(), eventType, Instant.now()));
-        }
 
         LOGGER.info("Order confirmation completed for order ID: {}", orderDto.orderId());
     }
