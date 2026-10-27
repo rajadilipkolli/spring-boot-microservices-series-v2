@@ -58,7 +58,7 @@ services:
       - payment-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.163.2
+    image: otel/opentelemetry-collector-contrib:0.164.0
     container_name: otel-collector
     command: [ "--config=/etc/otel-collector-config.yml" ]
     volumes:
