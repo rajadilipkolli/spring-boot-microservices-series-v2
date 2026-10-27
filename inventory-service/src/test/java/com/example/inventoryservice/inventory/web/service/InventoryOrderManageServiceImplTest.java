@@ -10,7 +10,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -21,9 +23,11 @@ import com.example.inventoryservice.inventory.events.InventoryProcessedEvent;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
@@ -63,6 +67,8 @@ class InventoryOrderManageServiceImplTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
+        given(processedOrderEventRepository.claim(eq(1L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(1);
         given(
                         inventoryRepository.findByProductCodeInAndDeletedFalse(
                                 List.of("product1", "product2")))
@@ -103,6 +109,8 @@ class InventoryOrderManageServiceImplTest {
 
         Inventory inventory1 = new Inventory().setProductCode("product1").setAvailableQuantity(15);
         Inventory inventory2 = new Inventory().setProductCode("product2").setAvailableQuantity(25);
+        given(processedOrderEventRepository.claim(eq(1L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(1);
         given(
                         inventoryRepository.findByProductCodeInAndDeletedFalse(
                                 List.of("product1", "product2")))
@@ -132,6 +140,8 @@ class InventoryOrderManageServiceImplTest {
         orderItems.add(new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN));
         OrderDto orderDto = new OrderDto(1L, 1L, "NEW", "TEST", orderItems);
 
+        given(processedOrderEventRepository.claim(eq(1L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(1);
         given(
                         inventoryRepository.findByProductCodeInAndDeletedFalse(
                                 List.of("product1", "product2")))
@@ -191,6 +201,10 @@ class InventoryOrderManageServiceImplTest {
                         .setReservedItems(20)
                         .setAvailableQuantity(20));
 
+        given(
+                        processedOrderEventRepository.claim(
+                                eq(1L), eq("CONFIRM_CONFIRMED"), any(Instant.class)))
+                .willReturn(1);
         given(inventoryRepository.findByProductCodeIn(anyList())).willReturn(inventoryList);
 
         // Act
@@ -224,6 +238,10 @@ class InventoryOrderManageServiceImplTest {
                         .setReservedItems(20)
                         .setAvailableQuantity(20));
 
+        given(
+                        processedOrderEventRepository.claim(
+                                eq(1L), eq("CONFIRM_ROLLBACK"), any(Instant.class)))
+                .willReturn(1);
         given(inventoryRepository.findByProductCodeIn(List.of("product1", "product2")))
                 .willReturn(List.of(inventoryList.get(0), inventoryList.get(1)));
 
@@ -254,13 +272,93 @@ class InventoryOrderManageServiceImplTest {
     @Test
     void shouldSkipDuplicateReserveEvent() {
         OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", List.of());
-        given(processedOrderEventRepository.existsByOrderIdAndEventType(100L, "RESERVE"))
-                .willReturn(true);
+        given(processedOrderEventRepository.claim(eq(100L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(0);
 
         OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
 
         assertThat(result).isEqualTo(orderDto);
         verifyNoInteractions(inventoryRepository);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void reserve_DuplicateReserveWithBlankAttempt_ShouldSuppress() {
+        OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", List.of(), "   ");
+        given(processedOrderEventRepository.claim(eq(100L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(0);
+
+        OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
+
+        assertThat(result).isEqualTo(orderDto);
+        verifyNoInteractions(inventoryRepository);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void reserve_DuplicateReserveWithSameAttempt_ShouldSuppress() {
+        OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", List.of(), "attempt-1");
+        given(processedOrderEventRepository.claim(eq(100L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(0);
+        given(
+                        processedOrderEventRepository.claim(
+                                eq(100L), eq("RESERVE_REPLY:attempt-1"), any(Instant.class)))
+                .willReturn(0);
+
+        OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
+
+        assertThat(result).isEqualTo(orderDto);
+        verifyNoInteractions(inventoryRepository);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void reserve_DuplicateReserveWithNewAttempt_ShouldReplayWithoutStockChanges() {
+        List<OrderDto.OrderItemDto> orderItems =
+                List.of(new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
+        OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", orderItems, "attempt-2");
+        given(processedOrderEventRepository.claim(eq(100L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(0);
+        given(
+                        processedOrderEventRepository.claim(
+                                eq(100L), eq("RESERVE_REPLY:attempt-2"), any(Instant.class)))
+                .willReturn(1);
+        given(processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(100L))
+                .willReturn(Optional.of("ACCEPT"));
+
+        OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
+
+        assertThat(result.status()).isEqualTo("ACCEPT");
+        assertThat(result.source()).isEqualTo(AppConstants.SOURCE);
+        assertThat(result.attemptId()).isEqualTo("attempt-2");
+        assertThat(result.items()).isEqualTo(orderItems);
+
+        verify(inventoryRepository, never()).saveAll(anyCollection());
+        ArgumentCaptor<InventoryProcessedEvent> eventCaptor =
+                ArgumentCaptor.forClass(InventoryProcessedEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().order().status()).isEqualTo("ACCEPT");
+        assertThat(eventCaptor.getValue().order().attemptId()).isEqualTo("attempt-2");
+    }
+
+    @Test
+    void reserve_DuplicateReserveWithNewAttempt_OutcomeNull_ShouldNotReplay() {
+        List<OrderDto.OrderItemDto> orderItems =
+                List.of(new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN));
+        OrderDto orderDto = new OrderDto(100L, 1L, "NEW", "ORDER", orderItems, "attempt-3");
+        given(processedOrderEventRepository.claim(eq(100L), eq("RESERVE"), any(Instant.class)))
+                .willReturn(0);
+        given(
+                        processedOrderEventRepository.claim(
+                                eq(100L), eq("RESERVE_REPLY:attempt-3"), any(Instant.class)))
+                .willReturn(1);
+        given(processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(100L))
+                .willReturn(Optional.empty());
+
+        OrderDto result = inventoryOrderManageServiceImpl.reserve(orderDto);
+
+        assertThat(result).isEqualTo(orderDto);
+        verify(inventoryRepository, never()).saveAll(anyCollection());
         verifyNoInteractions(eventPublisher);
     }
 }

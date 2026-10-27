@@ -15,6 +15,7 @@ import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecor
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -121,5 +122,78 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                                                         .findByProductCodeAndDeletedFalse(
                                                                 "P_UNKNOWN_001"))
                                         .isPresent());
+    }
+
+    @Test
+    void onDuplicateNewOrderEvent_DecreasesAvailableQuantityOnlyOnce() {
+        String code = "JUNIT_DUP_ORDER";
+        inventoryRepository.deleteByProductCode(code);
+        Inventory inventory =
+                inventoryRepository.save(
+                        new Inventory().setProductCode(code).setAvailableQuantity(100));
+
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, code, 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(8888L, 2L, "NEW", "ORDER", java.util.List.of(item));
+        byte[] payload = jsonMapper.writeValueAsBytes(orderDto);
+
+        // Send duplicate NEW events with key = orderId
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), payload);
+        kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), payload);
+
+        // A sentinel message to ensure both messages were processed by the single-partition order
+        // listener
+        OrderDto sentinelDto = new OrderDto(8889L, 2L, "NEW", "ORDER", java.util.List.of(item));
+        kafkaTemplate.send(
+                "orders",
+                String.valueOf(orderDto.orderId()),
+                jsonMapper.writeValueAsBytes(sentinelDto));
+
+        await().atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(200))
+                .untilAsserted(
+                        () -> {
+                            Optional<InventoryRecord> opt =
+                                    inventoryJOOQRepository.findById(inventory.getId());
+                            assertThat(opt).isPresent();
+                            // First order 8888 took 10 (reserved 10, available 90).
+                            // Sentinel 8889 took 10 (reserved 20, available 80).
+                            // If 8888 duplicate was processed, available would be 70 and reserved
+                            // 30.
+                            InventoryRecord record = opt.get();
+                            assertThat(record.getReservedItems()).isEqualTo(20);
+                            assertThat(record.getQuantity()).isEqualTo(80);
+                        });
+    }
+
+    @Test
+    void onDuplicateProductEvent_CreatesOnlyOneProductRow() {
+        String code = "P_DUP_001";
+        inventoryRepository.deleteByProductCode(code);
+
+        ProductDto productDto = new ProductDto(code, "Dup Product", "Desc", BigDecimal.TEN);
+        byte[] payload = jsonMapper.writeValueAsBytes(productDto);
+
+        // Send duplicate product events
+        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, code, payload);
+        kafkaTemplate.send(AppConstants.PRODUCT_TOPIC, code, payload);
+
+        // Sentinel product to synchronize
+        String sentinelCode = "P_DUP_SENTINEL";
+        inventoryRepository.deleteByProductCode(sentinelCode);
+        ProductDto sentinelDto = new ProductDto(sentinelCode, "Sentinel", "Desc", BigDecimal.TEN);
+        kafkaTemplate.send(
+                AppConstants.PRODUCT_TOPIC, code, jsonMapper.writeValueAsBytes(sentinelDto));
+
+        await().atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(200))
+                .untilAsserted(
+                        () -> {
+                            assertThat(
+                                            inventoryJOOQRepository
+                                                    .findByProductCodeAndDeletedFalse(sentinelCode))
+                                    .isPresent();
+                            // Verify exactly one row for P_DUP_001
+                            assertThat(inventoryRepository.findByProductCode(code)).isPresent();
+                        });
     }
 }

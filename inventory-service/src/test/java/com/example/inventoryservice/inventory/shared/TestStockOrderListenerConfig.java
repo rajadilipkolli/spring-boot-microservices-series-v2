@@ -7,6 +7,7 @@
 package com.example.inventoryservice.inventory.shared;
 
 import com.example.common.dto.OrderDto;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ public class TestStockOrderListenerConfig {
     private static final Logger log = LoggerFactory.getLogger(TestStockOrderListenerConfig.class);
 
     private volatile CountDownLatch countDownLatch = new CountDownLatch(1);
+    private final List<OrderDto> receivedOrders = new java.util.concurrent.CopyOnWriteArrayList<>();
     private final JsonMapper jsonMapper;
 
     public TestStockOrderListenerConfig(JsonMapper jsonMapper) {
@@ -31,8 +33,13 @@ public class TestStockOrderListenerConfig {
         return countDownLatch;
     }
 
+    public List<OrderDto> getReceivedOrders() {
+        return receivedOrders;
+    }
+
     public void reset() {
         this.countDownLatch = new CountDownLatch(1);
+        this.receivedOrders.clear();
     }
 
     @KafkaListener(
@@ -45,6 +52,7 @@ public class TestStockOrderListenerConfig {
     public void onOrderEvent(ConsumerRecord<String, byte[]> record) {
         OrderDto orderDto = jsonMapper.readValue(record.value(), OrderDto.class);
         log.info("Received Order: {}", orderDto);
+        receivedOrders.add(orderDto);
         countDownLatch.countDown();
     }
 }

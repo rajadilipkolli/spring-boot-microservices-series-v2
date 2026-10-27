@@ -20,6 +20,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
 import tools.jackson.databind.json.JsonMapper;
 
 @ActiveProfiles({PROFILE_TEST})
@@ -50,4 +51,5 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected KafkaConnectionDetails kafkaConnectionDetails;
 
     @Autowired protected InventoryOrderManageService inventoryOrderManageService;
+    @Autowired protected PlatformTransactionManager transactionManager;
 }
