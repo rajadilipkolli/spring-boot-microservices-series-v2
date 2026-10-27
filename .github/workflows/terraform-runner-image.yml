@@ -1,0 +1,62 @@
+name: Build and Publish Keycloak Terraform Runner Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'deployment/terraform/**'
+      - '.github/workflows/terraform-runner-image.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'deployment/terraform/**'
+      - '.github/workflows/terraform-runner-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-runner-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 \
+            -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT \
+            -t dockertmt/mmv2-keycloak-terraform-runner:latest \
+            -f deployment/terraform/Dockerfile deployment/terraform/
+
+      - if: github.ref == 'refs/heads/main'
+        name: Verify Docker credentials
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSCODE: ${{ secrets.DOCKER_PASSCODE }}
+        run: |
+          if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_PASSCODE" ]; then
+            echo "Error: DOCKER_USERNAME or DOCKER_PASSCODE secret is not set"
+            echo "Please add these secrets in: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - if: github.ref == 'refs/heads/main'
+        name: Login to DockerHub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSCODE }}
+
+      - if: github.ref == 'refs/heads/main'
+        name: Push Docker image
+        run: |
+          docker push dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
+          docker push dockertmt/mmv2-keycloak-terraform-runner:latest

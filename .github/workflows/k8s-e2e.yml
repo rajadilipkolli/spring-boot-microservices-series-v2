@@ -69,7 +69,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           
-          # Build the Terraform runner image locally since it's not published to Docker Hub
+          # Build the Terraform runner image locally so Kind tests against the current commit.
+          # Dedicated workflow (.github/workflows/terraform-runner-image.yml) publishes the image to DockerHub.
           docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
           
           images=(

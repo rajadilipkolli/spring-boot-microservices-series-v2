@@ -97,7 +97,7 @@ This is an intentional trade-off:
 
 **Aligning CI to the Terraform flow is recorded as future work.** A subsequent
 ADR or ticket should:
-1. Build and push the Terraform runner image in CI.
+1. Build and push the Terraform runner image in CI (implemented via `.github/workflows/terraform-runner-image.yml`).
 2. Apply the prod overlay in CI and wait for the Job.
 3. Remove the `keycloak-realm-configmap.yaml` from the base overlay entirely.
 
@@ -117,8 +117,11 @@ ADR or ticket should:
 ### Negative
 
 - **New image to build and maintain**: `dockertmt/mmv2-keycloak-terraform-runner`
-  must be built, pushed, and loaded into Kind before the prod overlay can be
-  applied. This adds a step to the deployment surface.
+  is published to DockerHub via `.github/workflows/terraform-runner-image.yml`.
+  The Kubernetes E2E workflow (`.github/workflows/k8s-e2e.yml`) builds the runner
+  from checked-out source, loads the local image into Kind, and applies the CI
+  overlay (`deployment/k8s/overlays/ci`). This adds a step to the deployment
+  surface.
 - **State coupling**: Terraform state is stored in a Kubernetes Secret. Losing
   that Secret (e.g. accidental namespace deletion) requires `terraform import`
   to reconcile.
