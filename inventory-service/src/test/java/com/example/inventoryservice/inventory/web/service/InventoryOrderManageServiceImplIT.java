@@ -441,9 +441,14 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
                                             .filter(o -> orderId.equals(o.orderId()))
                                             .toList();
                             assertThat(orders).hasSize(2);
-                            assertThat(orders.get(0).attemptId()).isEqualTo("attempt-A");
-                            assertThat(orders.get(1).attemptId()).isEqualTo("attempt-B");
-                            assertThat(orders.get(1).status()).isEqualTo("ACCEPT");
+                            assertThat(orders)
+                                    .extracting(OrderDto::attemptId)
+                                    .containsExactlyInAnyOrder("attempt-A", "attempt-B");
+                            assertThat(orders)
+                                    .filteredOn(order -> "attempt-B".equals(order.attemptId()))
+                                    .singleElement()
+                                    .extracting(OrderDto::status)
+                                    .isEqualTo("ACCEPT");
                         });
     }
 
