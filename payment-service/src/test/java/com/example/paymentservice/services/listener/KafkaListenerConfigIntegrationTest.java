@@ -302,13 +302,14 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
                             // Order confirm captured 10 -> reserved becomes 10.
                             // Sentinel reserve added 10 -> reserved becomes 20.
                             // Sentinel confirm captured 10 -> reserved becomes 10.
-                            // Available balance remains 90 throughout capture.
+                            // Capture does not change available; the sentinel reserve deducted 10
+                            // (100 - 10 seed - 10 sentinel = 80).
                             CustomersRecord persistedCustomer =
                                     customerDAO.findById(customer.getId()).orElseThrow();
                             assertThat(persistedCustomer.getAmountReserved())
                                     .isEqualByComparingTo(BigDecimal.TEN);
                             assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(90));
+                                    .isEqualByComparingTo(BigDecimal.valueOf(80));
 
                             // Single SETTLE ledger entry for orderDto
                             String settleLedgerKey =
