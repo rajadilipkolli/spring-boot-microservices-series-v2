@@ -117,9 +117,11 @@ ADR or ticket should:
 ### Negative
 
 - **New image to build and maintain**: `dockertmt/mmv2-keycloak-terraform-runner`
-  is published to DockerHub via `.github/workflows/terraform-runner-image.yml`
-  and loaded into Kind in CI before the prod overlay can be applied. This adds a
-  step to the deployment surface.
+  is published to DockerHub via `.github/workflows/terraform-runner-image.yml`.
+  The Kubernetes E2E workflow (`.github/workflows/k8s-e2e.yml`) builds the runner
+  from checked-out source, loads the local image into Kind, and applies the CI
+  overlay (`deployment/k8s/overlays/ci`). This adds a step to the deployment
+  surface.
 - **State coupling**: Terraform state is stored in a Kubernetes Secret. Losing
   that Secret (e.g. accidental namespace deletion) requires `terraform import`
   to reconcile.

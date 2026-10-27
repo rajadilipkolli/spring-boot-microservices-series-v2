@@ -351,20 +351,24 @@ kubectl get secret tfstate-default-keycloak-realm -n retailstore
 
 The Terraform service is available in both compose stacks as an opt-in profile.
 Docker Compose pulls the pre-built runner image (`dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT`)
-from DockerHub:
+from DockerHub. Run these commands from the repository root:
 
 ```bash
 # Standard flow (default) — uses --import-realm
-docker compose up keycloak
+docker compose -f deployment/docker-compose.yml up keycloak
 
 # Terraform flow (recommended forward-looking path)
-docker compose --profile terraform up terraform
+docker compose -f deployment/docker-compose.yml --profile terraform up terraform
 ```
 
 To refresh the snapshot image tag from DockerHub:
 
 ```bash
-docker compose pull terraform
+# Default stack
+docker compose -f deployment/docker-compose.yml pull terraform
+
+# Tools stack
+docker compose -f deployment/docker-compose-tools.yml pull terraform
 ```
 
 For unpublished local runner modifications, build the runner image locally before starting Compose:
