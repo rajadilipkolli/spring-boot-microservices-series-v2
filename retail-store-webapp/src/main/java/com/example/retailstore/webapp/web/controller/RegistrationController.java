@@ -51,20 +51,27 @@ public class RegistrationController {
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
         logger.info("Received registration request for user: {}", request.username());
         registrationService.registerUser(request);
-        CustomerRequest customerRequest = new CustomerRequest(
-                request.username(),
-                request.email(),
-                String.valueOf(request.phone()),
-                request.addressLine1(),
-                request.addressLine2(),
-                request.city(),
-                request.state(),
-                request.zipCode(),
-                request.country(),
-                BigDecimal.valueOf(10_000));
-        CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
+        try {
+            CustomerRequest customerRequest = new CustomerRequest(
+                    request.username(),
+                    request.email(),
+                    String.valueOf(request.phone()),
+                    request.addressLine1(),
+                    request.addressLine2(),
+                    request.city(),
+                    request.state(),
+                    request.zipCode(),
+                    request.country(),
+                    BigDecimal.valueOf(10_000));
+            CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
-        logger.info("User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
-        return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+            logger.info(
+                    "User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
+            return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+        } catch (Exception ex) {
+            logger.error("Customer creation failed for user {}; compensating Keycloak user", request.username(), ex);
+            registrationService.deleteUserByUsername(request.username());
+            throw ex;
+        }
     }
 }

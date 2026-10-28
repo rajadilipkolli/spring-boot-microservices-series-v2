@@ -42,15 +42,6 @@ class ApiGatewayConfiguration {
                                                                         "X-Response-Header",
                                                                         "Transformed"))
                                         .uri(httpbinUri))
-                .route(
-                        p ->
-                                p.path("/ORDER-SERVICE-new/**")
-                                        .filters(
-                                                f ->
-                                                        f.rewritePath(
-                                                                "/ORDER-SERVICE-new/(?<segment>.*)",
-                                                                "/ORDER-SERVICE-feign/${segment}"))
-                                        .uri("lb://ORDER-SERVICE"))
                 .build();
     }
 }

@@ -25,8 +25,10 @@ This module provides end-to-end integration tests for the **Spring Boot Microser
    - **Rollback (Insufficient Stock)**: Submits order exceeding stock $\to$ awaits Saga transition to `ROLLBACK`/`REJECTED`.
    - **Rollback (Insufficient Funds)**: Submits order exceeding balance $\to$ awaits Saga transition to `ROLLBACK`/`REJECTED`.
 4. **Security & Identity (`KeycloakSecurityE2ETest`)**:
-   - Validates OAuth2 token acquisition, realm OpenID configuration, and token exchange.
-5. **Resilience & Fallbacks (`ResilienceE2ETest`)**:
+   - Validates OAuth2 token acquisition (ROPC & client credentials flows), realm OpenID configuration, and token exchange.
+5. **Retail Store WebApp APIs & Authentication (`RetailStoreWebappAuthE2ETest`)**:
+   - Validates that downstream APIs consumed by `retail-store-webapp` (Catalog, Inventory, Payment/Customer, Order) are functioning with OAuth2 Bearer token authentication via API Gateway.
+6. **Resilience & Fallbacks (`ResilienceE2ETest`)**:
    - Validates Gateway fallback routing and circuit breaker behavior.
 
 ---

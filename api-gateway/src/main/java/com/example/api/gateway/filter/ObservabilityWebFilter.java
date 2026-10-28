@@ -33,41 +33,56 @@ class ObservabilityWebFilter implements WebFilter {
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @Override
-    public @NonNull Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
+    public @NonNull Mono<Void> filter(
+            @NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
+        String traceId = getTraceId();
+        ServerWebExchange effectiveExchange = exchange;
+        if (traceId != null
+                && exchange.getRequest().getHeaders().getFirst("X-Correlation-Id") == null) {
+            effectiveExchange =
+                    exchange.mutate().request(r -> r.header("X-Correlation-Id", traceId)).build();
+        }
+
+        final ServerWebExchange finalExchange = effectiveExchange;
+
         // Safely add headers to the response before it commits
-        exchange.getResponse()
+        finalExchange
+                .getResponse()
                 .beforeCommit(
                         () -> {
-                            String traceId = getTraceId();
                             if (traceId != null) {
-                                exchange.getResponse().getHeaders().add(TRACE_ID_HEADER, traceId);
+                                finalExchange
+                                        .getResponse()
+                                        .getHeaders()
+                                        .add(TRACE_ID_HEADER, traceId);
                             }
                             return Mono.empty();
                         });
 
         // 2. Logging & Timing Logic
-        if (exchange.getRequest().getURI().getPath().contains("/actuator")) {
+        if (finalExchange.getRequest().getURI().getPath().contains("/actuator")) {
             if (log.isTraceEnabled()) {
-                log.trace("Path of the request received -> {}", exchange.getRequest().getPath());
+                log.trace(
+                        "Path of the request received -> {}", finalExchange.getRequest().getPath());
             }
-            return chain.filter(exchange);
+            return chain.filter(finalExchange);
         }
 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         log.info(
                 "Path of the request received -> {} with method {}",
-                exchange.getRequest().getPath(),
-                exchange.getRequest().getMethod());
+                finalExchange.getRequest().getPath(),
+                finalExchange.getRequest().getMethod());
 
-        return chain.filter(exchange)
+        return chain.filter(finalExchange)
                 .doFinally(
-                        (SignalType signal) -> {
+                        (SignalType _) -> {
                             Integer status = null;
                             try {
-                                exchange.getResponse();
-                                if (exchange.getResponse().getStatusCode() != null) {
-                                    status = exchange.getResponse().getStatusCode().value();
+                                finalExchange.getResponse();
+                                if (finalExchange.getResponse().getStatusCode() != null) {
+                                    status = finalExchange.getResponse().getStatusCode().value();
                                 }
                             } catch (Exception e) {
                                 // ignore - best effort to read status
@@ -76,8 +91,8 @@ class ObservabilityWebFilter implements WebFilter {
                             long took = stopWatch.getTotalTimeMillis();
                             log.info(
                                     "Request {} {} -> status={} took={}ms",
-                                    exchange.getRequest().getMethod(),
-                                    exchange.getRequest().getURI().getPath(),
+                                    finalExchange.getRequest().getMethod(),
+                                    finalExchange.getRequest().getURI().getPath(),
                                     status == null ? "UNKNOWN" : status,
                                     took);
                         });

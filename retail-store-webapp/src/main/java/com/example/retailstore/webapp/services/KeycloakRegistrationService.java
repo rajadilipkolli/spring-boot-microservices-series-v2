@@ -70,6 +70,25 @@ public class KeycloakRegistrationService {
     }
 
     /**
+     * Deletes an account matching the username, suppressing cleanup errors if the user is absent.
+     *
+     * @param username the username to remove from Keycloak
+     */
+    public void deleteUserByUsername(String username) {
+        try {
+            RealmResource realmResource = keycloakClient.realm(realm);
+            List<UserRepresentation> users = realmResource.users().searchByUsername(username, true);
+            if (users != null) {
+                for (UserRepresentation user : users) {
+                    realmResource.users().get(user.getId()).remove();
+                }
+            }
+        } catch (Exception ignored) {
+            // Best effort compensation
+        }
+    }
+
+    /**
      * Maps registration details to an enabled Keycloak user with a non-temporary password.
      *
      * @param request profile and password for the new account

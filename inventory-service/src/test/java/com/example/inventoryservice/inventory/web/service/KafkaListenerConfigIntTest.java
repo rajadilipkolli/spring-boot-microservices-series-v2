@@ -17,9 +17,15 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
+
+    @BeforeEach
+    void setUp() {
+        processedOrderEventRepository.deleteAllInBatch();
+    }
 
     @Test
     void onNewOrderEvent() {
