@@ -11,10 +11,14 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class KeycloakRegistrationService {
+
+    private static final Logger log = LoggerFactory.getLogger(KeycloakRegistrationService.class);
 
     private final Keycloak keycloakClient;
     private final String realm;
@@ -70,7 +74,7 @@ public class KeycloakRegistrationService {
     }
 
     /**
-     * Deletes an account matching the username, suppressing cleanup errors if the user is absent.
+     * Deletes an account matching the username, logging and suppressing cleanup errors.
      *
      * @param username the username to remove from Keycloak
      */
@@ -83,8 +87,8 @@ public class KeycloakRegistrationService {
                     realmResource.users().get(user.getId()).remove();
                 }
             }
-        } catch (Exception ignored) {
-            // Best effort compensation
+        } catch (Exception cleanupException) {
+            log.error("Failed to delete Keycloak user during registration compensation", cleanupException);
         }
     }
 

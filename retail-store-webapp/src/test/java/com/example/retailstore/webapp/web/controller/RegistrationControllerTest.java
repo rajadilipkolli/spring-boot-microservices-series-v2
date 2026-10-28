@@ -1,9 +1,12 @@
 package com.example.retailstore.webapp.web.controller;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -21,6 +24,7 @@ import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -28,14 +32,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(RegistrationController.class)
@@ -199,6 +209,62 @@ class RegistrationControllerTest {
     private static Stream<Arguments> invalidAddressComponents() {
         return Stream.of("addressLine1", "city", "state", "zipCode", "country")
                 .flatMap(field -> Stream.of("missing", null, "", " \t\n").map(value -> Arguments.of(field, value)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 409})
+    void shouldCompensateConfirmedCustomerRejectionAndPropagateOriginalException(int status) {
+        var failure = new HttpClientErrorException(HttpStatus.valueOf(status));
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenThrow(failure);
+
+        var controller = new RegistrationController(registrationService, customerServiceClient);
+        assertThatThrownBy(() -> controller.register(validRegistrationRequest()))
+                .isSameAs(failure);
+
+        verify(registrationService).registerUser(any(RegistrationRequest.class));
+        verify(registrationService).deleteUserByUsername(TEST_USERNAME);
+    }
+
+    @ParameterizedTest
+    @MethodSource("indeterminateCustomerFailures")
+    void shouldPreserveKeycloakUserAndPropagateOriginalException(RuntimeException failure) {
+        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+                .thenThrow(failure);
+
+        var controller = new RegistrationController(registrationService, customerServiceClient);
+        assertThatThrownBy(() -> controller.register(validRegistrationRequest()))
+                .isSameAs(failure);
+
+        verify(registrationService).registerUser(any(RegistrationRequest.class));
+        verify(registrationService, never()).deleteUserByUsername(any());
+    }
+
+    private static Stream<RuntimeException> indeterminateCustomerFailures() {
+        return Stream.of(
+                new ResourceAccessException("Response timed out", new SocketTimeoutException("Read timed out")),
+                new HttpClientErrorException(HttpStatus.REQUEST_TIMEOUT),
+                new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR),
+                new HttpServerErrorException(HttpStatus.BAD_GATEWAY),
+                new HttpServerErrorException(HttpStatus.GATEWAY_TIMEOUT),
+                new RestClientException("Cannot decode customer response"),
+                new IllegalStateException("Unexpected client failure"));
+    }
+
+    private static RegistrationRequest validRegistrationRequest() {
+        return new RegistrationRequest(
+                TEST_USERNAME,
+                TEST_EMAIL,
+                "Test",
+                "User",
+                TEST_PASSWORD,
+                9848022334L,
+                "junitAddress",
+                null,
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country");
     }
 
     /** Verifies that a Keycloak registration failure produces HTTP 500. */

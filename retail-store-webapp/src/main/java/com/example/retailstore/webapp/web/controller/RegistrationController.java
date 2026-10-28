@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.client.HttpClientErrorException;
 
 @Controller
 @Validated
@@ -41,8 +42,9 @@ public class RegistrationController {
     /**
      * Registers a Keycloak user, then gets or creates the payment customer using the supplied
      * address components and an initial available balance of 10,000. Keycloak and customer-service
-     * failures propagate, including duplicate-user errors. A customer-service failure does not undo
-     * the completed Keycloak registration.
+     * failures propagate, including duplicate-user errors. A confirmed customer validation failure
+     * (HTTP 400) or duplicate rejection (HTTP 409) compensates the Keycloak registration. Other
+     * failures preserve the Keycloak user because customer creation may have completed.
      *
      * @param request validated user and customer registration details
      * @return a success message after both service calls complete
@@ -68,9 +70,13 @@ public class RegistrationController {
             logger.info(
                     "User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
             return ResponseEntity.ok(Map.of("message", "User registered successfully"));
-        } catch (Exception ex) {
-            logger.error("Customer creation failed for user {}; compensating Keycloak user", request.username(), ex);
-            registrationService.deleteUserByUsername(request.username());
+        } catch (HttpClientErrorException ex) {
+            // These statuses are explicit rejections in the customer creation API contract.
+            if (ex.getStatusCode().value() == 400 || ex.getStatusCode().value() == 409) {
+                logger.error(
+                        "Customer creation rejected for user {}; compensating Keycloak user", request.username(), ex);
+                registrationService.deleteUserByUsername(request.username());
+            }
             throw ex;
         }
     }
