@@ -32,6 +32,15 @@ class ObservabilityWebFilter implements WebFilter {
     private static final Logger log = LoggerFactory.getLogger(ObservabilityWebFilter.class);
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
+    /**
+     * Passes the request through the chain with a trace ID from the current span, or a random
+     * UUID without hyphens when no valid span exists. Adds that ID as {@code X-Correlation-Id}
+     * only when the request header is absent, and as {@code X-Trace-Id} before the response commits.
+     *
+     * @param exchange current request and response
+     * @param chain remaining request filters
+     * @return completion of the remaining chain, propagating its errors
+     */
     @Override
     public @NonNull Mono<Void> filter(
             @NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
