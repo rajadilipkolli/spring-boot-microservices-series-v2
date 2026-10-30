@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.api.gateway.config.AbstractIntegrationTest;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -42,6 +43,7 @@ public class ObservabilityWebFilterIntegrationTest extends AbstractIntegrationTe
 
     @Test
     void shouldInjectTraceIdIntoResponse() {
+        AtomicReference<String> capturedTraceId = new AtomicReference<>();
         webTestClient
                 .get()
                 .uri("/api/trace/test")
@@ -57,12 +59,13 @@ public class ObservabilityWebFilterIntegrationTest extends AbstractIntegrationTe
                         traceId -> {
                             assertThat(traceId).isNotNull();
                             assertThat(traceId).isNotEmpty();
+                            capturedTraceId.set(traceId);
                         });
 
         WireMock wireMock = new WireMock(wireMockServer.getHost(), wireMockServer.getPort());
         wireMock.verifyThat(
                 WireMock.getRequestedFor(WireMock.urlEqualTo("/test"))
-                        .withHeader("X-Correlation-Id", WireMock.matching(".+")));
+                        .withHeader("X-Correlation-Id", WireMock.equalTo(capturedTraceId.get())));
     }
 
     @Test
