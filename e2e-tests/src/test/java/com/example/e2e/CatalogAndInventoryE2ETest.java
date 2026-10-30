@@ -13,75 +13,95 @@ import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 @Tag("e2e")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("E2E - Catalog & Inventory Inter-Service Communication")
 class CatalogAndInventoryE2ETest {
 
-    private static final String PRODUCT_CODE =
-            "CAT-INV-" + UUID.randomUUID().toString().substring(0, 8);
+    private static String productCode;
+    private static String createdProductId;
 
     @BeforeAll
     static void setup() {
         E2EConfig.initRestAssured();
+        productCode = "CAT-INV-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     @Test
-    @DisplayName("Should create product, update inventory, and verify inStock status")
-    void shouldCreateProductAndUpdateInventory() {
-        // 1. Create product in Catalog Service
+    @Order(1)
+    @DisplayName("Step 1: Should create product in Catalog Service")
+    void shouldCreateProduct() {
         ProductRequest product =
                 new ProductRequest(
-                        PRODUCT_CODE,
+                        productCode,
                         "Catalog & Inventory Test",
                         "End to End Test for inter-service communication",
                         "https://example.com/item.png",
                         new BigDecimal("49.99"));
 
-        given().spec(E2EConfig.defaultRequestSpec())
-                .body(product)
-                .when()
-                .post("/catalog-service/api/catalog")
-                .then()
-                .statusCode(201)
-                .body("productCode", is(PRODUCT_CODE));
+        createdProductId =
+                given().spec(E2EConfig.defaultRequestSpec())
+                        .body(product)
+                        .when()
+                        .post("/catalog-service/api/catalog")
+                        .then()
+                        .statusCode(201)
+                        .body("productCode", is(productCode))
+                        .extract()
+                        .path("id");
+    }
 
-        // 2. Fetch product by code
+    @Test
+    @Order(2)
+    @DisplayName("Step 2: Should fetch created product by code")
+    void shouldFetchProductByCode() {
         given().spec(E2EConfig.defaultRequestSpec())
                 .when()
-                .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
+                .get("/catalog-service/api/catalog/product-code/" + productCode)
                 .then()
                 .statusCode(200)
-                .body("productCode", is(PRODUCT_CODE))
+                .body("productCode", is(productCode))
                 .body("productName", is("Catalog & Inventory Test"));
+    }
 
-        // 3. Await inventory creation via Kafka, then update inventory in Inventory Service
-        await("Inventory should be initialized for product " + PRODUCT_CODE)
+    @Test
+    @Order(3)
+    @DisplayName("Step 3: Should await inventory creation via Kafka, then update inventory")
+    void shouldAwaitAndSupplyInventory() {
+        await("Inventory should be initialized for product " + productCode)
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
                         () ->
                                 given().spec(E2EConfig.defaultRequestSpec())
                                         .when()
-                                        .get("/inventory-service/api/inventory/" + PRODUCT_CODE)
+                                        .get("/inventory-service/api/inventory/" + productCode)
                                         .then()
                                         .statusCode(200)
-                                        .body("productCode", is(PRODUCT_CODE)));
+                                        .body("productCode", is(productCode)));
 
-        InventoryRequest inventory = new InventoryRequest(PRODUCT_CODE, 75);
+        InventoryRequest inventory = new InventoryRequest(productCode, 75);
         given().spec(E2EConfig.defaultRequestSpec())
                 .body(inventory)
                 .when()
-                .put("/inventory-service/api/inventory/product/" + PRODUCT_CODE)
+                .put("/inventory-service/api/inventory/product/" + productCode)
                 .then()
                 .statusCode(200)
-                .body("productCode", is(PRODUCT_CODE))
+                .body("productCode", is(productCode))
                 .body("availableQuantity", equalTo(75));
+    }
 
-        // 4. Verify catalog-service fetches inStock from inventory-service
-        await("Catalog should reflect inStock status for product " + PRODUCT_CODE)
+    @Test
+    @Order(4)
+    @DisplayName("Step 4: Should verify catalog-service reflects inStock status from inventory")
+    void shouldReflectInStockStatusInCatalog() {
+        await("Catalog should reflect inStock status for product " + productCode)
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
@@ -91,45 +111,50 @@ class CatalogAndInventoryE2ETest {
                                         .when()
                                         .get(
                                                 "/catalog-service/api/catalog/product-code/"
-                                                        + PRODUCT_CODE)
+                                                        + productCode)
                                         .then()
                                         .statusCode(200)
-                                        .body("productCode", is(PRODUCT_CODE))
+                                        .body("productCode", is(productCode))
                                         .body("inStock", is(true)));
+    }
 
-        // 5. Delete product in Catalog Service and verify soft delete propagation to Inventory
-        // Service
-        String productId =
-                given().spec(E2EConfig.defaultRequestSpec())
-                        .when()
-                        .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
-                        .then()
-                        .statusCode(200)
-                        .extract()
-                        .path("id");
+    @Test
+    @Order(5)
+    @DisplayName("Step 5: Should delete product in Catalog and verify soft delete in Inventory")
+    void shouldDeleteProductAndPropagateSoftDelete() {
+        if (createdProductId == null) {
+            createdProductId =
+                    given().spec(E2EConfig.defaultRequestSpec())
+                            .when()
+                            .get("/catalog-service/api/catalog/product-code/" + productCode)
+                            .then()
+                            .statusCode(200)
+                            .extract()
+                            .path("id");
+        }
 
         given().spec(E2EConfig.defaultRequestSpec())
                 .when()
-                .delete("/catalog-service/api/catalog/" + productId)
+                .delete("/catalog-service/api/catalog/" + createdProductId)
                 .then()
                 .statusCode(200);
 
         // Catalog reads should return 404
         given().spec(E2EConfig.defaultRequestSpec())
                 .when()
-                .get("/catalog-service/api/catalog/product-code/" + PRODUCT_CODE)
+                .get("/catalog-service/api/catalog/product-code/" + productCode)
                 .then()
                 .statusCode(404);
 
         // Inventory should soft-delete the item via Kafka event propagation
-        await("Inventory should be soft-deleted for product " + PRODUCT_CODE)
+        await("Inventory should be soft-deleted for product " + productCode)
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
                         () ->
                                 given().spec(E2EConfig.defaultRequestSpec())
                                         .when()
-                                        .get("/inventory-service/api/inventory/" + PRODUCT_CODE)
+                                        .get("/inventory-service/api/inventory/" + productCode)
                                         .then()
                                         .statusCode(404));
     }

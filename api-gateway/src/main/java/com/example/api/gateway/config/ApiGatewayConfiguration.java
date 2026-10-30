@@ -22,6 +22,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 class ApiGatewayConfiguration {
 
+    /**
+     * Routes {@code /get} to the configured upstream, adding the {@code MyHeader: MyURI} request
+     * header, {@code Param=MyValue} query parameter, and {@code X-Response-Header: Transformed}
+     * response header.
+     *
+     * @param builder gateway route builder
+     * @param httpbinUri upstream URI, overridable via {@code app.gateway.httpbin}
+     * @return the demonstration route locator
+     */
     @Bean
     RouteLocator gatewayRouter(
             RouteLocatorBuilder builder,
@@ -42,15 +51,6 @@ class ApiGatewayConfiguration {
                                                                         "X-Response-Header",
                                                                         "Transformed"))
                                         .uri(httpbinUri))
-                .route(
-                        p ->
-                                p.path("/ORDER-SERVICE-new/**")
-                                        .filters(
-                                                f ->
-                                                        f.rewritePath(
-                                                                "/ORDER-SERVICE-new/(?<segment>.*)",
-                                                                "/ORDER-SERVICE-feign/${segment}"))
-                                        .uri("lb://ORDER-SERVICE"))
                 .build();
     }
 }

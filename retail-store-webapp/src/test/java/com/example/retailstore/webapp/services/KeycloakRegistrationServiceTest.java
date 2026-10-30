@@ -5,9 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.ThrowableProxy;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.retailstore.webapp.config.KeycloakProperties;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
@@ -18,6 +23,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.RoleMappingResource;
@@ -32,6 +39,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 @ExtendWith(MockitoExtension.class)
 class KeycloakRegistrationServiceTest {
@@ -128,6 +136,41 @@ class KeycloakRegistrationServiceTest {
         assertThat(captured.getCredentials()).hasSize(1);
         assertThat(captured.getCredentials().get(0).getValue()).isEqualTo("pass123");
         assertThat(captured.getCredentials().get(0).isTemporary()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldLogCleanupFailureWithoutThrowing(boolean removalFails) {
+        given(keycloak.realm("retailstore")).willReturn(realmResource);
+        given(realmResource.users()).willReturn(usersResource);
+        var cleanupFailure = new IllegalStateException("Keycloak cleanup unavailable");
+        if (removalFails) {
+            var user = new UserRepresentation();
+            user.setId("created-user-id");
+            given(usersResource.searchByUsername("testuser", true)).willReturn(List.of(user));
+            given(usersResource.get("created-user-id")).willReturn(userResource);
+            doThrow(cleanupFailure).when(userResource).remove();
+        } else {
+            given(usersResource.searchByUsername("testuser", true)).willThrow(cleanupFailure);
+        }
+
+        Logger logger = (Logger) LoggerFactory.getLogger(KeycloakRegistrationService.class);
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertDoesNotThrow(() -> svc.deleteUserByUsername("testuser"));
+            assertThat(appender.list).singleElement().satisfies(event -> {
+                assertThat(event.getFormattedMessage()).contains("registration compensation");
+                assertThat(event.getThrowableProxy())
+                        .isInstanceOfSatisfying(
+                                ThrowableProxy.class,
+                                proxy -> assertThat(proxy.getThrowable()).isSameAs(cleanupFailure));
+            });
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
     }
 
     /** Verifies HTTP 409 raises a duplicate-user error, skips roles, and closes the response. */

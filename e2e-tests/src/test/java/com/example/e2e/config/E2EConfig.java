@@ -28,6 +28,11 @@ public final class E2EConfig {
     private static final String DEFAULT_KEYCLOAK_URL = "http://localhost:9191";
     private static final String DEFAULT_WEBAPP_URL = "http://localhost:8080";
 
+    /**
+     * Guards the one-time warm-up call so only the first test class that calls {@link
+     * #initRestAssured()} pays the cost. All subsequent classes share the already-warmed-up
+     * services.
+     */
     private static final AtomicBoolean WARMED_UP = new AtomicBoolean(false);
 
     private E2EConfig() {}
@@ -94,12 +99,34 @@ public final class E2EConfig {
         return DEFAULT_WEBAPP_URL;
     }
 
+    /**
+     * Returns a {@link RequestSpecification} pre-configured with the API Gateway base URL, JSON
+     * content type, and the shared {@link RestAssuredConfig}.
+     */
     public static RequestSpecification defaultRequestSpec() {
         return new RequestSpecBuilder()
                 .setBaseUri(getBaseUrl())
                 .setConfig(restAssuredConfig())
                 .setContentType(ContentType.JSON)
                 .setAccept(ContentType.JSON)
+                .build();
+    }
+
+    /**
+     * Returns a {@link RequestSpecification} identical to {@link #defaultRequestSpec()} but with
+     * the supplied bearer token attached as an {@code Authorization: Bearer} header. Use this when
+     * testing endpoints that require an authenticated caller (e.g. the APIs consumed by
+     * retail-store-webapp).
+     *
+     * @param bearerToken a valid OAuth2 access token
+     */
+    public static RequestSpecification authenticatedRequestSpec(String bearerToken) {
+        return new RequestSpecBuilder()
+                .setBaseUri(getBaseUrl())
+                .setConfig(restAssuredConfig())
+                .setContentType(ContentType.JSON)
+                .setAccept(ContentType.JSON)
+                .addHeader("Authorization", "Bearer " + bearerToken)
                 .build();
     }
 
@@ -122,6 +149,11 @@ public final class E2EConfig {
                                 .readTimeout(Duration.ofSeconds(30)));
     }
 
+    /**
+     * Initialises REST-Assured global state and triggers the one-time service warm-up. Safe to call
+     * from multiple {@code @BeforeAll} methods — only the first invocation performs the warm-up;
+     * subsequent calls are no-ops for the warm-up step.
+     */
     public static void initRestAssured() {
         String baseUrl = getBaseUrl();
         log.info("Configuring REST-Assured with target Base URL: {}", baseUrl);
