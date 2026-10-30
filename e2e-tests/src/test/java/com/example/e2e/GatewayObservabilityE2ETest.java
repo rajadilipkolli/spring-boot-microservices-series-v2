@@ -8,6 +8,7 @@ package com.example.e2e;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 import com.example.e2e.config.E2EConfig;
@@ -25,7 +26,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 class GatewayObservabilityE2ETest {
 
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     @BeforeAll
     static void setup() {
@@ -56,24 +56,25 @@ class GatewayObservabilityE2ETest {
     }
 
     @Test
-    @DisplayName(
-            "Gateway should preserve custom X-Correlation-Id and inject X-Trace-Id in response")
-    void shouldPreserveAndReturnTraceIdWithCustomCorrelationId() {
-        String correlationId = "e2e-corr-" + UUID.randomUUID();
+    @DisplayName("Gateway should propagate X-Trace-Id downstream and expose in error responses")
+    void shouldPropagateTraceIdDownstreamAndExposeInErrorResponse() {
+        String clientTraceId = UUID.randomUUID().toString().replace("-", "");
 
         Response response =
                 given().spec(E2EConfig.defaultRequestSpec())
-                        .header(CORRELATION_ID_HEADER, correlationId)
+                        .header(TRACE_ID_HEADER, clientTraceId)
                         .when()
-                        .get("/catalog-service/api/catalog")
+                        .get("/inventory-service/api/inventory/product")
                         .then()
-                        .statusCode(200)
+                        .statusCode(400)
                         .header(TRACE_ID_HEADER, notNullValue())
+                        .body("traceId", equalTo(clientTraceId))
                         .extract()
                         .response();
 
         String traceId = response.header(TRACE_ID_HEADER);
-        assertThat(traceId).isNotBlank();
+        assertThat(traceId).isEqualTo(clientTraceId);
+        assertThat(response.jsonPath().getString("traceId")).isEqualTo(clientTraceId);
     }
 
     @Test

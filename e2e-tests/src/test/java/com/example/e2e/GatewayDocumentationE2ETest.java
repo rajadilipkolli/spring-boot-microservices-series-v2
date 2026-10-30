@@ -55,6 +55,7 @@ class GatewayDocumentationE2ETest {
     @DisplayName("API Gateway should expose Actuator Prometheus scrape endpoint")
     void gatewayShouldExposePrometheus() {
         given().spec(E2EConfig.defaultRequestSpec())
+                .accept("text/plain")
                 .when()
                 .get("/actuator/prometheus")
                 .then()

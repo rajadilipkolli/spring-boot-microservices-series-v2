@@ -43,10 +43,10 @@ class GatewayOrchestrationE2ETest {
                 .statusCode(200)
                 .body("status", equalTo("success"))
                 .body("message", containsString("Generation process completed successfully"))
-                .body("details", notNullValue())
-                .body("details.catalog", notNullValue())
-                .body("details.inventory", notNullValue())
-                .body("details.order", notNullValue());
+                .body("serviceResponses", notNullValue())
+                .body("serviceResponses.catalog", notNullValue())
+                .body("serviceResponses.inventory", notNullValue())
+                .body("serviceResponses.order", notNullValue());
     }
 
     @ParameterizedTest(name = "Should reject invalid batch size {0}")
