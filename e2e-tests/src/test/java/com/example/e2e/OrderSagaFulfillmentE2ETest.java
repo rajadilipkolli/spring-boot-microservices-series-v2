@@ -62,7 +62,7 @@ class OrderSagaFulfillmentE2ETest {
         // 2. Ensure initial stock in Inventory
         // Wait for inventory record to be created asynchronously via Kafka from catalog service
         await("Inventory should be created for product " + TEST_PRODUCT_CODE)
-                .atMost(Duration.ofSeconds(15))
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
                         () ->

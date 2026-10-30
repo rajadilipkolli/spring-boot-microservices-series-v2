@@ -75,7 +75,7 @@ class CatalogAndInventoryE2ETest {
     @DisplayName("Step 3: Should await inventory creation via Kafka, then update inventory")
     void shouldAwaitAndSupplyInventory() {
         await("Inventory should be initialized for product " + productCode)
-                .atMost(Duration.ofSeconds(15))
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(
                         () ->

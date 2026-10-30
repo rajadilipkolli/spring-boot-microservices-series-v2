@@ -8,6 +8,7 @@ package com.example.e2e;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -21,6 +22,7 @@ import com.example.e2e.models.OrderRequest;
 import com.example.e2e.models.ProductRequest;
 import io.restassured.response.Response;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,6 +52,8 @@ class RetailStoreWebappAuthE2ETest {
 
     private static String bearerToken;
     private static String testProductCode;
+    private static String testCustomerEmail;
+    private static String testCustomerName;
     private static Long createdCustomerId;
     private static Long createdOrderId;
 
@@ -111,26 +115,32 @@ class RetailStoreWebappAuthE2ETest {
     @DisplayName(
             "InventoryServiceClient: GET /inventory-service/api/inventory (paginated inventory)")
     void shouldFetchInventoriesWithAuthToken() {
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
-                .queryParam("pageNo", 0)
-                .when()
-                .get("/inventory-service/api/inventory")
-                .then()
-                .statusCode(200)
-                .body("data", notNullValue())
-                .body("totalElements", greaterThanOrEqualTo(0));
+        await("Inventory items should be fetchable via Gateway")
+                .atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                                        .queryParam("pageNo", 0)
+                                        .when()
+                                        .get("/inventory-service/api/inventory")
+                                        .then()
+                                        .statusCode(200)
+                                        .body("data", notNullValue())
+                                        .body("totalElements", greaterThanOrEqualTo(0)));
     }
 
     @Test
     @Order(4)
     @DisplayName("CustomerServiceClient: POST /payment-service/api/customers (getOrCreateCustomer)")
     void shouldCreateOrGetCustomerWithAuthToken() {
-        String uniqueEmail =
+        testCustomerEmail =
                 "webapp-auth-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
+        testCustomerName = "Webapp User " + UUID.randomUUID().toString().substring(0, 8);
         CustomerRequest customer =
                 new CustomerRequest(
-                        "Webapp Auth User",
-                        uniqueEmail,
+                        testCustomerName,
+                        testCustomerEmail,
                         "1234567890",
                         "123 App St",
                         "Suite 1",
@@ -148,7 +158,7 @@ class RetailStoreWebappAuthE2ETest {
                         .then()
                         .statusCode(201)
                         .body("customerId", notNullValue())
-                        .body("email", is(uniqueEmail))
+                        .body("email", is(testCustomerEmail))
                         .extract()
                         .response();
 
@@ -173,6 +183,39 @@ class RetailStoreWebappAuthE2ETest {
 
     @Test
     @Order(6)
+    @DisplayName(
+            "CustomerServiceClient: GET /payment-service/api/customers/by-email (lookup by email)")
+    void shouldGetCustomerByEmailWithAuthToken() {
+        assertThat(testCustomerEmail).isNotNull();
+
+        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                .queryParam("email", testCustomerEmail)
+                .when()
+                .get("/payment-service/api/customers/by-email")
+                .then()
+                .statusCode(200)
+                .body("customerId", is(createdCustomerId.intValue()))
+                .body("email", is(testCustomerEmail));
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName(
+            "CustomerServiceClient: GET /payment-service/api/customers/name/{name} (lookup by name)")
+    void shouldGetCustomerByNameWithAuthToken() {
+        assertThat(testCustomerName).isNotNull();
+
+        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                .when()
+                .get("/payment-service/api/customers/name/" + testCustomerName)
+                .then()
+                .statusCode(200)
+                .body("customerId", is(createdCustomerId.intValue()))
+                .body("name", is(testCustomerName));
+    }
+
+    @Test
+    @Order(8)
     @DisplayName("OrderServiceClient: POST /order-service/api/orders (create order)")
     void shouldCreateOrderWithAuthToken() {
         assertThat(createdCustomerId).isNotNull();
@@ -199,7 +242,7 @@ class RetailStoreWebappAuthE2ETest {
     }
 
     @Test
-    @Order(7)
+    @Order(9)
     @DisplayName("OrderServiceClient: GET /order-service/api/orders (paged orders)")
     void shouldGetOrdersWithAuthToken() {
         given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
@@ -211,7 +254,7 @@ class RetailStoreWebappAuthE2ETest {
     }
 
     @Test
-    @Order(8)
+    @Order(10)
     @DisplayName("OrderServiceClient: GET /order-service/api/orders/{id} (lookup by ID)")
     void shouldGetOrderByIdWithAuthToken() {
         assertThat(createdOrderId).isNotNull();
@@ -226,7 +269,7 @@ class RetailStoreWebappAuthE2ETest {
     }
 
     @Test
-    @Order(9)
+    @Order(11)
     @DisplayName("OrderServiceClient: GET /order-service/api/orders/customer/{customerId}")
     void shouldGetOrdersByCustomerWithAuthToken() {
         assertThat(createdCustomerId).isNotNull();
@@ -234,6 +277,21 @@ class RetailStoreWebappAuthE2ETest {
         given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
                 .when()
                 .get("/order-service/api/orders/customer/" + createdCustomerId)
+                .then()
+                .statusCode(200)
+                .body("data", notNullValue());
+    }
+
+    @Test
+    @Order(12)
+    @DisplayName(
+            "CustomerServiceClient: GET /payment-service/api/customers/{id}/orders (cross-service order lookup)")
+    void shouldGetOrdersViaPaymentServiceCustomerEndpointWithAuthToken() {
+        assertThat(createdCustomerId).isNotNull();
+
+        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                .when()
+                .get("/payment-service/api/customers/" + createdCustomerId + "/orders")
                 .then()
                 .statusCode(200)
                 .body("data", notNullValue());

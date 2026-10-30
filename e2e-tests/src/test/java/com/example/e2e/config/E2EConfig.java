@@ -6,6 +6,8 @@
 
 package com.example.e2e.config;
 
+import static org.awaitility.Awaitility.await;
+
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.HttpClientConfig;
@@ -15,6 +17,7 @@ import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
@@ -168,6 +171,43 @@ public final class E2EConfig {
                 Boolean.parseBoolean(System.getProperty("e2e.warmup.enabled", "true"));
         if (!warmupEnabled || !WARMED_UP.compareAndSet(false, true)) {
             return;
+        }
+
+        log.info("Waiting for API Gateway and downstream services to be discovered and UP...");
+        List<String> healthEndpoints =
+                List.of(
+                        "/actuator/health",
+                        "/catalog-service/actuator/health",
+                        "/inventory-service/actuator/health",
+                        "/order-service/actuator/health",
+                        "/payment-service/actuator/health");
+
+        for (String endpoint : healthEndpoints) {
+            try {
+                await("Endpoint " + endpoint + " should be UP via Gateway")
+                        .atMost(Duration.ofSeconds(60))
+                        .pollInterval(Duration.ofSeconds(2))
+                        .until(
+                                () -> {
+                                    try {
+                                        Response r =
+                                                RestAssured.given()
+                                                        .spec(defaultRequestSpec())
+                                                        .when()
+                                                        .get(endpoint);
+                                        return r.statusCode() == 200
+                                                && "UP".equals(r.jsonPath().getString("status"));
+                                    } catch (Exception ex) {
+                                        return false;
+                                    }
+                                });
+                log.info("Health check passed for: {}", endpoint);
+            } catch (Exception ex) {
+                log.warn(
+                        "Health check for {} did not report UP within timeout: {}",
+                        endpoint,
+                        ex.getMessage());
+            }
         }
 
         String batchId = UUID.randomUUID().toString();

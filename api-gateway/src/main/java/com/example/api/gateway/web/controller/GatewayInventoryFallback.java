@@ -16,8 +16,8 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/fallback/api/inventory")
 public class GatewayInventoryFallback {
 
-    @GetMapping("/{id}")
-    public Mono<String> fallback(@PathVariable String id) {
+    @GetMapping({"", "/", "/{id}"})
+    public Mono<String> fallback(@PathVariable(required = false) String id) {
         // IDs in this system are alphanumeric (e.g. P0001). Accept String to avoid
         // path variable conversion failures which can produce 404s when the
         // circuit-breaker fallback is invoked.
