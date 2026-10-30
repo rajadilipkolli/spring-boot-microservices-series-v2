@@ -65,7 +65,7 @@ public class ObservabilityWebFilterIntegrationTest extends AbstractIntegrationTe
         WireMock wireMock = new WireMock(wireMockServer.getHost(), wireMockServer.getPort());
         wireMock.verifyThat(
                 WireMock.getRequestedFor(WireMock.urlEqualTo("/test"))
-                        .withHeader("X-Correlation-Id", WireMock.equalTo(capturedTraceId.get())));
+                        .withHeader("X-Trace-Id", WireMock.equalTo(capturedTraceId.get())));
     }
 
     @Test

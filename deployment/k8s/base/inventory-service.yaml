@@ -59,7 +59,7 @@ spec:
         - name: OTEL_SERVICE_NAME
           value: inventory-service
         - name: OTEL_RESOURCE_ATTRIBUTES
-          value: service.name=inventory-service,service.version=0.0.1-SNAPSHOT
+          value: service.name=inventory-service,service.version=0.0.1-SNAPSHOT,service.namespace=retailstore,deployment.environment=kubernetes
         envFrom:
         - configMapRef:
             name: shared-config

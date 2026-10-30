@@ -19,6 +19,8 @@ import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.repositories.OrderRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -56,28 +58,32 @@ public class OrderService {
     private final CatalogService catalogService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
+    private final Counter ordersCreatedCounter;
 
     /**
-     * Creates an order service with its persistence, mapping, catalog, event, and transaction
-     * collaborators.
+     * Creates an order service with its persistence, mapping, catalog, event, transaction, and
+     * meter collaborators.
      *
      * @param orderRepository repository used to access orders
      * @param orderMapper mapper between order API models and entities
      * @param catalogService service used to validate products
      * @param eventPublisher publisher for persisted order events
      * @param transactionTemplate template used to run persistence operations in a transaction
+     * @param meterRegistry registry used to publish business metrics
      */
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
             CatalogService catalogService,
             ApplicationEventPublisher eventPublisher,
-            TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate,
+            MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
         this.eventPublisher = eventPublisher;
         this.transactionTemplate = transactionTemplate;
+        this.ordersCreatedCounter = meterRegistry.counter("orders_created");
     }
 
     /**
@@ -171,6 +177,7 @@ public class OrderService {
                 this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
         // Should send persistedOrderDto as it contains OrderId used for subsequent processing
         eventPublisher.publishEvent(persistedOrderDto);
+        this.ordersCreatedCounter.increment();
         return this.orderMapper.toResponse(savedOrder);
     }
 
@@ -241,6 +248,7 @@ public class OrderService {
                     eventPublisher.publishEvent(dto);
                 });
 
+        this.ordersCreatedCounter.increment(savedOrders.size());
         return savedOrders.stream().map(this.orderMapper::toResponse).toList();
     }
 

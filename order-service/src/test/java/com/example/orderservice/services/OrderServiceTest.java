@@ -15,11 +15,13 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.repositories.OrderRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +35,10 @@ class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private OrderMapper orderMapper;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private MeterRegistry meterRegistry;
+
     @InjectMocks private OrderService orderService;
 
     @Test

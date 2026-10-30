@@ -1,9 +1,11 @@
 package com.example.e2e;
 
 import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 
 import com.example.e2e.config.E2EConfig;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -23,12 +25,17 @@ class ActuatorHealthE2ETest {
     @Test
     @DisplayName("API Gateway health endpoint should return UP")
     void gatewayShouldBeHealthy() {
-        given().spec(E2EConfig.defaultRequestSpec())
-                .when()
-                .get("/actuator/health")
-                .then()
-                .statusCode(200)
-                .body("status", is("UP"));
+        await("API Gateway health endpoint should return UP")
+                .atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .when()
+                                        .get("/actuator/health")
+                                        .then()
+                                        .statusCode(200)
+                                        .body("status", is("UP")));
     }
 
     @ParameterizedTest(name = "Service {0} health endpoint should be UP via Gateway")
@@ -40,11 +47,16 @@ class ActuatorHealthE2ETest {
                 "/payment-service/actuator/health"
             })
     void downstreamServicesShouldBeHealthyViaGateway(String healthPath) {
-        given().spec(E2EConfig.defaultRequestSpec())
-                .when()
-                .get(healthPath)
-                .then()
-                .statusCode(200)
-                .body("status", is("UP"));
+        await("Service " + healthPath + " health endpoint should be UP via Gateway")
+                .atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofSeconds(2))
+                .untilAsserted(
+                        () ->
+                                given().spec(E2EConfig.defaultRequestSpec())
+                                        .when()
+                                        .get(healthPath)
+                                        .then()
+                                        .statusCode(200)
+                                        .body("status", is("UP")));
     }
 }
