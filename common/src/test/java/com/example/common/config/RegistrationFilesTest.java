@@ -29,7 +29,7 @@ class RegistrationFilesTest {
     }
 
     @Test
-    void autoConfigurationImportsListsCommonLoggingAutoConfiguration() throws IOException {
+    void autoConfigurationImportsListsAutoConfigurations() throws IOException {
         ClassPathResource resource =
                 new ClassPathResource(
                         "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
@@ -37,7 +37,9 @@ class RegistrationFilesTest {
         try (InputStream is = resource.getInputStream()) {
             String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             assertThat(content)
-                    .contains("com.example.common.config.CommonLoggingAutoConfiguration");
+                    .contains("com.example.common.config.CommonLoggingAutoConfiguration")
+                    .contains("com.example.common.config.CommonWebAutoConfiguration")
+                    .contains("com.example.common.config.CommonReactiveWebAutoConfiguration");
         }
     }
 }

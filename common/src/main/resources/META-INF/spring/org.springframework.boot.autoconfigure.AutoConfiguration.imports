@@ -1,1 +1,3 @@
 com.example.common.config.CommonLoggingAutoConfiguration
+com.example.common.config.CommonWebAutoConfiguration
+com.example.common.config.CommonReactiveWebAutoConfiguration

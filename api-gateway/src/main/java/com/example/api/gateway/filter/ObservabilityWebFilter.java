@@ -53,10 +53,7 @@ class ObservabilityWebFilter implements WebFilter {
             @NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
 
         String incomingTraceId = exchange.getRequest().getHeaders().getFirst(TRACE_ID_HEADER);
-        String traceId =
-                (StringUtils.hasText(incomingTraceId))
-                        ? incomingTraceId
-                        : getTraceId();
+        String traceId = (StringUtils.hasText(incomingTraceId)) ? incomingTraceId : getTraceId();
 
         // 1. Add trace ID to the downstream request headers if absent
         ServerWebExchange effectiveExchange = addTraceIdRequestHeader(exchange, traceId);
