@@ -71,7 +71,7 @@ Override target URLs using system properties:
 | `keycloak.url` | `KEYCLOAK_URL` | `http://localhost:9191` | Keycloak server URL |
 | `webapp.url` | `WEBAPP_URL` | `http://localhost:8080` | Retail Store WebApp URL |
 | `keycloak.client.secret` | `TF_VAR_webapp_client_secret` | `demo-throwaway-oauth-secret` | Keycloak OAuth2 client secret |
-| `keycloak.password` | `KEYCLOAK_RETAIL_PASSWORD` | `retail1234` | Keycloak retail user password |
+| `keycloak.password` | `KEYCLOAK_RETAIL_PASSWORD` | `demo-throwaway-retail-pass` | Keycloak retail user password |
 | `skipE2E` | `SKIP_E2E` | `true` | Set to `false` to execute E2E tests (skipped by default in regular builds) |
 
 The Bash Kubernetes runners load credentials from Kubernetes Secrets when no

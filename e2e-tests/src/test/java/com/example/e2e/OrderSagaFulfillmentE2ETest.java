@@ -64,7 +64,7 @@ class OrderSagaFulfillmentE2ETest {
         await("Inventory should be created for product " + TEST_PRODUCT_CODE)
                 .atMost(Duration.ofSeconds(30))
                 .pollDelay(Duration.ofSeconds(1))
-                .pollInterval(Duration.ofSeconds(3))
+                .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () ->
                                 given().spec(E2EConfig.defaultRequestSpec())
@@ -142,7 +142,7 @@ class OrderSagaFulfillmentE2ETest {
         await("Order " + orderId + " should transition to CONFIRMED")
                 .atMost(Duration.ofSeconds(60))
                 .pollDelay(Duration.ofSeconds(2))
-                .pollInterval(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
                             Response orderCheck =
@@ -196,7 +196,7 @@ class OrderSagaFulfillmentE2ETest {
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
                 .atMost(Duration.ofSeconds(60))
                 .pollDelay(Duration.ofSeconds(2))
-                .pollInterval(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
                             Response orderCheck =
@@ -269,7 +269,7 @@ class OrderSagaFulfillmentE2ETest {
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
                 .atMost(Duration.ofSeconds(60))
                 .pollDelay(Duration.ofSeconds(2))
-                .pollInterval(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
                             Response orderCheck =
