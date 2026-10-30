@@ -179,7 +179,7 @@ class RetailStoreWebappAuthE2ETest {
                 .get("/payment-service/api/customers/" + createdCustomerId)
                 .then()
                 .statusCode(200)
-                .body("customerId", is(createdCustomerId.intValue()));
+                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)));
     }
 
     @Test
@@ -195,7 +195,7 @@ class RetailStoreWebappAuthE2ETest {
                 .get("/payment-service/api/customers/by-email")
                 .then()
                 .statusCode(200)
-                .body("customerId", is(createdCustomerId.intValue()))
+                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)))
                 .body("email", is(testCustomerEmail));
     }
 
@@ -211,7 +211,7 @@ class RetailStoreWebappAuthE2ETest {
                 .get("/payment-service/api/customers/name/" + testCustomerName)
                 .then()
                 .statusCode(200)
-                .body("customerId", is(createdCustomerId.intValue()))
+                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)))
                 .body("name", is(testCustomerName));
     }
 
@@ -265,8 +265,8 @@ class RetailStoreWebappAuthE2ETest {
                 .get("/order-service/api/orders/" + createdOrderId)
                 .then()
                 .statusCode(200)
-                .body("orderId", is(createdOrderId.intValue()))
-                .body("customerId", is(createdCustomerId.intValue()));
+                .body("orderId.toString()", equalTo(String.valueOf(createdOrderId)))
+                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)));
     }
 
     @Test

@@ -77,7 +77,8 @@ public final class E2EConfig {
     }
 
     public static String getKeycloakPassword() {
-        return getCredential("keycloak.password", "KEYCLOAK_RETAIL_PASSWORD", "retail1234");
+        return getCredential(
+                "keycloak.password", "KEYCLOAK_RETAIL_PASSWORD", "demo-throwaway-retail-pass");
     }
 
     private static String getCredential(

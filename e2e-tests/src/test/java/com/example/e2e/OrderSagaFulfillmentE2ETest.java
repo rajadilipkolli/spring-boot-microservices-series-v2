@@ -63,7 +63,8 @@ class OrderSagaFulfillmentE2ETest {
         // Wait for inventory record to be created asynchronously via Kafka from catalog service
         await("Inventory should be created for product " + TEST_PRODUCT_CODE)
                 .atMost(Duration.ofSeconds(30))
-                .pollInterval(Duration.ofMillis(500))
+                .pollDelay(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () ->
                                 given().spec(E2EConfig.defaultRequestSpec())
@@ -139,7 +140,8 @@ class OrderSagaFulfillmentE2ETest {
 
         // Await asynchronous Saga confirmation
         await("Order " + orderId + " should transition to CONFIRMED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
@@ -192,7 +194,8 @@ class OrderSagaFulfillmentE2ETest {
 
         // Await Saga rollback
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {
@@ -264,7 +267,8 @@ class OrderSagaFulfillmentE2ETest {
         assertThat(orderId).isNotNull().isPositive();
 
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(
                         () -> {

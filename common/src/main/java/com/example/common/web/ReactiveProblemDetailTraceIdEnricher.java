@@ -33,11 +33,14 @@ public class ReactiveProblemDetailTraceIdEnricher implements ErrorResponse.Inter
                     "io.opentelemetry.api.trace.Span",
                     ReactiveProblemDetailTraceIdEnricher.class.getClassLoader());
 
+    /**
+     * Adds a trace ID to the problem detail when it has no nonblank string trace ID. The first
+     * nonblank value from the error response header, active OpenTelemetry span, or MDC keys
+     * {@code traceId} and {@code trace_id}, in that order, is used. If none is available, the
+     * detail is left unchanged.
+     */
     @Override
     public void handleError(@NonNull ProblemDetail detail, @Nullable ErrorResponse errorResponse) {
-        if (detail == null) {
-            return;
-        }
 
         String existingTraceId = null;
         if (detail.getProperties() != null) {

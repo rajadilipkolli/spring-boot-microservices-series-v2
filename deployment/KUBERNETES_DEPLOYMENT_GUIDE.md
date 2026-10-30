@@ -232,7 +232,7 @@ CLIENT_SECRET=$(kubectl get secret webapp-oauth2-credentials -n retailstore -o j
 curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d 'client_id=retailstore-webapp' -d "client_secret=$CLIENT_SECRET" \
   -d 'grant_type=password' \
-  -d 'username=retail' -d 'password=retail1234' | grep access_token
+  -d 'username=retail' -d 'password=demo-throwaway-retail-pass' | grep access_token
 ```
 
 The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through ingress instead.
