@@ -13,7 +13,7 @@
 
     <groupId>io.github.rajadilipkolli</groupId>
     <artifactId>microservices-common</artifactId>
-    <version>0.1.3-SNAPSHOT</version>
+    <version>0.1.4-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>microservices-common</name>
