@@ -32,6 +32,13 @@ class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Returns HTTP 400 problem details with field violations sorted by field name, with null names
+     * last.
+     *
+     * @throws ClassCastException if a validation error is not a field error
+     * @throws NullPointerException if a field error has no default message
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> handleValidationErrors(MethodArgumentNotValidException ex) {
         log.warn("Validation failed: {}", ex.getMessage());
@@ -61,6 +68,10 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /**
+     * Returns HTTP 400 problem details with violations sorted by property path, with null paths
+     * last.
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException ex) {
         log.warn("Constraint violation: {}", ex.getMessage());
@@ -89,6 +100,7 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns HTTP 400 problem details for an unreadable request body. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ProblemDetail> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex) {
@@ -102,6 +114,7 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns HTTP 400 problem details containing the missing parameter error message. */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ProblemDetail> handleMissingParameter(
             MissingServletRequestParameterException ex) {
@@ -113,6 +126,7 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns the status and problem detail carried by the duplicate-product exception. */
     @ExceptionHandler(ProductAlreadyExistsException.class)
     public ResponseEntity<ProblemDetail> handleProductAlreadyExistsException(
             ProductAlreadyExistsException ex) {
@@ -121,6 +135,7 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(problemDetail);
     }
 
+    /** Returns HTTP 500 problem details with a generic message for an unexpected error. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: ", ex);

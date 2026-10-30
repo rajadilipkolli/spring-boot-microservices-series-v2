@@ -33,6 +33,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** Returns HTTP 404 problem details with the sanitized order error message. */
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(OrderNotFoundException ex) {
         log.warn("Order not found: {}", LogSanitizer.sanitizeException(ex));
@@ -49,6 +50,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    /** Returns HTTP 404 problem details with the sanitized product error message. */
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleProductNotFound(
             ProductNotFoundException ex) {
@@ -65,6 +67,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    /** Returns HTTP 404 problem details with the sanitized entity error message. */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleEntityNotFound(EntityNotFoundException ex) {
         log.warn("Entity not found: {}", LogSanitizer.sanitizeException(ex));
@@ -79,6 +82,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    /**
+     * Returns HTTP 400 problem details with field violations sorted by field name. Non-field errors
+     * are omitted.
+     *
+     * @throws NullPointerException if a field error has no default message or field names cannot be
+     *     compared because one is null
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
             MethodArgumentNotValidException ex) {
@@ -110,6 +120,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns HTTP 400 problem details with the sanitized constraint violation message. */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
             ConstraintViolationException ex) {
@@ -125,6 +136,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns HTTP 400 problem details with the sanitized argument error message. */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
             IllegalArgumentException ex) {
@@ -140,6 +152,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    /** Returns HTTP 500 problem details with a generic message for an unexpected error. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<@NonNull ProblemDetail> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: ", ex);
