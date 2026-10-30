@@ -25,18 +25,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<ProblemDetail> handleValidationErrors(
-            MethodArgumentNotValidException ex, WebRequest request) {
+    ResponseEntity<ProblemDetail> handleValidationErrors(MethodArgumentNotValidException ex) {
         log.warn("Validation failed: {}", ex.getMessage());
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
@@ -61,13 +58,11 @@ class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    ResponseEntity<ProblemDetail> handleConstraintViolation(
-            ConstraintViolationException ex, WebRequest request) {
+    ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException ex) {
         log.warn("Constraint violation: {}", ex.getMessage());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -91,13 +86,12 @@ class GlobalExceptionHandler {
                                         Comparator.nullsLast(String::compareTo)))
                         .toList();
         problemDetail.setProperty("violations", violations);
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ProblemDetail> handleHttpMessageNotReadable(
-            HttpMessageNotReadableException ex, WebRequest request) {
+            HttpMessageNotReadableException ex) {
         log.warn("Bad request: {}", ex.getMessage());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request format");
@@ -105,48 +99,37 @@ class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.microservices.com/errors/bad-request"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("error", "Invalid JSON format");
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ProblemDetail> handleMissingParameter(
-            MissingServletRequestParameterException ex, WebRequest request) {
+            MissingServletRequestParameterException ex) {
         log.warn("Missing parameter: {}", ex.getMessage());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Bad Request");
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ProductAlreadyExistsException.class)
     public ResponseEntity<ProblemDetail> handleProductAlreadyExistsException(
-            ProductAlreadyExistsException ex, WebRequest request) {
+            ProductAlreadyExistsException ex) {
         log.warn("Product already exists: {}", ex.getMessage());
         ProblemDetail problemDetail = ex.getBody();
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(ex.getStatusCode()).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
+    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: ", ex);
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
-    }
-
-    private void addCorrelationId(ProblemDetail problemDetail, WebRequest request) {
-        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId != null && !correlationId.isBlank()) {
-            problemDetail.setProperty("correlationId", correlationId);
-        }
     }
 
     record ApiValidationError(String object, String field, Object rejectedValue, String message) {}

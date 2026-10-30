@@ -26,18 +26,15 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
     @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(
-            OrderNotFoundException ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleOrderNotFound(OrderNotFoundException ex) {
         log.warn("Order not found: {}", LogSanitizer.sanitizeException(ex));
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
@@ -49,14 +46,12 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
-        addCorrelationId(problemDetail, request);
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleProductNotFound(
-            ProductNotFoundException ex, WebRequest request) {
+            ProductNotFoundException ex) {
         log.warn("Product not found: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -67,14 +62,11 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
-        addCorrelationId(problemDetail, request);
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<@NonNull ProblemDetail> handleEntityNotFound(
-            EntityNotFoundException ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleEntityNotFound(EntityNotFoundException ex) {
         log.warn("Entity not found: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -83,14 +75,13 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Resource Not Found");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/not-found"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
-            MethodArgumentNotValidException ex, WebRequest request) {
+            MethodArgumentNotValidException ex) {
         log.warn("Validation failed: {}", LogSanitizer.sanitizeException(ex));
 
         List<ApiValidationError> validationErrorsList =
@@ -98,13 +89,13 @@ public class GlobalExceptionHandler {
                         .filter(FieldError.class::isInstance)
                         .map(FieldError.class::cast)
                         .map(
-                                fieldError -> {
-                                    return new ApiValidationError(
-                                            fieldError.getObjectName(),
-                                            fieldError.getField(),
-                                            fieldError.getRejectedValue(),
-                                            Objects.requireNonNull(fieldError.getDefaultMessage()));
-                                })
+                                fieldError ->
+                                        new ApiValidationError(
+                                                fieldError.getObjectName(),
+                                                fieldError.getField(),
+                                                fieldError.getRejectedValue(),
+                                                Objects.requireNonNull(
+                                                        fieldError.getDefaultMessage())))
                         .sorted(Comparator.comparing(ApiValidationError::field))
                         .toList();
 
@@ -115,14 +106,13 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
-            ConstraintViolationException ex, WebRequest request) {
+            ConstraintViolationException ex) {
         log.warn("Constraint violation: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -131,14 +121,13 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
-            IllegalArgumentException ex, WebRequest request) {
+            IllegalArgumentException ex) {
         log.warn("Illegal argument: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -147,14 +136,12 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Invalid Request");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/invalid-request"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<@NonNull ProblemDetail> handleGenericException(
-            Exception ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: ", ex);
 
         ProblemDetail problemDetail =
@@ -162,16 +149,8 @@ public class GlobalExceptionHandler {
                         HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
-    }
-
-    private void addCorrelationId(ProblemDetail problemDetail, WebRequest request) {
-        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId != null) {
-            problemDetail.setProperty("correlationId", correlationId);
-        }
     }
 
     record ApiValidationError(String object, String field, Object rejectedValue, String message) {}

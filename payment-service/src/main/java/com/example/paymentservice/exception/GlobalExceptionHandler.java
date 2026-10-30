@@ -22,18 +22,16 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
 
     @ExceptionHandler(CustomerNotFoundException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleCustomerNotFound(
-            CustomerNotFoundException ex, WebRequest request) {
+            CustomerNotFoundException ex) {
         log.warn("Customer not found: {}", LogSanitizer.sanitizeException(ex));
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
@@ -45,22 +43,17 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
-        addCorrelationId(problemDetail, request);
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     /**
-     * Returns HTTP 409 problem details for a duplicate customer, including a correlation ID if
-     * present.
+     * Returns HTTP 409 problem details for a duplicate customer.
      *
      * @param ex the duplicate-customer failure
-     * @param request the request supplying the optional correlation ID
      * @return the conflict response with a timestamp and sanitized error details
      */
     @ExceptionHandler(CustomerExistsException.class)
-    public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(
-            CustomerExistsException ex, WebRequest request) {
+    public ResponseEntity<@NonNull ProblemDetail> handleCustomerExists(CustomerExistsException ex) {
         log.warn("Customer already exists: {}", LogSanitizer.sanitizeException(ex));
 
         // Use the ProblemDetail from the exception itself since it already has proper formatting
@@ -72,14 +65,12 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("errorCategory", "Generic");
         problemDetail.setProperty("timestamp", Instant.now());
 
-        addCorrelationId(problemDetail, request);
-
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleValidationErrors(
-            MethodArgumentNotValidException ex, WebRequest request) {
+            MethodArgumentNotValidException ex) {
         log.warn("Validation failed: {}", LogSanitizer.sanitizeException(ex));
 
         List<ApiValidationError> validationErrorsList =
@@ -103,14 +94,13 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("violations", validationErrorsList);
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleConstraintViolation(
-            ConstraintViolationException ex, WebRequest request) {
+            ConstraintViolationException ex) {
         log.warn("Constraint violation: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -119,14 +109,13 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Constraint Violation");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/validation-error"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleIllegalArgument(
-            IllegalArgumentException ex, WebRequest request) {
+            IllegalArgumentException ex) {
         log.warn("Illegal argument: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -135,18 +124,17 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Invalid Request");
         problemDetail.setType(URI.create("https://api.microservices.com/errors/invalid-request"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     /**
      * Converts an upstream HTTP server error to an HTTP 503 problem response with a generic order
-     * service unavailable message, a timestamp, and the request's correlation ID if present.
+     * service unavailable message, and a timestamp.
      */
     @ExceptionHandler(HttpServerErrorException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleOrderServiceError(
-            HttpServerErrorException ex, WebRequest request) {
+            HttpServerErrorException ex) {
         log.warn("Order service error: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail =
@@ -157,18 +145,17 @@ public class GlobalExceptionHandler {
         problemDetail.setType(
                 URI.create("https://api.microservices.com/errors/service-unavailable"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail);
     }
 
     /**
      * Converts a rejected circuit breaker call to an HTTP 503 problem response reporting an open
-     * order service circuit, with a timestamp and the request's correlation ID if present.
+     * order service circuit, with a timestamp.
      */
     @ExceptionHandler(CallNotPermittedException.class)
     public ResponseEntity<@NonNull ProblemDetail> handleCircuitBreakerOpen(
-            CallNotPermittedException ex, WebRequest request) {
+            CallNotPermittedException ex) {
         log.warn(
                 "Circuit breaker prevented access to order service: {}",
                 LogSanitizer.sanitizeException(ex));
@@ -181,13 +168,12 @@ public class GlobalExceptionHandler {
         problemDetail.setType(
                 URI.create("https://api.microservices.com/errors/service-unavailable"));
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex, WebRequest request) {
+    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: ", ex);
 
         ProblemDetail problemDetail =
@@ -195,16 +181,8 @@ public class GlobalExceptionHandler {
                         HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setProperty("timestamp", Instant.now());
-        addCorrelationId(problemDetail, request);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
-    }
-
-    private void addCorrelationId(ProblemDetail problemDetail, WebRequest request) {
-        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId != null) {
-            problemDetail.setProperty("correlationId", correlationId);
-        }
     }
 
     record ApiValidationError(String object, String field, Object rejectedValue, String message) {}

@@ -59,7 +59,7 @@ class GatewayOrchestrationE2ETest {
                 .post("/api/v1/generate")
                 .then()
                 .statusCode(400)
-                .body("status", equalTo("error"))
-                .body("message", containsString("batchSize must be between 1 and 10000"));
+                .body("status", equalTo(400))
+                .body("title", equalTo("Bad Request"));
     }
 }

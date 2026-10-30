@@ -35,9 +35,6 @@ public class ReactiveProblemDetailTraceIdEnricher implements ErrorResponse.Inter
 
     @Override
     public void handleError(@NonNull ProblemDetail detail, @Nullable ErrorResponse errorResponse) {
-        if (detail == null) {
-            return;
-        }
 
         String existingTraceId = null;
         if (detail.getProperties() != null) {

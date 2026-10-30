@@ -16,7 +16,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -48,9 +48,7 @@ class ProblemDetailTraceIdEnricherTest {
 
     @Test
     void supportsReturnsTrue() {
-        assertThat(
-                        enricher.supports(
-                                dummyMethodParameter, MappingJackson2HttpMessageConverter.class))
+        assertThat(enricher.supports(dummyMethodParameter, JacksonJsonHttpMessageConverter.class))
                 .isTrue();
     }
 
@@ -66,7 +64,7 @@ class ProblemDetailTraceIdEnricherTest {
                         null,
                         dummyMethodParameter,
                         MediaType.APPLICATION_JSON,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 
@@ -86,7 +84,7 @@ class ProblemDetailTraceIdEnricherTest {
                         body,
                         dummyMethodParameter,
                         MediaType.TEXT_PLAIN,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 
@@ -109,7 +107,7 @@ class ProblemDetailTraceIdEnricherTest {
                         problemDetail,
                         dummyMethodParameter,
                         MediaType.APPLICATION_PROBLEM_JSON,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 
@@ -135,7 +133,7 @@ class ProblemDetailTraceIdEnricherTest {
                         problemDetail,
                         dummyMethodParameter,
                         MediaType.APPLICATION_PROBLEM_JSON,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 
@@ -161,7 +159,7 @@ class ProblemDetailTraceIdEnricherTest {
                         problemDetail,
                         dummyMethodParameter,
                         MediaType.APPLICATION_PROBLEM_JSON,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 
@@ -187,7 +185,7 @@ class ProblemDetailTraceIdEnricherTest {
                         problemDetail,
                         dummyMethodParameter,
                         MediaType.APPLICATION_PROBLEM_JSON,
-                        MappingJackson2HttpMessageConverter.class,
+                        JacksonJsonHttpMessageConverter.class,
                         request,
                         response);
 

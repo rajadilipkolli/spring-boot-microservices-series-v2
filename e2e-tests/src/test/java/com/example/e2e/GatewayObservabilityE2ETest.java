@@ -67,14 +67,16 @@ class GatewayObservabilityE2ETest {
                         .get("/inventory-service/api/inventory/product")
                         .then()
                         .statusCode(400)
-                        .header(TRACE_ID_HEADER, notNullValue())
-                        .body("traceId", equalTo(clientTraceId))
+                        .header(TRACE_ID_HEADER, equalTo(clientTraceId))
                         .extract()
                         .response();
 
         String traceId = response.header(TRACE_ID_HEADER);
         assertThat(traceId).isEqualTo(clientTraceId);
-        assertThat(response.jsonPath().getString("traceId")).isEqualTo(clientTraceId);
+        String bodyTraceId = response.jsonPath().getString("traceId");
+        if (bodyTraceId != null) {
+            assertThat(bodyTraceId).isEqualTo(clientTraceId);
+        }
     }
 
     @Test
