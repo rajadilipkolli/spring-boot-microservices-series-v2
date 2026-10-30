@@ -427,4 +427,12 @@
         </plugins>
     </build>
 
+    <repositories>
+        <!-- Needed to resolve wiremock testcontiner-->
+        <repository>
+            <id>jitpack</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
 </project>
