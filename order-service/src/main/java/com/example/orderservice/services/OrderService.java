@@ -340,7 +340,8 @@ public class OrderService {
      * Republishes NEW orders last modified strictly more than five minutes ago, in ascending ID
      * order, with a new random attempt ID for each. After publishing, saves the order with its last
      * modified time set to the current time. Exceptions while processing an individual order are
-     * caught so remaining orders are attempted; failures fetching the orders propagate.
+     * caught so remaining orders are attempted; failures fetching the orders propagate. Configured
+     * as a recurring JobRunr job to run every minute.
      */
     @Job(name = "reProcessNewOrders", retries = 2)
     @Recurring(id = "retry-new-orders", cron = "*/1 * * * *")
