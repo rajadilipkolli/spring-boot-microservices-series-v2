@@ -126,7 +126,8 @@ class OrderStreamTopologyTest {
         testDriver = new TopologyTestDriver(topology, props);
         
         // Create test topics
-        JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<OrderDto> orderSerde =
+                new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
         
         paymentTopic = testDriver.createInputTopic(
             "payment-orders",

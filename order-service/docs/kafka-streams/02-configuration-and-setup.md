@@ -405,7 +405,7 @@ public StreamsUncaughtExceptionHandler streamsUncaughtExceptionHandler() {
 
 ```java
 // JSON serialization for OrderDto
-JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
 
 ```
 
@@ -451,7 +451,8 @@ KStream<Long, OrderDto> stream = builder.stream("orders");
 KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
     // Persistent store for durability
     KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-    JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+    JacksonJsonSerde<OrderDto> orderSerde =
+            new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
     
     KStream<Long, OrderDto> stream = streamsBuilder.stream(
         ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));

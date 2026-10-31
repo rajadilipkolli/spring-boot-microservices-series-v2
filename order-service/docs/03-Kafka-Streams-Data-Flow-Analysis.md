@@ -650,7 +650,8 @@ graph TB
 ### JSON Serialization Configuration
 ```java
 // From KafkaStreamsConfig.java
-JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class);
+JacksonJsonSerde<OrderDto> orderSerde =
+        new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
 
 ```
 
