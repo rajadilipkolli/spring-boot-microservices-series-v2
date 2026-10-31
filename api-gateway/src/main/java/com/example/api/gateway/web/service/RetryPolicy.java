@@ -45,7 +45,11 @@ public class RetryPolicy {
         this.gatewayMetrics = gatewayMetrics;
     }
 
-    /** Creates a fresh retry specification for each downstream request. */
+    /**
+     * Creates a retry specification for the service. Timeout and connection failures and HTTP 429,
+     * 502, 503, and 504 responses are eligible for retry. Each retry increments the service metric;
+     * exhaustion propagates the last failure.
+     */
     public Retry create(ServiceType serviceType) {
 
         return Retry.backoff(MAX_RETRIES, INITIAL_BACKOFF)

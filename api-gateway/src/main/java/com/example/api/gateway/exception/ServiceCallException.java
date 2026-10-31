@@ -28,7 +28,7 @@ public class ServiceCallException extends RuntimeException {
         return serviceType;
     }
 
-    /** Returns the original upstream HTTP status when available. */
+    /** Returns the first upstream HTTP status in the cause chain, or null if none is present. */
     public Integer getUpstreamStatus() {
 
         for (Throwable current = getCause(); current != null; current = current.getCause()) {

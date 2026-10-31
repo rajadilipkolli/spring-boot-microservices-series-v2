@@ -36,6 +36,14 @@ public class GenerationOrchestrator {
         this.gatewayMetrics = gatewayMetrics;
     }
 
+    /**
+     * Runs catalog, inventory, and order generation in sequence, stopping after an unsuccessful
+     * result. Each subscription uses a new batch ID and records the workflow outcome.
+     *
+     * @param batchSize optional batch size passed to each service
+     * @return a response containing the service results, or an error if a call fails; the workflow
+     *     deadline is reported as a {@link WorkflowTimeoutException}
+     */
     public Mono<GenerationResponse> generate(Integer batchSize) {
 
         return Mono.defer(

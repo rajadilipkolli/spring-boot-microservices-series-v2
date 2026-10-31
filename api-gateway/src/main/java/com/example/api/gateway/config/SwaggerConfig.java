@@ -66,6 +66,7 @@ class SwaggerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SwaggerConfig.class);
 
+    /** Creates API groups for service routes and adds their documentation URLs to Swagger UI. */
     @Bean
     @Lazy(value = false)
     List<GroupedOpenApi> groupedOpenApis(

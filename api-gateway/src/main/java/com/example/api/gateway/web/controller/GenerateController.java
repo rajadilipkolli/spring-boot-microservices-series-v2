@@ -29,6 +29,12 @@ public class GenerateController implements GenerateAPI {
         this.orchestrator = orchestrator;
     }
 
+    /**
+     * Runs the generation workflow and returns HTTP 200 for a successful response or 502 for a
+     * failure response. Errors from the workflow propagate to the exception handlers.
+     *
+     * @param batchSize optional batch size, from 1 through {@value #MAX_BATCH_SIZE}
+     */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<ResponseEntity<GenerationResponse>> generate(

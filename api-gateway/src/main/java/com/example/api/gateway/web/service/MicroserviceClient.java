@@ -52,6 +52,18 @@ public class MicroserviceClient {
         this.gatewayMetrics = gatewayMetrics;
     }
 
+    /**
+     * Posts to the configured service with the batch ID as the idempotency key. Transient failures
+     * are retried; a successful empty response body is returned as an empty string.
+     *
+     * @param batchId nonblank idempotency key shared by the workflow's service calls
+     * @param batchSize optional positive batch size sent as a query parameter
+     * @return the service status and body, or a reactive error; downstream call failures are
+     *     wrapped in {@link ServiceCallException}, while request configuration errors propagate
+     *     directly. A blank batch ID or nonpositive batch size produces an {@link
+     *     IllegalArgumentException}.
+     * @throws NullPointerException if the service type or batch ID is null
+     */
     public Mono<ServiceResult> call(ServiceType serviceType, String batchId, Integer batchSize) {
 
         Objects.requireNonNull(serviceType, "Service type is required");

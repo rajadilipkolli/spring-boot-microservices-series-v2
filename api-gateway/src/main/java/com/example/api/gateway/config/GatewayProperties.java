@@ -50,6 +50,7 @@ public class GatewayProperties {
         return workflowTimeout;
     }
 
+    /** Sets the workflow deadline; the duration must be nonnull and positive. */
     public void setWorkflowTimeout(Duration workflowTimeout) {
         if (workflowTimeout == null || workflowTimeout.isZero() || workflowTimeout.isNegative()) {
             throw new IllegalArgumentException("workflowTimeout must be positive");
@@ -58,7 +59,12 @@ public class GatewayProperties {
         this.workflowTimeout = workflowTimeout;
     }
 
-    /** Returns the configured URL for a downstream service. */
+    /**
+     * Returns the configured HTTP or HTTPS URL for a downstream service.
+     *
+     * @throws NullPointerException if the service type is null
+     * @throws IllegalStateException if the URL is missing, blank, or invalid
+     */
     public String getServiceUrl(ServiceType serviceType) {
 
         Objects.requireNonNull(serviceType, "ServiceType must not be null");
@@ -101,6 +107,10 @@ public class GatewayProperties {
         return delayBetweenServices;
     }
 
+    /**
+     * Sets the delay between successful service calls; zero is allowed, but null and negative
+     * values are not.
+     */
     public void setDelayBetweenServices(Duration delayBetweenServices) {
 
         if (delayBetweenServices == null || delayBetweenServices.isNegative()) {
@@ -115,6 +125,7 @@ public class GatewayProperties {
         return requestTimeout;
     }
 
+    /** Sets the timeout for each downstream attempt; the duration must be nonnull and positive. */
     public void setRequestTimeout(Duration requestTimeout) {
 
         if (requestTimeout == null || requestTimeout.isZero() || requestTimeout.isNegative()) {
@@ -125,10 +136,12 @@ public class GatewayProperties {
         this.requestTimeout = requestTimeout;
     }
 
+    /** Returns an unmodifiable copy of the configured service URLs. */
     public Map<ServiceType, String> getServiceUrls() {
         return Map.copyOf(serviceUrls);
     }
 
+    /** Replaces the configured service URLs with a copy of the supplied map. */
     public void setServiceUrls(Map<ServiceType, String> serviceUrls) {
 
         Objects.requireNonNull(serviceUrls, "Service URLs must not be null");
@@ -142,6 +155,7 @@ public class GatewayProperties {
         return connectionTimeout;
     }
 
+    /** Sets the connection timeout; the duration must be nonnull and positive. */
     public void setConnectionTimeout(Duration connectionTimeout) {
         this.connectionTimeout = requirePositive(connectionTimeout, "connectionTimeout");
     }
@@ -150,6 +164,7 @@ public class GatewayProperties {
         return responseTimeout;
     }
 
+    /** Sets the response timeout; the duration must be nonnull and positive. */
     public void setResponseTimeout(Duration responseTimeout) {
         this.responseTimeout = requirePositive(responseTimeout, "responseTimeout");
     }
@@ -158,6 +173,7 @@ public class GatewayProperties {
         return pendingAcquireTimeout;
     }
 
+    /** Sets the connection acquisition timeout; the duration must be nonnull and positive. */
     public void setPendingAcquireTimeout(Duration pendingAcquireTimeout) {
         this.pendingAcquireTimeout =
                 requirePositive(pendingAcquireTimeout, "pendingAcquireTimeout");
@@ -167,6 +183,9 @@ public class GatewayProperties {
         return maxIdleTime;
     }
 
+    /**
+     * Sets the maximum idle time for pooled connections; the duration must be nonnull and positive.
+     */
     public void setMaxIdleTime(Duration maxIdleTime) {
         this.maxIdleTime = requirePositive(maxIdleTime, "maxIdleTime");
     }
@@ -175,6 +194,9 @@ public class GatewayProperties {
         return maxLifeTime;
     }
 
+    /**
+     * Sets the maximum lifetime of pooled connections; the duration must be nonnull and positive.
+     */
     public void setMaxLifeTime(Duration maxLifeTime) {
         this.maxLifeTime = requirePositive(maxLifeTime, "maxLifeTime");
     }
@@ -183,6 +205,7 @@ public class GatewayProperties {
         return evictInBackground;
     }
 
+    /** Sets the background eviction interval; the duration must be nonnull and positive. */
     public void setEvictInBackground(Duration evictInBackground) {
         this.evictInBackground = requirePositive(evictInBackground, "evictInBackground");
     }
@@ -191,6 +214,7 @@ public class GatewayProperties {
         return maxConnections;
     }
 
+    /** Sets the maximum number of pooled connections, which must be at least one. */
     public void setMaxConnections(int maxConnections) {
         if (maxConnections < 1) {
             throw new IllegalArgumentException("maxConnections must be greater than zero");

@@ -24,6 +24,10 @@ public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Converts a downstream failure to a generic response: 504 for a timeout, 503 for upstream 429,
+     * and 502 otherwise.
+     */
     @ExceptionHandler(ServiceCallException.class)
     public Mono<ResponseEntity<GenerationResponse>> handleServiceCallException(
             ServiceCallException exception) {
@@ -47,6 +51,7 @@ public class GlobalExceptionHandler {
                                         Map.of(service, "Upstream service error"))));
     }
 
+    /** Converts request and validation errors to a generic HTTP 400 response. */
     @ExceptionHandler({
         IllegalArgumentException.class,
         ServerWebInputException.class,
@@ -63,6 +68,7 @@ public class GlobalExceptionHandler {
                                         "error", "Invalid generation request.", Map.of())));
     }
 
+    /** Converts a workflow deadline error to HTTP 504. */
     @ExceptionHandler(WorkflowTimeoutException.class)
     public Mono<ResponseEntity<GenerationResponse>> handleWorkflowTimeout(
             WorkflowTimeoutException exception) {
@@ -78,6 +84,7 @@ public class GlobalExceptionHandler {
                                         Map.of())));
     }
 
+    /** Converts an unexpected error to a generic HTTP 500 response. */
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<GenerationResponse>> handleUnexpectedException(Exception exception) {
 
