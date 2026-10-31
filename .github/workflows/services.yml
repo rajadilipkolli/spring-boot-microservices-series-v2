@@ -103,9 +103,9 @@ jobs:
           echo "=== Docker server architecture ==="
           docker info --format '{{.OSType}}/{{.Architecture}}'
 
-          # config-server is published as a native image.
+          # config-server and order-service are published as native images.
           PROFILE=""
-          if [ "$SERVICE" = "config-server" ]; then
+          if [ "$SERVICE" = "config-server" ] || [ "$SERVICE" = "order-service" ]; then
             PROFILE="-Pnative"
           fi
           

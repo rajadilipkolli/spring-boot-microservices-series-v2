@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
+import org.jobrunr.jobs.annotations.Recurring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -342,6 +343,7 @@ public class OrderService {
      * caught so remaining orders are attempted; failures fetching the orders propagate.
      */
     @Job(name = "reProcessNewOrders", retries = 2)
+    @Recurring(id = "retry-new-orders", cron = "*/1 * * * *")
     @Transactional
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order

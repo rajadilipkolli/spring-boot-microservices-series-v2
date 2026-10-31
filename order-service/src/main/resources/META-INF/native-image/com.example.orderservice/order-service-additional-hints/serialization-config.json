@@ -1,0 +1,12 @@
+{
+  "types": [
+    {
+      "name": "java.lang.invoke.SerializedLambda"
+    }
+  ],
+  "lambdaCapturingTypes": [
+    {
+      "name": "org.springframework.modulith.events.jobrunr.JobRunrEventExternalizer"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import com.example.e2e.models.InventoryRequest;
 import com.example.e2e.models.OrderItemRequest;
 import com.example.e2e.models.OrderRequest;
 import com.example.e2e.models.ProductRequest;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -70,8 +71,8 @@ class OrderSagaFulfillmentE2ETest {
                                 given().spec(E2EConfig.defaultRequestSpec())
                                         .when()
                                         .get(
-                                                "/inventory-service/api/inventory/"
-                                                        + TEST_PRODUCT_CODE)
+                                                "/inventory-service/api/inventory/{productCode}",
+                                                TEST_PRODUCT_CODE)
                                         .then()
                                         .statusCode(200));
 
@@ -80,7 +81,7 @@ class OrderSagaFulfillmentE2ETest {
         given().spec(E2EConfig.defaultRequestSpec())
                 .body(inventory)
                 .when()
-                .put("/inventory-service/api/inventory/product/" + TEST_PRODUCT_CODE)
+                .put("/inventory-service/api/inventory/product/{productCode}", TEST_PRODUCT_CODE)
                 .then()
                 .statusCode(200);
 
@@ -148,7 +149,8 @@ class OrderSagaFulfillmentE2ETest {
                             Response orderCheck =
                                     given().spec(E2EConfig.defaultRequestSpec())
                                             .when()
-                                            .get("/order-service/api/orders/" + orderId)
+                                            .accept(ContentType.JSON)
+                                            .get("/order-service/api/orders/{id}", orderId)
                                             .then()
                                             .statusCode(200)
                                             .extract()
@@ -201,8 +203,9 @@ class OrderSagaFulfillmentE2ETest {
                         () -> {
                             Response orderCheck =
                                     given().spec(E2EConfig.defaultRequestSpec())
+                                            .accept(ContentType.JSON)
                                             .when()
-                                            .get("/order-service/api/orders/" + orderId)
+                                            .get("/order-service/api/orders/{id}", orderId)
                                             .then()
                                             .statusCode(200)
                                             .extract()
@@ -274,8 +277,9 @@ class OrderSagaFulfillmentE2ETest {
                         () -> {
                             Response orderCheck =
                                     given().spec(E2EConfig.defaultRequestSpec())
+                                            .accept(ContentType.JSON)
                                             .when()
-                                            .get("/order-service/api/orders/" + orderId)
+                                            .get("/order-service/api/orders/{id}", orderId)
                                             .then()
                                             .statusCode(200)
                                             .extract()

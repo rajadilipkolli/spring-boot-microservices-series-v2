@@ -1052,18 +1052,18 @@ void testOrderProcessingTopology() {
         TestInputTopic<Long, OrderDto> paymentTopic = 
             testDriver.createInputTopic("payment-orders", 
                 Serdes.Long().serializer(), 
-                new JsonSerde<>(OrderDto.class).serializer());
+                new JacksonJsonSerde<>(OrderDto.class).serializer());
         
         TestInputTopic<Long, OrderDto> stockTopic = 
             testDriver.createInputTopic("stock-orders", 
                 Serdes.Long().serializer(), 
-                new JsonSerde<>(OrderDto.class).serializer());
+                new JacksonJsonSerde<>(OrderDto.class).serializer());
         
         // Create test output topic
         TestOutputTopic<Long, OrderDto> outputTopic = 
             testDriver.createOutputTopic("orders", 
                 Serdes.Long().deserializer(), 
-                new JsonSerde<>(OrderDto.class).deserializer());
+                new JacksonJsonSerde<>(OrderDto.class).deserializer());
         
         // Send test data
         paymentTopic.pipeInput(1L, createPaymentOrder(1L, "ACCEPT"));

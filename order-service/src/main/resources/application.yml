@@ -21,10 +21,10 @@ spring:
     streams:
       clientId: order-service-stream-client
       replicationFactor: 1
-      producer:
-        acks: all
       application-id: ${spring.application.name}
       properties:
+        producer:
+          acks: all
         commit:
           interval:
             ms: 100
@@ -37,7 +37,7 @@ spring:
           key:
             serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
-            serde: org.springframework.kafka.support.serializer.JsonSerde
+            serde: org.springframework.kafka.support.serializer.JacksonJsonSerde
         spring:
           json:
             trusted:

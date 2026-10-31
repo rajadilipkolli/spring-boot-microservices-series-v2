@@ -471,12 +471,12 @@ private OrderDto applyBusinessRules(OrderDto payment, OrderDto stock) {
 // Kafka Streams serialization setup
 @Bean
 public Serde<OrderDto> orderDtoSerde() {
-    JsonSerde<OrderDto> serde = new JsonSerde<>(OrderDto.class);
+    JacksonJsonSerde<OrderDto> serde = new JacksonJsonSerde<>(OrderDto.class);
     
     Map<String, Object> config = Map.of(
-        JsonDeserializer.TRUSTED_PACKAGES, "com.example.common.dtos",
-        JsonDeserializer.USE_TYPE_INFO_HEADERS, false,
-        JsonSerializer.ADD_TYPE_INFO_HEADERS, false
+        JacksonJsonDeserializer.TRUSTED_PACKAGES, "com.example.common.dtos",
+        JacksonJsonDeserializer.USE_TYPE_INFO_HEADERS, false,
+        JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false
     );
     
     serde.configure(config, false);
