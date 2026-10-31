@@ -50,8 +50,8 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
      * Registers reflection and proxy hints for order-service native images, including JobRunr job
      * handlers, MapStruct decorators, Kafka Streams exception handlers, JPA auditing listeners,
      * Liquibase preconditions, Kafka Serdes, assignors, and Hibernate proxies. Also registers
-     * serialization hints for serialized lambdas and resource patterns for Liquibase, JobRunr,
-     * and Spring Modulith.
+     * serialization hints for serialized lambdas and resource patterns for Liquibase, JobRunr, and
+     * Spring Modulith.
      *
      * @param hints registry to update
      * @param classLoader unused by this registrar
