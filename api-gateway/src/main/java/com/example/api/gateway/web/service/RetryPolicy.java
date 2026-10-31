@@ -112,7 +112,9 @@ public class RetryPolicy {
 
         for (Throwable current = throwable; current != null; current = current.getCause()) {
 
-            if (current instanceof TimeoutException || current instanceof SocketTimeoutException) {
+            if (current instanceof TimeoutException
+                    || current instanceof SocketTimeoutException
+                    || current instanceof io.netty.handler.timeout.TimeoutException) {
                 return true;
             }
         }
