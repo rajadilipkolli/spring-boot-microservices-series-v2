@@ -399,7 +399,7 @@ public class OptimizedKafkaConfig {
         // Basic configuration
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
         
         // Performance optimizations
         configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);

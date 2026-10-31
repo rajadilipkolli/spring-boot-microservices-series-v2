@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 import org.jobrunr.jobs.annotations.Job;
+import org.jobrunr.jobs.annotations.Recurring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -339,9 +340,11 @@ public class OrderService {
      * Republishes NEW orders last modified strictly more than five minutes ago, in ascending ID
      * order, with a new random attempt ID for each. After publishing, saves the order with its last
      * modified time set to the current time. Exceptions while processing an individual order are
-     * caught so remaining orders are attempted; failures fetching the orders propagate.
+     * caught so remaining orders are attempted; failures fetching the orders propagate. Configured
+     * as a recurring JobRunr job to run every minute.
      */
     @Job(name = "reProcessNewOrders", retries = 2)
+    @Recurring(id = "retry-new-orders", cron = "*/1 * * * *")
     @Transactional
     public void retryNewOrders() {
         // fetch all orders where Status is New in Order

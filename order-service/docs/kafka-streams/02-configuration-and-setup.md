@@ -102,7 +102,7 @@ spring:
           key:
             serde: org.apache.kafka.common.serialization.Serdes$StringSerde
           value:
-            serde: org.springframework.kafka.support.serializer.JsonSerde
+            serde: org.springframework.kafka.support.serializer.JacksonJsonSerde
         spring:
           json:
             trusted:
@@ -405,7 +405,7 @@ public StreamsUncaughtExceptionHandler streamsUncaughtExceptionHandler() {
 
 ```java
 // JSON serialization for OrderDto
-JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+JacksonJsonSerde<OrderDto> orderSerde = new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
 
 ```
 
@@ -414,12 +414,12 @@ JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
 ```java
 @Bean
 public Serde<OrderDto> orderDtoSerde() {
-    JsonSerde<OrderDto> serde = new JsonSerde<>(OrderDto.class);
+    JacksonJsonSerde<OrderDto> serde = new JacksonJsonSerde<>(OrderDto.class);
     
     // Configure JsonMapper to ignore type headers
     serde.configure(Map.of(
-        JsonDeserializer.USE_TYPE_INFO_HEADERS, false,
-        JsonSerializer.ADD_TYPE_INFO_HEADERS, false
+        JacksonJsonDeserializer.USE_TYPE_INFO_HEADERS, false,
+        JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false
     ), false);
     
     return serde;
@@ -451,7 +451,8 @@ KStream<Long, OrderDto> stream = builder.stream("orders");
 KTable<Long, OrderDto> table(StreamsBuilder streamsBuilder) {
     // Persistent store for durability
     KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(ORDERS_TOPIC);
-    JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+    JacksonJsonSerde<OrderDto> orderSerde =
+            new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
     
     KStream<Long, OrderDto> stream = streamsBuilder.stream(
         ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));

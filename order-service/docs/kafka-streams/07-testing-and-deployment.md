@@ -120,13 +120,14 @@ class OrderStreamTopologyTest {
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test-order-service");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, JsonSerde.class);
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, JacksonJsonSerde.class);
         
         // Create test driver
         testDriver = new TopologyTestDriver(topology, props);
         
         // Create test topics
-        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<OrderDto> orderSerde =
+                new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
         
         paymentTopic = testDriver.createInputTopic(
             "payment-orders",
