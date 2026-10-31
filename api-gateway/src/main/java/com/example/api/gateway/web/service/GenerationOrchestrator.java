@@ -93,7 +93,7 @@ public class GenerationOrchestrator {
     }
 
     private boolean isSuccessful(ServiceResult result) {
-        return result != null && result.status() == HttpStatus.OK.value();
+        return result != null && HttpStatus.valueOf(result.status()).is2xxSuccessful();
     }
 
     private Mono<Void> delay() {
