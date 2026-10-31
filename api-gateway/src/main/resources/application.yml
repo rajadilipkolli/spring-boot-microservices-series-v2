@@ -2,10 +2,23 @@ management:
   endpoint:
     gateway:
       access: READ_ONLY
+    health:
+      show-details: when_authorized
+    metrics:
+      tags:
+        application: api-gateway
+    prometheus:
+      metrics:
+        export:
+          enabled: true
   endpoints:
     web:
       exposure:
-        include: 'health,info,prometheus,metrics'
+        include:
+          - health
+          - info
+          - metrics
+          - prometheus
   info:
     git:
       mode: full
@@ -40,7 +53,7 @@ spring:
                   args:
                     redis-rate-limiter:
                       replenishRate: 60
-                      burstCapacity: 10
+                      burstCapacity: 120
             - id: inventory-service
               predicates:
                 - Path=/inventory-service/**
@@ -90,3 +103,25 @@ springdoc:
     group: api-gateway
     pathsToMatch: /**
 #  packagesToScan: com.example.api.gateway.web
+
+
+
+gateway:
+  delay-between-services: 5s
+  request-timeout: 10s
+  workflow-timeout: 45s
+
+  connection-timeout: 2s
+  response-timeout: 8s
+  pending-acquire-timeout: 2s
+
+  max-idle-time: 30s
+  max-life-time: 5m
+  evict-in-background: 30s
+
+  max-connections: 100
+
+  service-urls:
+    CATALOG: "http://CATALOG-SERVICE/catalog-service/api/catalog/generate"
+    INVENTORY: "http://INVENTORY-SERVICE/inventory-service/api/inventory/generate"
+    ORDER: "http://ORDER-SERVICE/order-service/api/orders/generate"
