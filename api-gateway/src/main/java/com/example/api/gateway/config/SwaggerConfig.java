@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.servers.Server;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,7 @@ class SwaggerConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SwaggerConfig.class);
 
+    /** Creates API groups for service routes and adds their documentation URLs to Swagger UI. */
     @Bean
     @Lazy(value = false)
     List<GroupedOpenApi> groupedOpenApis(
@@ -75,6 +77,7 @@ class SwaggerConfig {
         return locator.getRouteDefinitions()
                 .toStream()
                 .map(RouteDefinition::getId)
+                .filter(Objects::nonNull)
                 .filter(this::isServiceRoute)
                 .map(
                         routeDefinitionId -> {
