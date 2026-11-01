@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
+import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +16,6 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.postgresql.util.PSQLException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -69,9 +69,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Verifies that inserting a duplicate customer with identical name and email fails with
-     * DataIntegrityViolationException (specifically DuplicateKeyException) and wraps a
-     * PSQLException for the uc_customers_name_email_key constraint.
+     * Verifies that inserting a duplicate customer with identical name and email translates to
+     * CustomerExistsException wrapping the underlying constraint violation.
      */
     @Test
     void saveCustomerDuplicateNameAndEmailThrowsDataIntegrityViolationException() {
@@ -103,7 +102,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setAmountReserved(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer2))
-                .isInstanceOf(DuplicateKeyException.class)
+                .isInstanceOf(CustomerExistsException.class)
+                .hasMessage("Customer with email duplicate@example.com already exists.")
                 .satisfies(
                         ex -> {
                             PSQLException psqlEx = findCause(ex, PSQLException.class);

@@ -32,6 +32,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private CacheManager cacheManager;
 
+    @Autowired private ProductGeneratorService productGeneratorService;
+
     @MockitoBean private InventoryServiceProxy inventoryServiceProxy;
 
     /** Clears Redis and seeds a deterministic product for cache integration tests. */
@@ -156,7 +158,7 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productRepository.deleteByProductCodeAllIgnoreCase("P002").block();
 
         String beforeGenerate = productCacheGenerationRepository.findCacheGeneration().block();
-        productService.generateProducts("cache-test", 1).block();
+        productGeneratorService.generateAndSaveProducts("cache-test", 1).block();
         assertThat(productCacheGenerationRepository.findCacheGeneration().block())
                 .isNotEqualTo(beforeGenerate);
         productRepository.deleteByProductCodeAllIgnoreCase("ProductCode_cache-test_0").block();

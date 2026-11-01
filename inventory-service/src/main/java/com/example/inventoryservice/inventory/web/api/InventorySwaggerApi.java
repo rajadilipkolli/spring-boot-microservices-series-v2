@@ -314,7 +314,7 @@ public interface InventorySwaggerApi {
                         description = "Inventory absent or already deleted",
                         content = @Content)
             })
-    ResponseEntity<InventoryResponse> deleteInventory(
+    ResponseEntity<Void> deleteInventory(
             @Parameter(name = "id", description = "Inventory ID", example = "1") @PathVariable
                     Long id);
 }

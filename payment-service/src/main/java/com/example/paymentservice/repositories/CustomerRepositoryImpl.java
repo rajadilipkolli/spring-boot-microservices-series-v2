@@ -3,6 +3,7 @@ package com.example.paymentservice.repositories;
 
 import static com.example.paymentservice.jooq.tables.Customers.CUSTOMERS;
 
+import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -16,6 +17,8 @@ import org.jooq.conf.Settings;
 import org.jooq.conf.SettingsTools;
 import org.jooq.exception.DataChangedException;
 import org.jooq.impl.DSL;
+import org.postgresql.util.PSQLException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -23,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-public class CustomerRepositoryImpl implements CustomerRepository {
+public class CustomerRepositoryImpl implements CustomerRepository, CustomerBalanceRepository {
 
     private final DSLContext insertDsl;
     private final CustomerDAO customerDAO;
@@ -192,8 +195,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
     }
 
     /**
-     * Deletes all ledger entries, payment operations, outbox events, and customers through the DAO
-     * in one transaction. Database failures propagate.
+     * Deletes all customers through the DAO. Database failures propagate.
      *
      * @return the number of deleted customer rows
      */
@@ -299,15 +301,44 @@ public class CustomerRepositoryImpl implements CustomerRepository {
      * without changing the supplied record. Database failures propagate to the caller.
      *
      * @throws OptimisticLockingFailureException if the insert affects no rows
+     * @throws CustomerExistsException if a unique constraint violation occurs for email
      */
     private CustomersRecord getInsertedCustomersRecord(CustomersRecord requestCustomer) {
         CustomersRecord customersRecord = insertDsl.newRecord(CUSTOMERS, requestCustomer);
         customersRecord.reset(CUSTOMERS.VERSION);
-        int inserted = customersRecord.insert();
-        if (inserted == 0) {
-            throw new OptimisticLockingFailureException(
-                    "Customer was inserted by another transaction");
+        try {
+            int inserted = customersRecord.insert();
+            if (inserted == 0) {
+                throw new OptimisticLockingFailureException(
+                        "Customer was inserted by another transaction");
+            }
+            return customersRecord.into(CustomersRecord.class);
+        } catch (DataIntegrityViolationException e) {
+            if (isEmailUniqueConstraintViolation(e)) {
+                throw new CustomerExistsException(
+                        "Customer with email " + requestCustomer.getEmail() + " already exists.",
+                        e);
+            }
+            throw e;
         }
-        return customersRecord.into(CustomersRecord.class);
+    }
+
+    /**
+     * Checks nested PostgreSQL causes for a unique violation of the customer email constraint.
+     *
+     * @param exception the persistence failure to inspect
+     * @return whether a cause identifies SQL state 23505 and the exact customer email constraint
+     */
+    private boolean isEmailUniqueConstraintViolation(DataIntegrityViolationException exception) {
+        for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof PSQLException sqlException
+                    && "23505".equals(sqlException.getSQLState())
+                    && sqlException.getServerErrorMessage() != null
+                    && "uc_customers_name_email_key"
+                            .equals(sqlException.getServerErrorMessage().getConstraint())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

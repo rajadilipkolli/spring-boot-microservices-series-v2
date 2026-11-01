@@ -15,7 +15,6 @@ import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
-import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -86,15 +85,15 @@ class CustomerServiceTest {
                                 record -> "customer@example.com".equals(record.getEmail())));
     }
 
-    /** Verifies that a concurrent email-constraint violation becomes a customer conflict. */
+    /**
+     * Verifies that a concurrent duplicate email failure from repository propagates
+     * CustomerExistsException.
+     */
     @Test
     void translatesEmailConstraintViolationAfterPreInsertCheck() {
-        DataIntegrityViolationException failure =
-                new DuplicateKeyException(
-                        "insert failed",
-                        new DataAccessException(
-                                "jOOQ insert failed",
-                                postgresFailure("23505", "uc_customers_name_email_key")));
+        CustomerExistsException failure =
+                new CustomerExistsException(
+                        "Customer with email customer@example.com already exists.");
         given(customerRepository.saveCustomer(any(CustomersRecord.class))).willThrow(failure);
 
         assertThatThrownBy(() -> customerService.saveCustomer(request))

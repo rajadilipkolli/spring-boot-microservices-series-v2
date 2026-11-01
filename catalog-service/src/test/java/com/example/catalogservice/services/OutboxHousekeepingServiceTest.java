@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.example.catalogservice.config.ApplicationProperties;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,9 +25,12 @@ import reactor.core.publisher.Mono;
 
 class OutboxHousekeepingServiceTest {
     private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
+    private final ApplicationProperties properties =
+            new ApplicationProperties("http://localhost:8082", null, null, null);
     private final ApplicationContextRunner contextRunner =
             new ApplicationContextRunner()
                     .withBean(OutboxEventRepository.class, () -> repository)
+                    .withBean(ApplicationProperties.class, () -> properties)
                     .withBean(MeterRegistry.class, SimpleMeterRegistry::new)
                     .withUserConfiguration(OutboxHousekeepingService.class);
 

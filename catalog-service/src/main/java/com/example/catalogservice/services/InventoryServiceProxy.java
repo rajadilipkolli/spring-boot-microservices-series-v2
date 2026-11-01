@@ -152,12 +152,13 @@ public class InventoryServiceProxy {
                 .onErrorResume(RequestNotPermitted.class, fallback)
                 .onErrorResume(
                         CallNotPermittedException.class,
-                        throwable -> {
+                        _ -> {
                             log.error(
                                     "Circuit Breaker is in [{}]... Providing fallback response without calling the API",
                                     circuitBreaker.getState());
-                            throw new CustomResponseStatusException(
-                                    SERVICE_UNAVAILABLE, "API service is unavailable");
+                            return Mono.error(
+                                    new CustomResponseStatusException(
+                                            SERVICE_UNAVAILABLE, "API service is unavailable"));
                         });
     }
 }

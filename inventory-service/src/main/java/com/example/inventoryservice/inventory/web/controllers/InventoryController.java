@@ -154,7 +154,7 @@ class InventoryController implements InventorySwaggerApi {
     /** Deletes existing inventory and returns an empty HTTP 200 response, or HTTP 410 if absent. */
     @DeleteMapping("/{id}")
     @Override
-    public ResponseEntity<InventoryResponse> deleteInventory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteInventory(@PathVariable Long id) {
         boolean existsInventoryById = inventoryAPI.existsInventoryById(id);
         if (existsInventoryById) {
             inventoryAPI.deleteInventoryById(id);

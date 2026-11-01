@@ -15,10 +15,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jooq.OrderField;
-import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,7 +126,6 @@ public class CustomerService {
      * @return the persisted customer response
      * @throws CustomerExistsException if the email is already present or a concurrent insert
      *     violates the customer email constraint
-     * @throws DataIntegrityViolationException if another database integrity constraint fails
      */
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
@@ -140,38 +137,10 @@ public class CustomerService {
                     "Customer with email " + normalizedEmail + " already exists.");
         }
 
-        CustomersRecord savedCustomer;
-        try {
-            CustomersRecord customerRecord = customerRequest.toCustomersRecord();
-            customerRecord.setEmail(normalizedEmail);
-            savedCustomer = customerRepository.saveCustomer(customerRecord);
-        } catch (DataIntegrityViolationException e) {
-            if (isEmailUniqueConstraintViolation(e)) {
-                throw new CustomerExistsException(
-                        "Customer with email " + normalizedEmail + " already exists.");
-            }
-            throw e;
-        }
+        CustomersRecord customerRecord = customerRequest.toCustomersRecord();
+        customerRecord.setEmail(normalizedEmail);
+        CustomersRecord savedCustomer = customerRepository.saveCustomer(customerRecord);
         return CustomerResponse.toResponse(savedCustomer);
-    }
-
-    /**
-     * Checks nested PostgreSQL causes for a unique violation of the customer email constraint.
-     *
-     * @param exception the persistence failure to inspect
-     * @return whether a cause identifies SQL state 23505 and the exact customer email constraint
-     */
-    private boolean isEmailUniqueConstraintViolation(DataIntegrityViolationException exception) {
-        for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
-            if (cause instanceof PSQLException sqlException
-                    && "23505".equals(sqlException.getSQLState())
-                    && sqlException.getServerErrorMessage() != null
-                    && "uc_customers_name_email_key"
-                            .equals(sqlException.getServerErrorMessage().getConstraint())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

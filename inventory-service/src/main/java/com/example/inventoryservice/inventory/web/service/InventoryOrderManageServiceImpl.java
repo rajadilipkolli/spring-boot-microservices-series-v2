@@ -38,6 +38,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     private final InventoryRepository inventoryRepository;
     private final ProcessedOrderEventRepository processedOrderEventRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final List<OrderStockActionStrategy> stockActionStrategies;
     private final Counter inventoryReservationsCounter;
     private final Counter inventoryFailuresCounter;
 
@@ -47,9 +48,32 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             ProcessedOrderEventRepository processedOrderEventRepository,
             MeterRegistry meterRegistry,
             ApplicationEventPublisher eventPublisher) {
+        this(
+                inventoryRepository,
+                processedOrderEventRepository,
+                meterRegistry,
+                eventPublisher,
+                List.of(
+                        new ConfirmedOrderStockActionStrategy(),
+                        new RollbackOrderStockActionStrategy()));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public InventoryOrderManageServiceImpl(
+            InventoryRepository inventoryRepository,
+            ProcessedOrderEventRepository processedOrderEventRepository,
+            MeterRegistry meterRegistry,
+            ApplicationEventPublisher eventPublisher,
+            List<OrderStockActionStrategy> stockActionStrategies) {
         this.inventoryRepository = inventoryRepository;
         this.processedOrderEventRepository = processedOrderEventRepository;
         this.eventPublisher = eventPublisher;
+        this.stockActionStrategies =
+                stockActionStrategies == null
+                        ? List.of(
+                                new ConfirmedOrderStockActionStrategy(),
+                                new RollbackOrderStockActionStrategy())
+                        : List.copyOf(stockActionStrategies);
         this.inventoryReservationsCounter = meterRegistry.counter("inventory_reservations");
         this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
     }
@@ -299,15 +323,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             Inventory inventory = inventoryMap.get(productId);
 
             if (inventory != null) {
-                Integer productCount = orderItemDto.quantity();
-
-                if ("CONFIRMED".equals(orderDto.status())) {
-                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
-                } else if (AppConstants.ROLLBACK.equals(orderDto.status())
-                        && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.source())) {
-                    inventory
-                            .setReservedItems(inventory.getReservedItems() - productCount)
-                            .setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
+                for (OrderStockActionStrategy strategy : stockActionStrategies) {
+                    if (strategy.supports(orderDto.status(), orderDto.source())) {
+                        strategy.apply(inventory, orderItemDto);
+                    }
                 }
             }
         }

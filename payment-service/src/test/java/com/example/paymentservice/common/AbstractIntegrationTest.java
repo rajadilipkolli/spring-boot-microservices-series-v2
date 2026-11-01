@@ -7,6 +7,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import com.example.common.dto.OrderDto;
 import com.example.paymentservice.PaymentApplication;
 import com.example.paymentservice.clients.OrderServiceProxy;
+import com.example.paymentservice.repositories.CustomerBalanceRepository;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.repositories.LedgerRepository;
@@ -49,6 +50,8 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected KafkaTemplate<String, OrderDto> kafkaTemplate;
 
     @MockitoSpyBean protected CustomerRepository customerRepository;
+
+    @MockitoSpyBean protected CustomerBalanceRepository customerBalanceRepository;
 
     @Autowired protected CustomerDAO customerDAO;
 

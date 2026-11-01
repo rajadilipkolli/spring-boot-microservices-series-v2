@@ -9,8 +9,6 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.entities.OutboxEvent;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.entities.OutboxPayload;
-import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -28,19 +26,14 @@ public class OutboxService {
 
     private final OutboxEventRepository outboxEventRepository;
     private final JsonMapper jsonMapper;
-    private final ProductMapper productMapper;
 
-    public OutboxService(
-            OutboxEventRepository outboxEventRepository,
-            JsonMapper jsonMapper,
-            ProductMapper productMapper) {
+    public OutboxService(OutboxEventRepository outboxEventRepository, JsonMapper jsonMapper) {
         this.outboxEventRepository = outboxEventRepository;
         this.jsonMapper = jsonMapper;
-        this.productMapper = productMapper;
     }
 
     /**
-     * Serializes the payload and saves a pending outbox event, mapping products to DTOs first.
+     * Serializes the payload and saves a pending outbox event.
      *
      * @param aggregateType type of aggregate that produced the event
      * @param aggregateId identifier of the aggregate
@@ -51,11 +44,7 @@ public class OutboxService {
     @Transactional
     public Mono<OutboxEvent> createOutboxEvent(
             String aggregateType, String aggregateId, String eventType, Object payload) {
-        Object finalPayload = payload;
-        if (payload instanceof Product product) {
-            finalPayload = productMapper.toProductDto(product);
-        }
-        String payloadString = jsonMapper.writeValueAsString(finalPayload);
+        String payloadString = jsonMapper.writeValueAsString(payload);
         OutboxEvent event =
                 new OutboxEvent()
                         .setId(UUID.randomUUID())

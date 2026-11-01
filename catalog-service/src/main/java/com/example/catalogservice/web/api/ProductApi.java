@@ -7,11 +7,9 @@
 package com.example.catalogservice.web.api;
 
 import com.example.catalogservice.model.request.ProductRequest;
+import com.example.catalogservice.model.response.ProductExistsResponse;
 import com.example.catalogservice.model.response.ProductResponse;
-import com.example.catalogservice.services.ProductGeneratorService;
 import com.example.catalogservice.utils.AppConstants;
-import com.example.catalogservice.web.controllers.ProductController.GenerateProductsResponse;
-import com.example.catalogservice.web.controllers.ProductController.ProductExistsResponse;
 import com.example.common.dto.PagedResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,8 +18,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.MediaType;
@@ -29,7 +25,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 
@@ -187,52 +182,6 @@ public interface ProductApi {
             @Parameter(name = "productCodes", description = "List of product codes to check")
                     @RequestParam
                     List<String> productCodes);
-
-    /**
-     * Generates and saves sample products, reusing products with matching codes. New or restored
-     * products produce creation outbox events, and product caches are invalidated. Save and
-     * cache-generation errors propagate through the returned Mono; Redis deletion failures are
-     * suppressed.
-     *
-     * @param idempotencyKey included in each product code with its zero-based batch index
-     * @param batchSize number of products from 1 through 10,000, or null for 101
-     * @return a successful generation result after all saves complete
-     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
-     */
-    @Operation(
-            summary = "Generate random products",
-            description = "Generates and saves sample products in batches.",
-            tags = {"product"},
-            responses = {
-                @ApiResponse(
-                        responseCode = "200",
-                        description = "Random products generated successfully",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                        schema =
-                                                @Schema(
-                                                        implementation =
-                                                                GenerateProductsResponse.class))),
-                @ApiResponse(
-                        responseCode = "400",
-                        description = "Validation error",
-                        content =
-                                @Content(
-                                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                                        schema = @Schema(implementation = ProblemDetail.class)))
-            })
-    Mono<GenerateProductsResponse> createRandomProducts(
-            @Parameter(
-                            name = "Idempotency-Key",
-                            description = "Idempotency key for batch generation")
-                    @RequestHeader(name = "Idempotency-Key")
-                    String idempotencyKey,
-            @Parameter(
-                            name = "batchSize",
-                            description = "Number of products to generate (between 1 and 10000)")
-                    @RequestParam(required = false)
-                    @Min(1) @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE) Integer batchSize);
 
     /**
      * Returns an active product with the same case-insensitive code, restores a deleted product, or

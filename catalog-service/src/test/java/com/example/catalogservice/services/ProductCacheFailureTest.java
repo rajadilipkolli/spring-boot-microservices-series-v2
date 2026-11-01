@@ -44,8 +44,6 @@ class ProductCacheFailureTest {
             mock(ProductCacheGenerationRepository.class);
     private final ProductMapper mapper = mock(ProductMapper.class);
     private final ProductAvailabilityEnricher enricher = mock(ProductAvailabilityEnricher.class);
-    private final ProductGeneratorService productGeneratorService =
-            mock(ProductGeneratorService.class);
     private final OutboxService outbox = mock(OutboxService.class);
     private final ReactiveRedisOperations<String, Object> redis = mock();
     private final ReactiveValueOperations<String, Object> values = mock();
@@ -180,7 +178,6 @@ class ProductCacheFailureTest {
                 outbox,
                 redis,
                 enricher,
-                productGeneratorService,
                 null,
                 TSID.Factory.builder().withNode(1).build(),
                 productCacheGeneration);

@@ -42,6 +42,7 @@ public class PaymentOperationEngine {
     private final ApplicationProperties properties;
     private final JsonMapper jsonMapper;
     private final TransactionTemplate transactionTemplate;
+    private final OrderPricingCalculator pricingCalculator;
 
     private final Counter zombieRejectionsCounter;
 
@@ -57,7 +58,8 @@ public class PaymentOperationEngine {
             ApplicationProperties properties,
             JsonMapper jsonMapper,
             MeterRegistry meterRegistry,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            OrderPricingCalculator pricingCalculator) {
         this.operationRepository = operationRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.customerRepository = customerRepository;
@@ -65,6 +67,7 @@ public class PaymentOperationEngine {
         this.properties = properties;
         this.jsonMapper = jsonMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.pricingCalculator = pricingCalculator;
         this.zombieRejectionsCounter =
                 meterRegistry.counter("payment.operations.zombie.rejections");
     }
@@ -509,10 +512,7 @@ public class PaymentOperationEngine {
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
-        return orderDto.items().stream()
-                .map(OrderDto.OrderItemDto::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+        return pricingCalculator.calculateTotalOrderPrice(orderDto);
     }
 
     /**

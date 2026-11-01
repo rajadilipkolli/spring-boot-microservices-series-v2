@@ -244,7 +244,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                             blockLatch.await(10, TimeUnit.SECONDS);
                         } catch (InterruptedException ignored) {
                         }
-                        customerRepository.reserveFunds(command.customerId(), command.amount());
+                        customerBalanceRepository.reserveFunds(
+                                command.customerId(), command.amount());
                         return ProviderResult.accept();
                     }
 
@@ -263,7 +264,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 new ApplicationProperties(),
                 jsonMapper,
                 new SimpleMeterRegistry(),
-                transactionManager);
+                transactionManager,
+                new OrderPricingCalculator());
     }
 
     /**
@@ -336,7 +338,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                     @Override
                     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
                         if (callCount.incrementAndGet() == 1) {
-                            customerRepository.reserveFunds(command.customerId(), command.amount());
+                            customerBalanceRepository.reserveFunds(
+                                    command.customerId(), command.amount());
                             throw new com.example.paymentservice.services.provider
                                     .ProviderTimeoutException("Simulated timeout", null);
                         }
@@ -359,7 +362,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         new ApplicationProperties(),
                         jsonMapper,
                         new SimpleMeterRegistry(),
-                        transactionManager);
+                        transactionManager,
+                        new OrderPricingCalculator());
 
         OrderDto initial = customEngine.processReserve(order);
         assertThat(initial.status()).isEqualTo("PENDING");
@@ -527,7 +531,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                             assertThat(releaseFirst.await(5, TimeUnit.SECONDS)).isTrue();
                             return result;
                         })
-                .when(customerRepository)
+                .when(customerBalanceRepository)
                 .reserveFunds(customer.getId(), BigDecimal.TEN);
 
         CompletableFuture<ProviderResult> first =
@@ -567,7 +571,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                             customerRepository.softDeleteById(customer.getId());
                             return invocation.callRealMethod();
                         })
-                .when(customerRepository)
+                .when(customerBalanceRepository)
                 .reserveFunds(customer.getId(), new BigDecimal("10.00"));
 
         OrderDto result =

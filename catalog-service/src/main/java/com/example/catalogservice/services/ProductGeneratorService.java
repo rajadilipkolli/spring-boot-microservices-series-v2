@@ -10,6 +10,7 @@ import com.example.catalogservice.model.request.ProductRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -22,6 +23,31 @@ public class ProductGeneratorService {
     public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
     private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
     private static final SecureRandom RAND = new SecureRandom();
+
+    private final ProductService productService;
+
+    public ProductGeneratorService(@Lazy ProductService productService) {
+        this.productService = productService;
+    }
+
+    /**
+     * Generates and saves sample products with whole-unit prices from 1.00 through 100.00, reusing
+     * products with existing codes. New products create outbox events, and product caches are
+     * invalidated. Save failures propagate through the returned Mono; Redis deletion failures are
+     * suppressed.
+     *
+     * @param idempotencyKey included in each product code with its zero-based batch index;
+     *     repeating a key reuses matching codes
+     * @param batchSize number of products, from 1 through 10,000, or null for 101
+     * @return true after all saves complete
+     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     */
+    @Transactional
+    public Mono<Boolean> generateAndSaveProducts(String idempotencyKey, Integer batchSize) {
+        return generateProducts(idempotencyKey, batchSize)
+                .flatMap(productService::saveProduct)
+                .then(Mono.just(Boolean.TRUE));
+    }
 
     /**
      * Generates unsaved sample product requests with whole-unit prices from 1.00 through 100.00.
