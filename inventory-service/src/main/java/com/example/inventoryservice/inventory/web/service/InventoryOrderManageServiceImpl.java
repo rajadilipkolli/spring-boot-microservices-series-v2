@@ -58,6 +58,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                         new RollbackOrderStockActionStrategy()));
     }
 
+    /**
+     * Creates the service with the supplied stock actions. A null list selects the confirmation and
+     * rollback defaults; an empty list selects no actions.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public InventoryOrderManageServiceImpl(
             InventoryRepository inventoryRepository,
@@ -275,8 +279,9 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     /**
      * Decreases reserved stock for {@code CONFIRMED} orders, or restores it to available stock for
      * {@code ROLLBACK} orders whose source is not {@code INVENTORY} (case-insensitive). Missing
-     * products are skipped and other statuses leave quantities unchanged. Changes are persisted
-     * without publishing an event; persistence failures propagate to the caller.
+     * products are skipped. These are the default strategies; supplied strategies can alter this
+     * behavior, and every matching strategy is applied. Changes are persisted without publishing an
+     * event; persistence failures propagate to the caller.
      *
      * <p>For non-null order IDs, an existing {@code CONFIRM_<status>} record skips processing;
      * otherwise that record is saved even when no quantities change. Null IDs bypass duplicate

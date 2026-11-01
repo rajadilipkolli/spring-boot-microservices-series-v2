@@ -38,6 +38,8 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
     /**
      * Creates the ledger provider with ledger storage, customer balances, database access, timeout
      * configuration, and operation strategies.
+     *
+     * @throws IllegalStateException if two strategies have the same operation type, ignoring case
      */
     public InternalLedgerAdapter(
             LedgerRepository ledgerRepository,

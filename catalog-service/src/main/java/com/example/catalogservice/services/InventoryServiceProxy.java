@@ -141,6 +141,10 @@ public class InventoryServiceProxy {
         return Flux.empty();
     }
 
+    /**
+     * Applies resilience controls to a request. Timeouts and rate-limit rejections use the supplied
+     * fallback; an open circuit emits a service-unavailable error. Other errors propagate.
+     */
     private <T> Mono<T> executeWithFallback(
             Mono<T> publisher, Function<Throwable, Mono<T>> fallback) {
         return publisher

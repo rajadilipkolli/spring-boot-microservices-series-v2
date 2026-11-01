@@ -11,7 +11,8 @@ public interface CustomerBalanceRepository {
      *
      * @param customerId the customer identifier
      * @param amount the amount to reserve
-     * @return true if funds were reserved, false if insufficient funds or customer not found
+     * @return true if funds were reserved, false if funds are insufficient or the customer is
+     *     absent or deleted
      */
     boolean reserveFunds(Long customerId, BigDecimal amount);
 

@@ -15,7 +15,7 @@ public class OrderPricingCalculator {
      *
      * @param orderDto the order containing items to total
      * @return the total with scale two, or 0.00 for an empty item list
-     * @throws NullPointerException if the order, items, or an item price is null
+     * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     public BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
         return orderDto.items().stream()

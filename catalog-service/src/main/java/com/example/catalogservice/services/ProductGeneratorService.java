@@ -32,9 +32,9 @@ public class ProductGeneratorService {
 
     /**
      * Generates and saves sample products with whole-unit prices from 1.00 through 100.00, reusing
-     * products with existing codes. New products create outbox events, and product caches are
-     * invalidated. Save failures propagate through the returned Mono; Redis deletion failures are
-     * suppressed.
+     * products with existing codes. New or restored products create outbox events, and product
+     * caches are invalidated. Save failures propagate through the returned Mono; Redis deletion
+     * failures are suppressed.
      *
      * @param idempotencyKey included in each product code with its zero-based batch index;
      *     repeating a key reuses matching codes

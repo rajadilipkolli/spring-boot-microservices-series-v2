@@ -33,7 +33,8 @@ public class OutboxService {
     }
 
     /**
-     * Serializes the payload and saves a pending outbox event.
+     * Serializes the payload immediately and saves a pending outbox event. Serialization failures
+     * reach the caller immediately; repository failures propagate through the returned publisher.
      *
      * @param aggregateType type of aggregate that produced the event
      * @param aggregateId identifier of the aggregate
