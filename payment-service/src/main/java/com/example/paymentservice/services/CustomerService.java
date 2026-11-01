@@ -126,8 +126,8 @@ public class CustomerService {
      * @return the persisted customer response
      * @throws CustomerExistsException if the email is already present or a concurrent insert
      *     violates the customer email constraint
-     * @throws org.springframework.dao.DataIntegrityViolationException if another database
-     *     integrity constraint fails
+     * @throws org.springframework.dao.DataIntegrityViolationException if another database integrity
+     *     constraint fails
      */
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {

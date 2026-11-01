@@ -47,9 +47,6 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
     /** Clears payment state and creates a customer with 100 available and no reserved funds. */
     @BeforeEach
     void setUp() {
-        dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
-        dslContext.deleteFrom(PaymentOperations.PAYMENT_OPERATIONS).execute();
-        dslContext.deleteFrom(OutboxEvents.OUTBOX_EVENTS).execute();
         customerRepository.deleteAll();
         Faker faker = new Faker();
         CustomersRecord record = new CustomersRecord();
