@@ -75,14 +75,15 @@ class OutboxScheduledJobsTest {
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.reapOrphanedEvents(any(), anyInt()))
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
-        OutboxPublisher publisher =
-                new OutboxPublisher(
-                        repository, mock(CatalogKafkaProducer.class), properties, registry);
-        assertWaits(publisher::scheduledReap, subscribed, () -> work.tryEmitValue(1L));
+        OutboxHousekeepingService housekeeping =
+                new OutboxHousekeepingService(repository, properties, registry);
+        assertWaits(housekeeping::scheduledReap, subscribed, () -> work.tryEmitValue(1L));
     }
 
     @Test
     void metricsWaitForTheLastQuery() throws Exception {
+        ApplicationProperties properties =
+                new ApplicationProperties("http://localhost:8082", null, null, null);
         Sinks.One<Long> work = Sinks.one();
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.countByStatus(OutboxEventStatus.PENDING)).thenReturn(Mono.just(1L));
@@ -90,30 +91,34 @@ class OutboxScheduledJobsTest {
         when(repository.countByStatus(OutboxEventStatus.FAILED))
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxHousekeepingService housekeeping =
-                new OutboxHousekeepingService(repository, registry);
+                new OutboxHousekeepingService(repository, properties, registry);
         assertWaits(housekeeping::updateMetrics, subscribed, () -> work.tryEmitValue(3L));
         assertThat(registry.get("outbox.events.failed").gauge().value()).isEqualTo(3);
     }
 
     @Test
     void cleanupWaitsForDeletion() throws Exception {
+        ApplicationProperties properties =
+                new ApplicationProperties("http://localhost:8082", null, null, null);
         Sinks.One<Integer> work = Sinks.one();
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.deleteAllByStatusAndCreatedAtBefore(any(), any()))
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxHousekeepingService housekeeping =
-                new OutboxHousekeepingService(repository, registry);
+                new OutboxHousekeepingService(repository, properties, registry);
         assertWaits(housekeeping::cleanupPublishedEvents, subscribed, () -> work.tryEmitValue(2));
     }
 
     @Test
     void cleanupFailedWaitsForDeletion() throws Exception {
+        ApplicationProperties properties =
+                new ApplicationProperties("http://localhost:8082", null, null, null);
         Sinks.One<Integer> work = Sinks.one();
         CountDownLatch subscribed = new CountDownLatch(1);
         when(repository.deleteAllByStatusAndProcessedAtBefore(any(), any()))
                 .thenReturn(work.asMono().doOnSubscribe(ignored -> subscribed.countDown()));
         OutboxHousekeepingService housekeeping =
-                new OutboxHousekeepingService(repository, registry);
+                new OutboxHousekeepingService(repository, properties, registry);
         assertWaits(housekeeping::cleanupFailedEvents, subscribed, () -> work.tryEmitValue(2));
     }
 

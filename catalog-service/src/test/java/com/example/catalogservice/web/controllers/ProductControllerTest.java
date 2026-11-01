@@ -19,6 +19,7 @@ import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.services.ProductGeneratorService;
 import com.example.catalogservice.services.ProductService;
 import com.example.common.dto.PagedResult;
 import com.example.common.dto.ProductDto;
@@ -40,13 +41,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
-@WebFluxTest(controllers = ProductController.class)
+@WebFluxTest(controllers = {ProductController.class, ProductMockGeneratorController.class})
 @ActiveProfiles({PROFILE_TEST})
 class ProductControllerTest {
 
     @Autowired private WebTestClient webTestClient;
 
     @MockitoBean private ProductService productService;
+
+    @MockitoBean private ProductGeneratorService productGeneratorService;
 
     private List<ProductResponse> productResponseList;
 
@@ -366,7 +369,7 @@ class ProductControllerTest {
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
         given(productService.updateProduct(eq(productId), any(ProductRequest.class)))
-                .willReturn(Mono.empty());
+                .willReturn(Mono.error(new ProductNotFoundException(productId)));
         ProductRequest productRequest =
                 new ProductRequest(
                         "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
@@ -594,7 +597,7 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts(any(String.class), isNull()))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), isNull()))
                 .willReturn(Mono.just(true));
 
         webTestClient
@@ -611,7 +614,7 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsWithBatchSize() {
-        given(productService.generateProducts(any(String.class), eq(25)))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), eq(25)))
                 .willReturn(Mono.just(true));
 
         webTestClient
@@ -625,7 +628,7 @@ class ProductControllerTest {
                 .jsonPath("$.success")
                 .isEqualTo(true);
 
-        verify(productService).generateProducts("test-batch-123", 25);
+        verify(productGeneratorService).generateAndSaveProducts("test-batch-123", 25);
     }
 
     @ParameterizedTest
@@ -639,12 +642,12 @@ class ProductControllerTest {
                 .expectStatus()
                 .isBadRequest();
 
-        verifyNoInteractions(productService);
+        verifyNoInteractions(productGeneratorService);
     }
 
     @Test
     void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts(any(String.class), isNull()))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), isNull()))
                 .willReturn(Mono.just(false));
 
         webTestClient

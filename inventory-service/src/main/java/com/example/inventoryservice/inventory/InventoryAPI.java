@@ -6,9 +6,7 @@
 
 package com.example.inventoryservice.inventory;
 
-import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
-import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.domain.models.*;
 import java.util.List;
 import java.util.Optional;
@@ -96,32 +94,6 @@ public interface InventoryAPI {
      * @throws IllegalArgumentException if a supplied batch size is outside 1 through 10,000
      */
     void updateGeneratedInventory(String idempotencyKey, Integer batchSize);
-
-    /**
-     * Reserves stock for a {@code NEW} order and publishes its acceptance or rejection.
-     *
-     * <p>Orders with other statuses are ignored. Rejected orders leave stock unchanged.
-     *
-     * @param orderDto order and item quantities to reserve
-     */
-    void reserve(OrderDto orderDto);
-
-    /**
-     * Consumes reserved stock for confirmed orders or restores stock for external rollbacks.
-     *
-     * <p>Missing products are skipped. Rollbacks originating from {@code INVENTORY} and statuses
-     * other than {@code CONFIRMED} or {@code ROLLBACK} leave quantities unchanged.
-     *
-     * @param orderDto order whose reservation should be finalized or rolled back
-     */
-    void confirm(OrderDto orderDto);
-
-    /**
-     * Creates inventory for a product, ignoring an already present product code.
-     *
-     * @param productDto product whose code identifies the inventory record
-     */
-    void manage(ProductDto productDto);
 
     /**
      * Checks whether active inventory exists by its identifier. Persistence failures propagate.

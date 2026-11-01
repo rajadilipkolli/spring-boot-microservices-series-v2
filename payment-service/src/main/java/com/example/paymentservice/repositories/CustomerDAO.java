@@ -5,9 +5,6 @@ import static com.example.paymentservice.jooq.Tables.CUSTOMERS;
 
 import ch.martinelli.oss.jooqspring.JooqDAO;
 import com.example.paymentservice.jooq.tables.Customers;
-import com.example.paymentservice.jooq.tables.LedgerEntries;
-import com.example.paymentservice.jooq.tables.OutboxEvents;
-import com.example.paymentservice.jooq.tables.PaymentOperations;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
 import java.util.List;
@@ -116,16 +113,12 @@ public class CustomerDAO extends JooqDAO<Customers, CustomersRecord, Long> {
     }
 
     /**
-     * Deletes all ledger entries, payment operations, outbox events, and customers in one
-     * transaction. Database failures propagate and roll back the deletions.
+     * Deletes all customers.
      *
-     * @return the number of deleted customer rows, excluding the other deleted rows
+     * @return the number of deleted customer rows
      */
     @Transactional
     public int deleteAll() {
-        dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
-        dslContext.deleteFrom(PaymentOperations.PAYMENT_OPERATIONS).execute();
-        dslContext.deleteFrom(OutboxEvents.OUTBOX_EVENTS).execute();
         return dslContext.deleteFrom(table).execute();
     }
 

@@ -8,17 +8,14 @@ package com.example.catalogservice.web.controllers;
 
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.request.ProductRequest;
+import com.example.catalogservice.model.response.ProductExistsResponse;
 import com.example.catalogservice.model.response.ProductResponse;
-import com.example.catalogservice.services.ProductGeneratorService;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
 import com.example.common.dto.PagedResult;
 import com.example.common.logging.Loggable;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
@@ -32,7 +29,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -95,25 +91,6 @@ public class ProductController implements ProductApi {
         return productService
                 .productExistsByProductCodes(productCodes)
                 .map(exists -> ResponseEntity.ok(new ProductExistsResponse(exists)));
-    }
-
-    /**
-     * Generates and saves sample products, reusing products with matching codes. Service errors
-     * propagate.
-     *
-     * @param idempotencyKey included in each product code with its zero-based batch index
-     * @param batchSize number of products from 1 through 10,000, or null for 101
-     * @return the generation result after saves complete
-     */
-    @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Override
-    public Mono<GenerateProductsResponse> createRandomProducts(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false)
-                    @Min(1) @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE) Integer batchSize) {
-        return productService
-                .generateProducts(idempotencyKey, batchSize)
-                .map(GenerateProductsResponse::new);
     }
 
     @PostMapping(
@@ -210,14 +187,4 @@ public class ProductController implements ProductApi {
         // If no specific search criteria provided, return all products
         return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
-
-    @Schema(description = "Response indicating whether product exists")
-    public record ProductExistsResponse(
-            @Schema(description = "True if product exists, false otherwise", example = "true")
-                    boolean exists) {}
-
-    @Schema(description = "Response indicating success of product generation")
-    public record GenerateProductsResponse(
-            @Schema(description = "True if products were generated successfully", example = "true")
-                    boolean success) {}
 }

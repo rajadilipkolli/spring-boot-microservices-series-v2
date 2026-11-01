@@ -141,6 +141,10 @@ public class InventoryServiceProxy {
         return Flux.empty();
     }
 
+    /**
+     * Applies resilience controls to a request. Timeouts and rate-limit rejections use the supplied
+     * fallback; an open circuit emits a service-unavailable error. Other errors propagate.
+     */
     private <T> Mono<T> executeWithFallback(
             Mono<T> publisher, Function<Throwable, Mono<T>> fallback) {
         return publisher
@@ -152,12 +156,13 @@ public class InventoryServiceProxy {
                 .onErrorResume(RequestNotPermitted.class, fallback)
                 .onErrorResume(
                         CallNotPermittedException.class,
-                        throwable -> {
+                        _ -> {
                             log.error(
                                     "Circuit Breaker is in [{}]... Providing fallback response without calling the API",
                                     circuitBreaker.getState());
-                            throw new CustomResponseStatusException(
-                                    SERVICE_UNAVAILABLE, "API service is unavailable");
+                            return Mono.error(
+                                    new CustomResponseStatusException(
+                                            SERVICE_UNAVAILABLE, "API service is unavailable"));
                         });
     }
 }

@@ -6,6 +6,7 @@
 
 package com.example.catalogservice.services;
 
+import com.example.catalogservice.config.ApplicationProperties;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -25,6 +26,7 @@ public class OutboxHousekeepingService {
     private static final Logger log = LoggerFactory.getLogger(OutboxHousekeepingService.class);
 
     private final OutboxEventRepository outboxEventRepository;
+    private final ApplicationProperties properties;
     private final AtomicLong pendingCount = new AtomicLong(0);
     private final AtomicLong publishedCount = new AtomicLong(0);
     private final AtomicLong failedCount = new AtomicLong(0);
@@ -36,8 +38,11 @@ public class OutboxHousekeepingService {
     private int failedRetentionDays = 30;
 
     public OutboxHousekeepingService(
-            OutboxEventRepository outboxEventRepository, MeterRegistry meterRegistry) {
+            OutboxEventRepository outboxEventRepository,
+            ApplicationProperties properties,
+            MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
+        this.properties = properties;
 
         meterRegistry.gauge("outbox.events.pending", pendingCount);
         meterRegistry.gauge("outbox.events.published", publishedCount);
@@ -114,6 +119,29 @@ public class OutboxHousekeepingService {
                 .deleteAllByStatusAndProcessedAtBefore(OutboxEventStatus.FAILED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old failed events", v))
                 .doOnError(e -> log.error("Error during failed outbox cleanup", e))
+                .onErrorComplete()
+                .block();
+    }
+
+    /**
+     * Reclaims processing events locked longer than the configured lock timeout and waits for
+     * completion. Increments retry counts, marking events failed when the new count reaches the
+     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
+     */
+    @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
+    @SchedulerLock(name = "scheduledReapLock")
+    public void scheduledReap() {
+        log.debug("Running outbox reaper");
+        OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
+        outboxEventRepository
+                .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
+                .doOnNext(
+                        count -> {
+                            if (count > 0) {
+                                log.info("Reaped {} orphaned outbox events", count);
+                            }
+                        })
+                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
                 .onErrorComplete()
                 .block();
     }

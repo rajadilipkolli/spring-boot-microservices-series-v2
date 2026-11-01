@@ -6,11 +6,8 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
-import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
-import com.example.common.dto.ProductDto;
 import com.example.inventoryservice.inventory.InventoryAPI;
-import com.example.inventoryservice.inventory.ProductManageService;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
 import java.util.List;
@@ -23,19 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 class InventoryAPIImpl implements InventoryAPI {
     private final InventoryService inventoryService;
     private final InventoryMapper inventoryMapper;
-    private final InventoryOrderManageServiceImpl orderManageService;
-    private final ProductManageService productManageService;
+    private final InventoryGeneratorService inventoryGeneratorService;
 
-    /** Creates the facade with inventory persistence, response mapping, and event handlers. */
+    /** Creates the facade with inventory persistence, response mapping, and generator service. */
     InventoryAPIImpl(
             InventoryService inventoryService,
             InventoryMapper inventoryMapper,
-            InventoryOrderManageServiceImpl orderManageService,
-            ProductManageService productManageService) {
+            InventoryGeneratorService inventoryGeneratorService) {
         this.inventoryService = inventoryService;
         this.inventoryMapper = inventoryMapper;
-        this.orderManageService = orderManageService;
-        this.productManageService = productManageService;
+        this.inventoryGeneratorService = inventoryGeneratorService;
     }
 
     /** Delegates the sorted inventory page lookup to the inventory service. */
@@ -105,29 +99,6 @@ class InventoryAPIImpl implements InventoryAPI {
     @Override
     @Transactional
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
-        inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
-    }
-
-    /**
-     * Reserves order quantities and publishes the outcome through the transactional order service.
-     */
-    @Override
-    @Transactional
-    public void reserve(OrderDto orderDto) {
-        orderManageService.reserve(orderDto);
-    }
-
-    /** Applies order confirmation or rollback stock changes within a write transaction. */
-    @Override
-    @Transactional
-    public void confirm(OrderDto orderDto) {
-        orderManageService.confirm(orderDto);
-    }
-
-    /** Handles product creation or soft deletion within a write transaction. */
-    @Override
-    @Transactional
-    public void manage(ProductDto productDto) {
-        productManageService.manage(productDto);
+        inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, batchSize);
     }
 }

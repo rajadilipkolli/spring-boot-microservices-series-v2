@@ -189,27 +189,4 @@ public class OutboxPublisher {
                             return Mono.empty();
                         });
     }
-
-    /**
-     * Reclaims processing events locked longer than the configured lock timeout and waits for
-     * completion. Increments retry counts, marking events failed when the new count reaches the
-     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
-     */
-    @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
-    @SchedulerLock(name = "scheduledReapLock")
-    public void scheduledReap() {
-        log.debug("Running outbox reaper");
-        OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
-        outboxEventRepository
-                .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
-                .doOnNext(
-                        count -> {
-                            if (count > 0) {
-                                log.info("Reaped {} orphaned outbox events", count);
-                            }
-                        })
-                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
-                .onErrorComplete()
-                .block();
-    }
 }

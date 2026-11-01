@@ -23,7 +23,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -55,7 +54,6 @@ public class ProductService {
     private final OutboxService outboxService;
     private final ReactiveRedisOperations<String, Object> redisOps;
     private final ProductAvailabilityEnricher productAvailabilityEnricher;
-    private final ProductGeneratorService productGeneratorService;
 
     private final ProductService self;
     private final TSID.Factory tsidFactory;
@@ -73,7 +71,6 @@ public class ProductService {
             OutboxService outboxService,
             ReactiveRedisOperations<String, Object> redisOps,
             ProductAvailabilityEnricher productAvailabilityEnricher,
-            ProductGeneratorService productGeneratorService,
             @Lazy ProductService self,
             TSID.Factory tsidFactory,
             ProductCacheGenerationRepository productCacheGenerationRepository) {
@@ -83,7 +80,6 @@ public class ProductService {
         this.redisOps = redisOps;
         this.productAvailabilityEnricher = productAvailabilityEnricher;
         this.self = self != null ? self : this;
-        this.productGeneratorService = productGeneratorService;
         this.tsidFactory = tsidFactory;
         this.productCacheGenerationRepository = productCacheGenerationRepository;
     }
@@ -155,17 +151,6 @@ public class ProductService {
                                                 return enrichWithAvailability(
                                                         productResponseFlux, pageable, count);
                                             });
-                        });
-    }
-
-    private Flux<ProductResponse> updateProductAvailability(
-            List<ProductResponse> productResponses, Map<String, Integer> inventoriesMap) {
-        return Flux.fromIterable(productResponses)
-                .map(
-                        productResponse -> {
-                            int availableQuantity =
-                                    inventoriesMap.getOrDefault(productResponse.productCode(), 0);
-                            return productResponse.withInStock(availableQuantity > 0);
                         });
     }
 
@@ -306,7 +291,7 @@ public class ProductService {
                                                 "PRODUCT",
                                                 savedProduct.getProductCode(),
                                                 "PRODUCT_CREATED",
-                                                savedProduct)
+                                                productMapper.toProductDto(savedProduct))
                                         .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse);
     }
@@ -337,7 +322,8 @@ public class ProductService {
                                                                     "PRODUCT",
                                                                     savedProduct.getProductCode(),
                                                                     "PRODUCT_DELETED",
-                                                                    savedProduct)
+                                                                    productMapper.toProductDto(
+                                                                            savedProduct))
                                                             .then(
                                                                     evictProductCache(
                                                                             id,
@@ -370,12 +356,13 @@ public class ProductService {
      *
      * @param id the product ID
      * @param productRequest the updated product details
-     * @return the updated product, or an empty Mono if the ID is absent or deleted
+     * @return the updated product, or ProductNotFoundException as an error if absent or deleted
      */
     @Transactional
     public Mono<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {
         return productRepository
                 .findByIdAndDeletedFalse(id)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                 .flatMap(product -> updateProduct(productRequest, product));
     }
 
@@ -408,7 +395,7 @@ public class ProductService {
                                                 "PRODUCT",
                                                 savedProduct.getProductCode(),
                                                 "PRODUCT_UPDATED",
-                                                savedProduct)
+                                                productMapper.toProductDto(savedProduct))
                                         .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse)
                 .delayUntil(p -> evictProductCache(p.id(), previousProductCode, p.productCode()));
@@ -420,25 +407,6 @@ public class ProductService {
      */
     public Mono<Product> findById(Long id) {
         return this.productRepository.findByIdAndDeletedFalse(id);
-    }
-
-    /**
-     * Creates sample products with whole-unit prices from 1.00 through 100.00, reusing products
-     * with existing codes. New products create outbox events, and product caches are invalidated.
-     * Save failures propagate through the returned Mono; Redis deletion failures are suppressed.
-     *
-     * @param idempotencyKey included in each product code with its zero-based batch index;
-     *     repeating a key reuses matching codes
-     * @param batchSize number of products, from 1 through 10,000, or null for 101
-     * @return true after all saves complete
-     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
-     */
-    @Transactional
-    public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
-        return productGeneratorService
-                .generateProducts(idempotencyKey, batchSize)
-                .flatMap(self::saveProduct)
-                .then(Mono.just(Boolean.TRUE));
     }
 
     /**

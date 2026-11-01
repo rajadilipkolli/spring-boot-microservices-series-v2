@@ -8,7 +8,8 @@ package com.example.inventoryservice.inventory.config;
 
 import com.example.common.dto.OrderDto;
 import com.example.common.dto.ProductDto;
-import com.example.inventoryservice.inventory.InventoryAPI;
+import com.example.inventoryservice.inventory.InventoryOrderManageService;
+import com.example.inventoryservice.inventory.ProductManageService;
 import com.example.inventoryservice.inventory.utils.AppConstants;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -35,13 +36,19 @@ class KafkaListenerConfig {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private final InventoryAPI inventoryAPI;
+    private final InventoryOrderManageService inventoryOrderManageService;
+    private final ProductManageService productManageService;
     private final JsonMapper jsonMapper;
     private final Validator validator;
 
-    /** Creates the Kafka adapter with the inventory API, JSON mapper, and payload validator. */
-    KafkaListenerConfig(InventoryAPI inventoryAPI, JsonMapper jsonMapper, Validator validator) {
-        this.inventoryAPI = inventoryAPI;
+    /** Creates the Kafka adapter with segregated services, JSON mapper, and payload validator. */
+    KafkaListenerConfig(
+            InventoryOrderManageService inventoryOrderManageService,
+            ProductManageService productManageService,
+            JsonMapper jsonMapper,
+            Validator validator) {
+        this.inventoryOrderManageService = inventoryOrderManageService;
+        this.productManageService = productManageService;
         this.jsonMapper = jsonMapper;
         this.validator = validator;
     }
@@ -66,9 +73,9 @@ class KafkaListenerConfig {
         OrderDto orderDto = validate(jsonMapper.readValue(orderDtoStr, OrderDto.class));
         log.info("Received Order: {}", orderDto);
         if ("NEW".equals(orderDto.status())) {
-            inventoryAPI.reserve(orderDto);
+            inventoryOrderManageService.reserve(orderDto);
         } else {
-            inventoryAPI.confirm(orderDto);
+            inventoryOrderManageService.confirm(orderDto);
         }
     }
 
@@ -90,7 +97,7 @@ class KafkaListenerConfig {
         String productDtoStr = record.value();
         log.info("Received Product: {}", productDtoStr);
         ProductDto productDto = validate(jsonMapper.readValue(productDtoStr, ProductDto.class));
-        inventoryAPI.manage(productDto);
+        productManageService.manage(productDto);
     }
 
     private <T> T validate(T object) {

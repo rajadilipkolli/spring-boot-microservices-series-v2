@@ -38,6 +38,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     private final InventoryRepository inventoryRepository;
     private final ProcessedOrderEventRepository processedOrderEventRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final List<OrderStockActionStrategy> stockActionStrategies;
     private final Counter inventoryReservationsCounter;
     private final Counter inventoryFailuresCounter;
 
@@ -47,9 +48,36 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             ProcessedOrderEventRepository processedOrderEventRepository,
             MeterRegistry meterRegistry,
             ApplicationEventPublisher eventPublisher) {
+        this(
+                inventoryRepository,
+                processedOrderEventRepository,
+                meterRegistry,
+                eventPublisher,
+                List.of(
+                        new ConfirmedOrderStockActionStrategy(),
+                        new RollbackOrderStockActionStrategy()));
+    }
+
+    /**
+     * Creates the service with the supplied stock actions. A null list selects the confirmation and
+     * rollback defaults; an empty list selects no actions.
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public InventoryOrderManageServiceImpl(
+            InventoryRepository inventoryRepository,
+            ProcessedOrderEventRepository processedOrderEventRepository,
+            MeterRegistry meterRegistry,
+            ApplicationEventPublisher eventPublisher,
+            List<OrderStockActionStrategy> stockActionStrategies) {
         this.inventoryRepository = inventoryRepository;
         this.processedOrderEventRepository = processedOrderEventRepository;
         this.eventPublisher = eventPublisher;
+        this.stockActionStrategies =
+                stockActionStrategies == null
+                        ? List.of(
+                                new ConfirmedOrderStockActionStrategy(),
+                                new RollbackOrderStockActionStrategy())
+                        : List.copyOf(stockActionStrategies);
         this.inventoryReservationsCounter = meterRegistry.counter("inventory_reservations");
         this.inventoryFailuresCounter = meterRegistry.counter("inventory_failures");
     }
@@ -251,8 +279,9 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     /**
      * Decreases reserved stock for {@code CONFIRMED} orders, or restores it to available stock for
      * {@code ROLLBACK} orders whose source is not {@code INVENTORY} (case-insensitive). Missing
-     * products are skipped and other statuses leave quantities unchanged. Changes are persisted
-     * without publishing an event; persistence failures propagate to the caller.
+     * products are skipped. These are the default strategies; supplied strategies can alter this
+     * behavior, and every matching strategy is applied. Changes are persisted without publishing an
+     * event; persistence failures propagate to the caller.
      *
      * <p>For non-null order IDs, an existing {@code CONFIRM_<status>} record skips processing;
      * otherwise that record is saved even when no quantities change. Null IDs bypass duplicate
@@ -299,15 +328,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             Inventory inventory = inventoryMap.get(productId);
 
             if (inventory != null) {
-                Integer productCount = orderItemDto.quantity();
-
-                if ("CONFIRMED".equals(orderDto.status())) {
-                    inventory.setReservedItems(inventory.getReservedItems() - productCount);
-                } else if (AppConstants.ROLLBACK.equals(orderDto.status())
-                        && !AppConstants.SOURCE.equalsIgnoreCase(orderDto.source())) {
-                    inventory
-                            .setReservedItems(inventory.getReservedItems() - productCount)
-                            .setAvailableQuantity(inventory.getAvailableQuantity() + productCount);
+                for (OrderStockActionStrategy strategy : stockActionStrategies) {
+                    if (strategy.supports(orderDto.status(), orderDto.source())) {
+                        strategy.apply(inventory, orderItemDto);
+                    }
                 }
             }
         }

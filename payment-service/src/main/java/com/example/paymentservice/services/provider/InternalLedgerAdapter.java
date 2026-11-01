@@ -3,10 +3,15 @@ package com.example.paymentservice.services.provider;
 
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord;
-import com.example.paymentservice.repositories.CustomerRepository;
+import com.example.paymentservice.repositories.CustomerBalanceRepository;
 import com.example.paymentservice.repositories.LedgerRepository;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,29 +24,39 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Ensures stable downstream key replay and records all balance movements in the ledger.
  */
-@Service
+@Service("internalLedgerAdapter")
 public class InternalLedgerAdapter implements PaymentProviderPort {
 
     private static final Logger log = LoggerFactory.getLogger(InternalLedgerAdapter.class);
 
     private final LedgerRepository ledgerRepository;
-    private final CustomerRepository customerRepository;
+    private final CustomerBalanceRepository customerRepository;
     private final DSLContext dslContext;
     private final ApplicationProperties properties;
+    private final Map<String, LedgerOperationStrategy> strategies;
 
     /**
-     * Creates the ledger provider with ledger storage, customer balances, database access, and
-     * timeout configuration.
+     * Creates the ledger provider with ledger storage, customer balances, database access, timeout
+     * configuration, and operation strategies.
+     *
+     * @throws IllegalStateException if two strategies have the same operation type, ignoring case
      */
     public InternalLedgerAdapter(
             LedgerRepository ledgerRepository,
-            CustomerRepository customerRepository,
+            CustomerBalanceRepository customerRepository,
             DSLContext dslContext,
-            ApplicationProperties properties) {
+            ApplicationProperties properties,
+            List<LedgerOperationStrategy> strategyList) {
         this.ledgerRepository = ledgerRepository;
         this.customerRepository = customerRepository;
         this.dslContext = dslContext;
         this.properties = properties;
+        this.strategies =
+                strategyList.stream()
+                        .collect(
+                                Collectors.toUnmodifiableMap(
+                                        s -> s.getOperationType().toUpperCase(Locale.ROOT),
+                                        Function.identity()));
     }
 
     /**
@@ -71,12 +86,13 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         }
 
         boolean success;
-        if ("RESERVE".equalsIgnoreCase(command.operationType())) {
-            success = customerRepository.reserveFunds(command.customerId(), command.amount());
-        } else if ("CAPTURE".equalsIgnoreCase(command.operationType())) {
-            success = customerRepository.captureFunds(command.customerId(), command.amount());
-        } else if ("RELEASE".equalsIgnoreCase(command.operationType())) {
-            success = customerRepository.releaseFunds(command.customerId(), command.amount());
+        String opType =
+                command.operationType() != null
+                        ? command.operationType().toUpperCase(Locale.ROOT)
+                        : "";
+        LedgerOperationStrategy strategy = strategies.get(opType);
+        if (strategy != null) {
+            success = strategy.execute(customerRepository, command.customerId(), command.amount());
         } else {
             log.warn("Unknown operation type: {}", command.operationType());
             success = false;
