@@ -1,6 +1,7 @@
 package com.example.retailstore.webapp.exception;
 
 import com.example.common.logging.LogSanitizer;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,8 +25,8 @@ public class ViewExceptionHandler {
         return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
-    public ModelAndView handleConstraintViolationException(jakarta.validation.ConstraintViolationException ex) {
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ModelAndView handleConstraintViolationException(ConstraintViolationException ex) {
         return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

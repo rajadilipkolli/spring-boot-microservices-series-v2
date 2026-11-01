@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(annotations = RestController.class)
 public class RestExceptionHandler {
 
@@ -29,6 +32,7 @@ public class RestExceptionHandler {
     public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("Invalid request content.");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/validation"));
 
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
@@ -44,6 +48,7 @@ public class RestExceptionHandler {
     public ResponseEntity<ProblemDetail> handleConstraintViolationException(ConstraintViolationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setDetail("Invalid request content.");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/constraint-violation"));
 
         List<String> errors = ex.getConstraintViolations().stream()
@@ -115,6 +120,12 @@ public class RestExceptionHandler {
         problemDetail.setDetail("You do not have the necessary permissions to access this resource.");
         problemDetail.setProperty("timestamp", Instant.now());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
+    }
+
+    @ExceptionHandler(KeyCloakException.class)
+    public ResponseEntity<ProblemDetail> handleKeyCloakException(KeyCloakException ex) {
+        log.error("Keycloak registration error: {}", LogSanitizer.sanitizeException(ex));
+        return ResponseEntity.status(ex.getStatusCode()).body(ex.getBody());
     }
 
     @ExceptionHandler(Exception.class)
