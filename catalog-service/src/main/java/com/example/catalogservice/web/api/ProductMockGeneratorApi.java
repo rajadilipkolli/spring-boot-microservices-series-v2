@@ -69,5 +69,7 @@ public interface ProductMockGeneratorApi {
                             name = "batchSize",
                             description = "Number of products to generate (between 1 and 10000)")
                     @RequestParam(required = false)
-                    @Min(1) @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE) Integer batchSize);
+                    @Min(1)
+                    @Max(ProductGeneratorService.MAX_GENERATION_BATCH_SIZE)
+                    Integer batchSize);
 }
