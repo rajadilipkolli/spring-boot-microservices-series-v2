@@ -7,6 +7,9 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 import com.example.common.dto.OrderDto;
 import com.example.paymentservice.PaymentApplication;
 import com.example.paymentservice.clients.OrderServiceProxy;
+import com.example.paymentservice.jooq.tables.LedgerEntries;
+import com.example.paymentservice.jooq.tables.OutboxEvents;
+import com.example.paymentservice.jooq.tables.PaymentOperations;
 import com.example.paymentservice.repositories.CustomerBalanceRepository;
 import com.example.paymentservice.repositories.CustomerDAO;
 import com.example.paymentservice.repositories.CustomerRepository;
@@ -20,6 +23,7 @@ import com.example.paymentservice.services.PaymentReconciler;
 import com.example.paymentservice.services.listener.KafkaListenerConfig;
 import com.example.paymentservice.services.provider.InternalLedgerAdapter;
 import org.jooq.DSLContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -70,6 +74,13 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected PaymentOperationEngine paymentOperationEngine;
 
     @Autowired protected DSLContext dslContext;
+
+    @BeforeEach
+    void clearPaymentState() {
+        dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
+        dslContext.deleteFrom(PaymentOperations.PAYMENT_OPERATIONS).execute();
+        dslContext.deleteFrom(OutboxEvents.OUTBOX_EVENTS).execute();
+    }
 
     @Autowired protected OutboxPublisher outboxPublisher;
 
