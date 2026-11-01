@@ -19,6 +19,10 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/fallback/api/inventory")
 public class GatewayInventoryFallback {
 
+    /**
+     * Returns a service-unavailable problem. A nonblank ID is included in its detail and productId
+     * property; a null or blank ID produces a general message without that property.
+     */
     @GetMapping({"", "/", "/{id}"})
     public Mono<ProblemDetail> fallback(@PathVariable(required = false) String id) {
         // IDs in this system are alphanumeric (e.g. P0001). Accept String to avoid

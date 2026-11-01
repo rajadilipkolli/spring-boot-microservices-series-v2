@@ -31,6 +31,10 @@ public class CatalogService implements ProductVerificationPort {
         this.applicationProperties = applicationProperties;
     }
 
+    /**
+     * Returns the catalog's existence result, or false when the catalog response is null. When the
+     * circuit breaker invokes its fallback, the result is the configured bypass value.
+     */
     @Override
     @CircuitBreaker(name = "catalog-service", fallbackMethod = "productsExistsDefaultValue")
     public ProductVerificationResult productsExistsByCodes(List<String> productCodes) {

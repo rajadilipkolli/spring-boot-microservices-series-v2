@@ -25,13 +25,13 @@ public class UserRegistrationService {
     }
 
     /**
-     * Registers a Keycloak user, then gets or creates the payment customer using the supplied
-     * address components and an initial available balance of 10,000. Keycloak and customer-service
-     * failures propagate, including duplicate-user errors. A confirmed customer validation failure
-     * (HTTP 400) or duplicate rejection (HTTP 409) triggers an attempt to delete the Keycloak user
-     * by username; cleanup exceptions are suppressed and the original customer error is rethrown.
-     * Other customer-service failures preserve the Keycloak user because customer creation may
-     * have completed.
+     * Registers a user with the identity provider, then gets or creates the payment customer using
+     * the supplied address components and an initial available balance of 10,000. Identity provider
+     * and customer-service failures propagate, including duplicate-user errors. A customer
+     * validation failure (HTTP 400) or duplicate rejection (HTTP 409) triggers an attempt to delete
+     * the user by username; the customer error is rethrown if deletion returns normally. A deletion
+     * failure propagates instead. Other customer-service failures do not trigger deletion because
+     * customer creation may have completed.
      *
      * @param request validated user and customer registration details
      * @return the customer response after both service calls complete

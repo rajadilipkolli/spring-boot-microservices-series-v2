@@ -257,7 +257,7 @@ public class OrderService {
     }
 
     /**
-     * Checks whether the requested products exist and are in stock.
+     * Checks whether the requested products exist through the product verification port.
      *
      * @param productIds product identifiers to check
      * @return the catalog product-existence response
@@ -339,15 +339,16 @@ public class OrderService {
     }
 
     /**
-     * Searches order IDs and loads the matching orders as a page of responses.
+     * Searches order IDs with the first registered strategy that supports the mode and loads the
+     * matching orders as a page of responses. Returns an empty page if no strategy supports it.
      *
      * @param term text to search for in source, delivery address, and item product codes
-     * @param mode selects trigram matching when equal to "similarity", ignoring case; otherwise
-     *     uses keyword matching
+     * @param mode search mode; the supplied strategies select trigram matching for "similarity",
+     *     ignoring case, and keyword matching otherwise
      * @param customerId customer to filter by, or null for all customers
      * @param status status to filter by, or null for all statuses
-     * @param threshold additional similarity cutoff, defaulting to 0.3 when null; ignored in
-     *     keyword mode
+     * @param threshold for the supplied similarity strategy, an additional cutoff defaulting to 0.3
+     *     when null; ignored by the supplied keyword strategy
      * @param pageable pagination options
      * @return matching order responses and pagination metadata with a one-based page number
      */

@@ -14,6 +14,9 @@ public class SecurityHelper {
     /** Creates a helper that reads the current thread's security context. */
     public SecurityHelper() {}
 
+    /**
+     * Returns the preferred username of an authenticated OAuth2 principal, or null if unavailable.
+     */
     public String getUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = null;
@@ -25,6 +28,11 @@ public class SecurityHelper {
         return username;
     }
 
+    /**
+     * Returns the OAuth2 user's email, or the authentication name for other authentication types,
+     * in lowercase using the root locale. Returns null if authentication or the OAuth2 email is
+     * absent.
+     */
     public String getLoggedInUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

@@ -28,6 +28,13 @@ public abstract class AbstractMicroserviceGenerationStep implements GenerationSt
         return serviceType;
     }
 
+    /**
+     * Calls the configured service using the workflow batch ID and optional batch size.
+     *
+     * @return the service result or a reactive error from the client
+     * @throws NullPointerException if the service type or batch ID is null
+     * @see MicroserviceClient#call(ServiceType, String, Integer)
+     */
     @Override
     public Mono<ServiceResult> execute(String batchId, Integer batchSize) {
         return microserviceClient.call(serviceType, batchId, batchSize);

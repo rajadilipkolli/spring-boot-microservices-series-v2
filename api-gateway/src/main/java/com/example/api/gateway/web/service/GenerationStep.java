@@ -14,6 +14,7 @@ public interface GenerationStep {
 
     ServiceType getServiceType();
 
+    /** Returns the service display name, or "Unknown" when no service type is supplied. */
     default String getStepName() {
         return getServiceType() != null ? getServiceType().getDisplayName() : "Unknown";
     }

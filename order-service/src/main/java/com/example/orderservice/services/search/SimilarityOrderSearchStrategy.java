@@ -26,6 +26,7 @@ public class SimilarityOrderSearchStrategy implements OrderSearchStrategy {
         return "similarity".equalsIgnoreCase(mode);
     }
 
+    /** Uses a threshold of 0.3 when none is provided; repository failures propagate. */
     @Override
     public Page<Long> search(
             String term, Long customerId, OrderStatus status, Double threshold, Pageable pageable) {
