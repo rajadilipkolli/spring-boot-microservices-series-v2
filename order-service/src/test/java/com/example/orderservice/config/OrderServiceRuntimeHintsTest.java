@@ -13,6 +13,8 @@ import com.example.orderservice.mapper.OrderMapperDecorator;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.services.OrderRetryScheduler;
+import com.example.orderservice.services.OrderRetryService;
 import com.example.orderservice.services.OrderService;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.consumer.RangeAssignor;
@@ -60,9 +62,15 @@ class OrderServiceRuntimeHintsTest {
         assertThat(RuntimeHintsPredicates.reflection().onType(OrderItemResponse.class))
                 .accepts(hints);
         assertThat(RuntimeHintsPredicates.reflection().onType(OrderService.class)).accepts(hints);
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderRetryScheduler.class))
+                .accepts(hints);
+        assertThat(RuntimeHintsPredicates.reflection().onType(OrderRetryService.class))
+                .accepts(hints);
         assertThat(
                         RuntimeHintsPredicates.reflection()
-                                .onMethodInvocation(OrderService.class, "retryNewOrders"))
+                                .onMethodInvocation(
+                                        com.example.orderservice.services.OrderRetryScheduler.class,
+                                        "retryNewOrders"))
                 .accepts(hints);
         assertThat(
                         RuntimeHintsPredicates.reflection()
@@ -73,6 +81,10 @@ class OrderServiceRuntimeHintsTest {
         assertThat(RuntimeHintsPredicates.reflection().onType(AuditingEntityListener.class))
                 .accepts(hints);
         assertThat(RuntimeHintsPredicates.reflection().onType(OrderItem.class)).accepts(hints);
+        assertThat(
+                        RuntimeHintsPredicates.reflection()
+                                .onType(TypeReference.of("org.apache.coyote.AbstractProtocol")))
+                .accepts(hints);
         assertThat(
                         RuntimeHintsPredicates.reflection()
                                 .onType(TypeReference.of("org.hibernate.proxy.HibernateProxy")))
@@ -139,10 +151,13 @@ class OrderServiceRuntimeHintsTest {
                         TypeReference.of(Address.class),
                         TypeReference.of(OrderItemResponse.class),
                         TypeReference.of(OrderService.class),
+                        TypeReference.of(OrderRetryScheduler.class),
+                        TypeReference.of(OrderRetryService.class),
                         TypeReference.of(RecoveringDeserializationExceptionHandler.class),
                         TypeReference.of(OrderMapperDecorator.class),
                         TypeReference.of(AuditingEntityListener.class),
                         TypeReference.of(OrderItem.class),
+                        TypeReference.of("org.apache.coyote.AbstractProtocol"),
                         TypeReference.of("org.hibernate.proxy.HibernateProxy"),
                         TypeReference.of("liquibase.precondition.core.ColumnExistsPrecondition"),
                         TypeReference.of("liquibase.precondition.core.TableExistsPrecondition"),

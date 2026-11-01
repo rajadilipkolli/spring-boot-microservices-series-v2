@@ -1,30 +1,25 @@
 package com.example.retailstore.webapp.web.controller;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
-import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.config.SecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
-import com.example.retailstore.webapp.services.KeycloakRegistrationService;
 import com.example.retailstore.webapp.services.SecurityHelper;
+import com.example.retailstore.webapp.services.UserRegistrationService;
 import java.math.BigDecimal;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -32,23 +27,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(RegistrationController.class)
+@WebMvcTest(controllers = {RegistrationViewController.class, RegistrationRestController.class})
 @Import({SecurityConfig.class, SecurityHelper.class})
 class RegistrationControllerTest {
 
@@ -67,10 +56,13 @@ class RegistrationControllerTest {
     private ClientRegistrationRepository clientRegistrationRepository;
 
     @MockitoBean
-    private KeycloakRegistrationService registrationService;
+    private UserRegistrationService userRegistrationService;
 
-    @MockitoBean
-    private CustomerServiceClient customerServiceClient;
+    @Test
+    @WithAnonymousUser
+    void showRegistrationPage_shouldReturnView() throws Exception {
+        mockMvc.perform(get("/registration")).andExpect(status().isOk()).andExpect(view().name("registration"));
+    }
 
     /** Verifies that anonymous registration returns a success message when both service calls succeed. */
     @Test
@@ -89,9 +81,7 @@ class RegistrationControllerTest {
                 "Test State",
                 "12345",
                 "Test Country");
-        doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
-        // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+        when(userRegistrationService.registerUserAndCustomer(any(RegistrationRequest.class)))
                 .thenReturn(new CustomerResponse(
                         1L,
                         TEST_USERNAME,
@@ -130,9 +120,7 @@ class RegistrationControllerTest {
                 "Test State",
                 "12345",
                 "Test Country");
-        doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
-        // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+        when(userRegistrationService.registerUserAndCustomer(any(RegistrationRequest.class)))
                 .thenReturn(new CustomerResponse(
                         1L,
                         TEST_USERNAME,
@@ -150,36 +138,28 @@ class RegistrationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User registered successfully"));
+                .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
     /** Verifies that invalid registration fields produce HTTP 400. */
     @Test
     @WithAnonymousUser
     void shouldReturn400WhenRegistrationDataIsInvalid() throws Exception {
-        RegistrationRequest request = new RegistrationRequest(
-                "", // invalid username
-                "invalid-email", // invalid email
-                "", // invalid firstName
-                "", // invalid lastName
-                "pwd", // valid password
-                9848022334L,
-                "junitAddress",
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
+        RegistrationRequest request =
+                new RegistrationRequest("", "invalid-email", "", "", "weak", null, "", null, "", "", "", "");
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userRegistrationService);
     }
 
     @ParameterizedTest(name = "{0}: {1}")
     @MethodSource("invalidAddressComponents")
+    @WithAnonymousUser
     void shouldRejectMissingOrBlankAddressComponent(String field, String value) throws Exception {
         Map<String, Object> request = new HashMap<>(Map.of(
                 "username", TEST_USERNAME,
@@ -203,68 +183,12 @@ class RegistrationControllerTest {
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(registrationService, customerServiceClient);
+        verifyNoInteractions(userRegistrationService);
     }
 
     private static Stream<Arguments> invalidAddressComponents() {
         return Stream.of("addressLine1", "city", "state", "zipCode", "country")
                 .flatMap(field -> Stream.of("missing", null, "", " \t\n").map(value -> Arguments.of(field, value)));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {400, 409})
-    void shouldCompensateConfirmedCustomerRejectionAndPropagateOriginalException(int status) {
-        var failure = new HttpClientErrorException(HttpStatus.valueOf(status));
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenThrow(failure);
-
-        var controller = new RegistrationController(registrationService, customerServiceClient);
-        assertThatThrownBy(() -> controller.register(validRegistrationRequest()))
-                .isSameAs(failure);
-
-        verify(registrationService).registerUser(any(RegistrationRequest.class));
-        verify(registrationService).deleteUserByUsername(TEST_USERNAME);
-    }
-
-    @ParameterizedTest
-    @MethodSource("indeterminateCustomerFailures")
-    void shouldPreserveKeycloakUserAndPropagateOriginalException(RuntimeException failure) {
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenThrow(failure);
-
-        var controller = new RegistrationController(registrationService, customerServiceClient);
-        assertThatThrownBy(() -> controller.register(validRegistrationRequest()))
-                .isSameAs(failure);
-
-        verify(registrationService).registerUser(any(RegistrationRequest.class));
-        verify(registrationService, never()).deleteUserByUsername(any());
-    }
-
-    private static Stream<RuntimeException> indeterminateCustomerFailures() {
-        return Stream.of(
-                new ResourceAccessException("Response timed out", new SocketTimeoutException("Read timed out")),
-                new HttpClientErrorException(HttpStatus.REQUEST_TIMEOUT),
-                new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR),
-                new HttpServerErrorException(HttpStatus.BAD_GATEWAY),
-                new HttpServerErrorException(HttpStatus.GATEWAY_TIMEOUT),
-                new RestClientException("Cannot decode customer response"),
-                new IllegalStateException("Unexpected client failure"));
-    }
-
-    private static RegistrationRequest validRegistrationRequest() {
-        return new RegistrationRequest(
-                TEST_USERNAME,
-                TEST_EMAIL,
-                "Test",
-                "User",
-                TEST_PASSWORD,
-                9848022334L,
-                "junitAddress",
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
     }
 
     /** Verifies that a Keycloak registration failure produces HTTP 500. */
@@ -286,8 +210,8 @@ class RegistrationControllerTest {
                 "Test Country");
 
         doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
-                .when(registrationService)
-                .registerUser(any(RegistrationRequest.class));
+                .when(userRegistrationService)
+                .registerUserAndCustomer(any(RegistrationRequest.class));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())

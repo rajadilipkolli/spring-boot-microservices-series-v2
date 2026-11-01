@@ -33,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(controllers = InventoryController.class)
+@WebMvcTest(controllers = {InventoryViewController.class, InventoryRestController.class})
 @Import({SecurityConfig.class, SecurityHelper.class})
 class InventoryControllerTest {
     private static final String INVENTORY_PATH = "/inventory";

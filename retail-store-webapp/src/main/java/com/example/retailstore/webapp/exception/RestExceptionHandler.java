@@ -1,7 +1,6 @@
 package com.example.retailstore.webapp.exception;
 
 import com.example.common.logging.LogSanitizer;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
@@ -9,29 +8,31 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.servlet.ModelAndView;
 
-@ControllerAdvice
-public class GlobalExceptionHandler {
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@RestControllerAdvice(annotations = RestController.class)
+public class RestExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(RestExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    Object handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
-
+    public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("Invalid request content.");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/validation"));
 
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
@@ -44,11 +45,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    Object handleConstraintViolationException(ConstraintViolationException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
-
+    public ResponseEntity<ProblemDetail> handleConstraintViolationException(ConstraintViolationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Constraint Violation");
+        problemDetail.setDetail("Invalid request content.");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/constraint-violation"));
 
         List<String> errors = ex.getConstraintViolations().stream()
@@ -61,15 +61,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({HttpClientErrorException.class, HttpServerErrorException.class})
-    Object handleHttpException(Exception ex, HttpServletRequest request) {
+    public ResponseEntity<ProblemDetail> handleHttpException(Exception ex) {
         HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         if (ex instanceof HttpClientErrorException clientError) {
             status = clientError.getStatusCode();
         } else if (ex instanceof HttpServerErrorException serverError) {
             status = serverError.getStatusCode();
         }
-
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), status);
 
         log.error("HTTP error occurred: {}", LogSanitizer.sanitizeException(ex));
 
@@ -81,17 +79,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(problemDetail);
     }
 
-    /**
-     * Converts a duplicate registration into an HTTP 409 UI error or API problem detail.
-     *
-     * @param ex exception describing the username or email conflict
-     * @param request request used to select the UI or API response format
-     * @return an error view for UI requests or a response entity for API requests
-     */
     @ExceptionHandler(UserAlreadyExistsException.class)
-    Object handleUserAlreadyExistsException(UserAlreadyExistsException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.CONFLICT);
-
+    public ResponseEntity<ProblemDetail> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problemDetail.setTitle("User Already Exists");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/conflict"));
@@ -101,9 +90,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidRequestException.class)
-    Object handleInvalidRequestException(InvalidRequestException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.BAD_REQUEST);
-
+    public ResponseEntity<ProblemDetail> handleInvalidRequestException(InvalidRequestException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Bad Request");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/bad-request"));
@@ -113,9 +100,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    Object handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.NOT_FOUND);
-
+    public ResponseEntity<ProblemDetail> handleResourceNotFoundException(ResourceNotFoundException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
         problemDetail.setTitle("Not Found");
         problemDetail.setType(URI.create("https://api.retailstore.com/errors/not-found"));
@@ -125,11 +110,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public Object handleSpringAccessDeniedException(AccessDeniedException ex, HttpServletRequest request) {
-        if (!isApiRequest(request)) return renderUiError(ex.getMessage(), HttpStatus.FORBIDDEN);
-
+    public ResponseEntity<ProblemDetail> handleSpringAccessDeniedException(AccessDeniedException ex) {
         log.warn(
-                "Access Denied (e.g., by @PreAuthorize), handled in GlobalExceptionHandler: {}",
+                "Access Denied (e.g., by @PreAuthorize), handled in RestExceptionHandler: {}",
                 LogSanitizer.sanitizeException(ex));
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
         problemDetail.setTitle("Forbidden");
@@ -139,13 +122,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problemDetail);
     }
 
-    @ExceptionHandler(Exception.class)
-    Object handleGenericException(Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error occurred: {}", LogSanitizer.sanitizeException(ex));
+    @ExceptionHandler(KeyCloakException.class)
+    public ResponseEntity<ProblemDetail> handleKeyCloakException(KeyCloakException ex) {
+        log.error("Keycloak registration error: {}", LogSanitizer.sanitizeException(ex));
+        return ResponseEntity.status(ex.getStatusCode()).body(ex.getBody());
+    }
 
-        if (!isApiRequest(request))
-            return renderUiError(
-                    "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex) {
+        log.error("Unexpected error occurred: {}", LogSanitizer.sanitizeException(ex));
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Internal Server Error");
@@ -153,16 +138,5 @@ public class GlobalExceptionHandler {
         problemDetail.setDetail("An unexpected error occurred. Please try again later.");
         problemDetail.setProperty("timestamp", Instant.now());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problemDetail);
-    }
-
-    private boolean isApiRequest(HttpServletRequest request) {
-        return request.getRequestURI().startsWith("/api/");
-    }
-
-    private ModelAndView renderUiError(String message, HttpStatusCode status) {
-        ModelAndView mav = new ModelAndView("error");
-        mav.setStatus(status);
-        mav.addObject("message", message);
-        return mav;
     }
 }

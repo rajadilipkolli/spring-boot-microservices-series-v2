@@ -6,6 +6,8 @@
 
 package com.example.api.gateway.web.api;
 
+import static com.example.api.gateway.constants.GatewayConstants.MAX_BATCH_SIZE;
+
 import com.example.api.gateway.model.GenerationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -23,8 +25,6 @@ import reactor.core.publisher.Mono;
         name = "Data Generation",
         description = "API for orchestrating data generation across services")
 public interface GenerateAPI {
-
-    int MAX_BATCH_SIZE = 10_000;
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(

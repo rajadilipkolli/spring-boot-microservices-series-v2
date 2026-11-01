@@ -26,6 +26,7 @@ import com.example.retailstore.webapp.clients.order.OrderRequestExternal;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.config.SecurityConfig;
+import com.example.retailstore.webapp.services.OrderService;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,8 +46,8 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(controllers = OrderController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest(controllers = {OrderViewController.class, OrderRestController.class, CartViewController.class})
+@Import({SecurityConfig.class, OrderService.class})
 class OrderControllerTest {
 
     @Autowired
@@ -138,7 +139,6 @@ class OrderControllerTest {
 
         // Mock customer service client for cart
         when(customerServiceClient.getCustomerByName(anyString())).thenReturn(customerResponse);
-        when(customerServiceClient.getCustomerById(any(Long.class))).thenReturn(customerResponse);
         when(customerServiceClient.getCustomerByEmail(anyString())).thenReturn(customerResponse);
     }
 

@@ -9,6 +9,7 @@ package com.example.orderservice.services;
 import com.example.common.logging.LogSanitizer;
 import com.example.common.logging.Loggable;
 import com.example.orderservice.config.ApplicationProperties;
+import com.example.orderservice.model.response.ProductVerificationResult;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.util.List;
 import org.slf4j.Logger;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Loggable
-public class CatalogService {
+public class CatalogService implements ProductVerificationPort {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -30,19 +31,23 @@ public class CatalogService {
         this.applicationProperties = applicationProperties;
     }
 
+    /**
+     * Returns the catalog's existence result, or false when the catalog response is null. When the
+     * circuit breaker invokes its fallback, the result is the configured bypass value.
+     */
+    @Override
     @CircuitBreaker(name = "catalog-service", fallbackMethod = "productsExistsDefaultValue")
-    public CatalogServiceProxy.ProductExistsResponse productsExistsByCodes(
-            List<String> productCodes) {
-        return catalogServiceProxy.productsExistsByCodes(productCodes);
+    public ProductVerificationResult productsExistsByCodes(List<String> productCodes) {
+        CatalogServiceProxy.ProductExistsResponse response =
+                catalogServiceProxy.productsExistsByCodes(productCodes);
+        return new ProductVerificationResult(response != null && response.exists());
     }
 
-    CatalogServiceProxy.ProductExistsResponse productsExistsDefaultValue(
-            List<String> productCodes, Exception e) {
+    ProductVerificationResult productsExistsDefaultValue(List<String> productCodes, Exception e) {
         log.error(
                 "While fetching status for productCodes :{}, Exception Occurred : {}",
                 LogSanitizer.sanitizeCollection(productCodes),
                 LogSanitizer.sanitizeException(e));
-        return new CatalogServiceProxy.ProductExistsResponse(
-                applicationProperties.byPassCircuitBreaker());
+        return new ProductVerificationResult(applicationProperties.byPassCircuitBreaker());
     }
 }

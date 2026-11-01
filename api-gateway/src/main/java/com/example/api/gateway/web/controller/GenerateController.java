@@ -6,6 +6,7 @@
 
 package com.example.api.gateway.web.controller;
 
+import com.example.api.gateway.constants.GatewayConstants;
 import com.example.api.gateway.model.GenerationResponse;
 import com.example.api.gateway.web.api.GenerateAPI;
 import com.example.api.gateway.web.service.GenerationOrchestrator;
@@ -33,12 +34,13 @@ public class GenerateController implements GenerateAPI {
      * Runs the generation workflow and returns HTTP 200 for a successful response or 502 for a
      * failure response. Errors from the workflow propagate to the exception handlers.
      *
-     * @param batchSize optional batch size, from 1 through {@value #MAX_BATCH_SIZE}
+     * @param batchSize optional batch size, from 1 through {@value GatewayConstants#MAX_BATCH_SIZE}
      */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Override
     public Mono<ResponseEntity<GenerationResponse>> generate(
-            @RequestParam(required = false) @Min(1) @Max(MAX_BATCH_SIZE) Integer batchSize) {
+            @RequestParam(required = false) @Min(1) @Max(GatewayConstants.MAX_BATCH_SIZE)
+                    Integer batchSize) {
 
         return orchestrator
                 .generate(batchSize)

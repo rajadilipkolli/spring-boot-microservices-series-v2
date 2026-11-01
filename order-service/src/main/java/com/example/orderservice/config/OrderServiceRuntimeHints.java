@@ -11,6 +11,8 @@ import com.example.orderservice.mapper.OrderMapperDecorator;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.services.OrderRetryScheduler;
+import com.example.orderservice.services.OrderRetryService;
 import com.example.orderservice.services.OrderService;
 import java.lang.reflect.Method;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
@@ -32,6 +34,7 @@ import org.jobrunr.storage.sql.common.DatabaseCreator;
 import org.jobrunr.storage.sql.common.DatabaseMigrationsProvider;
 import org.jobrunr.storage.sql.common.migrations.DefaultSqlMigrationProvider;
 import org.jobrunr.storage.sql.common.migrations.SqlMigrationByPath;
+import org.jspecify.annotations.Nullable;
 import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
@@ -57,7 +60,7 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
      * @param classLoader unused by this registrar
      */
     @Override
-    public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         hints.reflection()
                 .registerType(
                         OrderResponse.class,
@@ -76,6 +79,16 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.ACCESS_DECLARED_FIELDS)
                 .registerType(
                         OrderService.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        OrderRetryScheduler.class,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        OrderRetryService.class,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS)
@@ -99,6 +112,9 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(
+                        TypeReference.of("org.apache.coyote.AbstractProtocol"),
+                        MemberCategory.INVOKE_PUBLIC_METHODS)
                 .registerType(
                         TypeReference.of("org.hibernate.proxy.HibernateProxy"),
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
@@ -242,12 +258,13 @@ public class OrderServiceRuntimeHints implements RuntimeHintsRegistrar {
                                         + "KafkaEventExternalizerConfiguration$KafkaOutboxConfiguration$JobRunrOutboxAutoConfiguration"),
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
-                        MemberCategory.ACCESS_DECLARED_FIELDS);
+                        MemberCategory.ACCESS_DECLARED_FIELDS)
+                .registerType(TypeReference.of("java.lang.invoke.SerializedLambda"));
 
         hints.serialization().registerType(TypeReference.of("java.lang.invoke.SerializedLambda"));
 
         Method retryNewOrdersMethod =
-                ReflectionUtils.findMethod(OrderService.class, "retryNewOrders");
+                ReflectionUtils.findMethod(OrderRetryScheduler.class, "retryNewOrders");
         if (retryNewOrdersMethod != null) {
             hints.reflection().registerMethod(retryNewOrdersMethod, ExecutableMode.INVOKE);
         }
