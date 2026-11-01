@@ -18,11 +18,12 @@ import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
+import com.example.orderservice.model.response.ProductVerificationResult;
 import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.services.search.OrderSearchStrategy;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.annotation.Observed;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -31,8 +32,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
-import org.jobrunr.jobs.annotations.Job;
-import org.jobrunr.jobs.annotations.Recurring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -56,10 +55,11 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
-    private final CatalogService catalogService;
+    private final ProductVerificationPort catalogService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
     private final Counter ordersCreatedCounter;
+    private final List<OrderSearchStrategy> searchStrategies;
 
     /**
      * Creates an order service with its persistence, mapping, catalog, event, transaction, and
@@ -71,20 +71,23 @@ public class OrderService {
      * @param eventPublisher publisher for persisted order events
      * @param transactionTemplate template used to run persistence operations in a transaction
      * @param meterRegistry registry used to publish business metrics
+     * @param searchStrategies registered search strategies
      */
     public OrderService(
             OrderRepository orderRepository,
             OrderMapper orderMapper,
-            CatalogService catalogService,
+            ProductVerificationPort catalogService,
             ApplicationEventPublisher eventPublisher,
             TransactionTemplate transactionTemplate,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            List<OrderSearchStrategy> searchStrategies) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.catalogService = catalogService;
         this.eventPublisher = eventPublisher;
         this.transactionTemplate = transactionTemplate;
         this.ordersCreatedCounter = meterRegistry.counter("orders_created");
+        this.searchStrategies = searchStrategies != null ? searchStrategies : List.of();
     }
 
     /**
@@ -259,8 +262,7 @@ public class OrderService {
      * @param productIds product identifiers to check
      * @return the catalog product-existence response
      */
-    private CatalogServiceProxy.ProductExistsResponse productsExistsAndInStock(
-            List<String> productIds) {
+    private ProductVerificationResult productsExistsAndInStock(List<String> productIds) {
         return catalogService.productsExistsByCodes(productIds);
     }
 
@@ -337,42 +339,6 @@ public class OrderService {
     }
 
     /**
-     * Republishes NEW orders last modified strictly more than five minutes ago, in ascending ID
-     * order, with a new random attempt ID for each. After publishing, saves the order with its last
-     * modified time set to the current time. Exceptions while processing an individual order are
-     * caught so remaining orders are attempted; failures fetching the orders propagate. Configured
-     * as a recurring JobRunr job to run every minute.
-     */
-    @Job(name = "reProcessNewOrders", retries = 2)
-    @Recurring(id = "retry-new-orders", cron = "*/1 * * * *")
-    @Transactional
-    public void retryNewOrders() {
-        // fetch all orders where Status is New in Order
-        List<Order> byStatusOrderByIdAsc =
-                orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
-                        OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
-        byStatusOrderByIdAsc.forEach(
-                order -> {
-                    try {
-                        OrderDto persistedOrderDto =
-                                this.orderMapper
-                                        .toDto(order)
-                                        .withAttemptId(UUID.randomUUID().toString());
-                        log.info(
-                                "Retrying Order :{}",
-                                LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                        eventPublisher.publishEvent(persistedOrderDto);
-
-                        // Update lastModifiedDate to prevent immediate repolling and endless spam
-                        order.setLastModifiedDate(LocalDateTime.now());
-                        orderRepository.save(order);
-                    } catch (Exception e) {
-                        log.error("Failed to retry publishing order :{}", order.getId(), e);
-                    }
-                });
-    }
-
-    /**
      * Searches order IDs and loads the matching orders as a page of responses.
      *
      * @param term text to search for in source, delivery address, and item product codes
@@ -393,19 +359,15 @@ public class OrderService {
             Double threshold,
             Pageable pageable) {
 
-        Page<Long> page;
-        if ("similarity".equalsIgnoreCase(mode)) {
-            double actualThreshold = threshold != null ? threshold : 0.3;
-            page =
-                    orderRepository.searchOrdersBySimilarity(
-                            term,
-                            actualThreshold,
-                            customerId,
-                            status != null ? status.name() : null,
-                            pageable);
-        } else {
-            page = orderRepository.searchOrdersByKeyword(term, customerId, status, pageable);
-        }
+        Page<Long> page =
+                searchStrategies.stream()
+                        .filter(strategy -> strategy.supports(mode))
+                        .findFirst()
+                        .map(
+                                strategy ->
+                                        strategy.search(
+                                                term, customerId, status, threshold, pageable))
+                        .orElse(Page.empty(pageable));
 
         return getOrderResponsePagedResult(page);
     }

@@ -27,18 +27,6 @@ public interface CustomerServiceClient {
     CustomerResponse getCustomerByName(@PathVariable String name);
 
     /**
-     * Retrieves a customer by ID using the {@code retailstore-webapp} OAuth2 registration.
-     * Authorization and downstream request failures, including a missing customer, propagate to
-     * the caller.
-     *
-     * @param id customer ID to look up
-     * @return the customer returned by the payment service
-     */
-    @ClientRegistrationId("retailstore-webapp")
-    @GetExchange("/api/customers/{id}")
-    CustomerResponse getCustomerById(@PathVariable Long id);
-
-    /**
      * Retrieves a customer by email using the {@code retailstore-webapp} OAuth2 registration.
      * Authorization and downstream request failures, including a missing customer, propagate to
      * the caller.

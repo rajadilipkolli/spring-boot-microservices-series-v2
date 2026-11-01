@@ -15,6 +15,7 @@ import com.example.orderservice.entities.Order;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.repositories.OrderRepository;
+import com.example.orderservice.repositories.OrderSearchRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Answers;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -34,12 +34,30 @@ import org.springframework.data.domain.Sort;
 class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
+    @Mock private OrderSearchRepository orderSearchRepository;
     @Mock private OrderMapper orderMapper;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private MeterRegistry meterRegistry;
 
-    @InjectMocks private OrderService orderService;
+    private OrderService orderService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        orderService =
+                new OrderService(
+                        orderRepository,
+                        orderMapper,
+                        null,
+                        null,
+                        null,
+                        meterRegistry,
+                        List.of(
+                                new com.example.orderservice.services.search
+                                        .KeywordOrderSearchStrategy(orderSearchRepository),
+                                new com.example.orderservice.services.search
+                                        .SimilarityOrderSearchStrategy(orderSearchRepository)));
+    }
 
     @Test
     void findAllOrdersPreservesPaginationAndEverySortOrder() {
@@ -65,10 +83,10 @@ class OrderServiceTest {
         List<Long> ids = List.of(30L, 10L, 20L);
         Page<Long> page = new PageImpl<>(ids, pageable, 8);
         if ("similarity".equals(mode)) {
-            when(orderRepository.searchOrdersBySimilarity("web", 0.3, null, null, pageable))
+            when(orderSearchRepository.searchOrdersBySimilarity("web", 0.3, null, null, pageable))
                     .thenReturn(page);
         } else {
-            when(orderRepository.searchOrdersByKeyword("web", null, null, pageable))
+            when(orderSearchRepository.searchOrdersByKeyword("web", null, null, pageable))
                     .thenReturn(page);
         }
         List<Order> loadedOrders =

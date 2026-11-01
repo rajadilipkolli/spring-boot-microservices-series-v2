@@ -36,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(controllers = ProductController.class)
+@WebMvcTest(controllers = {ProductViewController.class, ProductRestController.class})
 @Import({SecurityConfig.class, SecurityHelper.class})
 class ProductControllerTest {
 

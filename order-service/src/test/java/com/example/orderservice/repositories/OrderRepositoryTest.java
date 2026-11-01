@@ -36,6 +36,7 @@ import org.springframework.test.context.ActiveProfiles;
 class OrderRepositoryTest {
 
     @Autowired private OrderRepository orderRepository;
+    @Autowired private OrderSearchRepository orderSearchRepository;
     @Autowired private OrderItemRepository orderItemRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -178,16 +179,17 @@ class OrderRepositoryTest {
             orderRepository.save(order2);
 
             Page<Long> results =
-                    orderRepository.searchOrdersByKeyword(
+                    orderSearchRepository.searchOrdersByKeyword(
                             "York", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order1.getId());
 
             results =
-                    orderRepository.searchOrdersByKeyword("mob", null, null, PageRequest.of(0, 10));
+                    orderSearchRepository.searchOrdersByKeyword(
+                            "mob", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order2.getId());
 
             results =
-                    orderRepository.searchOrdersByKeyword(
+                    orderSearchRepository.searchOrdersByKeyword(
                             "nomatch", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
         }
@@ -212,12 +214,12 @@ class OrderRepositoryTest {
 
             for (int page = 0; page < ids.size(); page++) {
                 Page<Long> results =
-                        orderRepository.searchOrdersByKeyword(
+                        orderSearchRepository.searchOrdersByKeyword(
                                 "Product", null, null, PageRequest.of(page, 1));
                 assertThat(results.getContent()).containsExactly(ids.get(page));
                 assertThat(results.getTotalElements()).isEqualTo(ids.size());
                 Page<Long> descending =
-                        orderRepository.searchOrdersByKeyword(
+                        orderSearchRepository.searchOrdersByKeyword(
                                 "Product",
                                 null,
                                 null,
@@ -225,7 +227,7 @@ class OrderRepositoryTest {
                 assertThat(descending.getContent()).containsExactly(ids.get(ids.size() - page - 1));
             }
             assertThat(
-                            orderRepository
+                            orderSearchRepository
                                     .searchOrdersByKeyword(
                                             "Product", null, null, Pageable.unpaged())
                                     .getContent())
@@ -245,7 +247,7 @@ class OrderRepositoryTest {
                             Sort.by(Sort.Order.asc("id").ignoreCase()))) {
                 assertThatThrownBy(
                                 () ->
-                                        orderRepository.searchOrdersByKeyword(
+                                        orderSearchRepository.searchOrdersByKeyword(
                                                 "Product", null, null, PageRequest.of(0, 10, sort)))
                         .hasMessageContaining("Keyword search only supports sorting by id");
             }
@@ -269,7 +271,7 @@ class OrderRepositoryTest {
 
             // A full page forces the count query; exact matches may appear in either order.
             Page<Long> firstPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(0, 2));
             assertThat(firstPage.getContent())
                     .containsExactlyInAnyOrder(orders.get(0).getId(), orders.get(1).getId());
@@ -277,7 +279,7 @@ class OrderRepositoryTest {
 
             // The partial match qualifies through either cutoff, but not when both exclude it.
             Page<Long> nextPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(1, 2));
             List<Long> expectedRemainingIds =
                     expectedCount == 3 ? List.of(orders.get(2).getId()) : List.of();
@@ -285,7 +287,7 @@ class OrderRepositoryTest {
             assertThat(nextPage.getTotalElements()).isEqualTo(expectedCount);
 
             Page<Long> beyondLastPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(2, 2));
             assertThat(beyondLastPage.getContent()).isEmpty();
             assertThat(beyondLastPage.getTotalElements()).isEqualTo(expectedCount);
@@ -303,12 +305,12 @@ class OrderRepositoryTest {
             orderRepository.save(order2);
 
             Page<Long> results =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", 0.3, null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order1.getId());
 
             results =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "NoMatchHere", 0.3, null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
         }

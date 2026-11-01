@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class KeycloakRegistrationService {
+public class KeycloakRegistrationService implements IdentityProviderPort {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakRegistrationService.class);
 
@@ -44,6 +44,7 @@ public class KeycloakRegistrationService {
      * @throws UserAlreadyExistsException if user creation returns HTTP 409
      * @throws KeyCloakException if user creation returns another status of 400 or higher
      */
+    @Override
     public void registerUser(RegistrationRequest request) {
         UserRepresentation user = getUserRepresentation(request);
 
@@ -78,6 +79,7 @@ public class KeycloakRegistrationService {
      *
      * @param username the username to remove from Keycloak
      */
+    @Override
     public void deleteUserByUsername(String username) {
         try {
             RealmResource realmResource = keycloakClient.realm(realm);

@@ -11,38 +11,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-class ProductController {
+@RestController
+class ProductRestController {
 
-    private static final Logger log = LoggerFactory.getLogger(ProductController.class);
+    private static final Logger log = LoggerFactory.getLogger(ProductRestController.class);
     private final CatalogServiceClient catalogServiceClient;
 
-    ProductController(CatalogServiceClient catalogServiceClient) {
+    ProductRestController(CatalogServiceClient catalogServiceClient) {
         this.catalogServiceClient = catalogServiceClient;
-    }
-
-    @GetMapping
-    String index() {
-        return "redirect:/products";
-    }
-
-    @GetMapping("/products")
-    String showProductsPage(@RequestParam(defaultValue = "0") int page, Model model) {
-        model.addAttribute("pageNo", page);
-        return "products";
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/api/products", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
     ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
         log.info("Creating new product: {}", LogSanitizer.sanitizeForLog(String.valueOf(productRequest)));
         try {
@@ -54,8 +40,7 @@ class ProductController {
     }
 
     @GetMapping("/api/products")
-    @ResponseBody
-    PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page, Model model) {
+    PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page) {
         log.info("Fetching products for page: {}", LogSanitizer.sanitizeForLog(String.valueOf(page)));
         try {
             return catalogServiceClient.getProducts(page);

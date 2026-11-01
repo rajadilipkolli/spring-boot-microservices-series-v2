@@ -9,6 +9,7 @@ package com.example.orderservice.services;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.orderservice.config.ApplicationProperties;
+import com.example.orderservice.model.response.ProductVerificationResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -22,8 +23,7 @@ class CatalogServiceTest {
         CatalogService catalogService = new CatalogService(proxy, properties);
         List<String> codes = List.of("P001", "P002");
 
-        CatalogServiceProxy.ProductExistsResponse response =
-                catalogService.productsExistsByCodes(codes);
+        ProductVerificationResult response = catalogService.productsExistsByCodes(codes);
 
         assertThat(response.exists()).isTrue();
     }
@@ -40,7 +40,7 @@ class CatalogServiceTest {
         CatalogService catalogService = new CatalogService(proxy, properties);
         List<String> codes = List.of("P001");
 
-        CatalogServiceProxy.ProductExistsResponse fallbackResponse =
+        ProductVerificationResult fallbackResponse =
                 catalogService.productsExistsDefaultValue(
                         codes, new RuntimeException("Catalog service down"));
 
@@ -59,7 +59,7 @@ class CatalogServiceTest {
         CatalogService catalogService = new CatalogService(proxy, properties);
         List<String> codes = List.of("P001");
 
-        CatalogServiceProxy.ProductExistsResponse fallbackResponse =
+        ProductVerificationResult fallbackResponse =
                 catalogService.productsExistsDefaultValue(
                         codes, new RuntimeException("Catalog service down"));
 

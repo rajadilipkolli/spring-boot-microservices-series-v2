@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2025-2026 Raja Kolli.
 </p>
 ***/
 
@@ -8,6 +8,7 @@ package com.example.api.gateway.web.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,9 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -40,64 +43,79 @@ class GatewayInventoryFallbackTest {
     class HappyPathTests {
 
         @Test
-        @DisplayName("Should return fallback response for valid alphanumeric ID")
+        @DisplayName("Should return ProblemDetail fallback response for valid alphanumeric ID")
         void shouldReturnFallbackForValidAlphanumericId() {
-            // Given
             String productId = "P0001";
-            String expectedResponse = "Hello P0001";
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_PROBLEM_JSON, MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectHeader()
-                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getTitle())
+                                        .isEqualTo("Inventory Service Unavailable");
+                                assertThat(problem.getDetail())
+                                        .isEqualTo(
+                                                "Inventory service is currently unavailable for product P0001");
+                                assertThat(problem.getType())
+                                        .isEqualTo(
+                                                URI.create(
+                                                        "urn:problem-type:inventory-service-unavailable"));
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", "P0001");
+                            });
         }
 
         @Test
-        @DisplayName("Should return fallback response for numeric ID")
+        @DisplayName("Should return ProblemDetail fallback response for numeric ID")
         void shouldReturnFallbackForNumericId() {
-            // Given
             String productId = "12345";
-            String expectedResponse = "Hello 12345";
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectHeader()
-                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail()).contains("12345");
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", "12345");
+                            });
         }
 
         @Test
-        @DisplayName("Should return fallback response for single character ID")
+        @DisplayName("Should return ProblemDetail fallback response for single character ID")
         void shouldReturnFallbackForSingleCharacterId() {
-            // Given
             String productId = "A";
-            String expectedResponse = "Hello A";
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail()).contains("A");
+                                assertThat(problem.getProperties()).containsEntry("productId", "A");
+                            });
         }
 
         @ParameterizedTest(name = "Should handle various valid product IDs: {0}")
@@ -105,19 +123,42 @@ class GatewayInventoryFallbackTest {
                 strings = {"P0001", "PROD123", "SKU-ABC-001", "item_42", "X1Y2Z3", "product.v2"})
         @DisplayName("Should handle various valid product ID formats")
         void shouldHandleVariousValidProductIds(String productId) {
-            // Given
-            String expectedResponse = "Hello " + productId;
-
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail()).contains(productId);
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", productId);
+                            });
+        }
+
+        @Test
+        @DisplayName("Should return ProblemDetail fallback response when id is omitted")
+        void shouldReturnFallbackWhenIdOmitted() {
+            webTestClient
+                    .get()
+                    .uri("/fallback/api/inventory")
+                    .exchange()
+                    .expectStatus()
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getTitle())
+                                        .isEqualTo("Inventory Service Unavailable");
+                                assertThat(problem.getDetail())
+                                        .isEqualTo("Inventory service is currently unavailable");
+                            });
         }
     }
 
@@ -128,78 +169,82 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should handle very long product ID")
         void shouldHandleVeryLongProductId() {
-            // Given - Create a long product ID
             String longProductId =
                     "PRODUCT_ID_WITH_VERY_LONG_NAME_THAT_EXCEEDS_NORMAL_LENGTH_EXPECTATIONS_123456789";
-            String expectedResponse = "Hello " + longProductId;
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", longProductId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", longProductId);
+                                assertThat(problem.getDetail()).contains(longProductId);
+                            });
         }
 
         @Test
         @DisplayName("Should handle product ID with special characters")
         void shouldHandleProductIdWithSpecialCharacters() {
-            // Given
             String specialCharProductId = "PROD@#$%";
-            String expectedResponse = "Hello " + specialCharProductId;
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", specialCharProductId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", specialCharProductId);
+                                assertThat(problem.getDetail()).contains(specialCharProductId);
+                            });
         }
 
         @Test
         @DisplayName("Should handle product ID with spaces (URL encoded)")
         void shouldHandleProductIdWithSpaces() {
-            // Given
             String productIdWithSpaces = "PROD 001";
-            String expectedResponse = "Hello " + productIdWithSpaces;
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productIdWithSpaces)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", productIdWithSpaces);
+                                assertThat(problem.getDetail()).contains(productIdWithSpaces);
+                            });
         }
 
         @Test
         @DisplayName("Should handle Unicode characters in product ID")
         void shouldHandleUnicodeCharactersInProductId() {
-            // Given
             String unicodeProductId = "产品001";
-            String expectedResponse = "Hello " + unicodeProductId;
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", unicodeProductId)
-                    .accept(MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem -> {
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", unicodeProductId);
+                                assertThat(problem.getDetail()).contains(unicodeProductId);
+                            });
         }
     }
 
@@ -210,54 +255,42 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should accept and respond with proper content types")
         void shouldHandleProperContentTypes() {
-            // Given
             String productId = "P0001";
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_PROBLEM_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectHeader()
-                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                    .expectBody(String.class);
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+                    .expectBody(ProblemDetail.class);
         }
 
         @Test
         @DisplayName("Should work without explicit Accept header")
         void shouldWorkWithoutAcceptHeader() {
-            // Given
             String productId = "P0001";
-            String expectedResponse = "Hello P0001";
 
-            // When & Then
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
                     .exchange()
                     .expectStatus()
-                    .isOk()
-                    .expectBody(String.class)
-                    .value(response -> assertThat(response).isEqualTo(expectedResponse));
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                    .expectBody(ProblemDetail.class)
+                    .value(
+                            problem ->
+                                    assertThat(problem.getProperties())
+                                            .containsEntry("productId", productId));
         }
 
         @Test
         @DisplayName("Should accept different media types in Accept header")
         void shouldAcceptDifferentMediaTypes() {
-            // Given
             String productId = "P0001";
-
-            // When & Then - Test with various Accept headers
-            webTestClient
-                    .get()
-                    .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.TEXT_PLAIN)
-                    .exchange()
-                    .expectStatus()
-                    .isOk();
 
             webTestClient
                     .get()
@@ -265,7 +298,7 @@ class GatewayInventoryFallbackTest {
                     .accept(MediaType.ALL)
                     .exchange()
                     .expectStatus()
-                    .isOk();
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
@@ -276,34 +309,38 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should return Mono that emits expected value")
         void shouldReturnMonoWithExpectedValue() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
             String productId = "P0001";
 
-            // When
-            Mono<String> result = controller.fallback(productId);
+            Mono<ProblemDetail> result = controller.fallback(productId);
 
-            // Then - Test using StepVerifier for reactive stream verification
-            StepVerifier.create(result).expectNext("Hello P0001").verifyComplete();
+            StepVerifier.create(result)
+                    .assertNext(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail()).contains("P0001");
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", "P0001");
+                            })
+                    .verifyComplete();
         }
 
         @Test
         @DisplayName("Should return Mono that completes successfully")
         void shouldReturnMonoThatCompletes() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
             String productId = "TEST123";
 
-            // When
-            Mono<String> result = controller.fallback(productId);
+            Mono<ProblemDetail> result = controller.fallback(productId);
 
-            // Then
             StepVerifier.create(result)
                     .assertNext(
-                            response -> {
-                                assertThat(response).isNotNull();
-                                assertThat(response).contains("TEST123");
-                                assertThat(response).startsWith("Hello ");
+                            problem -> {
+                                assertThat(problem).isNotNull();
+                                assertThat(problem.getDetail()).contains("TEST123");
+                                assertThat(problem.getTitle())
+                                        .isEqualTo("Inventory Service Unavailable");
                             })
                     .verifyComplete();
         }
@@ -311,21 +348,22 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should handle multiple concurrent calls correctly")
         void shouldHandleConcurrentCalls() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
             String[] productIds = {"P001", "P002", "P003", "P004", "P005"};
 
-            // When - Create multiple Monos
-            Mono<String>[] monos = new Mono[productIds.length];
+            @SuppressWarnings("unchecked")
+            Mono<ProblemDetail>[] monos = new Mono[productIds.length];
             for (int i = 0; i < productIds.length; i++) {
                 monos[i] = controller.fallback(productIds[i]);
             }
 
-            // Then - Verify each Mono independently
             for (int i = 0; i < productIds.length; i++) {
-                final int index = i;
+                final String expectedId = productIds[i];
                 StepVerifier.create(monos[i])
-                        .expectNext("Hello " + productIds[index])
+                        .assertNext(
+                                problem ->
+                                        assertThat(problem.getProperties())
+                                                .containsEntry("productId", expectedId))
                         .verifyComplete();
             }
         }
@@ -338,44 +376,55 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should handle null ID gracefully via direct method call")
         void shouldHandleNullIdDirectly() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
 
-            // When
-            Mono<String> result = controller.fallback(null);
+            Mono<ProblemDetail> result = controller.fallback(null);
 
-            // Then - Should complete with "Hello null" as per String.formatted behavior
-            StepVerifier.create(result).expectNext("Hello null").verifyComplete();
+            StepVerifier.create(result)
+                    .assertNext(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail())
+                                        .isEqualTo("Inventory service is currently unavailable");
+                                assertThat(problem.getProperties()).isNull();
+                            })
+                    .verifyComplete();
         }
 
         @ParameterizedTest
         @NullAndEmptySource
         @DisplayName("Should handle null and empty IDs via direct method call")
         void shouldHandleNullAndEmptyIds(String productId) {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
-            String expectedResponse = "Hello " + productId;
 
-            // When
-            Mono<String> result = controller.fallback(productId);
+            Mono<ProblemDetail> result = controller.fallback(productId);
 
-            // Then
-            StepVerifier.create(result).expectNext(expectedResponse).verifyComplete();
+            StepVerifier.create(result)
+                    .assertNext(
+                            problem -> {
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getDetail())
+                                        .isEqualTo("Inventory service is currently unavailable");
+                            })
+                    .verifyComplete();
         }
 
         @Test
         @DisplayName("Should not throw exceptions for any string input")
         void shouldNotThrowExceptionsForAnyStringInput() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
             String[] problematicInputs = {
                 "", " ", "null", "undefined", "NaN", "\n\r\t", "   spaces   "
             };
 
-            // When & Then - None should throw exceptions
             for (String input : problematicInputs) {
                 StepVerifier.create(controller.fallback(input))
-                        .expectNext("Hello " + input)
+                        .assertNext(
+                                problem ->
+                                        assertThat(problem.getStatus())
+                                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value()))
                         .verifyComplete();
             }
         }
@@ -386,33 +435,8 @@ class GatewayInventoryFallbackTest {
     class PerformanceTests {
 
         @Test
-        @DisplayName("Should handle multiple concurrent calls correctly")
-        void shouldHandleConcurrentCalls() {
-            // Given
-            GatewayInventoryFallback controller = new GatewayInventoryFallback();
-            String[] productIds = {"P001", "P002", "P003", "P004", "P005"};
-
-            // When - Create multiple Monos
-            Mono<String>[] monos = new Mono[productIds.length];
-            for (int i = 0; i < productIds.length; i++) {
-                monos[i] = controller.fallback(productIds[i]);
-            }
-
-            // Then - Verify each Mono independently
-            for (int i = 0; i < productIds.length; i++) {
-                final int index = i; // Capture loop variable as final
-                final String expectedResponse =
-                        "Hello " + productIds[index]; // Pre-calculate expected response
-                StepVerifier.create(monos[index]) // Use final variable instead of loop variable
-                        .expectNext(expectedResponse)
-                        .verifyComplete();
-            }
-        }
-
-        @Test
         @DisplayName("Should handle stress test with varying ID lengths")
         void shouldHandleStressTestWithVaryingIdLengths() {
-            // Given - Create IDs of different lengths
             String[] varyingLengthIds = {
                 "A",
                 "AB",
@@ -424,21 +448,20 @@ class GatewayInventoryFallbackTest {
                 "VERY_LONG_PRODUCT_IDENTIFIER_NAME"
             };
 
-            // When & Then - All should work correctly
             for (String productId : varyingLengthIds) {
                 webTestClient
                         .get()
                         .uri("/fallback/api/inventory/{id}", productId)
                         .exchange()
                         .expectStatus()
-                        .isOk()
-                        .expectBody(String.class)
+                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                        .expectBody(ProblemDetail.class)
                         .value(
-                                response -> {
-                                    assertThat(response).isEqualTo("Hello " + productId);
-                                    assertThat(response.length())
-                                            .isEqualTo(
-                                                    6 + productId.length()); // "Hello " + productId
+                                problem -> {
+                                    assertThat(problem.getStatus())
+                                            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                    assertThat(problem.getProperties())
+                                            .containsEntry("productId", productId);
                                 });
             }
         }
@@ -451,52 +474,56 @@ class GatewayInventoryFallbackTest {
         @Test
         @DisplayName("Should maintain consistent API contract")
         void shouldMaintainConsistentApiContract() {
-            // Given
             String productId = "CONTRACT_TEST";
 
-            // When & Then - Verify complete API contract
             webTestClient
                     .get()
                     .uri("/fallback/api/inventory/{id}", productId)
-                    .accept(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_PROBLEM_JSON, MediaType.APPLICATION_JSON)
                     .exchange()
                     .expectStatus()
-                    .isOk()
+                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectHeader()
-                    .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                    .expectBody(String.class)
+                    .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+                    .expectBody(ProblemDetail.class)
                     .value(
-                            response -> {
-                                // Verify response format
-                                assertThat(response).isNotNull();
-                                assertThat(response).isNotEmpty();
-                                assertThat(response).startsWith("Hello ");
-                                assertThat(response).endsWith(productId);
-                                assertThat(response).hasSize(6 + productId.length());
+                            problem -> {
+                                assertThat(problem).isNotNull();
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                assertThat(problem.getTitle())
+                                        .isEqualTo("Inventory Service Unavailable");
+                                assertThat(problem.getDetail())
+                                        .isEqualTo(
+                                                "Inventory service is currently unavailable for product CONTRACT_TEST");
+                                assertThat(problem.getType())
+                                        .isEqualTo(
+                                                URI.create(
+                                                        "urn:problem-type:inventory-service-unavailable"));
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", "CONTRACT_TEST");
                             });
         }
 
         @Test
         @DisplayName("Should work correctly as a circuit breaker fallback")
         void shouldWorkAsCircuitBreakerFallback() {
-            // Given - Simulate circuit breaker scenario with typical product IDs
             String[] typicalProductIds = {"P0001", "SKU123", "ITEM-456", "PROD_789"};
 
-            // When & Then - All should return fallback responses consistently
             for (String productId : typicalProductIds) {
                 webTestClient
                         .get()
                         .uri("/fallback/api/inventory/{id}", productId)
                         .exchange()
                         .expectStatus()
-                        .isOk()
-                        .expectBody(String.class)
+                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
+                        .expectBody(ProblemDetail.class)
                         .value(
-                                response -> {
-                                    assertThat(response).isEqualTo("Hello " + productId);
-                                    // Verify it's a proper fallback response
-                                    assertThat(response)
-                                            .doesNotContain("error", "exception", "failure");
+                                problem -> {
+                                    assertThat(problem.getStatus())
+                                            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                                    assertThat(problem.getProperties())
+                                            .containsEntry("productId", productId);
                                 });
             }
         }
@@ -507,25 +534,10 @@ class GatewayInventoryFallbackTest {
     class MethodLevelTests {
 
         @Test
-        @DisplayName("Should format string correctly using String.formatted")
-        void shouldFormatStringCorrectlyUsingStringFormatted() {
-            // Given
-            GatewayInventoryFallback controller = new GatewayInventoryFallback();
-            String testId = "FORMAT_TEST";
-
-            // When & Then
-            StepVerifier.create(controller.fallback(testId))
-                    .expectNext("Hello FORMAT_TEST")
-                    .verifyComplete();
-        }
-
-        @Test
-        @DisplayName("Should return non-null Mono for any input")
+        @DisplayName("Should return non-null Mono with ProblemDetail for any input")
         void shouldReturnNonNullMonoForAnyInput() {
-            // Given
             GatewayInventoryFallback controller = new GatewayInventoryFallback();
 
-            // When & Then
             assertThat(controller.fallback("test")).isNotNull();
             assertThat(controller.fallback("")).isNotNull();
             assertThat(controller.fallback(null)).isNotNull();

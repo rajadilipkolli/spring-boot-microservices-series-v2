@@ -1,42 +1,27 @@
-package com.example.retailstore.webapp.web.controller;
+package com.example.retailstore.webapp.services;
 
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
 import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
-import com.example.retailstore.webapp.services.KeycloakRegistrationService;
-import jakarta.validation.Valid;
 import java.math.BigDecimal;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
-@Controller
-@Validated
-public class RegistrationController {
+@Service
+public class UserRegistrationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RegistrationController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserRegistrationService.class);
 
-    private final KeycloakRegistrationService registrationService;
+    private final IdentityProviderPort identityProviderPort;
     private final CustomerServiceClient customerServiceClient;
 
-    public RegistrationController(
-            KeycloakRegistrationService registrationService, CustomerServiceClient customerServiceClient) {
-        this.registrationService = registrationService;
+    public UserRegistrationService(
+            IdentityProviderPort identityProviderPort, CustomerServiceClient customerServiceClient) {
+        this.identityProviderPort = identityProviderPort;
         this.customerServiceClient = customerServiceClient;
-    }
-
-    @GetMapping("/registration") // Serves the registration page
-    public String showRegistrationPage() {
-        return "registration"; // Returns the name of the Thymeleaf template (registration.html)
     }
 
     /**
@@ -49,12 +34,11 @@ public class RegistrationController {
      * have completed.
      *
      * @param request validated user and customer registration details
-     * @return a success message after both service calls complete
+     * @return the customer response after both service calls complete
      */
-    @PostMapping(value = "/api/register", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegistrationRequest request) {
-        logger.info("Received registration request for user: {}", request.username());
-        registrationService.registerUser(request);
+    public CustomerResponse registerUserAndCustomer(RegistrationRequest request) {
+        log.info("Received registration request for user: {}", request.username());
+        identityProviderPort.registerUser(request);
         try {
             CustomerRequest customerRequest = new CustomerRequest(
                     request.username(),
@@ -69,15 +53,13 @@ public class RegistrationController {
                     BigDecimal.valueOf(10_000));
             CustomerResponse customerResponse = customerServiceClient.getOrCreateCustomer(customerRequest);
 
-            logger.info(
-                    "User {} registered successfully with id :{}", request.username(), customerResponse.customerId());
-            return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+            log.info("User {} registered successfully with id: {}", request.username(), customerResponse.customerId());
+            return customerResponse;
         } catch (HttpClientErrorException ex) {
             // These statuses are explicit rejections in the customer creation API contract.
             if (ex.getStatusCode().value() == 400 || ex.getStatusCode().value() == 409) {
-                logger.error(
-                        "Customer creation rejected for user {}; compensating Keycloak user", request.username(), ex);
-                registrationService.deleteUserByUsername(request.username());
+                log.error("Customer creation rejected for user {}; compensating Keycloak user", request.username(), ex);
+                identityProviderPort.deleteUserByUsername(request.username());
             }
             throw ex;
         }
