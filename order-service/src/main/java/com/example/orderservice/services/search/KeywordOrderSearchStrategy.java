@@ -23,7 +23,7 @@ public class KeywordOrderSearchStrategy implements OrderSearchStrategy {
 
     @Override
     public boolean supports(String mode) {
-        return "keyword".equalsIgnoreCase(mode) || mode == null || mode.isBlank();
+        return !"similarity".equalsIgnoreCase(mode);
     }
 
     @Override
