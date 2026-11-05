@@ -162,6 +162,7 @@ jobs:
 
           ./mvnw -B -pl common versions:set \
             -DnewVersion="$RELEASE_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
             -DgenerateBackupPoms=false
 
       - name: Deploy Common to GitHub Packages
@@ -222,6 +223,7 @@ jobs:
 
           ./mvnw -B -pl common versions:set \
             -DnewVersion="$RELEASE_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
             -DgenerateBackupPoms=false
 
       - name: Deploy Common to Maven Central
@@ -286,13 +288,10 @@ jobs:
           git config user.email \
             "github-actions[bot]@users.noreply.github.com"
 
-          # Record the release against the source commit.
-          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-          git push origin "$TAG_NAME"
-
           # Prepare the next development version.
           ./mvnw -B -pl common versions:set \
             -DnewVersion="$NEXT_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
             -DgenerateBackupPoms=false
 
           git add common/pom.xml
@@ -301,6 +300,10 @@ jobs:
             echo "No POM changes to commit."
             exit 1
           fi
+
+          # Record the release against the source commit.
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
 
           git commit -m \
             "chore(common): bump development version to ${NEXT_VERSION} [skip common release]"

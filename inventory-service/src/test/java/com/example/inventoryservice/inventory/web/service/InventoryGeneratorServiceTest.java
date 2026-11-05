@@ -111,4 +111,23 @@ class InventoryGeneratorServiceTest {
 
         verify(inventoryService, times(batchSize)).findInventoryByProductCode(anyString());
     }
+
+    @Test
+    void shouldRemoveIdempotencyKeyOnNonOptimisticRuntimeExceptionToAllowRetry() {
+        String idempotencyKey = "retryable-batch";
+        given(inventoryService.findInventoryByProductCode(anyString()))
+                .willThrow(new RuntimeException("Database connection failure"))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(
+                        () -> inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, 1))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Database connection failure");
+
+        // Retry should be allowed and processed
+        inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, 1);
+
+        verify(inventoryService, times(2))
+                .findInventoryByProductCode("ProductCode_" + idempotencyKey + "_0");
+    }
 }

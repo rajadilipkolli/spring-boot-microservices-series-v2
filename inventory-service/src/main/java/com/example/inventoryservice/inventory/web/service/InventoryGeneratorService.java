@@ -36,8 +36,9 @@ class InventoryGeneratorService {
      * Missing or deleted inventory is skipped; reserved quantities are preserved.
      *
      * <p>Batch size is validated before claiming the key. Repeated keys are ignored for this
-     * service instance's lifetime, even after a partial failure. Optimistic locking failures are
-     * ignored per item; other persistence failures propagate and stop the batch.
+     * service instance's lifetime. Optimistic locking failures are ignored per item; other
+     * persistence failures propagate, remove the idempotency key to allow a retry, and stop the
+     * batch.
      *
      * @param idempotencyKey non-null key identifying the batch and preventing repeated processing
      * @param batchSize number of codes to visit, or {@code null} for 101
@@ -54,28 +55,36 @@ class InventoryGeneratorService {
             return;
         }
 
-        IntStream.range(0, resolvedBatchSize)
-                .forEach(
-                        operand -> {
-                            try {
-                                int randomQuantity = RAND.nextInt(10_000) + 1;
-                                Optional<Inventory> inventoryByProductCode =
-                                        inventoryService.findInventoryByProductCode(
-                                                "ProductCode_" + idempotencyKey + "_" + operand);
-                                inventoryByProductCode.ifPresent(
-                                        inventoryFromDB ->
-                                                inventoryService.updateInventory(
-                                                        inventoryFromDB,
-                                                        new InventoryRequest(
-                                                                "ProductCode_"
-                                                                        + idempotencyKey
-                                                                        + "_"
-                                                                        + operand,
-                                                                randomQuantity)));
-                            } catch (OptimisticLockingFailureException e) {
-                                // Ignore optimistic locking failures when concurrently updating
-                                // random inventory
-                            }
-                        });
+        try {
+            IntStream.range(0, resolvedBatchSize)
+                    .forEach(
+                            operand -> {
+                                try {
+                                    int randomQuantity = RAND.nextInt(10_000) + 1;
+                                    Optional<Inventory> inventoryByProductCode =
+                                            inventoryService.findInventoryByProductCode(
+                                                    "ProductCode_"
+                                                            + idempotencyKey
+                                                            + "_"
+                                                            + operand);
+                                    inventoryByProductCode.ifPresent(
+                                            inventoryFromDB ->
+                                                    inventoryService.updateInventory(
+                                                            inventoryFromDB,
+                                                            new InventoryRequest(
+                                                                    "ProductCode_"
+                                                                            + idempotencyKey
+                                                                            + "_"
+                                                                            + operand,
+                                                                    randomQuantity)));
+                                } catch (OptimisticLockingFailureException e) {
+                                    // Ignore optimistic locking failures when concurrently updating
+                                    // random inventory
+                                }
+                            });
+        } catch (RuntimeException e) {
+            processedIdempotencyKeys.remove(idempotencyKey);
+            throw e;
+        }
     }
 }
