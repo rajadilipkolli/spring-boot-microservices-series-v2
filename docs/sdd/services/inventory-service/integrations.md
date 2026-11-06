@@ -106,8 +106,8 @@ Inbound Kafka listeners in `KafkaListenerConfig.java` configure non-blocking ret
         graceful-shutdown-timeout: 1s
   ```
 - **Delivery Guarantees**:
-  - Events are saved into `event_publication` in the exact same local database transaction as the inventory state mutation.
-  - A background poller dispatches events to Kafka and archives them to `event_publication_archive`.
+  - Externalized events are saved in the Namastack outbox in the same local transaction as any inventory state mutation.
+  - After the transaction commits, Namastack dispatches the events to Kafka. `event_publication` and `event_publication_archive` belong to the Spring Modulith event registry, not the Kafka outbox.
   - **At-Least-Once Delivery**: Network partitions or pod crashes during publishing can cause re-deliveries. Downstream consumers must be idempotent.
   - **No Distributed 2PC / Atomic Offset Commits**: Kafka offset commits and database transactions are independent. There is no distributed two-phase commit (2PC) or exactly-once semantic between Kafka consumer offset commits and database updates.
   - **No Restart Republication Guarantee**: The service does not guarantee automatic republishing of uncommitted outbox events immediately upon container restart without manual or job execution.
