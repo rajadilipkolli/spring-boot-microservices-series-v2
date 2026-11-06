@@ -13,7 +13,7 @@
 
     <groupId>io.github.rajadilipkolli</groupId>
     <artifactId>microservices-common</artifactId>
-    <version>0.1.8-SNAPSHOT</version>
+    <version>0.1.9-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>microservices-common</name>
@@ -429,7 +429,7 @@
                         <configuration>
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
+                            <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
                 </plugins>
