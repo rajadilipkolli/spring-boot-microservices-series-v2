@@ -44,7 +44,8 @@ class InventoryRetryHandler {
      * @param maxAttempts maximum attempts; values below one still permit one attempt
      * @param <T> the return type
      * @return the result of the operation
-     * @throws OptimisticLockingFailureException if attempts are exhausted or the wait is interrupted
+     * @throws OptimisticLockingFailureException if attempts are exhausted or the wait is
+     *     interrupted
      */
     public <T> T executeWithRetry(RetryCallback<T> operation, int maxAttempts) {
         int attempt = 0;
