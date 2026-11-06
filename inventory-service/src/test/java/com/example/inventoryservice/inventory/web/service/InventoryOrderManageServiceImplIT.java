@@ -9,10 +9,15 @@ package com.example.inventoryservice.inventory.web.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import com.example.common.dto.OrderDto;
+import com.example.inventoryservice.inventory.events.InventoryProcessedEvent;
 import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.utils.AppConstants;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -27,12 +32,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 
 class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
     private static final AtomicLong ORDER_ID_GENERATOR = new AtomicLong(1000L);
     private Inventory product1;
+
+    @Autowired private InventoryMapper inventoryMapper;
+    @Autowired private InventoryRetryHandler retryHandler;
+    @Autowired private MeterRegistry meterRegistry;
 
     /** Clears persisted inventory and seeds two products with available and reserved quantities. */
     @BeforeEach
@@ -507,16 +517,23 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         OrderDto orderDto =
                 new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1), "attempt-fail");
 
-        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        // Fail inside the reservation transaction, after stock and event markers are saved.
+        // An outer transaction failure cannot roll back a committed REQUIRES_NEW attempt.
+        ApplicationEventPublisher failingPublisher = mock(ApplicationEventPublisher.class);
+        doThrow(new RuntimeException("Simulated failure"))
+                .when(failingPublisher)
+                .publishEvent(any(InventoryProcessedEvent.class));
+        InventoryOrderManageServiceImpl failingService =
+                new InventoryOrderManageServiceImpl(
+                        inventoryRepository,
+                        inventoryJOOQRepository,
+                        inventoryMapper,
+                        retryHandler,
+                        processedOrderEventRepository,
+                        meterRegistry,
+                        failingPublisher);
 
-        // Simulate a transaction failure after claim (e.g. database error or rollback)
-        assertThatThrownBy(
-                        () ->
-                                transactionTemplate.execute(
-                                        status -> {
-                                            inventoryOrderManageService.reserve(orderDto);
-                                            throw new RuntimeException("Simulated failure");
-                                        }))
+        assertThatThrownBy(() -> failingService.reserve(orderDto))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Simulated failure");
 
@@ -525,6 +542,19 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
                         processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(
                                 orderId))
                 .isEmpty();
+
+        assertThat(
+                        processedOrderEventRepository.existsById(
+                                new ProcessedOrderEventId(orderId, "RESERVE")))
+                .isFalse();
+        assertThat(
+                        processedOrderEventRepository.existsById(
+                                new ProcessedOrderEventId(orderId, "RESERVE_REPLY:attempt-fail")))
+                .isFalse();
+        InventoryRecord afterFailure =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFailure.getQuantity()).isEqualTo(100);
+        assertThat(afterFailure.getReservedItems()).isEqualTo(50);
 
         // Subsequent delivery succeeds and reserves stock
         OrderDto secondResult = inventoryOrderManageService.reserve(orderDto);
