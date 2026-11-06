@@ -39,3 +39,5 @@ docs/sdd/services/<service-name>/
 2. Fill in metadata, descriptions, source references, and test references.
 3. Observe the mandatory vs optional markers on individual subsections.
 4. Keep requirements atomic, scenario-based, and grounded in codebase facts.
+
+5. Copy diagrams into `diagrams/`; change section-template links from `../diagrams/` to `diagrams/` after placing sections in the service root. Verify every relative link.

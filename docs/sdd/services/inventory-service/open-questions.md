@@ -110,13 +110,15 @@ This document captures open ambiguities, suspected defects, stale documentation 
 ### INV-PROP-003: Disallow Product Code Mutation and Enforce Non-Null Quantity on PUT
 - **Status**: `Draft` (Unapproved)
 - **Motivating Question**: `INV-Q-003`
-- **Contract Impact**: `[Compatible]`
+- **Contract Impact**: `[Breaking]`
 - **Proposed Behavior**:
   1. Add `@NotNull` on `availableQuantity` in `InventoryRequest`.
   2. In `InventoryMapper`, configure `productCode` as ignored during updates (`@Mapping(target = "productCode", ignore = true)`).
   3. Reject `PUT /api/inventory/{id}` with 400 if the body contains a conflicting non-null `productCode`.
 
 ---
+
+- **Client Migration**: Before enabling validation, clients must send a non-null `availableQuantity` on POST and PUT and use a matching product code. Previously accepted null or omitted quantities will return HTTP 400. Coordinate rollout with all callers.
 
 ### INV-PROP-004: Clean Up Unused Resilience4j Properties in Config Repository
 - **Status**: `Draft` (Unapproved)

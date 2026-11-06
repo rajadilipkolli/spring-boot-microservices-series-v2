@@ -49,6 +49,6 @@ The table below catalogs every test class in `inventory-service` with scope and 
 ## 3. Discrepancies and Misleading Test Names
 
 1. **`JOOQInventoryRepositoryTest#findByProductCodeInAndQuantityAvailable`**:
-   The test method name mentions `AndQuantityAvailable`, but the underlying query executed is actually `findByProductCodeInAndDeletedFalse`. The query does **not** filter by available quantity $> 0$.
+   The test executes direct DSL SQL with `PRODUCT_CODE.in(...)` and `QUANTITY.gt(0)`, asserting that only the positive-quantity record is returned. It does not invoke `InventoryJOOQRepositoryImpl`.
 2. **`InventoryRepositoryTest#shouldDeleteByProductCodeWithoutAnExistingTransaction`**:
    Verifies physical database deletion (`deleteByProductCode`), which is only used in test cleanup routines and is not exposed in public REST controllers.

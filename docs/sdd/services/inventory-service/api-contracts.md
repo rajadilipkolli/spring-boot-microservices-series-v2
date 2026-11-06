@@ -160,3 +160,5 @@
 | `PUT /api/inventory/product/{code}` | Swagger documents 400 with `ProblemDetail` schema | Controller returns empty `ResponseEntity.badRequest().build()` on path mismatch without `ProblemDetail`. |
 | `DELETE /api/inventory/{id}` | Swagger documents 200 with empty body, 410 empty body | Accurately matches controller `ResponseEntity.ok().build()` and `ResponseEntity.status(HttpStatus.GONE).build()`. |
 | `GET /api/inventory` | Swagger specifies `pageNo` (0-based) | Controller reads 0-based `pageNo`, but `PagedResult` returns 1-based `pageNumber`. |
+
+Trace enrichment requires a non-blank trace ID: preserve an existing non-blank string `traceId` property; otherwise resolve the request `X-Trace-Id`, valid OpenTelemetry span, then MDC `traceId`/`trace_id`. Preserve other properties and existing response headers, adding `X-Trace-Id` only if absent. Without a resolved ID, add neither property nor header. Empty bodies are not enriched.

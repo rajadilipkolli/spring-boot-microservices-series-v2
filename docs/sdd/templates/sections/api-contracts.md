@@ -65,3 +65,5 @@ All application errors emitted by `GlobalExceptionHandler` conform to RFC 7807 `
 
 ## 4. Swagger / OpenAPI Contract Differences *(Mandatory)*
 [Document any discrepancies between the Swagger annotations on the API interface and actual runtime controller behavior, such as missing response codes, incorrect error models, or parameter defaults.]
+
+Trace enrichment requires a non-blank trace ID: preserve an existing non-blank string `traceId` property; otherwise resolve the request `X-Trace-Id`, valid OpenTelemetry span, then MDC `traceId`/`trace_id`. Preserve other properties and existing response headers, adding `X-Trace-Id` only if absent. Without a resolved ID, add neither property nor header. Empty bodies are not enriched.

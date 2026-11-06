@@ -24,10 +24,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Loggable
@@ -114,14 +111,12 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * @return the order with its reservation outcome and inventory source, or the original order
      *     when processing or replay is skipped
      */
-    @Transactional
-    @Retryable(
-            includes = OptimisticLockingFailureException.class,
-            maxRetries = 3,
-            delay = 1000,
-            multiplier = 2.0)
     @Override
     public OrderDto reserve(OrderDto orderDto) {
+        return retryHandler.executeWithRetry(() -> reserveAttempt(orderDto));
+    }
+
+    private OrderDto reserveAttempt(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
         // Check if order status is not NEW
         if (!"NEW".equals(orderDto.status())) {
@@ -255,7 +250,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 updatedInventoryList.add(inventoryFromDB);
             }
             // Persist changes via Spring Data JPA with custom fallback retry
-            retryHandler.executeWithRetry(() -> inventoryRepository.saveAll(updatedInventoryList));
+            inventoryRepository.saveAll(updatedInventoryList);
             finalOrderDto = orderDto.withStatus("ACCEPT");
             this.inventoryReservationsCounter.increment();
             if (orderDto.orderId() != null) {
@@ -294,14 +289,15 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * <p>For non-null order IDs, duplicate confirmations with the same status are skipped. Null IDs
      * bypass duplicate tracking. No event is published; persistence failures propagate.
      */
-    @Transactional
-    @Retryable(
-            includes = OptimisticLockingFailureException.class,
-            maxRetries = 3,
-            multiplier = 2.0,
-            delay = 1000)
     @Override
     public void confirm(OrderDto orderDto) {
+        retryHandler.executeWithRetry(() -> {
+                    confirmAttempt(orderDto);
+                    return null;
+                });
+    }
+
+    private void confirmAttempt(OrderDto orderDto) {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
 
         String eventType = "CONFIRM_" + orderDto.status();
@@ -344,7 +340,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         }
 
         // Persist changes via Spring Data JPA with custom fallback retry
-        retryHandler.executeWithRetry(() -> inventoryRepository.saveAll(inventoryMap.values()));
+        inventoryRepository.saveAll(inventoryMap.values());
 
         LOGGER.info("Order confirmation completed for order ID: {}", orderDto.orderId());
     }

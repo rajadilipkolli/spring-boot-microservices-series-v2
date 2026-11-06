@@ -15,7 +15,6 @@ import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecor
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -83,8 +82,11 @@ class InventoryService {
      * @throws DataIntegrityViolationException if saving fails an integrity constraint and the
      *     product code has no active inventory
      */
-    @Transactional
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
+        return retryHandler.executeWithRetry(() -> saveInventoryAttempt(inventoryRequest));
+    }
+
+    private Inventory saveInventoryAttempt(InventoryRequest inventoryRequest) {
         // Read via jOOQ to check existing record
         Optional<InventoryRecord> existingRecordOpt =
                 inventoryJOOQRepository.findByProductCode(inventoryRequest.productCode());
@@ -117,8 +119,14 @@ class InventoryService {
      * Soft deletes active inventory without changing available or reserved quantities. Does nothing
      * if absent or already deleted; persistence failures propagate.
      */
-    @Transactional
     public void deleteInventoryById(Long id) {
+        retryHandler.executeWithRetry(() -> {
+                    deleteInventoryByIdAttempt(id);
+                    return null;
+                });
+    }
+
+    private void deleteInventoryByIdAttempt(Long id) {
         // Check active existence via jOOQ read
         inventoryJOOQRepository
                 .findByIdAndDeletedFalse(id)
@@ -131,7 +139,6 @@ class InventoryService {
     }
 
     /** Applies the request to the entity, preserving reserved quantity, and saves it. */
-    @Transactional
     public Inventory updateInventory(Inventory inventory, InventoryRequest inventoryRequest) {
         this.inventoryMapper.updateInventoryFromRequest(inventoryRequest, inventory);
         return saveWithCustomFallback(inventory);
@@ -165,27 +172,18 @@ class InventoryService {
      *
      * @return the saved inventory response, or empty if the ID is absent or soft deleted
      */
-    @Transactional
     public Optional<InventoryResponse> updateInventoryById(
             Long id, InventoryRequest inventoryRequest) {
-        return inventoryJOOQRepository
-                .findByIdAndDeletedFalse(id)
-                .map(
-                        record -> {
-                            return retryHandler.executeWithRetry(
-                                    () -> {
-                                        // Fetch latest active record via jOOQ on attempt
-                                        InventoryRecord latestRecord =
-                                                inventoryJOOQRepository
-                                                        .findByIdAndDeletedFalse(id)
-                                                        .orElse(record);
-                                        Inventory entity = inventoryMapper.toEntity(latestRecord);
-                                        this.inventoryMapper.updateInventoryFromRequest(
-                                                inventoryRequest, entity);
-                                        Inventory saved = inventoryRepository.save(entity);
-                                        return inventoryMapper.toResponse(saved);
-                                    });
-                        });
+        return retryHandler.executeWithRetry(() -> updateInventoryByIdAttempt(id, inventoryRequest));
+    }
+
+    private Optional<InventoryResponse> updateInventoryByIdAttempt(
+            Long id, InventoryRequest inventoryRequest) {
+        return inventoryJOOQRepository.findByIdAndDeletedFalse(id).map(record -> {
+            Inventory entity = inventoryMapper.toEntity(record);
+            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+            return inventoryMapper.toResponse(inventoryRepository.save(entity));
+        });
     }
 
     /**
@@ -195,28 +193,18 @@ class InventoryService {
      * @param productCode code used to find the inventory
      * @return the saved inventory response, or empty if the code is absent or soft deleted
      */
-    @Transactional
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
-        return inventoryJOOQRepository
-                .findByProductCodeAndDeletedFalse(productCode)
-                .map(
-                        record -> {
-                            return retryHandler.executeWithRetry(
-                                    () -> {
-                                        // Fetch latest active record via jOOQ on attempt
-                                        InventoryRecord latestRecord =
-                                                inventoryJOOQRepository
-                                                        .findByProductCodeAndDeletedFalse(
-                                                                productCode)
-                                                        .orElse(record);
-                                        Inventory entity = inventoryMapper.toEntity(latestRecord);
-                                        this.inventoryMapper.updateInventoryFromRequest(
-                                                inventoryRequest, entity);
-                                        Inventory saved = inventoryRepository.save(entity);
-                                        return inventoryMapper.toResponse(saved);
-                                    });
-                        });
+        return retryHandler.executeWithRetry(() -> updateInventoryByProductCodeAttempt(productCode, inventoryRequest));
+    }
+
+    private Optional<InventoryResponse> updateInventoryByProductCodeAttempt(
+            String productCode, InventoryRequest inventoryRequest) {
+        return inventoryJOOQRepository.findByProductCodeAndDeletedFalse(productCode).map(record -> {
+            Inventory entity = inventoryMapper.toEntity(record);
+            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+            return inventoryMapper.toResponse(inventoryRepository.save(entity));
+        });
     }
 
     /** Returns whether active inventory exists for the ID via jOOQ read. */
@@ -229,24 +217,6 @@ class InventoryService {
      * from the database after a conflict. Unresolved persistence failures propagate.
      */
     private Inventory saveWithCustomFallback(Inventory inventory) {
-        return retryHandler.executeWithRetry(
-                () -> {
-                    try {
-                        return inventoryRepository.save(inventory);
-                    } catch (OptimisticLockingFailureException ex) {
-                        // Custom fallback: reload latest version from DB via jOOQ if ID exists
-                        if (inventory.getId() != null) {
-                            inventoryJOOQRepository
-                                    .findById(inventory.getId())
-                                    .ifPresent(
-                                            latest -> {
-                                                if (latest.getVersion() != null) {
-                                                    inventory.setVersion(latest.getVersion());
-                                                }
-                                            });
-                        }
-                        throw ex;
-                    }
-                });
+        return inventoryRepository.save(inventory);
     }
 }

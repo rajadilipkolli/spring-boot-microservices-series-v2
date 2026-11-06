@@ -32,7 +32,7 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Returns a sorted, paginated collection of active inventory records wrapped in `PagedResult<InventoryResponse>`. Records marked as soft-deleted (`deleted = true`) are strictly excluded.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/controllers/InventoryController.java#InventoryController#getAllInventories`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldFetchAllInventories`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldFetchAllInventories`
 - **Linked Business Rules**: `INV-BR-001`, `INV-BR-003`
 - **Linked Questions**: `INV-Q-002` (Inferred 500 on invalid sort properties)
 
@@ -44,7 +44,7 @@ This document details all functional requirements implemented by `inventory-serv
 
 ##### Scenario 2: Request Paging with Case-Insensitive Sort Direction
 - **Given** Multiple active inventory records.
-- **When** `GET /api/inventory?pageNo=1&pageSize=5&sortBy=availableQuantity&sortDir=DESC` is called.
+- **When** `GET /api/inventory?pageNo=1&pageSize=5&sortBy=quantity&sortDir=DESC` is called.
 - **Then** Return HTTP 200 containing up to 5 items sorted descending by available quantity, with `pageNumber=2`. Any sort direction string other than `asc` (case-insensitive) sorts descending.
 
 ---
@@ -57,7 +57,7 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Retrieves active inventory for a specific product code. Supports an optional `delay` parameter in seconds to simulate latency (e.g. for testing circuit breakers or timeouts). The `delay` parameter is unbounded.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/controllers/InventoryController.java#InventoryController#getInventoryByProductCode`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldFindInventoryByProductCode`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldFindInventoryByProductCode`
 - **Linked Business Rules**: `INV-BR-003`
 
 #### Scenarios & Acceptance Criteria
@@ -86,7 +86,7 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Accepts a list of product codes via query parameter `codes` and returns a paginated `PagedResult<InventoryResponse>` matching only existing, active records. Missing or deleted product codes are silently omitted from the result.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/controllers/InventoryController.java#InventoryController#getInventoryByProductCodes`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldFindInventoriesByProductCodes`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldFindInventoriesByProductCodes`
 - **Linked Business Rules**: `INV-BR-003`
 
 #### Scenarios & Acceptance Criteria
@@ -105,14 +105,14 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Creates a new inventory record with a TSID identifier. If a record with the same product code already exists in an active state, HTTP 409 Conflict is returned. If a record with the same product code exists but is soft-deleted (`deleted = true`), the record is **restored** (`deleted = false`) with the newly requested available quantity while preserving its original ID and reserved items.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/service/InventoryService.java#InventoryService#saveInventory`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldRestoreDeletedInventoryOnCreate`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldRestoreDeletedInventoryOnCreate`
 - **Linked Business Rules**: `INV-BR-001`, `INV-BR-004`
 
 #### Scenarios & Acceptance Criteria
 ##### Scenario 1: Create New Unique Inventory Record
 - **Given** No record exists for product code `P100`.
 - **When** `POST /api/inventory` is invoked with `{"productCode": "P100", "availableQuantity": 100}`.
-- **Then** Return HTTP 201 Created with TSID identifier, `availableQuantity: 100`, `reservedItems: 0`, and `deleted: false`.
+- **Then** Return HTTP 201 Created with TSID identifier, `availableQuantity: 100`, `reservedItems: 0`, and database state `deleted = false`.
 
 ##### Scenario 2: Conflict on Existing Active Product Code
 - **Given** Active record already exists for `P001`.
@@ -122,7 +122,7 @@ This document details all functional requirements implemented by `inventory-serv
 ##### Scenario 3: Restore Soft-Deleted Product Code
 - **Given** Record `id = 1`, `productCode = "P001"`, `reserved_items = 5`, `deleted = true`.
 - **When** `POST /api/inventory` is invoked with `{"productCode": "P001", "availableQuantity": 200}`.
-- **Then** Return HTTP 201 Created with same `id = 1`, `availableQuantity = 200`, `reservedItems = 5`, and `deleted = false`.
+- **Then** Return HTTP 201 Created with same `id = 1`, `availableQuantity = 200`, `reservedItems = 5`, and database state `deleted = false`.
 
 ---
 
@@ -134,7 +134,7 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Updates available quantity of active inventory by database ID or by product code. Reserved items are preserved. If updating by product code, the request body `productCode` must match the URL path variable if non-null; a mismatch returns empty HTTP 400 Bad Request.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/controllers/InventoryController.java#InventoryController#updateInventory`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldUpdateInventory`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldUpdateInventory`
 - **Linked Business Rules**: `INV-BR-002`, `INV-BR-003`
 - **Linked Questions**: `INV-Q-003` (Null availableQuantity behavior)
 
@@ -164,7 +164,7 @@ This document details all functional requirements implemented by `inventory-serv
 - **Evidence Status**: Verified
 - **Description**: Marks active inventory as soft-deleted by setting `deleted = true`. Available and reserved quantities are left unchanged. If the ID exists and is active, returns HTTP 200. If the ID is absent or already soft-deleted, returns HTTP 410 Gone.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/controllers/InventoryController.java#InventoryController#deleteInventory`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldDeleteInventory`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldDeleteInventory`
 - **Linked Business Rules**: `INV-BR-003`, `INV-BR-004`
 
 #### Scenarios & Acceptance Criteria

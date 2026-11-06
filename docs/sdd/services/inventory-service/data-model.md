@@ -146,3 +146,6 @@ erDiagram
         timestamptz last_resubmission_date
     }
 ```
+
+### Optimistic-lock retries
+`InventoryRetryHandler` wraps each complete write operation in a programmatic `REQUIRES_NEW` transaction. The retry loop surrounds transaction completion, so flush and commit conflicts roll back before another attempt rereads inventory. Order claims, stock changes, result markers and outbox publication share the attempt transaction. Nested save retries and version-only refreshes are removed; retry correctness does not depend on retry/transaction advisor ordering.
