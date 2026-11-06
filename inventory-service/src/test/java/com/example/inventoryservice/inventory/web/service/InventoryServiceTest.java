@@ -15,13 +15,13 @@ import static org.mockito.Mockito.verify;
 
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
@@ -30,20 +30,25 @@ class InventoryServiceTest {
     @Mock private InventoryMapper inventoryMapper;
     @Mock private InventoryJOOQRepository inventoryJOOQRepository;
 
+    private InventoryRetryHandler retryHandler;
     private InventoryService inventoryService;
 
     @BeforeEach
     void setUp() {
+        retryHandler = new InventoryRetryHandler();
         inventoryService =
                 new InventoryService(
-                        inventoryRepository, inventoryMapper, inventoryJOOQRepository, null);
-        ReflectionTestUtils.setField(inventoryService, "self", inventoryService);
+                        inventoryRepository,
+                        inventoryMapper,
+                        inventoryJOOQRepository,
+                        retryHandler);
     }
 
     @Test
     void testSaveInventory() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryRepository.findByProductCode("ProductCode1")).willReturn(Optional.empty());
+        given(inventoryJOOQRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.empty());
         given(inventoryMapper.toEntity(any(InventoryRequest.class)))
                 .willReturn(
                         new Inventory()
@@ -68,8 +73,12 @@ class InventoryServiceTest {
     @Test
     void testSaveInventory_Conflict() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryRepository.findByProductCode("ProductCode1"))
-                .willReturn(Optional.of(new Inventory().setProductCode("ProductCode1")));
+        InventoryRecord activeRecord = new InventoryRecord();
+        activeRecord.setProductCode("ProductCode1");
+        activeRecord.setDeleted(false);
+
+        given(inventoryJOOQRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.of(activeRecord));
 
         assertThatThrownBy(() -> inventoryService.saveInventory(inventoryRequest))
                 .isInstanceOf(ProductAlreadyExistsException.class)

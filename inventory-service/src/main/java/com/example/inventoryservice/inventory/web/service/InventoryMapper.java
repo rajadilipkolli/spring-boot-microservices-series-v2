@@ -30,4 +30,8 @@ interface InventoryMapper {
     /** Maps stored quantity to available quantity in the response; returns null for null input. */
     @Mapping(target = "availableQuantity", source = "quantity")
     InventoryResponse toResponse(InventoryRecord inventoryRecord);
+
+    /** Maps a record to a new inventory entity, using stored quantity as available quantity. */
+    @Mapping(target = "availableQuantity", source = "quantity")
+    Inventory toEntity(InventoryRecord inventoryRecord);
 }

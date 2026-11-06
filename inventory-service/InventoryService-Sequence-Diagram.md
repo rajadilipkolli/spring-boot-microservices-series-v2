@@ -1,5 +1,8 @@
 # Inventory Service - Detailed Sequence Diagram
 
+> [!IMPORTANT]
+> **Authoritative Specification Notice**: This sequence diagram serves as discovery documentation. The authoritative, test-verified specification and saga workflows for the Inventory Service are maintained under **[`docs/sdd/services/inventory-service/README.md`](../docs/sdd/services/inventory-service/README.md)**. For documented discrepancies between this diagram and actual Kafka topic names (e.g., `-retry-inventory` and `-dlt-inventory` suffixes), see **[`open-questions.md`](../docs/sdd/services/inventory-service/open-questions.md)**.
+
 ## Complete Inventory Management Flow with Event-Driven Architecture
 
 ```mermaid

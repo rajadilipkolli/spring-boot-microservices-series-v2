@@ -1,5 +1,5 @@
+@ApplicationModule(type = ApplicationModule.Type.OPEN)
 @NullMarked
-@ApplicationModule(displayName = "Config Module")
 package com.example.inventoryservice.inventory.config;
 
 import org.jspecify.annotations.NullMarked;

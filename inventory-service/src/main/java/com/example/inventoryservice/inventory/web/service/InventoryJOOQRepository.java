@@ -60,4 +60,22 @@ interface InventoryJOOQRepository {
 
     /** Returns whether active inventory exists for the ID. Database failures propagate. */
     boolean existsByIdAndDeletedFalse(Long inventoryId);
+
+    /**
+     * Returns inventory by exact product code, including soft-deleted records, or empty if absent.
+     * Database failures propagate.
+     */
+    Optional<InventoryRecord> findByProductCode(String productCode);
+
+    /**
+     * Returns inventory matching the supplied codes, including soft-deleted records. Missing
+     * products are omitted; database failures propagate.
+     */
+    List<InventoryRecord> findByProductCodeIn(List<String> productCodes);
+
+    /**
+     * Returns active inventory matching the supplied codes. Missing or deleted products are
+     * omitted; database failures propagate.
+     */
+    List<InventoryRecord> findByProductCodeInAndDeletedFalse(List<String> productCodes);
 }

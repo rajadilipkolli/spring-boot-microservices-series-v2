@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ class InventoryRepositoryTest {
 
     @Autowired private DataSource datasource;
     @Autowired private InventoryRepository inventoryRepository;
+    @Autowired private JdbcClient jdbcClient;
 
     @Test
     void dataSource() {
@@ -44,6 +46,12 @@ class InventoryRepositoryTest {
 
         inventoryRepository.deleteByProductCode(productCode);
 
-        assertThat(inventoryRepository.findByProductCode(productCode)).isEmpty();
+        Integer count =
+                jdbcClient
+                        .sql("SELECT count(*) FROM inventory WHERE product_code = :productCode")
+                        .param("productCode", productCode)
+                        .query(Integer.class)
+                        .single();
+        assertThat(count).isZero();
     }
 }

@@ -9,6 +9,8 @@ package com.example.inventoryservice.inventory.web.service;
 import com.example.common.dto.ProductDto;
 import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.ProductManageService;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,10 +23,20 @@ class ProductManageServiceImpl implements ProductManageService {
     private static final Logger log = LoggerFactory.getLogger(ProductManageServiceImpl.class);
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJOOQRepository inventoryJOOQRepository;
+    private final InventoryMapper inventoryMapper;
+    private final InventoryRetryHandler retryHandler;
 
-    /** Creates the product handler with a repository for duplicate checks and inventory writes. */
-    public ProductManageServiceImpl(InventoryRepository inventoryRepository) {
+    /** Creates the product handler with repositories for reads (jOOQ) and writes (JPA). */
+    public ProductManageServiceImpl(
+            InventoryRepository inventoryRepository,
+            InventoryJOOQRepository inventoryJOOQRepository,
+            InventoryMapper inventoryMapper,
+            InventoryRetryHandler retryHandler) {
         this.inventoryRepository = inventoryRepository;
+        this.inventoryJOOQRepository = inventoryJOOQRepository;
+        this.inventoryMapper = inventoryMapper;
+        this.retryHandler = retryHandler;
     }
 
     /**
@@ -32,48 +44,57 @@ class ProductManageServiceImpl implements ProductManageService {
      * Existing codes include deleted inventory, which is not restored. A deleted product DTO soft
      * deletes active inventory; absent or already deleted inventory is left unchanged.
      *
+     * <p>Reads are executed via jOOQ and writes via Spring Data JPA.
+     *
      * <p>Integrity failures propagate when the product code is still absent after the failed
      * insert. Other persistence failures, including deletion failures, propagate.
      */
     @Override
     public void manage(ProductDto productDto) {
+        try {
+            retryHandler.executeWithRetry(
+                    () -> {
+                        manageAttempt(productDto);
+                        return null;
+                    });
+        } catch (DataIntegrityViolationException ex) {
+            if (productDto.isDeleted()
+                    || inventoryJOOQRepository.findByProductCode(productDto.code()).isEmpty()) {
+                throw ex;
+            }
+            // A concurrent create committed; ignore the duplicate after rollback.
+        }
+    }
+
+    private void manageAttempt(ProductDto productDto) {
         String productCode = productDto.code();
         if (productDto.isDeleted()) {
-            inventoryRepository
-                    .findByProductCode(productCode)
-                    .ifPresentOrElse(
-                            inventory -> {
-                                if (inventory.isDeleted()) {
-                                    log.info(
-                                            "Inventory already deleted for productCode: {}",
-                                            productCode);
-                                    return;
-                                }
-                                inventory.markDeleted();
-                                inventoryRepository.save(inventory);
-                                log.info("Soft deleted inventory for productCode: {}", productCode);
-                            },
-                            () ->
-                                    log.info(
-                                            "No inventory found to soft delete for productCode: {}",
-                                            productCode));
+            // Read via jOOQ
+            Optional<InventoryRecord> recordOpt =
+                    inventoryJOOQRepository.findByProductCode(productCode);
+            if (recordOpt.isPresent()) {
+                InventoryRecord record = recordOpt.get();
+                if (Boolean.TRUE.equals(record.getDeleted())) {
+                    log.info("Inventory already deleted for productCode: {}", productCode);
+                    return;
+                }
+                Inventory inventory = inventoryMapper.toEntity(record);
+                inventory.markDeleted();
+                inventoryRepository.save(inventory);
+                log.info("Soft deleted inventory for productCode: {}", productCode);
+            } else {
+                log.info("No inventory found to soft delete for productCode: {}", productCode);
+            }
             return;
         }
 
-        // avoid inserting duplicate inventory records when retries or duplicate events arrive
-        if (this.inventoryRepository.findByProductCode(productCode).isPresent()) {
+        // Avoid inserting duplicate inventory records when retries or duplicate events arrive (read
+        // via jOOQ)
+        if (this.inventoryJOOQRepository.findByProductCode(productCode).isPresent()) {
             return;
         }
 
         Inventory inventory = new Inventory().setProductCode(productCode);
-        try {
-            this.inventoryRepository.save(inventory);
-        } catch (DataIntegrityViolationException ex) {
-            if (this.inventoryRepository.findByProductCode(productCode).isEmpty()) {
-                throw ex;
-            }
-            // Another thread created the same product_code concurrently; ignore to keep
-            // idempotency. Logging is handled by the @Loggable aspect.
-        }
+        this.inventoryRepository.save(inventory);
     }
 }

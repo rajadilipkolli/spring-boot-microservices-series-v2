@@ -14,14 +14,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.example.common.dto.ProductDto;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.instancio.junit.InstancioExtension;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,15 +33,29 @@ class ProductManageServiceImplTest {
     @Captor private ArgumentCaptor<Inventory> argumentCaptor;
 
     @Mock private InventoryRepository inventoryRepository;
+    @Mock private InventoryJOOQRepository inventoryJOOQRepository;
+    @Mock private InventoryMapper inventoryMapper;
 
-    @InjectMocks private ProductManageServiceImpl productManageService;
+    private InventoryRetryHandler retryHandler;
+    private ProductManageServiceImpl productManageService;
+
+    @BeforeEach
+    void setUp() {
+        retryHandler = new InventoryRetryHandler();
+        productManageService =
+                new ProductManageServiceImpl(
+                        inventoryRepository,
+                        inventoryJOOQRepository,
+                        inventoryMapper,
+                        retryHandler);
+    }
 
     @Test
     void manage() {
         // Arrange
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
 
-        given(inventoryRepository.findByProductCode(productDto.code()))
+        given(inventoryJOOQRepository.findByProductCode(productDto.code()))
                 .willReturn(Optional.empty());
         given(inventoryRepository.save(argumentCaptor.capture()))
                 .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
@@ -49,103 +64,118 @@ class ProductManageServiceImplTest {
         productManageService.manage(productDto);
 
         // Assert
-        verify(inventoryRepository, times(1)).save(argumentCaptor.capture());
-        assertThat(argumentCaptor.getValue())
-                .isNotNull()
-                .satisfies(
-                        inventory -> {
-                            assertThat(inventory.getProductCode()).isNotBlank();
-                            assertThat(inventory.getId()).isNull();
-                            assertThat(inventory.isDeleted()).isFalse();
-                        });
+        assertThat(argumentCaptor.getValue()).isNotNull();
+        assertThat(argumentCaptor.getValue().getProductCode()).isEqualTo("P001");
+        assertThat(argumentCaptor.getValue().getAvailableQuantity()).isZero();
+        assertThat(argumentCaptor.getValue().getReservedItems()).isZero();
+        assertThat(argumentCaptor.getValue().isDeleted()).isFalse();
     }
 
     @Test
-    void manageWhenDeletedAndActiveShouldSoftDelete() {
+    void shouldSoftDeleteActiveInventoryWhenProductDeletedEventArrives() {
+        // Arrange
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, true);
-        Inventory activeInventory = new Inventory().setProductCode("P001").setAvailableQuantity(10);
-
-        given(inventoryRepository.findByProductCode("P001"))
-                .willReturn(Optional.of(activeInventory));
-        given(inventoryRepository.save(argumentCaptor.capture()))
-                .willAnswer(invocation -> invocation.getArgument(0));
-
-        productManageService.manage(productDto);
-
-        verify(inventoryRepository, times(1)).save(argumentCaptor.capture());
-        assertThat(argumentCaptor.getValue().isDeleted()).isTrue();
-    }
-
-    @Test
-    void manageWhenDeletedAndAlreadyDeletedShouldDoNothing() {
-        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, true);
-        Inventory deletedInventory =
-                new Inventory().setProductCode("P001").setAvailableQuantity(10).markDeleted();
-
-        given(inventoryRepository.findByProductCode("P001"))
-                .willReturn(Optional.of(deletedInventory));
-
-        productManageService.manage(productDto);
-
-        verify(inventoryRepository, times(0)).save(any());
-    }
-
-    @Test
-    void manageWhenDeletedAndMissingShouldDoNothing() {
-        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, true);
-
-        given(inventoryRepository.findByProductCode("P001")).willReturn(Optional.empty());
-
-        productManageService.manage(productDto);
-
-        verify(inventoryRepository, times(0)).save(any());
-    }
-
-    @Test
-    void manageWhenNotDeletedAndSoftDeletedExistsShouldNotRecreate() {
-        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
-        Inventory deletedInventory =
-                new Inventory()
+        InventoryRecord activeRecord =
+                new InventoryRecord()
                         .setProductCode("P001")
-                        .setAvailableQuantity(10)
-                        .setReservedItems(3)
-                        .markDeleted();
+                        .setQuantity(10)
+                        .setReservedItems(2)
+                        .setDeleted(false);
+        Inventory activeInventory =
+                new Inventory().setProductCode("P001").setAvailableQuantity(10).setReservedItems(2);
 
-        given(inventoryRepository.findByProductCode("P001"))
-                .willReturn(Optional.of(deletedInventory));
+        given(inventoryJOOQRepository.findByProductCode("P001"))
+                .willReturn(Optional.of(activeRecord));
+        given(inventoryMapper.toEntity(activeRecord)).willReturn(activeInventory);
+        given(inventoryRepository.save(argumentCaptor.capture()))
+                .willAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
 
+        // Act
         productManageService.manage(productDto);
 
-        verify(inventoryRepository, times(0)).save(any());
-        assertThat(deletedInventory.isDeleted()).isTrue();
-        assertThat(deletedInventory.getAvailableQuantity()).isEqualTo(10);
-        assertThat(deletedInventory.getReservedItems()).isEqualTo(3);
+        // Assert
+        Inventory saved = argumentCaptor.getValue();
+        assertThat(saved.isDeleted()).isTrue();
+        assertThat(saved.getAvailableQuantity()).isEqualTo(10);
+        assertThat(saved.getReservedItems()).isEqualTo(2);
     }
 
     @Test
-    void manageWhenSoftDeletedInventoryAppearsDuringSaveShouldIgnoreConflict() {
+    void shouldIgnoreDeletedEventWhenInventoryAlreadyDeleted() {
+        // Arrange
+        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, true);
+        InventoryRecord deletedRecord =
+                new InventoryRecord().setProductCode("P001").setDeleted(true);
+
+        given(inventoryJOOQRepository.findByProductCode("P001"))
+                .willReturn(Optional.of(deletedRecord));
+
+        // Act
+        productManageService.manage(productDto);
+
+        // Assert
+        verify(inventoryRepository, times(0)).save(any(Inventory.class));
+    }
+
+    @Test
+    void shouldIgnoreDeletedEventWhenInventoryNotFound() {
+        // Arrange
+        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, true);
+
+        given(inventoryJOOQRepository.findByProductCode("P001")).willReturn(Optional.empty());
+
+        // Act
+        productManageService.manage(productDto);
+
+        // Assert
+        verify(inventoryRepository, times(0)).save(any(Inventory.class));
+    }
+
+    @Test
+    void shouldIgnoreExistingInventoryWhenNewProductEventArrives() {
+        // Arrange
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
-        Inventory deletedInventory = new Inventory().setProductCode("P001").markDeleted();
-        given(inventoryRepository.findByProductCode("P001"))
-                .willReturn(Optional.empty(), Optional.of(deletedInventory));
+
+        given(inventoryJOOQRepository.findByProductCode("P001"))
+                .willReturn(Optional.of(new InventoryRecord().setProductCode("P001")));
+
+        // Act
+        productManageService.manage(productDto);
+
+        // Assert
+        verify(inventoryRepository, times(0)).save(any(Inventory.class));
+    }
+
+    @Test
+    void shouldIgnoreConcurrentInsertWhenProductCodeExistsAfterConflict() {
+        // Arrange
+        ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
+
+        given(inventoryJOOQRepository.findByProductCode("P001"))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(new InventoryRecord().setProductCode("P001")));
         given(inventoryRepository.save(any(Inventory.class)))
-                .willThrow(new DataIntegrityViolationException("Duplicate product code"));
+                .willThrow(new DataIntegrityViolationException("duplicate key"));
 
+        // Act
         productManageService.manage(productDto);
 
-        verify(inventoryRepository, times(2)).findByProductCode("P001");
-        verify(inventoryRepository).save(any(Inventory.class));
-        assertThat(deletedInventory.isDeleted()).isTrue();
+        // Assert
+        verify(inventoryRepository, times(1)).save(any(Inventory.class));
+        verify(inventoryJOOQRepository, times(2)).findByProductCode("P001");
     }
 
     @Test
-    void manageWhenIntegrityFailureLeavesProductCodeAbsentShouldPropagate() {
+    void shouldRethrowIntegrityExceptionWhenProductCodeStillMissingAfterConflict() {
+        // Arrange
         ProductDto productDto = new ProductDto("P001", "Product 1", "Desc", BigDecimal.TEN, false);
-        DataIntegrityViolationException failure =
-                new DataIntegrityViolationException("Save failed");
-        given(inventoryRepository.findByProductCode("P001")).willReturn(Optional.empty());
-        given(inventoryRepository.save(any(Inventory.class))).willThrow(failure);
 
-        assertThatThrownBy(() -> productManageService.manage(productDto)).isSameAs(failure);
+        given(inventoryJOOQRepository.findByProductCode("P001")).willReturn(Optional.empty());
+        given(inventoryRepository.save(any(Inventory.class)))
+                .willThrow(new DataIntegrityViolationException("fatal error"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> productManageService.manage(productDto))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

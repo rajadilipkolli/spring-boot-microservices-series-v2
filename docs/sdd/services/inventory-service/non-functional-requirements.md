@@ -1,0 +1,126 @@
+# Non-Functional Requirements Specification: Inventory Service
+
+- **Service**: `inventory-service` (`INV`)
+- **Document Status**: `Approved`
+
+This document defines the non-functional quality attributes, Service Level Objectives (SLOs), security boundaries, and resilience metrics for `inventory-service`.
+
+---
+
+## 1. Quality Attributes Index
+
+| ID | Dimension | Metric / Target | Evidence Status | Reference Source |
+| :--- | :--- | :--- | :--- | :--- |
+| `INV-NFR-001` | Availability | 99.9% eligible-request success over rolling 30 days | Target | `docs/runbooks/SLO-Definitions.md` |
+| `INV-NFR-002` | Latency (Read/Write) | P99 < 500ms | Target | `docs/runbooks/SLO-Definitions.md` |
+| `INV-NFR-003` | Messaging Lag | Lag < 1000 messages | Target | `docs/runbooks/SLO-Definitions.md` |
+| `INV-NFR-004` | High Availability & PDB | `minAvailable: 1` | Configured | `deployment/k8s/base/pdb.yaml` |
+| `INV-NFR-005` | Autoscaling | KEDA Kafka ScaledObject | Configured | `deployment/k8s/overlays/autoscaling/` |
+| `INV-NFR-006` | Kubernetes Hardening | Non-root, read-only root FS | Configured | `deployment/k8s/base/inventory-service.yaml` |
+| `INV-NFR-007` | Network Segmentation | Calico / K8s NetworkPolicy | Configured | `deployment/k8s/base/network-policies.yaml` |
+| `INV-NFR-008` | Service Authentication | Direct Service Auth Check | Needs-Clarification | `INV-Q-005` |
+
+---
+
+## 2. Requirement Specifications
+
+### INV-NFR-001: Availability SLO Target
+- **ID**: `INV-NFR-001`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Availability
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Target
+- **Metric**: 99.9% successful eligible requests over a 30-day rolling window. Count 2xx/3xx and expected 400, 401, 403, 404, 409, 422 only after completed application validation or authorization as successes. Exclude health checks and administration traffic. Other 4xx (including 408, 425, 429) and 502/503/504 are failures. Track 429 separately; exclude synthetic traffic only by explicit label. The error budget is 0.1% of eligible requests, without a fixed downtime allowance.
+- **Reference**: Linked directly to operational baseline [SLO-Definitions.md](../../../../docs/runbooks/SLO-Definitions.md).
+
+---
+
+### INV-NFR-002: Latency SLO Target
+- **ID**: `INV-NFR-002`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Performance
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Target
+- **Metric**: P99 response time under 500ms across all synchronous REST endpoints under nominal load.
+- **Reference**: [SLO-Definitions.md](../../../../docs/runbooks/SLO-Definitions.md).
+
+---
+
+### INV-NFR-003: Kafka Consumer Lag Target
+- **ID**: `INV-NFR-003`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Resilience & Scalability
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Target
+- **Metric**: Kafka consumer lag for group `stock` on topic `orders` must remain under 1000 messages. Lag exceeding 1000 triggers alerts.
+- **Reference**: [SLO-Definitions.md](../../../../docs/runbooks/SLO-Definitions.md) and [kafka-lag.md](../../../../docs/runbooks/kafka-lag.md).
+
+---
+
+### INV-NFR-004: Pod Disruption Budget
+- **ID**: `INV-NFR-004`
+- **Category**: Non-Functional Requirement
+- **Dimension**: High Availability
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Configured
+- **Metric**: Base Kubernetes deployment defines 1 replica with a PodDisruptionBudget ensuring `minAvailable: 1`. During voluntary evictions, at least one pod must remain operational.
+- **Reference**: `deployment/k8s/base/pdb.yaml`.
+
+---
+
+### INV-NFR-005: Event-Driven Autoscaling (KEDA)
+- **ID**: `INV-NFR-005`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Scalability
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Configured
+- **Metric**: Autoscaling overlay configures KEDA `ScaledObject` (`inventory-service-scaler`) monitoring consumer group `stock` on topic `orders`. Scales pods from `minReplicaCount: 1` to `maxReplicaCount: 5` with a lag threshold of `2`. Base manifest has no HPA configured.
+- **Reference**: `deployment/k8s/overlays/autoscaling/keda.yaml`.
+
+---
+
+### INV-NFR-006: Kubernetes Container Security Hardening
+- **ID**: `INV-NFR-006`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Security
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Configured
+- **Metric**: Pod runs in hardened mode:
+  - `runAsNonRoot: true`
+  - `runAsUser: 1000`
+  - `runAsGroup: 1000`
+  - `fsGroup: 1000`
+  - `readOnlyRootFilesystem: true`
+  - `allowPrivilegeEscalation: false`
+  - `capabilities: drop: [ALL]`
+  - `seccompProfile: type: RuntimeDefault`
+  - Writable storage limited to temporary in-memory volume at `/tmp`.
+- **Reference**: `deployment/k8s/base/inventory-service.yaml`.
+
+---
+
+### INV-NFR-007: Kubernetes Network Policy Isolation
+- **ID**: `INV-NFR-007`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Security & Network Isolation
+- **Lifecycle Status**: Approved
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:ff9eb29e1e99f2fcc61b343535e24fe5a78450d5f642411efbab068c9f587d81 -->
+
+- **Evidence Status**: Configured
+- **Metric**: In namespace `retailstore`, `default-deny-all` isolates ingress. `allow-apps-to-apps` selects `inventory-service` and allows ingress from same-namespace pods labeled `app` with values `inventory-service`, `keycloak`, `order-service`, `retail-store-webapp`, `catalog-service`, `payment-service`, `api-gateway`, or `keycloak-terraform-runner`. This describes the configured ingress boundary; it does not establish service authentication or effective runtime enforcement. See `INV-Q-005`.
+- **Reference**: `deployment/k8s/base/network-policies.yaml`.
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+---
+
+### INV-NFR-008: Service-Level Authentication & Authorization Boundary
+- **ID**: `INV-NFR-008`
+- **Category**: Non-Functional Requirement
+- **Dimension**: Security
+- **Lifecycle Status**: Approved
+- **Evidence Status**: Needs-Clarification
+- **Metric**: `inventory-service` contains **no** Spring Security dependencies, OAuth2 filters, or JWT validation tokens in its classpath. All HTTP requests arriving at port 18181 are accepted anonymously if they reach the service. Perimeter authentication relies entirely on upstream `api-gateway` and NetworkPolicies.
+- **Reference**: `inventory-service/pom.xml` and linked question `INV-Q-005`.

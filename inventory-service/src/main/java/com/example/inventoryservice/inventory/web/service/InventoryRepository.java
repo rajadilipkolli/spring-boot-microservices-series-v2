@@ -6,34 +6,14 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
-import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Spring Data JPA repository strictly reserved for write operations (insert, update, delete). All
+ * queries/reads are routed via {@link InventoryJOOQRepository}.
+ */
 interface InventoryRepository extends JpaRepository<Inventory, Long> {
-
-    Optional<Inventory> findByProductCode(String productCode);
-
-    List<Inventory> findByProductCodeIn(List<String> productCodes);
-
-    /**
-     * Finds active inventory by exact product code, or returns empty if absent or deleted.
-     * Persistence failures propagate.
-     */
-    Optional<Inventory> findByProductCodeAndDeletedFalse(String productCode);
-
-    /**
-     * Returns active inventory matching the supplied codes for new reservations. Missing or deleted
-     * products are omitted; persistence failures propagate.
-     */
-    List<Inventory> findByProductCodeInAndDeletedFalse(List<String> productCodes);
-
-    /**
-     * Finds active inventory by ID, or returns empty if absent or deleted. Persistence failures
-     * propagate.
-     */
-    Optional<Inventory> findByIdAndDeletedFalse(Long id);
 
     /**
      * Physically deletes inventory with the exact product code, including soft-deleted inventory,

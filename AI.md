@@ -25,5 +25,11 @@ To ensure consistency and follow project-specific standards, specialized playboo
 - **Testing**: Use Testcontainers for integration tests; verify with `./mvnw verify` (Mac/Linux) or `mvnw.cmd verify` (Windows).
 - **Modularity**: Respect package-private visibility where required by Spring Modulith.
 
+## 📋 Specification-Driven Development (SDD)
+- **Specification First**: Before modifying or implementing features in any microservice, always read the service's authoritative specification under `docs/sdd/services/<service>/` (e.g., `docs/sdd/services/inventory-service/README.md`).
+- **Implementation Workflow**: Follow the 7-step engineering process defined in [Implementation Workflow Guidelines](docs/sdd/guidelines/implementation-workflow.md).
+- **Same-PR Reconciliation**: Specifications, code changes, and automated tests must be updated and reconciled atomically in the same Pull Request.
+- **Defects vs Proposals**: Suspected code defects must be documented as current behavior with an open question (`<SVC>-Q-<NNN>`); proposed fixes must remain in unapproved proposals (`<SVC>-PROP-<NNN>`) until authorized.
+
 Please use these resources to provide accurate and idiomatic assistance.
 - **Imports**: Prefer imports over fully qualified class names (FQCNs) in Java code.
