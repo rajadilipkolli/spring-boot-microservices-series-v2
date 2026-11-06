@@ -83,7 +83,15 @@ class InventoryService {
      *     product code has no active inventory
      */
     public Inventory saveInventory(InventoryRequest inventoryRequest) {
-        return retryHandler.executeWithRetry(() -> saveInventoryAttempt(inventoryRequest));
+        try {
+            return retryHandler.executeWithRetry(() -> saveInventoryAttempt(inventoryRequest));
+        } catch (DataIntegrityViolationException ex) {
+            if (inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(
+                    inventoryRequest.productCode())) {
+                throw new ProductAlreadyExistsException(inventoryRequest.productCode());
+            }
+            throw ex;
+        }
     }
 
     private Inventory saveInventoryAttempt(InventoryRequest inventoryRequest) {
@@ -104,15 +112,7 @@ class InventoryService {
             inventory = inventoryMapper.toEntity(inventoryRequest);
         }
 
-        try {
-            return saveWithCustomFallback(inventory);
-        } catch (DataIntegrityViolationException ex) {
-            if (inventoryJOOQRepository.existsByProductCodeAndDeletedFalse(
-                    inventoryRequest.productCode())) {
-                throw new ProductAlreadyExistsException(inventoryRequest.productCode());
-            }
-            throw ex;
-        }
+        return saveWithCustomFallback(inventory);
     }
 
     /**
@@ -222,8 +222,9 @@ class InventoryService {
     }
 
     /**
-     * Saves inventory with retries on optimistic locking failure. If possible, refreshes its
-     * version from the database after a conflict. Unresolved persistence failures propagate.
+     * Delegates persistence to {@code inventoryRepository.save(inventory)} without retrying or
+     * refreshing the version. Retries are handled by {@link InventoryRetryHandler}. Persistence
+     * failures propagate.
      */
     private Inventory saveWithCustomFallback(Inventory inventory) {
         return inventoryRepository.save(inventory);

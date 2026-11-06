@@ -104,8 +104,15 @@ This document defines the non-functional quality attributes, Service Level Objec
 - **Category**: Non-Functional Requirement
 - **Dimension**: Security & Network Isolation
 - **Lifecycle Status**: Approved
-- **Evidence Status**: Needs-Clarification
-- **Metric**: Network-policy source is absent from this checkout. Ingress and egress exceptions remain unverified; no ports or peer permissions are asserted. See `INV-Q-005`.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:ff9eb29e1e99f2fcc61b343535e24fe5a78450d5f642411efbab068c9f587d81 -->
+
+- **Evidence Status**: Configured
+- **Metric**: In namespace `retailstore`, `default-deny-all` isolates ingress. `allow-apps-to-apps` selects `inventory-service` and allows ingress from same-namespace pods labeled `app` with values `inventory-service`, `keycloak`, `order-service`, `retail-store-webapp`, `catalog-service`, `payment-service`, `api-gateway`, or `keycloak-terraform-runner`. This describes the configured ingress boundary; it does not establish service authentication or effective runtime enforcement. See `INV-Q-005`.
+- **Reference**: `deployment/k8s/base/network-policies.yaml`.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ---
 

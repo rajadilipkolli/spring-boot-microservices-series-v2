@@ -93,7 +93,13 @@ Under profile `local`, if `inventoryRepository.count() == 0`, `Initializer.java`
 
 ## 3. Transaction Boundaries and Concurrency Details
 
-- **Class-Level Annotations**: `InventoryService` declares `@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)`. Write methods override with `@Transactional`.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:f0b1e248c24a55d48c4bc042f73ab647ca74562ba2f693671997f230261cc89c -->
+
+- **Class-Level Annotations**: `InventoryService` declares `@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)`. Retried write entry points delegate to `InventoryRetryHandler` for a fresh `REQUIRES_NEW` transaction per attempt.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - **Atomic Deduplication**: `ProcessedOrderEventRepository#claim` uses native `INSERT ... ON CONFLICT (order_id, event_type) DO NOTHING`, returning 1 on insertion and 0 on conflict.
 - **Check-Then-Delete Non-Atomicity**: `InventoryController#deleteInventory` invokes `existsInventoryById(id)` followed by `deleteInventoryById(id)` in two distinct transactions. A concurrent delete can cause the second step to be a no-op.
 - **Query / Count Separation**: Paged retrieval in `InventoryJOOQRepositoryImpl` executes two separate queries: a filtered data query with `limit`/`offset`, and a separate `fetchCount` query.
@@ -148,4 +154,12 @@ erDiagram
 ```
 
 ### Optimistic-lock retries
-`InventoryRetryHandler` wraps each complete write operation in a programmatic `REQUIRES_NEW` transaction. The retry loop surrounds transaction completion, so flush and commit conflicts roll back before another attempt rereads inventory. Order claims, stock changes, result markers and outbox publication share the attempt transaction. Nested save retries and version-only refreshes are removed; retry correctness does not depend on retry/transaction advisor ordering.
+`InventoryRetryHandler` wraps each complete write operation in a programmatic `REQUIRES_NEW` transaction. The retry loop surrounds transaction completion, so flush and commit conflicts roll back before another attempt rereads inventory. Order claims, stock changes, result markers and outbox publication share the attempt transaction. <!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:9253011dd0272dfc325c30a57cd5df70680b2303bcd119f775cfdee9c8ed94f3 -->
+
+`InventoryService#saveWithCustomFallback` delegates directly to `inventoryRepository.save(inventory)`; it neither retries nor refreshes the version. Retries are handled by `InventoryRetryHandler`. Duplicate-create integrity failures are classified by the caller only after the retry transaction has ended, including flush or commit failures. Deletion failures propagate.
+
+`InventoryGeneratorService` invokes a separate retry-wrapped transaction for each item through `updateInventoryByProductCode`; the batch is not one transaction. If a later item fails with a non-optimistic runtime exception, earlier item updates remain committed, processing stops, and the generation key is removed to allow retry. Exhausted optimistic-lock failures are ignored per item.
+
+<!-- /coderabbit-ai-generated:v1 -->

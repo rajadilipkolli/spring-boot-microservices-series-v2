@@ -2,7 +2,13 @@
 
 - **Service Name**: `inventory-service`
 - **Service Prefix**: `INV`
-- **Specification Version**: `1.1.1`
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:039643b3bb10c26f591f1c3e4adee2a036714da478bb329660bc7dda3cd1c724 -->
+
+- **Specification Version**: `1.1.2`
+
+<!-- /coderabbit-ai-generated:v1 -->
 - **Specification Status**: `Approved`
 - **Owner / Team**: Commerce Platform Squad
 - **Repository Location**: `inventory-service/`
@@ -53,7 +59,17 @@ The service utilizes a hybrid persistence architecture combining **Spring Data J
 
 ## 3. Change Log
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:b241517b5d233132b436b11125b61e7979271f55d2a19857131ddba4b58b1de1 -->
+
+### [1.1.2] - 2026-11-06
+- Moved duplicate-create classification after transaction completion while preserving deletion failure propagation.
+- Clarified per-item generation transactions, direct repository save behavior, and configured inventory ingress peers.
+
 ### [1.1.1] - 2026-11-06
+
+<!-- /coderabbit-ai-generated:v1 -->
 - Corrected test references, paging, response and availability documentation. Network policy exceptions remain unverified.
 - Wrapped complete write attempts in fresh transactions, including commit-time optimistic-lock handling.
 

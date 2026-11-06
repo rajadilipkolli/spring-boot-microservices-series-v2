@@ -46,7 +46,15 @@ The table below catalogs every test class in `inventory-service` with scope and 
 
 ---
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c14ab2f9b10314b24ac1b91b1ac4d43fb7b62250ca818b2ea89867bd4a67597f -->
+
+`InventoryCreateConcurrencyIT` exercises PostgreSQL races for both create paths at flush and commit: `concurrentRestCreatesReturnOneDuplicate`, `concurrentProductCreatesAreIdempotent`, and `deletionIntegrityFailuresPropagate`. The reads use synchronized JDBC-backed test doubles to force competing inserts; persistence and transaction completion use the real JPA repository and PostgreSQL. These tests cover create duplicate handling (`INV-FR-004`) and deletion failure propagation.
+
 ## 3. Discrepancies and Misleading Test Names
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 1. **`JOOQInventoryRepositoryTest#findByProductCodeInAndQuantityAvailable`**:
    The test executes direct DSL SQL with `PRODUCT_CODE.in(...)` and `QUANTITY.gt(0)`, asserting that only the positive-quantity record is returned. It does not invoke `InventoryJOOQRepositoryImpl`.

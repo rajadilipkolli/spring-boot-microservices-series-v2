@@ -51,11 +51,19 @@ class ProductManageServiceImpl implements ProductManageService {
      */
     @Override
     public void manage(ProductDto productDto) {
-        retryHandler.executeWithRetry(
-                () -> {
-                    manageAttempt(productDto);
-                    return null;
-                });
+        try {
+            retryHandler.executeWithRetry(
+                    () -> {
+                        manageAttempt(productDto);
+                        return null;
+                    });
+        } catch (DataIntegrityViolationException ex) {
+            if (productDto.isDeleted()
+                    || inventoryJOOQRepository.findByProductCode(productDto.code()).isEmpty()) {
+                throw ex;
+            }
+            // A concurrent create committed; ignore the duplicate after rollback.
+        }
     }
 
     private void manageAttempt(ProductDto productDto) {
@@ -87,14 +95,6 @@ class ProductManageServiceImpl implements ProductManageService {
         }
 
         Inventory inventory = new Inventory().setProductCode(productCode);
-        try {
-            this.inventoryRepository.save(inventory);
-        } catch (DataIntegrityViolationException ex) {
-            if (this.inventoryJOOQRepository.findByProductCode(productCode).isEmpty()) {
-                throw ex;
-            }
-            // Another thread created the same product_code concurrently; ignore to keep
-            // idempotency. Logging is handled by the @Loggable aspect.
-        }
+        this.inventoryRepository.save(inventory);
     }
 }
