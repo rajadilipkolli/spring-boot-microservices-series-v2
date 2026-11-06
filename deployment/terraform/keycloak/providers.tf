@@ -3,7 +3,7 @@
 # realm using admin-cli which supports the Resource Owner Password Credentials
 # grant without requiring a client secret.
 #
-# The empty default base_path is intentional for Quarkus-based Keycloak 26.8.1.
+# The empty default base_path is intentional for Quarkus-based Keycloak 26.8.2.
 # ---------------------------------------------------------------------------
 provider "keycloak" {
   url       = var.keycloak_url

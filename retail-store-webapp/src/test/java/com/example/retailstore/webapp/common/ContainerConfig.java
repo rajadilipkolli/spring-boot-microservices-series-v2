@@ -12,7 +12,7 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class ContainerConfig {
 
-    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.8.1";
+    private static final String KEYCLOAK_IMAGE = "quay.io/keycloak/keycloak:26.8.2";
     private static final String REALM_IMPORT_FILE = "/docker/realm-config/retailstore-realm.json";
     private static final String REALM_NAME = "retailstore";
 

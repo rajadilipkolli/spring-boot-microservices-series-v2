@@ -54,7 +54,7 @@ docker compose --profile terraform up terraform
 # deployment/docker-compose.yml
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1
+    image: quay.io/keycloak/keycloak:26.8.2
     command: [ 'start-dev', '--http-port=9191' ]
     container_name: keycloak
     hostname: keycloak
