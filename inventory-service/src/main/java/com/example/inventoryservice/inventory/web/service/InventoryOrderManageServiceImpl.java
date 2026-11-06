@@ -133,7 +133,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 if (orderDto.attemptId() == null || orderDto.attemptId().isBlank()) {
                     LOGGER.warn(
                             "Order {} reserve event has already been processed with blank attempt."
-                                + " Skipping duplicate.",
+                                    + " Skipping duplicate.",
                             orderDto.orderId());
                     return orderDto;
                 }
@@ -146,7 +146,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 if (replyClaimed == 0) {
                     LOGGER.warn(
                             "Order {} reserve reply for attempt {} has already been processed."
-                                + " Skipping duplicate.",
+                                    + " Skipping duplicate.",
                             orderDto.orderId(),
                             orderDto.attemptId());
                     return orderDto;
@@ -168,7 +168,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 eventPublisher.publishEvent(new InventoryProcessedEvent(replayOrderDto));
                 LOGGER.info(
                         "Replayed Order with status {} for attempt {} : {} from inventory service"
-                            + " to topic {}",
+                                + " to topic {}",
                         replayOrderDto.status(),
                         orderDto.attemptId(),
                         replayOrderDto,
@@ -188,7 +188,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         if (recordsFromDB.size() != productCodeList.size()) {
             LOGGER.error(
                     "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB:"
-                        + " {}, Products in Order: {}",
+                            + " {}, Products in Order: {}",
                     orderDto.orderId(),
                     recordsFromDB.stream().map(InventoryRecord::getProductCode).toList(),
                     productCodeList);
@@ -207,7 +207,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
                     "Sent Order with status REJECT (products not found): {} from inventory service"
-                        + " to topic {}",
+                            + " to topic {}",
                     rejectedOrderDto,
                     AppConstants.STOCK_ORDERS_TOPIC);
             return rejectedOrderDto;
@@ -237,7 +237,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         if (!allItemsAvailable) {
             LOGGER.info(
                     "Setting status as REJECT for OrderId in Inventory Service as quantity not"
-                        + " available : {}",
+                            + " available : {}",
                     orderDto.orderId());
             finalOrderDto = orderDto.withStatus("REJECT");
             this.inventoryFailuresCounter.increment();
@@ -315,7 +315,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             if (claimed == 0) {
                 LOGGER.warn(
                         "Order {} confirm ({}) event has already been processed. Skipping"
-                            + " duplicate.",
+                                + " duplicate.",
                         orderDto.orderId(),
                         orderDto.status());
                 return;
