@@ -33,9 +33,13 @@ class ResilienceE2ETest {
                         .extract()
                         .response();
 
-        // Gateway fallback returns 200 with fallback message or status
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.asString()).isEqualTo("Hello TEST_PRODUCT");
+        // Gateway fallback returns 503 SERVICE_UNAVAILABLE ProblemDetail
+        assertThat(response.statusCode()).isEqualTo(503);
+        assertThat(response.jsonPath().getString("title"))
+                .isEqualTo("Inventory Service Unavailable");
+        assertThat(response.jsonPath().getString("detail"))
+                .isEqualTo("Inventory service is currently unavailable for product TEST_PRODUCT");
+        assertThat(response.jsonPath().getString("productId")).isEqualTo("TEST_PRODUCT");
     }
 
     @Test

@@ -59,32 +59,28 @@ class InventoryAPIImpl implements InventoryAPI {
                 codes, pageNo, pageSize, sortBy, sortDir);
     }
 
-    /** Creates inventory in a write transaction and maps the saved entity to a response. */
+    /** Creates inventory and maps the saved entity to a response. */
     @Override
-    @Transactional
     public InventoryResponse saveInventory(InventoryRequest inventoryRequest) {
         return inventoryMapper.toResponse(inventoryService.saveInventory(inventoryRequest));
     }
 
-    /** Updates inventory by identifier in a write transaction, returning empty when absent. */
+    /** Updates inventory by identifier, returning empty when absent. */
     @Override
-    @Transactional
     public Optional<InventoryResponse> updateInventoryById(
             Long id, InventoryRequest inventoryRequest) {
         return inventoryService.updateInventoryById(id, inventoryRequest);
     }
 
-    /** Updates inventory by product code in a write transaction, returning empty when absent. */
+    /** Updates inventory by product code, returning empty when absent. */
     @Override
-    @Transactional
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
         return inventoryService.updateInventoryByProductCode(productCode, inventoryRequest);
     }
 
-    /** Soft deletes inventory by its identifier in a write transaction. */
+    /** Soft deletes inventory by its identifier. */
     @Override
-    @Transactional
     public void deleteInventoryById(Long id) {
         inventoryService.deleteInventoryById(id);
     }
