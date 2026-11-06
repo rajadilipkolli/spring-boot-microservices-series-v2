@@ -133,6 +133,42 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
                 INVENTORY, INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()));
     }
 
+    /**
+     * Returns inventory by exact product code, including soft-deleted records, or empty if absent.
+     * Database failures propagate.
+     */
+    @Override
+    public Optional<InventoryRecord> findByProductCode(String productCode) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
+                .fetchOptional();
+    }
+
+    /**
+     * Returns inventory matching the supplied codes, including soft-deleted records. Missing
+     * products are omitted; database failures propagate.
+     */
+    @Override
+    public List<InventoryRecord> findByProductCodeIn(List<String> productCodes) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                .fetch();
+    }
+
+    /**
+     * Returns active inventory matching the supplied codes. Missing or deleted products are
+     * omitted; database failures propagate.
+     */
+    @Override
+    public List<InventoryRecord> findByProductCodeInAndDeletedFalse(List<String> productCodes) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse()))
+                .fetch();
+    }
+
     private Collection<SortField<?>> getSortFields(Sort sortSpecification) {
         Collection<SortField<?>> querySortFields = new ArrayList<>();
 

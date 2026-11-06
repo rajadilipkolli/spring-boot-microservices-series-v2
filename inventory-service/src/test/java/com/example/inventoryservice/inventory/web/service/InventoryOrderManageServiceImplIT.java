@@ -74,19 +74,21 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
             Map<String, int[]> expectedChanges) {
 
         // Capture initial state of all products
-        Map<String, Inventory> initialState =
-                inventoryRepository
+        Map<String, InventoryRecord> initialState =
+                inventoryJOOQRepository
                         .findByProductCodeInAndDeletedFalse(
                                 new ArrayList<>(expectedChanges.keySet()))
                         .stream()
-                        .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
+                        .collect(
+                                Collectors.toMap(
+                                        InventoryRecord::getProductCode, Function.identity()));
 
         // Perform the operation
         OrderDto result = operation.apply(orderDto);
 
         // Verify each product's changes
         for (String productCode : expectedChanges.keySet()) {
-            Inventory initial = initialState.get(productCode);
+            InventoryRecord initial = initialState.get(productCode);
             InventoryRecord updated =
                     inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
 
@@ -94,8 +96,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
             int availableQtyChange = changes[0];
             int reservedItemsChange = changes[1];
 
-            assertThat(updated.getQuantity())
-                    .isEqualTo(initial.getAvailableQuantity() + availableQtyChange);
+            assertThat(updated.getQuantity()).isEqualTo(initial.getQuantity() + availableQtyChange);
             assertThat(updated.getReservedItems())
                     .isEqualTo(initial.getReservedItems() + reservedItemsChange);
         }

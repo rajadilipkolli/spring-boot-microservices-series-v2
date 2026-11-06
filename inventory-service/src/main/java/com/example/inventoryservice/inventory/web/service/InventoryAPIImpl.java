@@ -48,9 +48,7 @@ class InventoryAPIImpl implements InventoryAPI {
     /** Maps inventory found by product code to a response, preserving an absent result. */
     @Override
     public Optional<InventoryResponse> findInventoryByProductCode(String productCode) {
-        return inventoryService
-                .findInventoryByProductCode(productCode)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.findInventoryByProductCode(productCode);
     }
 
     /** Delegates the paged lookup restricted to the supplied product codes. */
@@ -73,9 +71,7 @@ class InventoryAPIImpl implements InventoryAPI {
     @Transactional
     public Optional<InventoryResponse> updateInventoryById(
             Long id, InventoryRequest inventoryRequest) {
-        return inventoryService
-                .updateInventoryById(id, inventoryRequest)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.updateInventoryById(id, inventoryRequest);
     }
 
     /** Updates inventory by product code in a write transaction, returning empty when absent. */
@@ -83,21 +79,18 @@ class InventoryAPIImpl implements InventoryAPI {
     @Transactional
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
-        return inventoryService
-                .updateInventoryByProductCode(productCode, inventoryRequest)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.updateInventoryByProductCode(productCode, inventoryRequest);
     }
 
-    /** Deletes inventory by identifier within a write transaction. */
+    /** Soft deletes inventory by its identifier in a write transaction. */
     @Override
     @Transactional
     public void deleteInventoryById(Long id) {
         inventoryService.deleteInventoryById(id);
     }
 
-    /** Runs the idempotent generated-batch update within a write transaction. */
+    /** Updates inventory for generated batches. */
     @Override
-    @Transactional
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
         inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, batchSize);
     }

@@ -96,10 +96,10 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         await().untilAsserted(
                         () -> {
                             // Unfiltered lookup shows it is retained with deleted = true
-                            Optional<Inventory> opt =
-                                    inventoryRepository.findByProductCode("P_DEL_001");
+                            Optional<InventoryRecord> opt =
+                                    inventoryJOOQRepository.findByProductCode("P_DEL_001");
                             assertThat(opt).isPresent();
-                            assertThat(opt.get().isDeleted()).isTrue();
+                            assertThat(opt.get().getDeleted()).isTrue();
 
                             // Filtered lookup returns empty
                             assertThat(
@@ -199,7 +199,7 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                                                     .findByProductCodeAndDeletedFalse(sentinelCode))
                                     .isPresent();
                             // Verify exactly one row for P_DUP_001
-                            assertThat(inventoryRepository.findByProductCode(code)).isPresent();
+                            assertThat(inventoryJOOQRepository.findByProductCode(code)).isPresent();
                         });
     }
 }

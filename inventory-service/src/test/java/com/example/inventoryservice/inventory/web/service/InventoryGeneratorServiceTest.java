@@ -10,12 +10,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
+import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,15 +41,10 @@ class InventoryGeneratorServiceTest {
 
     @Test
     void testUpdateGeneratedInventory() {
-        Inventory mockInventory =
-                new Inventory()
-                        .setId(1L)
-                        .setProductCode("ProductCode1")
-                        .setAvailableQuantity(100)
-                        .setReservedItems(0);
-        given(inventoryService.findInventoryByProductCode(anyString()))
-                .willReturn(Optional.of(mockInventory));
-        given(inventoryService.updateInventory(any(Inventory.class), any(InventoryRequest.class)))
+        InventoryResponse mockResponse = new InventoryResponse(1L, "ProductCode1", 100, 0);
+        given(
+                        inventoryService.updateInventoryByProductCode(
+                                anyString(), any(InventoryRequest.class)))
                 .willAnswer(
                         invocation -> {
                             InventoryRequest request = invocation.getArgument(1);
@@ -56,34 +53,27 @@ class InventoryGeneratorServiceTest {
                                             request.availableQuantity() >= 1
                                                     && request.availableQuantity() <= 10000)
                                     .isTrue();
-                            return mockInventory;
+                            return Optional.of(mockResponse);
                         });
 
         inventoryGeneratorService.updateGeneratedInventory("test-batch-123", null);
 
-        verify(inventoryService, times(101)).findInventoryByProductCode(anyString());
         verify(inventoryService, times(101))
-                .updateInventory(any(Inventory.class), any(InventoryRequest.class));
+                .updateInventoryByProductCode(anyString(), any(InventoryRequest.class));
     }
 
     @Test
     void shouldUpdateRequestedGeneratedInventoryBatchSize() {
-        Inventory mockInventory =
-                new Inventory()
-                        .setId(1L)
-                        .setProductCode("ProductCode1")
-                        .setAvailableQuantity(100)
-                        .setReservedItems(0);
-        given(inventoryService.findInventoryByProductCode(anyString()))
-                .willReturn(Optional.of(mockInventory));
-        given(inventoryService.updateInventory(any(Inventory.class), any(InventoryRequest.class)))
-                .willReturn(mockInventory);
+        InventoryResponse mockResponse = new InventoryResponse(1L, "ProductCode1", 100, 0);
+        given(
+                        inventoryService.updateInventoryByProductCode(
+                                anyString(), any(InventoryRequest.class)))
+                .willReturn(Optional.of(mockResponse));
 
         inventoryGeneratorService.updateGeneratedInventory("test-batch-456", 5);
 
-        verify(inventoryService, times(5)).findInventoryByProductCode(anyString());
         verify(inventoryService, times(5))
-                .updateInventory(any(Inventory.class), any(InventoryRequest.class));
+                .updateInventoryByProductCode(anyString(), any(InventoryRequest.class));
     }
 
     @ParameterizedTest
@@ -100,7 +90,9 @@ class InventoryGeneratorServiceTest {
 
         inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, 1);
 
-        verify(inventoryService).findInventoryByProductCode("ProductCode_" + idempotencyKey + "_0");
+        verify(inventoryService)
+                .updateInventoryByProductCode(
+                        eq("ProductCode_" + idempotencyKey + "_0"), any(InventoryRequest.class));
     }
 
     @ParameterizedTest
@@ -109,13 +101,16 @@ class InventoryGeneratorServiceTest {
         inventoryGeneratorService.updateGeneratedInventory("boundary-batch", batchSize);
         inventoryGeneratorService.updateGeneratedInventory("boundary-batch", batchSize);
 
-        verify(inventoryService, times(batchSize)).findInventoryByProductCode(anyString());
+        verify(inventoryService, times(batchSize))
+                .updateInventoryByProductCode(anyString(), any(InventoryRequest.class));
     }
 
     @Test
     void shouldRemoveIdempotencyKeyOnNonOptimisticRuntimeExceptionToAllowRetry() {
         String idempotencyKey = "retryable-batch";
-        given(inventoryService.findInventoryByProductCode(anyString()))
+        given(
+                        inventoryService.updateInventoryByProductCode(
+                                anyString(), any(InventoryRequest.class)))
                 .willThrow(new RuntimeException("Database connection failure"))
                 .willReturn(Optional.empty());
 
@@ -128,6 +123,7 @@ class InventoryGeneratorServiceTest {
         inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, 1);
 
         verify(inventoryService, times(2))
-                .findInventoryByProductCode("ProductCode_" + idempotencyKey + "_0");
+                .updateInventoryByProductCode(
+                        eq("ProductCode_" + idempotencyKey + "_0"), any(InventoryRequest.class));
     }
 }

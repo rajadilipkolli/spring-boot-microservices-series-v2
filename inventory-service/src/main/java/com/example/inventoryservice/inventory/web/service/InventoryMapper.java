@@ -30,4 +30,8 @@ interface InventoryMapper {
     /** Maps stored quantity to available quantity in the response; returns null for null input. */
     @Mapping(target = "availableQuantity", source = "quantity")
     InventoryResponse toResponse(InventoryRecord inventoryRecord);
+
+    /** Maps an InventoryRecord fetched via jOOQ into a managed Inventory JPA entity. */
+    @Mapping(target = "availableQuantity", source = "quantity")
+    Inventory toEntity(InventoryRecord inventoryRecord);
 }

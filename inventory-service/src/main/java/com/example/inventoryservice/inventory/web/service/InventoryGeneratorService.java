@@ -9,7 +9,6 @@ package com.example.inventoryservice.inventory.web.service;
 import com.example.common.logging.Loggable;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import java.security.SecureRandom;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
@@ -61,22 +60,11 @@ class InventoryGeneratorService {
                             operand -> {
                                 try {
                                     int randomQuantity = RAND.nextInt(10_000) + 1;
-                                    Optional<Inventory> inventoryByProductCode =
-                                            inventoryService.findInventoryByProductCode(
-                                                    "ProductCode_"
-                                                            + idempotencyKey
-                                                            + "_"
-                                                            + operand);
-                                    inventoryByProductCode.ifPresent(
-                                            inventoryFromDB ->
-                                                    inventoryService.updateInventory(
-                                                            inventoryFromDB,
-                                                            new InventoryRequest(
-                                                                    "ProductCode_"
-                                                                            + idempotencyKey
-                                                                            + "_"
-                                                                            + operand,
-                                                                    randomQuantity)));
+                                    String productCode =
+                                            "ProductCode_" + idempotencyKey + "_" + operand;
+                                    inventoryService.updateInventoryByProductCode(
+                                            productCode,
+                                            new InventoryRequest(productCode, randomQuantity));
                                 } catch (OptimisticLockingFailureException e) {
                                     // Ignore optimistic locking failures when concurrently updating
                                     // random inventory

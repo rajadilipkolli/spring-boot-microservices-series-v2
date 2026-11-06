@@ -887,7 +887,7 @@ We welcome contributions from the community! Here's how you can help:
 
 ### 📋 Contribution Guidelines
 
-- 📖 **Documentation:** Update documentation for any new features
+- 📖 **Documentation:** Update documentation for any new features. Please refer to the [Specification-Driven Development (SDD) Guide](docs/sdd/README.md) for service specifications and architectural standards.
 - 🧪 **Testing:** Add tests for new functionality
 - 🎨 **Code Style:** Follow existing code conventions
 - 💬 **Discussion:** Open an issue first for significant changes

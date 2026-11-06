@@ -1,5 +1,8 @@
 # Inventory Service (`inventory-service`)
 
+> [!IMPORTANT]
+> **Authoritative Specification Notice**: This document serves as general service overview material. The authoritative, test-grounded specification for the Inventory Service is maintained under **[`docs/sdd/services/inventory-service/README.md`](../docs/sdd/services/inventory-service/README.md)**. For documented discrepancies between legacy documentation and runtime code behavior (including Kafka retry topic naming), consult **[`open-questions.md`](../docs/sdd/services/inventory-service/open-questions.md)**.
+
 The **Inventory Service** manages product stock levels, inventory reservations for incoming orders, and event-driven stock synchronization across the platform. It uses a hybrid persistence layer combining **Spring Data JPA** and **jOOQ** for optimal developer ergonomics and type-safe, high-performance query execution.
 
 ---
