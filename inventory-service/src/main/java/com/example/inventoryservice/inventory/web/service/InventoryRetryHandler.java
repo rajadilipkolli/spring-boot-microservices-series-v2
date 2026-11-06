@@ -8,9 +8,9 @@ package com.example.inventoryservice.inventory.web.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -67,7 +67,9 @@ class InventoryRetryHandler {
         while (true) {
             attempt++;
             try {
-                return transactionTemplate == null ? operation.doInRetry() : transactionTemplate.execute(status -> operation.doInRetry());
+                return transactionTemplate == null
+                        ? operation.doInRetry()
+                        : transactionTemplate.execute(status -> operation.doInRetry());
             } catch (OptimisticLockingFailureException ex) {
                 if (attempt >= maxAttempts) {
                     LOGGER.error(

@@ -120,7 +120,8 @@ class InventoryService {
      * if absent or already deleted; persistence failures propagate.
      */
     public void deleteInventoryById(Long id) {
-        retryHandler.executeWithRetry(() -> {
+        retryHandler.executeWithRetry(
+                () -> {
                     deleteInventoryByIdAttempt(id);
                     return null;
                 });
@@ -174,16 +175,20 @@ class InventoryService {
      */
     public Optional<InventoryResponse> updateInventoryById(
             Long id, InventoryRequest inventoryRequest) {
-        return retryHandler.executeWithRetry(() -> updateInventoryByIdAttempt(id, inventoryRequest));
+        return retryHandler.executeWithRetry(
+                () -> updateInventoryByIdAttempt(id, inventoryRequest));
     }
 
     private Optional<InventoryResponse> updateInventoryByIdAttempt(
             Long id, InventoryRequest inventoryRequest) {
-        return inventoryJOOQRepository.findByIdAndDeletedFalse(id).map(record -> {
-            Inventory entity = inventoryMapper.toEntity(record);
-            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
-            return inventoryMapper.toResponse(inventoryRepository.save(entity));
-        });
+        return inventoryJOOQRepository
+                .findByIdAndDeletedFalse(id)
+                .map(
+                        record -> {
+                            Inventory entity = inventoryMapper.toEntity(record);
+                            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+                            return inventoryMapper.toResponse(inventoryRepository.save(entity));
+                        });
     }
 
     /**
@@ -195,16 +200,20 @@ class InventoryService {
      */
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
-        return retryHandler.executeWithRetry(() -> updateInventoryByProductCodeAttempt(productCode, inventoryRequest));
+        return retryHandler.executeWithRetry(
+                () -> updateInventoryByProductCodeAttempt(productCode, inventoryRequest));
     }
 
     private Optional<InventoryResponse> updateInventoryByProductCodeAttempt(
             String productCode, InventoryRequest inventoryRequest) {
-        return inventoryJOOQRepository.findByProductCodeAndDeletedFalse(productCode).map(record -> {
-            Inventory entity = inventoryMapper.toEntity(record);
-            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
-            return inventoryMapper.toResponse(inventoryRepository.save(entity));
-        });
+        return inventoryJOOQRepository
+                .findByProductCodeAndDeletedFalse(productCode)
+                .map(
+                        record -> {
+                            Inventory entity = inventoryMapper.toEntity(record);
+                            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+                            return inventoryMapper.toResponse(inventoryRepository.save(entity));
+                        });
     }
 
     /** Returns whether active inventory exists for the ID via jOOQ read. */
@@ -213,8 +222,8 @@ class InventoryService {
     }
 
     /**
-     * Saves inventory with retries on optimistic locking failure. If possible, refreshes its version
-     * from the database after a conflict. Unresolved persistence failures propagate.
+     * Saves inventory with retries on optimistic locking failure. If possible, refreshes its
+     * version from the database after a conflict. Unresolved persistence failures propagate.
      */
     private Inventory saveWithCustomFallback(Inventory inventory) {
         return inventoryRepository.save(inventory);

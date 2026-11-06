@@ -51,7 +51,8 @@ class ProductManageServiceImpl implements ProductManageService {
      */
     @Override
     public void manage(ProductDto productDto) {
-        retryHandler.executeWithRetry(() -> {
+        retryHandler.executeWithRetry(
+                () -> {
                     manageAttempt(productDto);
                     return null;
                 });
