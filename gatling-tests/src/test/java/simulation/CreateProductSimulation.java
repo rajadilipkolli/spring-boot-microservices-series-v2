@@ -239,9 +239,11 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                             })
                     .exec(createProduct)
                     .pause(_ -> randomPause())
-                    .exec(getProduct)
-                    .pause(_ -> randomPause())
+                    // Product reads enrich stock availability through inventory-service, so wait
+                    // for the asynchronous ProductCreated event before reading the product.
                     .exec(getInventory)
+                    .exitHereIfFailed()
+                    .exec(getProduct)
                     .pause(_ -> randomPause())
                     .exitHereIfFailed()
                     .exec(updateInventory)
