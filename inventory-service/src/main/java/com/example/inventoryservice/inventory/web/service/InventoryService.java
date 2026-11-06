@@ -75,7 +75,7 @@ class InventoryService {
 
     /**
      * Creates inventory or restores deleted inventory with the requested available quantity,
-     * preserving its ID and reserved quantity. Writes via Spring Data JPA.
+     * preserving its ID and reserved quantity. Other persistence failures propagate.
      *
      * @return the saved inventory
      * @throws ProductAlreadyExistsException if active inventory already exists for the code, or an
@@ -130,14 +130,14 @@ class InventoryService {
                         });
     }
 
-    /** Persists entity updates directly via Spring Data JPA. */
+    /** Applies the request to the entity, preserving reserved quantity, and saves it. */
     @Transactional
     public Inventory updateInventory(Inventory inventory, InventoryRequest inventoryRequest) {
         this.inventoryMapper.updateInventoryFromRequest(inventoryRequest, inventory);
         return saveWithCustomFallback(inventory);
     }
 
-    /** Returns active inventory response by exact product code via jOOQ read. */
+    /** Returns active inventory by exact product code, or empty if absent or deleted. */
     public Optional<InventoryResponse> findInventoryByProductCode(String productCode) {
         return this.inventoryJOOQRepository
                 .findByProductCodeAndDeletedFalse(productCode)
@@ -188,6 +188,13 @@ class InventoryService {
                         });
     }
 
+    /**
+     * Updates active inventory with the request, preserving reserved quantity. Persistence failures
+     * propagate.
+     *
+     * @param productCode code used to find the inventory
+     * @return the saved inventory response, or empty if the code is absent or soft deleted
+     */
     @Transactional
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
@@ -218,8 +225,8 @@ class InventoryService {
     }
 
     /**
-     * Custom fallback save method executing with retry on optimistic locking or concurrency
-     * conflicts.
+     * Saves inventory with retries on optimistic locking failure. If possible, refreshes its version
+     * from the database after a conflict. Unresolved persistence failures propagate.
      */
     private Inventory saveWithCustomFallback(Inventory inventory) {
         return retryHandler.executeWithRetry(

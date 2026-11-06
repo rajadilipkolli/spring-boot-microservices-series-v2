@@ -99,8 +99,20 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     }
 
     /**
-     * Reserves available inventory for a new order and publishes the reservation outcome. Reads are
-     * executed via jOOQ, and writes are executed via Spring Data JPA with custom fallback retry.
+     * Reserves available inventory for a new order and publishes the reservation outcome.
+     *
+     * <p>Non-new orders are returned unchanged. For a non-null order ID, a duplicate reservation
+     * skips stock changes; a new nonblank attempt ID can replay the stored outcome. If the attempt
+     * is blank, already claimed, or the outcome is unavailable, the order is returned unchanged
+     * without an event. Null order IDs bypass duplicate tracking.
+     *
+     * <p>Missing or deleted products, repeated product codes, and insufficient quantities cause
+     * rejection without stock changes. Otherwise, requested quantities move from available to
+     * reserved stock. Accepted and rejected outcomes are published as {@link
+     * InventoryProcessedEvent}s. Persistence and event publication failures propagate.
+     *
+     * @return the order with its reservation outcome and inventory source, or the original order
+     *     when processing or replay is skipped
      */
     @Transactional
     @Retryable(
@@ -274,9 +286,13 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     }
 
     /**
-     * Decreases reserved stock for {@code CONFIRMED} orders, or restores it to available stock for
-     * {@code ROLLBACK} orders whose source is not {@code INVENTORY} (case-insensitive). Reads are
-     * executed via jOOQ, and writes are executed via Spring Data JPA with custom fallback retry.
+     * Applies matching stock strategies to order items, including those for deleted inventory.
+     * The default strategies decrease reserved stock for {@code CONFIRMED} orders and restore it to
+     * available stock for {@code ROLLBACK} orders whose source is not {@code INVENTORY}
+     * (case-insensitive). Missing products are skipped; supplied strategies can alter the behavior.
+     *
+     * <p>For non-null order IDs, duplicate confirmations with the same status are skipped. Null IDs
+     * bypass duplicate tracking. No event is published; persistence failures propagate.
      */
     @Transactional
     @Retryable(

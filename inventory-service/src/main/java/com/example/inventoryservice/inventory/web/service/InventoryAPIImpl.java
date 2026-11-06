@@ -45,7 +45,7 @@ class InventoryAPIImpl implements InventoryAPI {
         return inventoryService.existsByIdAndDeletedFalse(id);
     }
 
-    /** Maps inventory found by product code to a response, preserving an absent result. */
+    /** Returns active inventory by product code, or empty if absent or deleted. */
     @Override
     public Optional<InventoryResponse> findInventoryByProductCode(String productCode) {
         return inventoryService.findInventoryByProductCode(productCode);

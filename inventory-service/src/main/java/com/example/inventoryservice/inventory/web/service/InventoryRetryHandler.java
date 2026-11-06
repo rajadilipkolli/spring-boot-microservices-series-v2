@@ -23,8 +23,8 @@ class InventoryRetryHandler {
     private static final long INITIAL_BACKOFF_MS = 50;
 
     /**
-     * Executes the given operation with up to {@code maxRetries} attempts if an {@link
-     * OptimisticLockingFailureException} occurs.
+     * Executes the operation with up to three attempts on optimistic locking failure. See {@link
+     * #executeWithRetry(RetryCallback, int)} for backoff and failure handling.
      *
      * @param operation the update operation to execute
      * @param <T> the return type
@@ -35,12 +35,16 @@ class InventoryRetryHandler {
     }
 
     /**
-     * Executes the given operation with up to the specified max attempts.
+     * Executes the operation again after an optimistic locking failure, up to the specified number
+     * of attempts. The first retry waits 50 milliseconds; subsequent waits double. Other failures
+     * propagate immediately. If a wait is interrupted, the interrupt flag is restored and the
+     * optimistic locking failure propagates.
      *
      * @param operation the update operation to execute
-     * @param maxAttempts maximum attempts
+     * @param maxAttempts maximum attempts; values below one still permit one attempt
      * @param <T> the return type
      * @return the result of the operation
+     * @throws OptimisticLockingFailureException if attempts are exhausted or the wait is interrupted
      */
     public <T> T executeWithRetry(RetryCallback<T> operation, int maxAttempts) {
         int attempt = 0;
