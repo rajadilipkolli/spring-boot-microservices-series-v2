@@ -132,7 +132,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 // Duplicate reserve event path
                 if (orderDto.attemptId() == null || orderDto.attemptId().isBlank()) {
                     LOGGER.warn(
-                            "Order {} reserve event has already been processed with blank attempt. Skipping duplicate.",
+                            "Order {} reserve event has already been processed with blank attempt."
+                                + " Skipping duplicate.",
                             orderDto.orderId());
                     return orderDto;
                 }
@@ -144,7 +145,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                                 Instant.now());
                 if (replyClaimed == 0) {
                     LOGGER.warn(
-                            "Order {} reserve reply for attempt {} has already been processed. Skipping duplicate.",
+                            "Order {} reserve reply for attempt {} has already been processed."
+                                + " Skipping duplicate.",
                             orderDto.orderId(),
                             orderDto.attemptId());
                     return orderDto;
@@ -165,7 +167,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                         orderDto.withStatusAndSource(outcomeStatus, AppConstants.SOURCE);
                 eventPublisher.publishEvent(new InventoryProcessedEvent(replayOrderDto));
                 LOGGER.info(
-                        "Replayed Order with status {} for attempt {} : {} from inventory service to topic {}",
+                        "Replayed Order with status {} for attempt {} : {} from inventory service"
+                            + " to topic {}",
                         replayOrderDto.status(),
                         orderDto.attemptId(),
                         replayOrderDto,
@@ -184,7 +187,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         // Check if all requested products exist in active inventory
         if (recordsFromDB.size() != productCodeList.size()) {
             LOGGER.error(
-                    "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB: {}, Products in Order: {}",
+                    "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB:"
+                        + " {}, Products in Order: {}",
                     orderDto.orderId(),
                     recordsFromDB.stream().map(InventoryRecord::getProductCode).toList(),
                     productCodeList);
@@ -202,7 +206,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             }
             eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
-                    "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
+                    "Sent Order with status REJECT (products not found): {} from inventory service"
+                        + " to topic {}",
                     rejectedOrderDto,
                     AppConstants.STOCK_ORDERS_TOPIC);
             return rejectedOrderDto;
@@ -231,7 +236,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
 
         if (!allItemsAvailable) {
             LOGGER.info(
-                    "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
+                    "Setting status as REJECT for OrderId in Inventory Service as quantity not"
+                        + " available : {}",
                     orderDto.orderId());
             finalOrderDto = orderDto.withStatus("REJECT");
             this.inventoryFailuresCounter.increment();
@@ -281,8 +287,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     }
 
     /**
-     * Applies matching stock strategies to order items, including those for deleted inventory.
-     * The default strategies decrease reserved stock for {@code CONFIRMED} orders and restore it to
+     * Applies matching stock strategies to order items, including those for deleted inventory. The
+     * default strategies decrease reserved stock for {@code CONFIRMED} orders and restore it to
      * available stock for {@code ROLLBACK} orders whose source is not {@code INVENTORY}
      * (case-insensitive). Missing products are skipped; supplied strategies can alter the behavior.
      *
@@ -291,7 +297,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      */
     @Override
     public void confirm(OrderDto orderDto) {
-        retryHandler.executeWithRetry(() -> {
+        retryHandler.executeWithRetry(
+                () -> {
                     confirmAttempt(orderDto);
                     return null;
                 });
@@ -307,7 +314,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                             orderDto.orderId(), eventType, Instant.now());
             if (claimed == 0) {
                 LOGGER.warn(
-                        "Order {} confirm ({}) event has already been processed. Skipping duplicate.",
+                        "Order {} confirm ({}) event has already been processed. Skipping"
+                            + " duplicate.",
                         orderDto.orderId(),
                         orderDto.status());
                 return;

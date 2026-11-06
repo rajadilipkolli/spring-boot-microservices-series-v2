@@ -1,3 +1,9 @@
+/***
+<p>
+    Licensed under MIT License Copyright (c) 2026 Raja Kolli.
+</p>
+***/
+
 package com.example.inventoryservice.inventory.web.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,12 +24,19 @@ class InventoryRetryHandlerTest {
         TransactionStatus first = mock(TransactionStatus.class);
         TransactionStatus second = mock(TransactionStatus.class);
         when(manager.getTransaction(any())).thenReturn(first, second);
-        doThrow(new OptimisticLockingFailureException("commit conflict")).when(manager).commit(first);
+        doThrow(new OptimisticLockingFailureException("commit conflict"))
+                .when(manager)
+                .commit(first);
         AtomicInteger reads = new AtomicInteger();
-        Integer result = new InventoryRetryHandler(manager).executeWithRetry(reads::incrementAndGet);
+        Integer result =
+                new InventoryRetryHandler(manager).executeWithRetry(reads::incrementAndGet);
         assertThat(result).isEqualTo(2);
         verify(manager).commit(second);
-        verify(manager, times(2)).getTransaction(argThat(definition ->
-                definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+        verify(manager, times(2))
+                .getTransaction(
+                        argThat(
+                                definition ->
+                                        definition.getPropagationBehavior()
+                                                == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
     }
 }
