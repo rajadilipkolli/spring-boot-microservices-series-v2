@@ -8,8 +8,12 @@ package com.example.inventoryservice.inventory.web.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Executes persistence operations with custom fallback and retry handling for concurrent
@@ -17,6 +21,16 @@ import org.springframework.stereotype.Component;
  */
 @Component
 class InventoryRetryHandler {
+
+    private TransactionTemplate transactionTemplate;
+
+    InventoryRetryHandler() {}
+
+    @Autowired
+    InventoryRetryHandler(PlatformTransactionManager transactionManager) {
+        transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryRetryHandler.class);
     private static final int DEFAULT_MAX_RETRIES = 3;
@@ -53,7 +67,9 @@ class InventoryRetryHandler {
         while (true) {
             attempt++;
             try {
-                return operation.doInRetry();
+                return transactionTemplate == null
+                        ? operation.doInRetry()
+                        : transactionTemplate.execute(status -> operation.doInRetry());
             } catch (OptimisticLockingFailureException ex) {
                 if (attempt >= maxAttempts) {
                     LOGGER.error(

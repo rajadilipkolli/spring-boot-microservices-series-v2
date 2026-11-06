@@ -24,10 +24,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Loggable
@@ -114,14 +111,12 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      * @return the order with its reservation outcome and inventory source, or the original order
      *     when processing or replay is skipped
      */
-    @Transactional
-    @Retryable(
-            includes = OptimisticLockingFailureException.class,
-            maxRetries = 3,
-            delay = 1000,
-            multiplier = 2.0)
     @Override
     public OrderDto reserve(OrderDto orderDto) {
+        return retryHandler.executeWithRetry(() -> reserveAttempt(orderDto));
+    }
+
+    private OrderDto reserveAttempt(OrderDto orderDto) {
         LOGGER.info("Reserving Order in Inventory Service {}", orderDto);
         // Check if order status is not NEW
         if (!"NEW".equals(orderDto.status())) {
@@ -137,7 +132,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 // Duplicate reserve event path
                 if (orderDto.attemptId() == null || orderDto.attemptId().isBlank()) {
                     LOGGER.warn(
-                            "Order {} reserve event has already been processed with blank attempt. Skipping duplicate.",
+                            "Order {} reserve event has already been processed with blank attempt."
+                                + " Skipping duplicate.",
                             orderDto.orderId());
                     return orderDto;
                 }
@@ -149,7 +145,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                                 Instant.now());
                 if (replyClaimed == 0) {
                     LOGGER.warn(
-                            "Order {} reserve reply for attempt {} has already been processed. Skipping duplicate.",
+                            "Order {} reserve reply for attempt {} has already been processed."
+                                + " Skipping duplicate.",
                             orderDto.orderId(),
                             orderDto.attemptId());
                     return orderDto;
@@ -170,7 +167,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                         orderDto.withStatusAndSource(outcomeStatus, AppConstants.SOURCE);
                 eventPublisher.publishEvent(new InventoryProcessedEvent(replayOrderDto));
                 LOGGER.info(
-                        "Replayed Order with status {} for attempt {} : {} from inventory service to topic {}",
+                        "Replayed Order with status {} for attempt {} : {} from inventory service"
+                            + " to topic {}",
                         replayOrderDto.status(),
                         orderDto.attemptId(),
                         replayOrderDto,
@@ -189,7 +187,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         // Check if all requested products exist in active inventory
         if (recordsFromDB.size() != productCodeList.size()) {
             LOGGER.error(
-                    "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB: {}, Products in Order: {}",
+                    "Not all products requested exist, Hence Ignoring OrderID : {}. Products in DB:"
+                        + " {}, Products in Order: {}",
                     orderDto.orderId(),
                     recordsFromDB.stream().map(InventoryRecord::getProductCode).toList(),
                     productCodeList);
@@ -207,7 +206,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
             }
             eventPublisher.publishEvent(new InventoryProcessedEvent(rejectedOrderDto));
             LOGGER.info(
-                    "Sent Order with status REJECT (products not found): {} from inventory service to topic {}",
+                    "Sent Order with status REJECT (products not found): {} from inventory service"
+                        + " to topic {}",
                     rejectedOrderDto,
                     AppConstants.STOCK_ORDERS_TOPIC);
             return rejectedOrderDto;
@@ -236,7 +236,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
 
         if (!allItemsAvailable) {
             LOGGER.info(
-                    "Setting status as REJECT for OrderId in Inventory Service as quantity not available : {}",
+                    "Setting status as REJECT for OrderId in Inventory Service as quantity not"
+                        + " available : {}",
                     orderDto.orderId());
             finalOrderDto = orderDto.withStatus("REJECT");
             this.inventoryFailuresCounter.increment();
@@ -255,7 +256,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                 updatedInventoryList.add(inventoryFromDB);
             }
             // Persist changes via Spring Data JPA with custom fallback retry
-            retryHandler.executeWithRetry(() -> inventoryRepository.saveAll(updatedInventoryList));
+            inventoryRepository.saveAll(updatedInventoryList);
             finalOrderDto = orderDto.withStatus("ACCEPT");
             this.inventoryReservationsCounter.increment();
             if (orderDto.orderId() != null) {
@@ -286,22 +287,24 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
     }
 
     /**
-     * Applies matching stock strategies to order items, including those for deleted inventory.
-     * The default strategies decrease reserved stock for {@code CONFIRMED} orders and restore it to
+     * Applies matching stock strategies to order items, including those for deleted inventory. The
+     * default strategies decrease reserved stock for {@code CONFIRMED} orders and restore it to
      * available stock for {@code ROLLBACK} orders whose source is not {@code INVENTORY}
      * (case-insensitive). Missing products are skipped; supplied strategies can alter the behavior.
      *
      * <p>For non-null order IDs, duplicate confirmations with the same status are skipped. Null IDs
      * bypass duplicate tracking. No event is published; persistence failures propagate.
      */
-    @Transactional
-    @Retryable(
-            includes = OptimisticLockingFailureException.class,
-            maxRetries = 3,
-            multiplier = 2.0,
-            delay = 1000)
     @Override
     public void confirm(OrderDto orderDto) {
+        retryHandler.executeWithRetry(
+                () -> {
+                    confirmAttempt(orderDto);
+                    return null;
+                });
+    }
+
+    private void confirmAttempt(OrderDto orderDto) {
         LOGGER.info("Confirming Order in Inventory Service {}", orderDto);
 
         String eventType = "CONFIRM_" + orderDto.status();
@@ -311,7 +314,8 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
                             orderDto.orderId(), eventType, Instant.now());
             if (claimed == 0) {
                 LOGGER.warn(
-                        "Order {} confirm ({}) event has already been processed. Skipping duplicate.",
+                        "Order {} confirm ({}) event has already been processed. Skipping"
+                            + " duplicate.",
                         orderDto.orderId(),
                         orderDto.status());
                 return;
@@ -344,7 +348,7 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         }
 
         // Persist changes via Spring Data JPA with custom fallback retry
-        retryHandler.executeWithRetry(() -> inventoryRepository.saveAll(inventoryMap.values()));
+        inventoryRepository.saveAll(inventoryMap.values());
 
         LOGGER.info("Order confirmation completed for order ID: {}", orderDto.orderId());
     }

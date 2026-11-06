@@ -33,7 +33,7 @@ This document specifies the domain invariants, validation rules, state constrain
 - **Statement**: Each product code must correspond to at most one record in the `inventory` table across the entire lifetime of the system, including soft-deleted records.
 - **Enforcement Mechanism**: PostgreSQL database constraint `inventory_product_code_key` created in Liquibase migration `01-create_inventories_table.json`.
 - **Source Reference**: `inventory-service/src/main/resources/db/changelog/migration/01-create_inventories_table.json#add_unique_constraint`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldReturn409WhenCreateNewInventoryWithExistingProductCode`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldReturn409WhenCreateNewInventoryWithExistingProductCode`
 - **Linked Requirements**: `INV-FR-004`
 - **Context**: If a product code is soft-deleted, inserting the same code via JPA throws `DataIntegrityViolationException`, which is caught by `InventoryService#saveInventory` to restore the deleted record instead of creating a second row.
 
@@ -72,7 +72,7 @@ This document specifies the domain invariants, validation rules, state constrain
 - **Statement**: All client-facing read endpoints (`getAllInventories`, `getInventoryByProductCode`, `getInventoryByProductCodes`) and new order reservation lookups must filter exclusively for active records (`deleted = false`).
 - **Enforcement Mechanism**: Explicit SQL/jOOQ predicates: `where(INVENTORY.DELETED.isFalse())` and JPA query methods: `findByProductCodeAndDeletedFalse`.
 - **Source Reference**: `inventory-service/src/main/java/com/example/inventoryservice/inventory/web/service/InventoryJOOQRepositoryImpl.java#InventoryJOOQRepositoryImpl#findAllAndDeletedFalse`
-- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/controllers/InventoryControllerIT.java#shouldFetchAllInventories`
+- **Test Reference**: `inventory-service/src/test/java/com/example/inventoryservice/inventory/web/service/InventoryControllerIT.java#shouldFetchAllInventories`
 - **Linked Requirements**: `INV-FR-001`, `INV-FR-002`, `INV-FR-003`, `INV-FR-008`
 
 ---

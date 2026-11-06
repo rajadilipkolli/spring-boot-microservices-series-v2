@@ -2,7 +2,7 @@
 
 - **Service Name**: `inventory-service`
 - **Service Prefix**: `INV`
-- **Specification Version**: `1.0.0`
+- **Specification Version**: `1.1.1`
 - **Specification Status**: `Approved`
 - **Owner / Team**: Commerce Platform Squad
 - **Repository Location**: `inventory-service/`
@@ -52,6 +52,10 @@ The service utilizes a hybrid persistence architecture combining **Spring Data J
 ---
 
 ## 3. Change Log
+
+### [1.1.1] - 2026-11-06
+- Corrected test references, paging, response and availability documentation. Network policy exceptions remain unverified.
+- Wrapped complete write attempts in fresh transactions, including commit-time optimistic-lock handling.
 
 ### [1.1.0] - 2026-11-05
 - **Architecture Refactoring**:

@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Loggable
@@ -51,8 +50,15 @@ class ProductManageServiceImpl implements ProductManageService {
      * insert. Other persistence failures, including deletion failures, propagate.
      */
     @Override
-    @Transactional
     public void manage(ProductDto productDto) {
+        retryHandler.executeWithRetry(
+                () -> {
+                    manageAttempt(productDto);
+                    return null;
+                });
+    }
+
+    private void manageAttempt(ProductDto productDto) {
         String productCode = productDto.code();
         if (productDto.isDeleted()) {
             // Read via jOOQ
@@ -66,7 +72,7 @@ class ProductManageServiceImpl implements ProductManageService {
                 }
                 Inventory inventory = inventoryMapper.toEntity(record);
                 inventory.markDeleted();
-                retryHandler.executeWithRetry(() -> inventoryRepository.save(inventory));
+                inventoryRepository.save(inventory);
                 log.info("Soft deleted inventory for productCode: {}", productCode);
             } else {
                 log.info("No inventory found to soft delete for productCode: {}", productCode);
@@ -82,7 +88,7 @@ class ProductManageServiceImpl implements ProductManageService {
 
         Inventory inventory = new Inventory().setProductCode(productCode);
         try {
-            retryHandler.executeWithRetry(() -> this.inventoryRepository.save(inventory));
+            this.inventoryRepository.save(inventory);
         } catch (DataIntegrityViolationException ex) {
             if (this.inventoryJOOQRepository.findByProductCode(productCode).isEmpty()) {
                 throw ex;

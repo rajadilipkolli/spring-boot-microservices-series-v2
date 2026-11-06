@@ -11,7 +11,7 @@ This document defines the non-functional quality attributes, Service Level Objec
 
 | ID | Dimension | Metric / Target | Evidence Status | Reference Source |
 | :--- | :--- | :--- | :--- | :--- |
-| `INV-NFR-001` | Availability | 99.9% uptime | Target | `docs/runbooks/SLO-Definitions.md` |
+| `INV-NFR-001` | Availability | 99.9% eligible-request success over rolling 30 days | Target | `docs/runbooks/SLO-Definitions.md` |
 | `INV-NFR-002` | Latency (Read/Write) | P99 < 500ms | Target | `docs/runbooks/SLO-Definitions.md` |
 | `INV-NFR-003` | Messaging Lag | Lag < 1000 messages | Target | `docs/runbooks/SLO-Definitions.md` |
 | `INV-NFR-004` | High Availability & PDB | `minAvailable: 1` | Configured | `deployment/k8s/base/pdb.yaml` |
@@ -30,7 +30,7 @@ This document defines the non-functional quality attributes, Service Level Objec
 - **Dimension**: Availability
 - **Lifecycle Status**: Approved
 - **Evidence Status**: Target
-- **Metric**: Maintain 99.9% availability during business hours (error budget: 0.1% failed requests).
+- **Metric**: 99.9% successful eligible requests over a 30-day rolling window. Count 2xx/3xx and expected 400, 401, 403, 404, 409, 422 only after completed application validation or authorization as successes. Exclude health checks and administration traffic. Other 4xx (including 408, 425, 429) and 502/503/504 are failures. Track 429 separately; exclude synthetic traffic only by explicit label. The error budget is 0.1% of eligible requests, without a fixed downtime allowance.
 - **Reference**: Linked directly to operational baseline [SLO-Definitions.md](../../../../docs/runbooks/SLO-Definitions.md).
 
 ---
@@ -104,12 +104,8 @@ This document defines the non-functional quality attributes, Service Level Objec
 - **Category**: Non-Functional Requirement
 - **Dimension**: Security & Network Isolation
 - **Lifecycle Status**: Approved
-- **Evidence Status**: Configured
-- **Metric**: Network isolation enforced via `retailstore` namespace network policies:
-  - Default deny-all ingress and egress (`default-deny-all`).
-  - Ingress permitted from pods with label `app in [catalog-service, order-service, payment-service, api-gateway, retail-store-webapp]`.
-  - Egress permitted to `postgresql`, `kafka`, `config-server`, `service-registry`, DNS (53), and HTTPS (443).
-- **Reference**: `deployment/k8s/base/network-policies.yaml`.
+- **Evidence Status**: Needs-Clarification
+- **Metric**: Network-policy source is absent from this checkout. Ingress and egress exceptions remain unverified; no ports or peer permissions are asserted. See `INV-Q-005`.
 
 ---
 
