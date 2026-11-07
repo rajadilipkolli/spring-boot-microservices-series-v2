@@ -14,7 +14,6 @@ import static org.mockito.Mockito.times;
 
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
-import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,15 +61,19 @@ class ProductGeneratorServiceTest {
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();
 
-        then(productService).should(times(101)).saveProduct(productCaptor.capture());
+        then(productService).should(times(100)).saveProduct(productCaptor.capture());
 
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
         assertThat(capturedProducts)
-                .hasSize(101)
+                .hasSize(100)
                 .allSatisfy(
-                        product ->
-                                assertThat(product.price())
-                                        .isBetween(BigDecimal.ONE, BigDecimal.valueOf(100.0)));
+                        product -> {
+                            assertThat(product.price()).isPositive();
+                            assertThat(product.imageUrl())
+                                    .startsWith("https://picsum.photos/seed/")
+                                    .endsWith("/300/200");
+                            assertThat(product.productCode()).matches("PROD\\d{3}");
+                        });
     }
 
     @Test
@@ -98,11 +101,6 @@ class ProductGeneratorServiceTest {
         then(productService).should(times(5)).saveProduct(productCaptor.capture());
         assertThat(productCaptor.getAllValues())
                 .extracting(ProductRequest::productCode)
-                .containsExactly(
-                        "ProductCode_test-batch-456_0",
-                        "ProductCode_test-batch-456_1",
-                        "ProductCode_test-batch-456_2",
-                        "ProductCode_test-batch-456_3",
-                        "ProductCode_test-batch-456_4");
+                .containsExactly("PROD000", "PROD001", "PROD002", "PROD003", "PROD004");
     }
 }
