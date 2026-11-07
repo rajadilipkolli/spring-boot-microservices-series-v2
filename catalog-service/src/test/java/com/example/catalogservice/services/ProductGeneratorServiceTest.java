@@ -14,7 +14,6 @@ import static org.mockito.Mockito.times;
 
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
-import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,15 +61,20 @@ class ProductGeneratorServiceTest {
                 .expectNext(Boolean.TRUE)
                 .verifyComplete();
 
-        then(productService).should(times(101)).saveProduct(productCaptor.capture());
+        then(productService).should(times(100)).saveProduct(productCaptor.capture());
 
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
         assertThat(capturedProducts)
-                .hasSize(101)
+                .hasSize(100)
                 .allSatisfy(
-                        product ->
-                                assertThat(product.price())
-                                        .isBetween(BigDecimal.ONE, BigDecimal.valueOf(100.0)));
+                        product -> {
+                            assertThat(product.price()).isPositive();
+                            assertThat(product.imageUrl())
+                                    .startsWith("https://picsum.photos/seed/")
+                                    .endsWith("/300/200");
+                            assertThat(product.productCode())
+                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}");
+                        });
     }
 
     @Test
@@ -98,11 +102,51 @@ class ProductGeneratorServiceTest {
         then(productService).should(times(5)).saveProduct(productCaptor.capture());
         assertThat(productCaptor.getAllValues())
                 .extracting(ProductRequest::productCode)
-                .containsExactly(
-                        "ProductCode_test-batch-456_0",
-                        "ProductCode_test-batch-456_1",
-                        "ProductCode_test-batch-456_2",
-                        "ProductCode_test-batch-456_3",
-                        "ProductCode_test-batch-456_4");
+                .containsExactlyElementsOf(
+                        generatorService
+                                .generateProducts("test-batch-456", 5)
+                                .map(ProductRequest::productCode)
+                                .collectList()
+                                .block());
+    }
+
+    @Test
+    void shouldScopeCodesByKeyAndReuseCodesOnRetry() {
+        List<ProductRequest> first =
+                generatorService.generateProducts("batch-A", 3).collectList().block();
+        assertThat(generatorService.generateProducts("batch-A", 3).collectList().block())
+                .containsExactlyElementsOf(first);
+        assertThat(
+                        generatorService
+                                .generateProducts("batch-B", 3)
+                                .map(ProductRequest::productCode)
+                                .collectList()
+                                .block())
+                .doesNotContainAnyElementsOf(
+                        first.stream().map(ProductRequest::productCode).toList());
+    }
+
+    @Test
+    void shouldKeepMaximumBatchCodesUniqueBoundedAndUrlSafeForArbitraryKeys() {
+        List<ProductRequest> products =
+                generatorService
+                        .generateProducts("日本語 /?#".repeat(1000), 10_000)
+                        .collectList()
+                        .block();
+        assertThat(products).hasSize(10_000);
+        assertThat(products).extracting(ProductRequest::productCode).doesNotHaveDuplicates();
+        assertThat(products)
+                .allSatisfy(
+                        product -> {
+                            assertThat(product.productCode())
+                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}")
+                                    .hasSizeLessThanOrEqualTo(73);
+                            assertThat(product.imageUrl())
+                                    .isEqualTo(
+                                            "https://picsum.photos/seed/"
+                                                    + product.productCode()
+                                                    + "/300/200");
+                        });
+        assertThat(products.getLast().productCode()).endsWith("_9999");
     }
 }

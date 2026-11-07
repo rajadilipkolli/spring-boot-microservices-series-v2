@@ -161,7 +161,12 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productGeneratorService.generateAndSaveProducts("cache-test", 1).block();
         assertThat(productCacheGenerationRepository.findCacheGeneration().block())
                 .isNotEqualTo(beforeGenerate);
-        productRepository.deleteByProductCodeAllIgnoreCase("ProductCode_cache-test_0").block();
+        String generatedCode =
+                productGeneratorService
+                        .generateProducts("cache-test", 1)
+                        .blockFirst()
+                        .productCode();
+        productRepository.deleteByProductCodeAllIgnoreCase(generatedCode).block();
     }
 
     private String cacheKey(String key) {

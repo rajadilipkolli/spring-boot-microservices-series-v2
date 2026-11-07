@@ -31,8 +31,9 @@ public interface ProductMockGeneratorApi {
      * cache-generation errors propagate through the returned Mono; Redis deletion failures are
      * suppressed.
      *
-     * @param idempotencyKey included in each product code with its zero-based batch index
-     * @param batchSize number of products from 1 through 10,000, or null for 101
+     * @param idempotencyKey hashed into each product code with its zero-based batch index;
+     *     repeating a key reuses matching codes, while different keys scope separate batches
+     * @param batchSize number of products from 1 through 10,000, or null for 100
      * @return a successful generation result after all saves complete
      * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
      */
