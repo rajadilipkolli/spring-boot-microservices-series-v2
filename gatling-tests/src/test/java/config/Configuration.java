@@ -17,6 +17,10 @@ public class Configuration {
     public static final int TEST_DURATION_SECONDS = config.getInt("simulation.load.testDuration");
     public static final int BURST_USERS_PER_SEC = config.getInt("simulation.load.burstUsersPerSec");
 
+    // Pace / Think times
+    public static final int MIN_PAUSE_MS = config.getInt("simulation.pace.minPauseMs");
+    public static final int MAX_PAUSE_MS = config.getInt("simulation.pace.maxPauseMs");
+
     // SLAs
     public static final int SLA_MEAN_MS = config.getInt("simulation.sla.meanMs");
     public static final int SLA_P95_MS = config.getInt("simulation.sla.p95Ms");

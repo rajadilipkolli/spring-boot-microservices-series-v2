@@ -1,6 +1,8 @@
 package simulation;
 
 import static config.Configuration.CONSTANT_USERS;
+import static config.Configuration.MAX_PAUSE_MS;
+import static config.Configuration.MIN_PAUSE_MS;
 import static config.Configuration.RAMP_DURATION_SECONDS;
 import static config.Configuration.SLA_MEAN_MS;
 import static config.Configuration.SLA_P95_MS;
@@ -8,7 +10,6 @@ import static config.Configuration.SLA_P99_MS;
 import static config.Configuration.TEST_DURATION_SECONDS;
 import static data.Feeders.enhancedProductFeeder;
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
-import static io.gatling.javaapi.core.CoreDsl.bodyString;
 import static io.gatling.javaapi.core.CoreDsl.constantUsersPerSec;
 import static io.gatling.javaapi.core.CoreDsl.details;
 import static io.gatling.javaapi.core.CoreDsl.exec;
@@ -21,8 +22,6 @@ import static io.gatling.javaapi.http.HttpDsl.header;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gatling.javaapi.core.Assertion;
 import io.gatling.javaapi.core.ChainBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
@@ -39,9 +38,17 @@ import org.slf4j.LoggerFactory;
 public class CreateProductSimulation extends BaseLoadSimulation {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CreateProductSimulation.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // Parameters are now inherited from BaseSimulation for consistency
+
+    private static Duration randomPause() {
+        if (MIN_PAUSE_MS <= 0 && MAX_PAUSE_MS <= 0) {
+            return Duration.ZERO;
+        }
+        long min = Math.max(0, MIN_PAUSE_MS);
+        long max = Math.max(min + 1, MAX_PAUSE_MS);
+        return Duration.ofMillis(ThreadLocalRandom.current().nextLong(min, max));
+    }
 
     // Breaking down the test flow into reusable components for better readability and
     // maintainability
@@ -81,19 +88,19 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                     jsonPath("$.productCode")
                                             .is(session -> session.getString("productCode"))));
 
-    // Pause 3 s unconditionally before the first inventory check so Kafka has time to process the
-    // ProductCreated event. Then retry up to 8 times with 3 s between each attempt.
+    // Pause dynamically before the first inventory check so Kafka has time to process the
+    // ProductCreated event. Then retry up to 8 times with dynamic pause between each attempt.
     private final ChainBuilder getInventory =
             exec(session -> session)
-                    .pause(Duration.ofSeconds(3))
+                    .pause(_ -> randomPause())
                     .exec(
                             tryMax(8, "inventoryRetryCounter")
                                     .on(
                                             exec(session -> {
-                                                        // Clear stale session data before
-                                                        // each attempt
-                                                        return session.remove(
-                                                                        "inventoryResponseBody")
+                                                        // Clear stale session data before each
+                                                        // attempt
+                                                        return session.remove("inventoryId")
+                                                                .remove("availableQuantity")
                                                                 .remove("inventoryStatus");
                                                     })
                                                     .doIf(
@@ -103,7 +110,7 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                             > 0)
                                                     .then(
                                                             exec(session -> session)
-                                                                    .pause(Duration.ofSeconds(3)))
+                                                                    .pause(_ -> randomPause()))
                                                     .exec(
                                                             http("Get product inventory")
                                                                     .get(
@@ -122,20 +129,19 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                                                                     "inventoryStatus")
                                                                                                     == 200)
                                                                     .then(
-                                                                            bodyString()
+                                                                            jsonPath("$.id")
                                                                                     .saveAs(
-                                                                                            "inventoryResponseBody")))
+                                                                                            "inventoryId"),
+                                                                            jsonPath(
+                                                                                            "$.availableQuantity")
+                                                                                    .saveAs(
+                                                                                            "availableQuantity")))
                                                     .doIf(
                                                             session ->
-                                                                    !session.contains(
-                                                                                    "inventoryResponseBody")
-                                                                            || session.getString(
-                                                                                            "inventoryResponseBody")
-                                                                                    == null
-                                                                            || session.getString(
-                                                                                            "inventoryResponseBody")
-                                                                                    .trim()
-                                                                                    .isEmpty())
+                                                                    !session.contains("inventoryId")
+                                                                            || session.get(
+                                                                                            "inventoryId")
+                                                                                    == null)
                                                     .then(
                                                             exec(
                                                                     session -> {
@@ -154,45 +160,29 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                     }))))
                     .exec(
                             session -> {
-                                // Validate the response body after all retries
-                                String responseBody = session.getString("inventoryResponseBody");
-                                if (responseBody == null || responseBody.trim().isEmpty()) {
+                                if (!session.contains("inventoryId")
+                                        || session.get("inventoryId") == null) {
                                     LOGGER.warn(
                                             "Inventory not available after all retries for"
                                                     + " product code: {}",
                                             session.getString("productCode"));
                                     return session.markAsFailed();
                                 }
-
-                                try {
-                                    // Additional validation - try to parse it as JSON
-                                    OBJECT_MAPPER.readTree(responseBody);
-                                    LOGGER.debug("Got valid inventory response");
-                                    return session;
-                                } catch (Exception e) {
-                                    LOGGER.warn(
-                                            "Invalid JSON response for product code: {},"
-                                                    + " Error: {}",
-                                            session.getString("productCode"),
-                                            e.getMessage());
-                                    return session.markAsFailed();
-                                }
+                                int newQuantity = ThreadLocalRandom.current().nextInt(100, 1000);
+                                return session.set("newAvailableQuantity", newQuantity);
                             });
 
     private final ChainBuilder updateInventory =
             exec(http("Update inventory")
-                            .put(
-                                    session ->
-                                            "/inventory-service/api/inventory/"
-                                                    + getInventoryId(
-                                                            session.getString(
-                                                                    "inventoryResponseBody")))
+                            .put("/inventory-service/api/inventory/#{inventoryId}")
                             .body(
                                     StringBody(
-                                            session ->
-                                                    getBodyAsString(
-                                                            session.getString(
-                                                                    "inventoryResponseBody"))))
+                                            """
+    {
+      "productCode": "#{productCode}",
+      "availableQuantity": #{newAvailableQuantity}
+    }
+    """))
                             .asJson()
                             .check(status().is(200)))
                     .exec(
@@ -248,135 +238,23 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                 return session;
                             })
                     .exec(createProduct)
-                    .pause(Duration.ofSeconds(2))
-                    .exec(getProduct)
-                    .pause(Duration.ofSeconds(2))
+                    .exitHereIfFailed()
+                    .pause(_ -> randomPause())
+                    // Product reads enrich stock availability through inventory-service, so wait
+                    // for the asynchronous ProductCreated event before reading the product.
                     .exec(getInventory)
-                    .pause(Duration.ofSeconds(2))
+                    .exitHereIfFailed()
+                    .exec(getProduct)
+                    .pause(_ -> randomPause())
                     .exitHereIfFailed()
                     .exec(updateInventory)
-                    .pause(Duration.ofSeconds(2))
+                    .pause(_ -> randomPause())
                     .exec(createOrder)
                     .exec(
                             session -> {
                                 LOGGER.info(">>> Finished Workflow for user: {}", session.userId());
                                 return session;
                             });
-
-    /**
-     * Prepares the inventory update request by generating a new inventory quantity
-     *
-     * @param inventoryResponseBody The original inventory response
-     * @return JSON string with updated inventory
-     */
-    private String getBodyAsString(String inventoryResponseBody) {
-        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
-            LOGGER.error("Empty inventory response body");
-            throw new RuntimeException("Empty inventory response body");
-        }
-
-        try {
-            // Log the raw response to help with debugging
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Processing inventory response: {}", inventoryResponseBody);
-            }
-
-            // Add additional validation before parsing
-            if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
-                LOGGER.error("Invalid empty JSON object or array: {}", inventoryResponseBody);
-                throw new RuntimeException("Empty JSON structure in inventory response");
-            }
-
-            try {
-                // First validate that it's valid JSON before trying to deserialize
-                OBJECT_MAPPER.readTree(inventoryResponseBody);
-            } catch (Exception e) {
-                LOGGER.error("Invalid JSON format: {}", e.getMessage());
-                throw new RuntimeException("Invalid JSON format in inventory response", e);
-            }
-
-            InventoryResponseDTO inventoryResponseDTO =
-                    OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
-
-            if (inventoryResponseDTO == null || inventoryResponseDTO.id() == null) {
-                LOGGER.error("Invalid inventory data after deserialization");
-                throw new RuntimeException("Invalid inventory data after deserialization");
-            }
-
-            int newQuantity = ThreadLocalRandom.current().nextInt(100, 1000);
-
-            String body =
-                    OBJECT_MAPPER.writeValueAsString(
-                            inventoryResponseDTO.withAvailableQuantity(newQuantity));
-
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Update Inventory Request: {}", body);
-            }
-            return body;
-        } catch (JsonProcessingException e) {
-            LOGGER.error(
-                    "Failed to process inventory JSON: {}. Response: {}",
-                    e.getMessage(),
-                    inventoryResponseBody);
-            throw new RuntimeException("Error processing inventory data", e);
-        }
-    }
-
-    /**
-     * Extracts the inventory ID from the inventory response
-     *
-     * @param inventoryResponseBody The inventory response JSON
-     * @return The inventory ID
-     */
-    private Long getInventoryId(String inventoryResponseBody) {
-
-        try {
-            validateInventoryResponse(
-                    inventoryResponseBody, "Extracting ID from inventory response");
-
-            InventoryResponseDTO dto =
-                    OBJECT_MAPPER.readValue(inventoryResponseBody, InventoryResponseDTO.class);
-
-            if (dto == null) {
-                LOGGER.error("Inventory DTO is null after parsing");
-                throw new RuntimeException("Inventory DTO is null after parsing");
-            }
-
-            if (dto.id() == null) {
-                LOGGER.error("Inventory ID is null. Response: {}", inventoryResponseBody);
-                throw new RuntimeException("Inventory ID is null");
-            }
-
-            return dto.id();
-        } catch (JsonProcessingException e) {
-            LOGGER.error(
-                    "Failed to parse inventory response: {}. Response: {}",
-                    e.getMessage(),
-                    inventoryResponseBody);
-            throw new RuntimeException("Error extracting inventory ID", e);
-        }
-    }
-
-    private void validateInventoryResponse(String inventoryResponseBody, String operation) {
-        if (inventoryResponseBody == null || inventoryResponseBody.trim().isEmpty()) {
-            LOGGER.error("Empty inventory response body during {}", operation);
-            throw new IllegalArgumentException("Empty inventory response body");
-        }
-
-        // Log the raw response to help with debugging
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("{}: {}", operation, inventoryResponseBody);
-        }
-
-        // Add additional validation before parsing
-        if (inventoryResponseBody.equals("{}") || inventoryResponseBody.equals("[]")) {
-            LOGGER.error(
-                    "Invalid empty JSON object or array during {}: {}",
-                    operation,
-                    inventoryResponseBody);
-            throw new IllegalArgumentException("Empty JSON structure in inventory response");
-        }
-    }
 
     /** Simulation setup with configurable load profile */
     public CreateProductSimulation() {
