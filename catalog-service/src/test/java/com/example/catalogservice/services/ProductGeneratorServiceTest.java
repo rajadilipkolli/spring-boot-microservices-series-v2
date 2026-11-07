@@ -72,7 +72,8 @@ class ProductGeneratorServiceTest {
                             assertThat(product.imageUrl())
                                     .startsWith("https://picsum.photos/seed/")
                                     .endsWith("/300/200");
-                            assertThat(product.productCode()).matches("PROD\\d{3}");
+                            assertThat(product.productCode())
+                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}");
                         });
     }
 
@@ -101,6 +102,51 @@ class ProductGeneratorServiceTest {
         then(productService).should(times(5)).saveProduct(productCaptor.capture());
         assertThat(productCaptor.getAllValues())
                 .extracting(ProductRequest::productCode)
-                .containsExactly("PROD000", "PROD001", "PROD002", "PROD003", "PROD004");
+                .containsExactlyElementsOf(
+                        generatorService
+                                .generateProducts("test-batch-456", 5)
+                                .map(ProductRequest::productCode)
+                                .collectList()
+                                .block());
+    }
+
+    @Test
+    void shouldScopeCodesByKeyAndReuseCodesOnRetry() {
+        List<ProductRequest> first =
+                generatorService.generateProducts("batch-A", 3).collectList().block();
+        assertThat(generatorService.generateProducts("batch-A", 3).collectList().block())
+                .containsExactlyElementsOf(first);
+        assertThat(
+                        generatorService
+                                .generateProducts("batch-B", 3)
+                                .map(ProductRequest::productCode)
+                                .collectList()
+                                .block())
+                .doesNotContainAnyElementsOf(
+                        first.stream().map(ProductRequest::productCode).toList());
+    }
+
+    @Test
+    void shouldKeepMaximumBatchCodesUniqueBoundedAndUrlSafeForArbitraryKeys() {
+        List<ProductRequest> products =
+                generatorService
+                        .generateProducts("日本語 /?#".repeat(1000), 10_000)
+                        .collectList()
+                        .block();
+        assertThat(products).hasSize(10_000);
+        assertThat(products).extracting(ProductRequest::productCode).doesNotHaveDuplicates();
+        assertThat(products)
+                .allSatisfy(
+                        product -> {
+                            assertThat(product.productCode())
+                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}")
+                                    .hasSizeLessThanOrEqualTo(73);
+                            assertThat(product.imageUrl())
+                                    .isEqualTo(
+                                            "https://picsum.photos/seed/"
+                                                    + product.productCode()
+                                                    + "/300/200");
+                        });
+        assertThat(products.getLast().productCode()).endsWith("_9999");
     }
 }

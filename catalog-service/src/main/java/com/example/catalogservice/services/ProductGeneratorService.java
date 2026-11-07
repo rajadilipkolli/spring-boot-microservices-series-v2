@@ -9,6 +9,10 @@ package com.example.catalogservice.services;
 import com.example.catalogservice.model.request.ProductRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -172,7 +176,7 @@ public class ProductGeneratorService {
      * outbox events, and product caches are invalidated. Save failures propagate through the
      * returned Mono; Redis deletion failures are suppressed.
      *
-     * @param idempotencyKey included in each product code or used to scope generation batches
+     * @param idempotencyKey hashed to scope product codes; the same key and index reuse a code
      * @param batchSize number of products, from 1 through 10,000, or null for 100
      * @return true after all saves complete
      * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
@@ -188,7 +192,7 @@ public class ProductGeneratorService {
      * Generates unsaved sample product requests with realistic data, reproducible deterministic
      * variety, prices based on product type, and seed images from Picsum Photos.
      *
-     * @param idempotencyKey included in each product code or used for batch reference
+     * @param idempotencyKey hashed to scope product codes; the same key and index reuse a code
      * @param batchSize number of products, from 1 through 10,000, or null for 100
      * @return the generated requests
      * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
@@ -198,11 +202,25 @@ public class ProductGeneratorService {
         validateBatchSize(batchSize);
         int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
 
-        return Flux.range(0, resolvedBatchSize).map(i -> buildProductRequest(i, idempotencyKey));
+        String batchCode = batchCode(idempotencyKey);
+        return Flux.range(0, resolvedBatchSize).map(i -> buildProductRequest(i, batchCode));
     }
 
-    private ProductRequest buildProductRequest(int index, String idempotencyKey) {
-        String productCode = String.format("PROD%03d", index);
+    private static String batchCode(String idempotencyKey) {
+        try {
+            return HexFormat.of()
+                    .formatHex(
+                            MessageDigest.getInstance("SHA-256")
+                                    .digest(idempotencyKey.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(
+                    "SHA-256 is required for batch product codes", exception);
+        }
+    }
+
+    private ProductRequest buildProductRequest(int index, String batchCode) {
+        // At most 73 ASCII characters, below the portable product_code limit of 255.
+        String productCode = "PROD" + batchCode + "_" + index;
         ProductType type = PRODUCT_TYPES.get(index % PRODUCT_TYPES.size());
         String adjective =
                 DESCRIPTIVE_ADJECTIVES.get(
