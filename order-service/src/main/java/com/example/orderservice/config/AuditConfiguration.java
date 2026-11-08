@@ -23,6 +23,7 @@ public class AuditConfiguration {
         return () -> Optional.of("AppUser");
     }
 
+    /** Supplies the current instant each time JPA auditing requests a timestamp. */
     @Bean
     DateTimeProvider dateTimeProvider() {
         return () -> Optional.of(Instant.now());

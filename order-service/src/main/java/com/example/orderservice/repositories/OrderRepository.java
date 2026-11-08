@@ -77,7 +77,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o.id from Order o where o.deleted = false")
     Page<Long> findAllOrders(Pageable pageable);
 
-    // Intentionally unfiltered for background retry job so in-flight orders complete
+    /**
+     * Finds orders with the given status and a last modification time strictly before the cutoff,
+     * ordered by ID with items loaded. Includes soft-deleted orders for background retries; orders
+     * without a last modification time are excluded. Persistence failures propagate.
+     *
+     * @param lastModifiedDate exclusive cutoff for the last modification time
+     */
     @EntityGraph(attributePaths = {"items"})
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
             OrderStatus status, Instant lastModifiedDate);
