@@ -20,6 +20,8 @@ public class Configuration {
     // Pace / Think times
     public static final int MIN_PAUSE_MS = config.getInt("simulation.pace.minPauseMs");
     public static final int MAX_PAUSE_MS = config.getInt("simulation.pace.maxPauseMs");
+    public static final int ASYNC_POLL_PAUSE_SECONDS =
+            config.getInt("simulation.pace.asyncPollPauseSeconds");
 
     // SLAs
     public static final int SLA_MEAN_MS = config.getInt("simulation.sla.meanMs");
