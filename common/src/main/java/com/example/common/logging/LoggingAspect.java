@@ -166,6 +166,13 @@ public class LoggingAspect {
                         + LogSanitizer.sanitizeForLog(redactValue(methodName, result), 1024));
     }
 
+    /**
+     * Renders a value for logging. A missing or sensitive name and any value outside the supported
+     * scalar types produce {@code REDACTED}; a null value with a nonsensitive name produces {@code
+     * null}.
+     *
+     * @param name the parameter or method name used to identify sensitive values
+     */
     private static String redactValue(String name, Object value) {
         if (name == null || name.isBlank()) {
             return "REDACTED";

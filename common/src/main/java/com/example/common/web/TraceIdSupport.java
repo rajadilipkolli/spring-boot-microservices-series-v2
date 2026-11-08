@@ -41,8 +41,9 @@ public final class TraceIdSupport {
     }
 
     /**
-     * Resolves the trace ID from the given header supplier (if any), falling back to OpenTelemetry
-     * span context or SLF4J MDC.
+     * Resolves the first nonblank trace ID from the header supplier, a valid OpenTelemetry span, or
+     * the SLF4J MDC keys {@code traceId} and {@code trace_id}, in that order. Failures obtaining
+     * the OpenTelemetry trace ID are ignored; failures from the supplier propagate to the caller.
      *
      * @param headerSupplier optional supplier returning the incoming header value
      * @return resolved trace ID, or {@code null} if none is found
@@ -80,7 +81,7 @@ public final class TraceIdSupport {
      * ProblemDetail}.
      *
      * @param problemDetail the problem detail to inspect
-     * @return the existing trace ID, or {@code null} if absent or blank
+     * @return the existing trace ID, or {@code null} if absent, blank, or not a string
      */
     public static @Nullable String getExistingTraceId(@NonNull ProblemDetail problemDetail) {
         if (problemDetail.getProperties() != null) {
@@ -93,7 +94,10 @@ public final class TraceIdSupport {
     }
 
     /**
-     * Enriches {@link ProblemDetail} with a resolved trace ID if none is already present.
+     * Preserves an existing nonblank string {@code traceId} property. Otherwise, resolves a trace
+     * ID and sets the property if one is found; if none is found, the detail is unchanged. The
+     * header supplier is called only when there is no existing nonblank string trace ID, and its
+     * failures propagate to the caller.
      *
      * @param problemDetail the problem detail to enrich
      * @param headerSupplier optional supplier returning incoming header value
@@ -114,6 +118,10 @@ public final class TraceIdSupport {
     }
 
     private static class OtelTraceIdExtractor {
+        /**
+         * Returns the current valid span's trace ID, or {@code null} if unavailable or retrieval
+         * fails.
+         */
         static @Nullable String getTraceId() {
             try {
                 io.opentelemetry.api.trace.Span span = io.opentelemetry.api.trace.Span.current();

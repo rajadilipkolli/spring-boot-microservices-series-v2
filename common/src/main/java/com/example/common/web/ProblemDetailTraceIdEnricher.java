@@ -59,6 +59,10 @@ public class ProblemDetailTraceIdEnricher implements ResponseBodyAdvice<Object> 
         return body;
     }
 
+    /**
+     * Preserves an existing nonblank trace ID or resolves one from the request and trace context.
+     * Adds the effective ID to the response header when that header is absent.
+     */
     private void enrichProblemDetail(
             ProblemDetail problemDetail, ServerHttpRequest request, ServerHttpResponse response) {
         String traceId =
