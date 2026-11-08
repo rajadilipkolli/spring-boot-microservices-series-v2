@@ -8,6 +8,7 @@ import com.example.paymentservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -174,7 +175,7 @@ public class OutboxPublisher {
             return;
         }
         OffsetDateTime threshold =
-                OffsetDateTime.now().minus(properties.getOutbox().getLockTimeout());
+                OffsetDateTime.now(ZoneOffset.UTC).minus(properties.getOutbox().getLockTimeout());
         int reaped =
                 outboxEventRepository.reapStaleProcessing(
                         threshold, properties.getOutbox().getMaxRetries());

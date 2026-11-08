@@ -11,6 +11,7 @@ import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.entities.OutboxPayload;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ public class OutboxService {
                         .setPayload(new OutboxPayload(payloadString))
                         .setStatus(OutboxEventStatus.PENDING)
                         .setNew(true)
-                        .setCreatedAt(OffsetDateTime.now())
+                        .setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .setRetryCount(0);
 
         log.info(

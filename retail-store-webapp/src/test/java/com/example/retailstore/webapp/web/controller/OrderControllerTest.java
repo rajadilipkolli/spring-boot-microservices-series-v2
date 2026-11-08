@@ -29,7 +29,8 @@ import com.example.retailstore.webapp.config.SecurityConfig;
 import com.example.retailstore.webapp.services.OrderService;
 import com.example.retailstore.webapp.services.SecurityHelper;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,15 +90,15 @@ class OrderControllerTest {
                 new OrderItemResponse(2L, "PROD-2", 1, BigDecimal.valueOf(20.99), BigDecimal.valueOf(20.99)));
 
         // Create OrderResponse instances using the constructor
-        OrderResponse order1 = new OrderResponse(
-                1L, 1L, "NEW", "", address, LocalDateTime.now(), BigDecimal.valueOf(42.97), orderItems);
+        OrderResponse order1 =
+                new OrderResponse(1L, 1L, "NEW", "", address, Instant.now(), BigDecimal.valueOf(42.97), orderItems);
         OrderResponse order2 = new OrderResponse(
                 2L,
                 1L,
                 "DELIVERED",
                 "",
                 address,
-                LocalDateTime.now().minusDays(1),
+                Instant.now().minus(1, ChronoUnit.DAYS),
                 BigDecimal.valueOf(30.99),
                 List.of(new OrderItemResponse(3L, "PROD-3", 1, BigDecimal.valueOf(30.99), BigDecimal.valueOf(30.99))));
 

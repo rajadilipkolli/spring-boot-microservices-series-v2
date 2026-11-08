@@ -40,7 +40,7 @@ import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -105,7 +105,7 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         orderResponseList.add(
@@ -121,7 +121,7 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         orderResponseList.add(
@@ -137,7 +137,7 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         Page<OrderResponse> page = new PageImpl<>(orderResponseList);
@@ -283,7 +283,7 @@ class OrderControllerTest {
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -325,7 +325,7 @@ class OrderControllerTest {
         @Test
         void shouldRespectDelayParameter() throws Exception {
             Long orderId = 1L;
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -407,7 +407,7 @@ class OrderControllerTest {
                                     "state",
                                     "zipCode",
                                     "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of(orderItemDto));
             given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
@@ -536,7 +536,7 @@ class OrderControllerTest {
                                     "zipCode",
                                     "country"));
 
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -704,7 +704,7 @@ class OrderControllerTest {
                             "WEB",
                             new Address(
                                     "Address1", "Address2", "city", "state", "zipCode", "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of());
 
@@ -750,7 +750,7 @@ class OrderControllerTest {
                             "WEB",
                             new Address(
                                     "Address1", "Address2", "city", "state", "zipCode", "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of());
 

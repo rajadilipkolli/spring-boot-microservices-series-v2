@@ -12,6 +12,7 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicLong;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -94,7 +95,7 @@ public class OutboxHousekeepingService {
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
     @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {
-        OffsetDateTime threshold = OffsetDateTime.now().minusDays(retentionDays);
+        OffsetDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusDays(retentionDays);
         log.info("Starting cleanup of published events older than {}", threshold);
         outboxEventRepository
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
@@ -113,7 +114,8 @@ public class OutboxHousekeepingService {
     @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
     @SchedulerLock(name = "cleanupFailedEventsLock")
     public void cleanupFailedEvents() {
-        OffsetDateTime threshold = OffsetDateTime.now().minusDays(failedRetentionDays);
+        OffsetDateTime threshold =
+                OffsetDateTime.now(ZoneOffset.UTC).minusDays(failedRetentionDays);
         log.info("Starting cleanup of failed events older than {}", threshold);
         outboxEventRepository
                 .deleteAllByStatusAndProcessedAtBefore(OutboxEventStatus.FAILED, threshold)
@@ -132,7 +134,8 @@ public class OutboxHousekeepingService {
     @SchedulerLock(name = "scheduledReapLock")
     public void scheduledReap() {
         log.debug("Running outbox reaper");
-        OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
+        OffsetDateTime threshold =
+                OffsetDateTime.now(ZoneOffset.UTC).minus(properties.outbox().getLockTimeout());
         outboxEventRepository
                 .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
                 .doOnNext(

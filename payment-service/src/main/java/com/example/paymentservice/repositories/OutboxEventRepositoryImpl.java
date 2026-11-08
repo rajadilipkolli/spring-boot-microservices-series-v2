@@ -6,6 +6,7 @@ import static com.example.paymentservice.jooq.tables.OutboxEvents.OUTBOX_EVENTS;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import io.hypersistence.tsid.TSID;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
@@ -98,7 +99,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         if (limit <= 0) {
             return List.of();
         }
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         List<Long> claimedIds =
                 dslContext
                         .select(OUTBOX_EVENTS.ID)
@@ -141,7 +142,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                         .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                         .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                         .set(OUTBOX_EVENTS.VERSION, OUTBOX_EVENTS.VERSION.plus(1))
-                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now())
+                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(OUTBOX_EVENTS.ID.eq(id))
                         .and(OUTBOX_EVENTS.VERSION.eq(expectedVersion))
                         .execute();
@@ -163,7 +164,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                         .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                         .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                         .set(OUTBOX_EVENTS.VERSION, OUTBOX_EVENTS.VERSION.plus(1))
-                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now())
+                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(OUTBOX_EVENTS.ID.eq(id))
                         .and(OUTBOX_EVENTS.VERSION.eq(expectedVersion))
                         .execute();
@@ -186,7 +187,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                         .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                         .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                         .set(OUTBOX_EVENTS.VERSION, OUTBOX_EVENTS.VERSION.plus(1))
-                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now())
+                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(OUTBOX_EVENTS.ID.eq(id))
                         .and(OUTBOX_EVENTS.VERSION.eq(expectedVersion))
                         .execute();
@@ -206,7 +207,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                         .set(OUTBOX_EVENTS.STATUS, "PENDING")
                         .set(OUTBOX_EVENTS.PAYLOAD, payload)
                         .set(OUTBOX_EVENTS.VERSION, OUTBOX_EVENTS.VERSION.plus(1))
-                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now())
+                        .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(OUTBOX_EVENTS.AGGREGATE_ID.eq(aggregateId))
                         .and(OUTBOX_EVENTS.EVENT_TYPE.eq(eventType))
                         .and(OUTBOX_EVENTS.STATUS.eq("AWAITING_RESULT"))
@@ -237,7 +238,7 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
                 .set(OUTBOX_EVENTS.VERSION, OUTBOX_EVENTS.VERSION.plus(1))
                 .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                 .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
-                .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now())
+                .set(OUTBOX_EVENTS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .where(OUTBOX_EVENTS.STATUS.eq("PROCESSING"))
                 .and(OUTBOX_EVENTS.LOCKED_AT.lt(threshold))
                 .execute();

@@ -26,7 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface CustomerApi {
 
     /**
-     * Retrieves a sorted customer page with counts and navigation metadata.
+     * Retrieves a sorted customer page with counts and navigation metadata. Order creation
+     * timestamps in the order details are emitted in UTC with a 'Z' suffix (ISO-8601).
      *
      * @param pageNo zero-based page index; defaults to 0 when omitted
      * @param pageSize positive number of customers per page; defaults to 10 when omitted

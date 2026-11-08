@@ -6,19 +6,26 @@
 
 package com.example.orderservice.config;
 
+import java.time.Instant;
 import java.util.Optional;
-import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @Configuration(proxyBeanMethods = false)
-@EnableJpaAuditing(auditorAwareRef = "auditorProvider")
-class AuditConfiguration {
+@EnableJpaAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "dateTimeProvider")
+public class AuditConfiguration {
 
     @Bean
-    AuditorAware<@NonNull String> auditorProvider() {
+    AuditorAware<String> auditorProvider() {
         return () -> Optional.of("AppUser");
+    }
+
+    /** Supplies the current instant each time JPA auditing requests a timestamp. */
+    @Bean
+    DateTimeProvider dateTimeProvider() {
+        return () -> Optional.of(Instant.now());
     }
 }

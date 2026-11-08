@@ -13,6 +13,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,7 +84,8 @@ public class PaymentReconciler {
     public void reconcileBatch() {
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
-                OffsetDateTime.now().plus(properties.getOperation().getLeaseDuration());
+                OffsetDateTime.now(ZoneOffset.UTC)
+                        .plus(properties.getOperation().getLeaseDuration());
         List<PaymentOperationsRecord> claimedOps =
                 operationRepository.claimBatchForReconciliation(
                         ownerId, leaseUntil, properties.getReconciler().getBatchSize());
@@ -204,7 +206,7 @@ public class PaymentReconciler {
         if (backoff.compareTo(properties.getReconciler().getMaxBackoff()) > 0) {
             backoff = properties.getReconciler().getMaxBackoff();
         }
-        OffsetDateTime nextReconcileAt = OffsetDateTime.now().plus(backoff);
+        OffsetDateTime nextReconcileAt = OffsetDateTime.now(ZoneOffset.UTC).plus(backoff);
         operationRepository.updateStatus(
                 op.getId(), op.getFencingToken(), "UNKNOWN", nextReconcileAt);
     }

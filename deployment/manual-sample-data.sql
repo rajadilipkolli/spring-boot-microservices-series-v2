@@ -39,9 +39,9 @@ BEGIN
     
     -- Insert orders with known IDs
     INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city, delivery_address_state, delivery_address_zip_code, delivery_address_country, created_by, created_date) VALUES
-    (next_order_id, 401, 'NEW', 'WEB', '123 Main St', 'New York', 'NY', '10001', 'USA', 'system', '2024-01-15 10:30:00'),
-    (next_order_id + 1, 402, 'CONFIRMED', 'MOBILE', '456 Oak Ave', 'Los Angeles', 'CA', '90210', 'USA', 'system', '2024-01-16 14:15:00'),
-    (next_order_id + 2, 403, 'CONFIRMED', 'WEB', '789 Pine Rd', 'Chicago', 'IL', '60601', 'USA', 'system', '2024-01-10 09:45:00');
+    (next_order_id, 401, 'NEW', 'WEB', '123 Main St', 'New York', 'NY', '10001', 'USA', 'system', '2024-01-15 10:30:00+00'),
+    (next_order_id + 1, 402, 'CONFIRMED', 'MOBILE', '456 Oak Ave', 'Los Angeles', 'CA', '90210', 'USA', 'system', '2024-01-16 14:15:00+00'),
+    (next_order_id + 2, 403, 'CONFIRMED', 'WEB', '789 Pine Rd', 'Chicago', 'IL', '60601', 'USA', 'system', '2024-01-10 09:45:00+00');
     
     -- Insert order items with correct order IDs
     INSERT INTO order_items (product_code, quantity, product_price, order_id) VALUES

@@ -18,8 +18,12 @@ import com.example.retailstore.webapp.clients.order.OrderItemRequest;
 import com.example.retailstore.webapp.clients.order.OrderResponse;
 import com.example.retailstore.webapp.common.AbstractIntegrationTest;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -227,8 +231,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     assertThat(res.getCustomerId()).isEqualTo(405L);
                     assertThat(res.getTotalPrice()).isEqualByComparingTo(new BigDecimal("2199.98"));
                     assertThat(res.getStatus()).isEqualTo("CONFIRMED");
-                    assertThat(res.getCreatedDate())
-                            .isEqualTo(java.time.LocalDateTime.parse("2026-08-09T11:01:00.157888"));
+                    assertThat(res.getCreatedDate()).isEqualTo(Instant.parse("2026-08-09T11:01:00.157888Z"));
                     assertThat(res.getDeliveryAddress().addressLine1()).isEqualTo("Apt. 668 05736 Feeney Brooks");
                     assertThat(res.getDeliveryAddress().addressLine2()).isEqualTo("Port Salvatoreside");
                     assertThat(res.getDeliveryAddress().city()).isEqualTo("WI 14512");
@@ -241,6 +244,128 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     assertThat(res.getItems().get(1).itemId()).isEqualTo(203L);
                     assertThat(res.getItems().get(1).price()).isEqualByComparingTo(new BigDecimal("899.99"));
                 });
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "2026-08-09T11:01:00.157888, 2026-08-09T11:01:00.157888Z",
+        "2026-08-09T11:01:00.157888Z, 2026-08-09T11:01:00.157888Z",
+        "2026-08-09T16:31:00.157888+05:30, 2026-08-09T11:01:00.157888Z"
+    })
+    void testGetOrderWithVariousTimestampFormats(String inputCreatedDate, String expectedInstant) {
+        String literalJsonResponse = """
+                {
+                  "orderId": 103,
+                  "customerId": 405,
+                  "status": "CONFIRMED",
+                  "source": null,
+                  "deliveryAddress": {
+                    "addressLine1": "Apt. 668 05736 Feeney Brooks",
+                    "addressLine2": "Port Salvatoreside",
+                    "city": "WI 14512",
+                    "state": "TS",
+                    "zipCode": "500072",
+                    "country": "India"
+                  },
+                  "createdDate": "%s",
+                  "totalPrice": 2199.98,
+                  "items": []
+                }
+                """.formatted(inputCreatedDate);
+
+        CustomerResponse customerResponse = new CustomerResponse(
+                405L,
+                "Test User",
+                "testemail@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                BigDecimal.ZERO);
+
+        gatewayServiceMock.stubFor(
+                get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
+                        .willReturn(aResponse()
+                                .withStatus(HttpStatus.OK.value())
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .withBody(jsonMapper.writeValueAsString(customerResponse))));
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/103"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(literalJsonResponse)));
+
+        mockMvcTester
+                .get()
+                .uri("/api/orders/103")
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "testemail@gmail.com")))
+                .assertThat()
+                .hasStatus(HttpStatus.OK)
+                .hasContentType(MediaType.APPLICATION_JSON)
+                .bodyJson()
+                .convertTo(OrderResponse.class)
+                .satisfies(res -> {
+                    assertThat(res.getOrderId()).isEqualTo(103L);
+                    assertThat(res.getCreatedDate()).isEqualTo(Instant.parse(expectedInstant));
+                });
+    }
+
+    @Test
+    void testGetOrdersReturnsUtcDesignatedListValue() {
+        OrderResponse orderResponse = new OrderResponse();
+        orderResponse.setOrderId(104L);
+        orderResponse.setCustomerId(405L);
+        orderResponse.setStatus("CONFIRMED");
+        orderResponse.setCreatedDate(Instant.parse("2026-08-09T11:01:00.157888Z"));
+
+        PagedResult<OrderResponse> pagedResult =
+                new PagedResult<>(List.of(orderResponse), 1L, 1, 1, true, true, false, false);
+
+        CustomerResponse customerResponse = new CustomerResponse(
+                405L,
+                "Test User",
+                "testemail@gmail.com",
+                "1234567890",
+                "Test Address",
+                "Test Building",
+                "Test City",
+                "Test State",
+                "12345",
+                "Test Country",
+                BigDecimal.ZERO);
+
+        gatewayServiceMock.stubFor(
+                get(urlEqualTo("/payment-service/api/customers/by-email?email=testemail%40gmail.com"))
+                        .willReturn(aResponse()
+                                .withStatus(HttpStatus.OK.value())
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .withBody(jsonMapper.writeValueAsString(customerResponse))));
+
+        gatewayServiceMock.stubFor(get(urlEqualTo("/order-service/api/orders/customer/405"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.OK.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(jsonMapper.writeValueAsString(pagedResult))));
+
+        mockMvcTester
+                .get()
+                .uri("/api/orders")
+                .with(oidcLogin()
+                        .clientRegistration(clientRegistration())
+                        .idToken(token -> token.claim("email", "testemail@gmail.com")))
+                .assertThat()
+                .hasStatus(HttpStatus.OK)
+                .hasContentType(MediaType.APPLICATION_JSON)
+                .bodyJson()
+                .extractingPath("$.data[0].createdDate")
+                .asString()
+                .isEqualTo("2026-08-09T11:01:00.157888Z");
     }
 
     /**

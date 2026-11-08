@@ -443,6 +443,8 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      terraform:
+        condition: service_completed_successfully
       naming-server:
         condition: service_started
       api-gateway:

@@ -15,6 +15,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -229,6 +230,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
                             .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
                             .andExpect(jsonPath("$.createdDate", notNullValue()))
+                            .andExpect(jsonPath("$.createdDate", endsWith("Z")))
                             // Verify address fields
                             .andExpect(
                                     jsonPath(
@@ -706,7 +708,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.items[1].productPrice").value(closeTo(7.50, 0.01)))
                 .andExpect(jsonPath("$.items[1].price").value(closeTo(37.50, 0.01)))
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(232.35, 0.01)))
-                .andExpect(jsonPath("$.createdDate", notNullValue()));
+                .andExpect(jsonPath("$.createdDate", notNullValue()))
+                .andExpect(jsonPath("$.createdDate", endsWith("Z")));
 
         // Verify that the database was updated properly
         Order updatedOrder = orderRepository.findOrderById(orderId).orElseThrow();

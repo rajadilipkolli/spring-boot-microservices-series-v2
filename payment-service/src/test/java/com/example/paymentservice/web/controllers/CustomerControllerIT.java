@@ -24,7 +24,7 @@ import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -552,7 +552,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "COMPLETED",
                         "PAYMENT",
                         address,
-                        LocalDateTime.now(),
+                        Instant.parse("2026-10-10T12:00:00Z"),
                         BigDecimal.valueOf(20.0),
                         List.of(item));
 
@@ -569,6 +569,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data[0].orderId", is("1")))
                 .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
+                .andExpect(jsonPath("$.data[0].createdDate", is("2026-10-10T12:00:00Z")))
                 .andExpect(jsonPath("$.data[0].items[0].itemId", is("100")))
                 .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10)))
                 .andExpect(jsonPath("$.data[0].items[0].price", is(20.0)))

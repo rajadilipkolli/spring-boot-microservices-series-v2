@@ -14,6 +14,7 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -128,13 +129,14 @@ public class OutboxPublisher {
      *     persistence errors propagate to the caller
      */
     private Mono<OutboxEvent> handleSuccess(OutboxEvent event) {
-        event.setStatus(OutboxEventStatus.PUBLISHED).setProcessedAt(OffsetDateTime.now());
+        event.setStatus(OutboxEventStatus.PUBLISHED)
+                .setProcessedAt(OffsetDateTime.now(ZoneOffset.UTC));
         return outboxEventRepository
                 .save(event)
-                .doOnSuccess(saved -> publishedEventCounter.increment())
+                .doOnSuccess(_ -> publishedEventCounter.increment())
                 .onErrorResume(
                         OptimisticLockingFailureException.class,
-                        ex -> {
+                        _ -> {
                             log.warn(
                                     "Optimistic locking conflict on OutboxEvent {}: skipping",
                                     event.getId());
@@ -164,7 +166,7 @@ public class OutboxPublisher {
         } else {
             log.error("Event {} failed after max retries: {}", event.getId(), error);
             event.setStatus(OutboxEventStatus.FAILED)
-                    .setProcessedAt(OffsetDateTime.now())
+                    .setProcessedAt(OffsetDateTime.now(ZoneOffset.UTC))
                     .setErrorMessage(error);
             return outboxEventRepository
                     .save(event)
