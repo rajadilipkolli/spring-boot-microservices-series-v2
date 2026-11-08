@@ -8,7 +8,7 @@ package com.example.orderservice.repositories;
 
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -80,5 +80,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Intentionally unfiltered for background retry job so in-flight orders complete
     @EntityGraph(attributePaths = {"items"})
     List<Order> findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
-            OrderStatus status, LocalDateTime lastModifiedDate);
+            OrderStatus status, Instant lastModifiedDate);
 }

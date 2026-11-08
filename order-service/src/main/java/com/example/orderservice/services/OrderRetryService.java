@@ -14,7 +14,8 @@ import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.repositories.OrderRepository;
 import io.micrometer.observation.annotation.Observed;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public class OrderRetryService {
         // fetch all orders where Status is New in Order
         List<Order> byStatusOrderByIdAsc =
                 orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
-                        OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
+                        OrderStatus.NEW, Instant.now().minus(5, ChronoUnit.MINUTES));
         byStatusOrderByIdAsc.forEach(
                 order -> {
                     try {
@@ -69,7 +70,7 @@ public class OrderRetryService {
                         eventPublisher.publishEvent(persistedOrderDto);
 
                         // Update lastModifiedDate to prevent immediate repolling and endless spam
-                        order.setLastModifiedDate(LocalDateTime.now());
+                        order.setLastModifiedDate(Instant.now());
                         orderRepository.save(order);
                     } catch (Exception e) {
                         log.error("Failed to retry publishing order :{}", order.getId(), e);

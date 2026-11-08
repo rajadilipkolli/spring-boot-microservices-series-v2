@@ -21,7 +21,7 @@ import com.example.retailstore.webapp.clients.order.OrderServiceClient;
 import com.example.retailstore.webapp.exception.InvalidRequestException;
 import com.example.retailstore.webapp.exception.ResourceNotFoundException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ class OrderServiceTest {
         List<OrderItemResponse> items =
                 List.of(new OrderItemResponse(1L, "PROD-1", 2, BigDecimal.TEN, BigDecimal.valueOf(20)));
         OrderResponse orderResponse =
-                new OrderResponse(1L, 1L, "NEW", "", address, LocalDateTime.now(), BigDecimal.valueOf(20), items);
+                new OrderResponse(1L, 1L, "NEW", "", address, Instant.now(), BigDecimal.valueOf(20), items);
 
         when(orderServiceClient.getOrder(orderNumber)).thenReturn(orderResponse);
         when(securityHelper.getLoggedInUserEmail()).thenReturn("test@example.com");
@@ -89,7 +89,7 @@ class OrderServiceTest {
         String orderNumber = "ORD-001";
         Address address = new Address("123 Test St", "Apt 4", "Test City", "TS", "12345", "US");
         OrderResponse orderResponse =
-                new OrderResponse(1L, 999L, "NEW", "", address, LocalDateTime.now(), BigDecimal.TEN, List.of());
+                new OrderResponse(1L, 999L, "NEW", "", address, Instant.now(), BigDecimal.TEN, List.of());
 
         when(orderServiceClient.getOrder(orderNumber)).thenReturn(orderResponse);
         when(securityHelper.getLoggedInUserEmail()).thenReturn("test@example.com");

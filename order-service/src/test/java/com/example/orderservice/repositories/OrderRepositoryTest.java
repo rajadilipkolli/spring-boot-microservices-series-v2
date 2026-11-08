@@ -11,8 +11,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.orderservice.common.OrderServicePostGreSQLContainer;
+import com.example.orderservice.config.AuditConfiguration;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.util.TestData;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +35,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({PROFILE_TEST})
-@Import(OrderServicePostGreSQLContainer.class)
+@Import({OrderServicePostGreSQLContainer.class, AuditConfiguration.class})
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate"})
 class OrderRepositoryTest {
 
@@ -313,6 +317,90 @@ class OrderRepositoryTest {
                     orderSearchRepository.searchOrdersBySimilarity(
                             "NoMatchHere", 0.3, null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
+        }
+
+        @Test
+        void
+                findByStatusAndLastModifiedDateLessThanOrderByIdAsc_RespectsRetryBoundaryAndStatusFilter() {
+            Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+            Instant cutoff = now.minus(5, ChronoUnit.MINUTES);
+
+            // Row 1: NEW, lastModifiedDate 10 minutes ago (with explicit SQL offset +00) -> should
+            // be included
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1001, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 10:00:00+00')
+                    """);
+
+            // Row 2: NEW, lastModifiedDate 10 minutes ago (with explicit SQL offset +05:30) ->
+            // should be included
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1002, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 15:30:00+05:30')
+                    """);
+
+            // Row 3: CONFIRMED (non-NEW), lastModifiedDate 10 minutes ago -> excluded by status
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1003, 1, 'CONFIRMED', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 10:00:00+00')
+                    """);
+
+            // Row 4: NEW, lastModifiedDate NULL -> excluded by null comparison
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1004, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', NULL)
+                    """);
+
+            // Row 5: NEW, lastModifiedDate 1 minute ago (strictly after cutoff) -> excluded by
+            // boundary
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1005, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', ?)
+                    """,
+                    java.sql.Timestamp.from(now.minus(1, ChronoUnit.MINUTES)));
+
+            // Also test JPA audited row persistence and epoch comparison
+            Order auditedOrder = TestData.getOrder();
+            auditedOrder.setStatus(OrderStatus.NEW);
+            Order savedOrder = orderRepository.saveAndFlush(auditedOrder);
+            assertThat(savedOrder.getCreatedDate()).isNotNull();
+
+            // Read back via JDBC to compare epoch seconds
+            long epochSecondsFromDb =
+                    jdbcTemplate.queryForObject(
+                            "SELECT EXTRACT(EPOCH FROM created_date)::bigint FROM orders WHERE id = ?",
+                            Long.class,
+                            savedOrder.getId());
+            assertThat(epochSecondsFromDb)
+                    .isCloseTo(
+                            savedOrder.getCreatedDate().getEpochSecond(),
+                            org.assertj.core.data.Offset.offset(1L));
+
+            List<Order> result =
+                    orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+                            OrderStatus.NEW, cutoff);
+
+            assertThat(result).extracting(Order::getId).containsExactly(1001L, 1002L);
         }
     }
 }

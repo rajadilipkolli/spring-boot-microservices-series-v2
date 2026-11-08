@@ -21,6 +21,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -103,7 +104,8 @@ public class PaymentOperationEngine {
 
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
-                OffsetDateTime.now().plus(properties.getOperation().getLeaseDuration());
+                OffsetDateTime.now(ZoneOffset.UTC)
+                        .plus(properties.getOperation().getLeaseDuration());
 
         ArrivalResult arrival =
                 executeArrival(
@@ -206,7 +208,8 @@ public class PaymentOperationEngine {
 
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
-                OffsetDateTime.now().plus(properties.getOperation().getLeaseDuration());
+                OffsetDateTime.now(ZoneOffset.UTC)
+                        .plus(properties.getOperation().getLeaseDuration());
 
         ArrivalResult arrival =
                 executeArrival(
@@ -324,7 +327,8 @@ public class PaymentOperationEngine {
                                         locked.getId(), currentToken, ownerId, leaseUntil);
                     } else if ("IN_FLIGHT".equals(locked.getStatus())
                             && locked.getLeaseUntil() != null
-                            && locked.getLeaseUntil().isBefore(OffsetDateTime.now())) {
+                            && locked.getLeaseUntil()
+                                    .isBefore(OffsetDateTime.now(ZoneOffset.UTC))) {
                         claimed =
                                 operationRepository.claim(
                                         locked.getId(), currentToken, ownerId, leaseUntil);
@@ -407,7 +411,7 @@ public class PaymentOperationEngine {
                 transactionTemplate.execute(
                         status -> {
                             OffsetDateTime nextReconcileAt =
-                                    OffsetDateTime.now()
+                                    OffsetDateTime.now(ZoneOffset.UTC)
                                             .plus(properties.getReconciler().getInitialBackoff());
                             return operationRepository.updateStatus(
                                     operationId, fencingToken, "UNKNOWN", nextReconcileAt);

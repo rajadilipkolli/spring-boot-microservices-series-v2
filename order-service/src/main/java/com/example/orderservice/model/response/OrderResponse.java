@@ -10,7 +10,7 @@ import com.example.orderservice.model.Address;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "Order details response")
@@ -27,8 +27,8 @@ public record OrderResponse(
                 String status,
         @Schema(description = "Order source", example = "WEB") String source,
         @Schema(description = "Delivery address") Address deliveryAddress,
-        @Schema(description = "Order creation timestamp", example = "2026-01-01T12:00:00")
-                LocalDateTime createdDate,
+        @Schema(description = "Order creation timestamp", example = "2026-01-01T12:00:00Z")
+                Instant createdDate,
         @Schema(description = "Total order price", example = "199.99")
                 @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
                 BigDecimal totalPrice,

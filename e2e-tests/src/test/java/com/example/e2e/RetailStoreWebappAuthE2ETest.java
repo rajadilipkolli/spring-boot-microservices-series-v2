@@ -9,6 +9,7 @@ package com.example.e2e;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -266,7 +267,9 @@ class RetailStoreWebappAuthE2ETest {
                 .then()
                 .statusCode(200)
                 .body("orderId.toString()", equalTo(String.valueOf(createdOrderId)))
-                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)));
+                .body("customerId.toString()", equalTo(String.valueOf(createdCustomerId)))
+                .body("createdDate", notNullValue())
+                .body("createdDate", endsWith("Z"));
     }
 
     @Test

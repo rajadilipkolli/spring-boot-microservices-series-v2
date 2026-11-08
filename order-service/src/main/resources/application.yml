@@ -62,6 +62,11 @@ spring:
   threads:
     virtual:
       enabled: true
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   testcontainers:
     beans:
       startup: parallel

@@ -6,6 +6,7 @@ import static com.example.paymentservice.jooq.tables.PaymentOperations.PAYMENT_O
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
 import io.hypersistence.tsid.TSID;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
@@ -121,7 +122,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                         .set(
                                 PAYMENT_OPERATIONS.ATTEMPT_COUNT,
                                 PAYMENT_OPERATIONS.ATTEMPT_COUNT.plus(1))
-                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now())
+                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(PAYMENT_OPERATIONS.ID.eq(id))
                         .and(PAYMENT_OPERATIONS.FENCING_TOKEN.eq(expectedFencingToken))
                         .and(PAYMENT_OPERATIONS.STATUS.in("RECEIVED", "IN_FLIGHT"))
@@ -141,7 +142,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                         .update(PAYMENT_OPERATIONS)
                         .set(PAYMENT_OPERATIONS.STATUS, status)
                         .set(PAYMENT_OPERATIONS.RESULT, result)
-                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now())
+                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(PAYMENT_OPERATIONS.ID.eq(id))
                         .and(PAYMENT_OPERATIONS.FENCING_TOKEN.eq(expectedFencingToken))
                         .execute();
@@ -161,7 +162,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
                         .update(PAYMENT_OPERATIONS)
                         .set(PAYMENT_OPERATIONS.STATUS, status)
                         .set(PAYMENT_OPERATIONS.NEXT_RECONCILE_AT, nextReconcileAt)
-                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now())
+                        .set(PAYMENT_OPERATIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                         .where(PAYMENT_OPERATIONS.ID.eq(id))
                         .and(PAYMENT_OPERATIONS.FENCING_TOKEN.eq(expectedFencingToken))
                         .execute();
@@ -177,7 +178,7 @@ public class PaymentOperationRepositoryImpl implements PaymentOperationRepositor
     @Transactional
     public List<PaymentOperationsRecord> claimBatchForReconciliation(
             String ownerId, OffsetDateTime leaseUntil, int limit) {
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         List<Long> claimedIds =
                 dslContext
                         .select(PAYMENT_OPERATIONS.ID)
