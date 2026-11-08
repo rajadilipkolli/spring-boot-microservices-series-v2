@@ -116,10 +116,7 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                     .get(
                                                                             "/inventory-service/api/inventory/#{productCode}")
                                                                     .check(
-                                                                            status().in(
-                                                                                            200,
-                                                                                            404,
-                                                                                            503)
+                                                                            status().in(200, 404)
                                                                                     .saveAs(
                                                                                             "inventoryStatus"))
                                                                     .checkIf(

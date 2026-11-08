@@ -30,14 +30,21 @@ require() {
     command -v "$1" &>/dev/null || { log_error "Required tool '$1' not found."; exit 1; }
 }
 
-if command -v python3 &>/dev/null; then
-    PYTHON_CMD="python3"
-elif command -v python &>/dev/null; then
-    PYTHON_CMD="python"
-elif command -v py &>/dev/null; then
-    PYTHON_CMD="py"
-else
-    log_error "Required tool 'python3' or 'python' not found."
+PYTHON_CMD=()
+for candidate in python3 python py; do
+    command -v "$candidate" &>/dev/null || continue
+    candidate_cmd=("$candidate")
+    if [[ "$candidate" == "py" ]]; then
+        candidate_cmd+=(-3)
+    fi
+    if "${candidate_cmd[@]}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 6) else 1)' &>/dev/null; then
+        PYTHON_CMD=("${candidate_cmd[@]}")
+        break
+    fi
+done
+
+if [[ ${#PYTHON_CMD[@]} -eq 0 ]]; then
+    log_error "Python 3.6 or later is required (tried python3, python, and py -3)."
     exit 1
 fi
 
@@ -58,7 +65,7 @@ log_info "Parsing: ${LATEST_HTML}"
 # Extract global stats from index.html using Python
 # Gatling 3.10+ uses a binary simulation.log, so we must parse the HTML report.
 # ─────────────────────────────────────────────────────────────────────────────
-CURRENT_JSON=$("$PYTHON_CMD" - "${LATEST_HTML}" <<'PYEOF'
+CURRENT_JSON=$("${PYTHON_CMD[@]}" - "${LATEST_HTML}" <<'PYEOF'
 import sys, json, re
 
 html_file = sys.argv[1]
@@ -112,7 +119,7 @@ cat "${BASELINE_FILE}"
 # ─────────────────────────────────────────────────────────────────────────────
 # Compare metrics; fail if any key metric degrades beyond threshold
 # ─────────────────────────────────────────────────────────────────────────────
-if REGRESSION_DETECTED=$("$PYTHON_CMD" - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
+if REGRESSION_DETECTED=$("${PYTHON_CMD[@]}" - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
 import sys, json
 
 baseline_file = sys.argv[1]
