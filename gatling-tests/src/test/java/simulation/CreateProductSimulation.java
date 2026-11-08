@@ -1,5 +1,6 @@
 package simulation;
 
+import static config.Configuration.ASYNC_POLL_PAUSE_SECONDS;
 import static config.Configuration.CONSTANT_USERS;
 import static config.Configuration.MAX_PAUSE_MS;
 import static config.Configuration.MIN_PAUSE_MS;
@@ -88,21 +89,18 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                     jsonPath("$.productCode")
                                             .is(session -> session.getString("productCode"))));
 
-    // Pause dynamically before the first inventory check so Kafka has time to process the
-    // ProductCreated event. Then retry up to 8 times with dynamic pause between each attempt.
+    // Pause before the first inventory check so Kafka has time to process the
+    // ProductCreated event. Then retry up to 8 times with configured pause between each attempt.
     private final ChainBuilder getInventory =
             exec(session -> session)
-                    .pause(_ -> randomPause())
+                    .pause(Duration.ofSeconds(ASYNC_POLL_PAUSE_SECONDS))
                     .exec(
                             tryMax(8, "inventoryRetryCounter")
                                     .on(
-                                            exec(session -> {
-                                                        // Clear stale session data before each
-                                                        // attempt
-                                                        return session.remove("inventoryId")
-                                                                .remove("availableQuantity")
-                                                                .remove("inventoryStatus");
-                                                    })
+                                            exec(session ->
+                                                            session.remove("inventoryId")
+                                                                    .remove("availableQuantity")
+                                                                    .remove("inventoryStatus"))
                                                     .doIf(
                                                             session ->
                                                                     session.getInt(
@@ -110,13 +108,18 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                             > 0)
                                                     .then(
                                                             exec(session -> session)
-                                                                    .pause(_ -> randomPause()))
+                                                                    .pause(
+                                                                            Duration.ofSeconds(
+                                                                                    ASYNC_POLL_PAUSE_SECONDS)))
                                                     .exec(
                                                             http("Get product inventory")
                                                                     .get(
                                                                             "/inventory-service/api/inventory/#{productCode}")
                                                                     .check(
-                                                                            status().in(200, 404)
+                                                                            status().in(
+                                                                                            200,
+                                                                                            404,
+                                                                                            503)
                                                                                     .saveAs(
                                                                                             "inventoryStatus"))
                                                                     .checkIf(
@@ -150,11 +153,14 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                                         + " available"
                                                                                         + " for product"
                                                                                         + " code: {},"
-                                                                                        + " attempt: {}",
+                                                                                        + " attempt: {},"
+                                                                                        + " status: {}",
                                                                                 session.getString(
                                                                                         "productCode"),
                                                                                 session.getInt(
-                                                                                        "inventoryRetryCounter"));
+                                                                                        "inventoryRetryCounter"),
+                                                                                session.get(
+                                                                                        "inventoryStatus"));
                                                                         return session
                                                                                 .markAsFailed();
                                                                     }))))
@@ -174,7 +180,7 @@ public class CreateProductSimulation extends BaseLoadSimulation {
 
     private final ChainBuilder updateInventory =
             exec(http("Update inventory")
-                            .put("/inventory-service/api/inventory/#{inventoryId}")
+                            .put("/inventory-service/api/inventory/product/#{productCode}")
                             .body(
                                     StringBody(
                                             """

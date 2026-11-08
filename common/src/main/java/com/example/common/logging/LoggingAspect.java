@@ -27,6 +27,10 @@ public class LoggingAspect {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
 
+    private static final Pattern CAMEL_CASE_1 =
+            Pattern.compile("(\\p{Upper}+)(\\p{Upper}\\p{Lower})");
+    private static final Pattern CAMEL_CASE_2 = Pattern.compile("([\\p{Lower}\\d])(\\p{Upper})");
+
     private static final Pattern SENSITIVE_NAME =
             Pattern.compile(
                     "(?i)password|credit[_-]?card|"
@@ -169,8 +173,9 @@ public class LoggingAspect {
 
         // Split camel case and acronyms so SSN matches without matching className/businessName.
         String words =
-                name.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
-                        .replaceAll("([a-z0-9])([A-Z])", "$1_$2");
+                CAMEL_CASE_2
+                        .matcher(CAMEL_CASE_1.matcher(name).replaceAll("$1_$2"))
+                        .replaceAll("$1_$2");
         if (SENSITIVE_NAME.matcher(words).find()) {
             return "REDACTED";
         }

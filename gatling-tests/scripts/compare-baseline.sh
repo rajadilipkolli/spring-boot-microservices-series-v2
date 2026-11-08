@@ -30,7 +30,16 @@ require() {
     command -v "$1" &>/dev/null || { log_error "Required tool '$1' not found."; exit 1; }
 }
 
-require python3
+if command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
+elif command -v py &>/dev/null; then
+    PYTHON_CMD="py"
+else
+    log_error "Required tool 'python3' or 'python' not found."
+    exit 1
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Locate the latest index.html
@@ -49,7 +58,7 @@ log_info "Parsing: ${LATEST_HTML}"
 # Extract global stats from index.html using Python
 # Gatling 3.10+ uses a binary simulation.log, so we must parse the HTML report.
 # ─────────────────────────────────────────────────────────────────────────────
-CURRENT_JSON=$(python3 - "${LATEST_HTML}" <<'PYEOF'
+CURRENT_JSON=$("$PYTHON_CMD" - "${LATEST_HTML}" <<'PYEOF'
 import sys, json, re
 
 html_file = sys.argv[1]
@@ -103,7 +112,7 @@ cat "${BASELINE_FILE}"
 # ─────────────────────────────────────────────────────────────────────────────
 # Compare metrics; fail if any key metric degrades beyond threshold
 # ─────────────────────────────────────────────────────────────────────────────
-if REGRESSION_DETECTED=$(python3 - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
+if REGRESSION_DETECTED=$("$PYTHON_CMD" - "${BASELINE_FILE}" "${CURRENT_JSON}" "${THRESHOLD}" <<'PYEOF'
 import sys, json
 
 baseline_file = sys.argv[1]

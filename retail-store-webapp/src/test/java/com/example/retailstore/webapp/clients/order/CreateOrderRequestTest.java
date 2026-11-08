@@ -1,6 +1,5 @@
 package com.example.retailstore.webapp.clients.order;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -53,7 +52,11 @@ class CreateOrderRequestTest {
                 new CustomerRequest(
                         "retail", "retail@gmail.com", "(274) 748-2938", null, null, null, null, null, null, null),
                 new Address("280 Rick Lakes", "Arnoldland", "FL 86710", "TS", "500072", "India"));
-        assertThat(this.json.parse(jsonContent)).isEqualTo(expected);
+        this.json
+                .parse(jsonContent)
+                .assertThat()
+                .isInstanceOf(CreateOrderRequest.class)
+                .isEqualTo(expected);
     }
 
     /**
