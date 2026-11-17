@@ -76,11 +76,8 @@ public class OutboxPublisher {
             try {
                 this.publishEvents()
                         .doOnNext(event -> log.debug("Published outbox event: {}", event.getId()))
-                        .doOnError(
-                                ex ->
-                                        log.error(
-                                                "Error occurred while publishing outbox events",
-                                                ex))
+                        .doOnError(ex ->
+                                log.error("Error occurred while publishing outbox events", ex))
                         .onErrorComplete()
                         .blockLast();
             } finally {
@@ -111,14 +108,13 @@ public class OutboxPublisher {
         log.info("Sending outbox event to Kafka: {}", event.getId());
         return catalogKafkaProducer
                 .send(event.getAggregateId(), event.getPayload().content())
-                .flatMap(
-                        success -> {
-                            if (success) {
-                                return handleSuccess(event);
-                            } else {
-                                return handleFailure(event, "Kafka send returned false");
-                            }
-                        })
+                .flatMap(success -> {
+                    if (success) {
+                        return handleSuccess(event);
+                    } else {
+                        return handleFailure(event, "Kafka send returned false");
+                    }
+                })
                 .onErrorResume(ex -> handleFailure(event, ex.getMessage()));
     }
 

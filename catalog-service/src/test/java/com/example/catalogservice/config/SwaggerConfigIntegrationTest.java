@@ -53,9 +53,8 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
                 .exists()
                 .jsonPath(
                         "$.paths['/api/catalog'].get.responses['200'].content['application/json'].schema.$ref")
-                .value(
-                        ref ->
-                                org.assertj.core.api.Assertions.assertThat((String) ref)
-                                        .contains("ProductResponse"));
+                .value(ref ->
+                        org.assertj.core.api.Assertions.assertThat((String) ref)
+                                .contains("ProductResponse"));
     }
 }

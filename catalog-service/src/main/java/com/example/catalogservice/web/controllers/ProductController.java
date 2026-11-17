@@ -101,11 +101,10 @@ public class ProductController implements ProductApi {
             @RequestBody @Valid ProductRequest productRequest) {
         return productService
                 .saveProduct(productRequest)
-                .map(
-                        productResponse -> {
-                            URI location = URI.create("/api/catalog/id/" + productResponse.id());
-                            return ResponseEntity.created(location).body(productResponse);
-                        });
+                .map(productResponse -> {
+                    URI location = URI.create("/api/catalog/id/" + productResponse.id());
+                    return ResponseEntity.created(location).body(productResponse);
+                });
     }
 
     /**
@@ -131,11 +130,10 @@ public class ProductController implements ProductApi {
     public Mono<ResponseEntity<ProductResponse>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findByIdWithMapping(id)
-                .flatMap(
-                        product ->
-                                productService
-                                        .deleteProductById(id)
-                                        .then(Mono.just(ResponseEntity.ok(product))))
+                .flatMap(product ->
+                        productService
+                                .deleteProductById(id)
+                                .then(Mono.just(ResponseEntity.ok(product))))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 

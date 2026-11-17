@@ -102,36 +102,33 @@ public class InventoryServiceProxy {
                 "Fetching inventory information for productCodes : {}",
                 LogSanitizer.sanitizeCollection(productCodeList));
         return fetchInventoryPage(productCodeList, 0)
-                .expand(
-                        page -> {
-                            if (page.hasNext()) {
-                                return fetchInventoryPage(productCodeList, page.pageNumber() + 1);
-                            }
-                            return Mono.empty();
-                        })
+                .expand(page -> {
+                    if (page.hasNext()) {
+                        return fetchInventoryPage(productCodeList, page.pageNumber() + 1);
+                    }
+                    return Mono.empty();
+                })
                 .flatMapIterable(PagedResult::data)
                 .transformDeferred(CircuitBreakerOperator.of(batchCircuitBreaker))
-                .onErrorResume(
-                        throwable ->
-                                getInventoryByProductCodesFallBack(
-                                        throwable instanceof Exception ex
-                                                ? ex
-                                                : new RuntimeException(throwable)));
+                .onErrorResume(throwable ->
+                        getInventoryByProductCodesFallBack(
+                                throwable instanceof Exception ex
+                                        ? ex
+                                        : new RuntimeException(throwable)));
     }
 
     private Mono<PagedResult<InventoryResponse>> fetchInventoryPage(
             List<String> productCodeList, int pageNo) {
         return webClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder.path("/api/inventory/product");
-                            uriBuilder.queryParam("codes", productCodeList);
-                            if (pageNo > 0) {
-                                uriBuilder.queryParam("pageNo", pageNo);
-                            }
-                            return uriBuilder.build();
-                        })
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/api/inventory/product");
+                    uriBuilder.queryParam("codes", productCodeList);
+                    if (pageNo > 0) {
+                        uriBuilder.queryParam("pageNo", pageNo);
+                    }
+                    return uriBuilder.build();
+                })
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<PagedResult<InventoryResponse>>() {});
     }

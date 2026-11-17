@@ -44,49 +44,39 @@ public class ProductAvailabilityEnricher {
             Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
         return productResponseFlux
                 .collectList()
-                .flatMap(
-                        productResponseList -> {
-                            if (productResponseList.isEmpty()) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
+                .flatMap(productResponseList -> {
+                    if (productResponseList.isEmpty()) {
+                        return Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(Collections.emptyList(), pageable, 0)));
+                    }
 
-                            List<String> productCodes =
+                    List<String> productCodes =
+                            productResponseList.stream().map(ProductResponse::productCode).toList();
+
+                    return inventoryServiceProxy
+                            .getInventoryByProductCodes(productCodes)
+                            .collectMap(
+                                    InventoryResponse::productCode,
+                                    InventoryResponse::availableQuantity)
+                            .map(inventoriesMap ->
                                     productResponseList.stream()
-                                            .map(ProductResponse::productCode)
-                                            .toList();
-
-                            return inventoryServiceProxy
-                                    .getInventoryByProductCodes(productCodes)
-                                    .collectMap(
-                                            InventoryResponse::productCode,
-                                            InventoryResponse::availableQuantity)
-                                    .map(
-                                            inventoriesMap ->
-                                                    productResponseList.stream()
-                                                            .map(
-                                                                    product ->
-                                                                            product.withInStock(
-                                                                                    inventoriesMap
-                                                                                                    .getOrDefault(
-                                                                                                            product
-                                                                                                                    .productCode(),
-                                                                                                            0)
-                                                                                            > 0))
-                                                            .toList())
-                                    .map(
-                                            updatedList ->
-                                                    new PagedResult<>(
-                                                            new PageImpl<>(
-                                                                    updatedList,
-                                                                    pageable,
-                                                                    totalCount != null
-                                                                            ? totalCount
-                                                                            : productResponseList
-                                                                                    .size())));
-                        });
+                                            .map(product ->
+                                                    product.withInStock(
+                                                            inventoriesMap.getOrDefault(
+                                                                            product.productCode(),
+                                                                            0)
+                                                                    > 0))
+                                            .toList())
+                            .map(updatedList ->
+                                    new PagedResult<>(
+                                            new PageImpl<>(
+                                                    updatedList,
+                                                    pageable,
+                                                    totalCount != null
+                                                            ? totalCount
+                                                            : productResponseList.size())));
+                });
     }
 
     /**

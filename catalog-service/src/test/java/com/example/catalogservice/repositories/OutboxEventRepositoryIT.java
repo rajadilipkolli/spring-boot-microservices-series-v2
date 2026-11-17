@@ -145,25 +145,23 @@ class OutboxEventRepositoryIT extends AbstractIntegrationTest {
         outboxEventRepository.saveAll(List.of(event1, event2)).collectList().block();
 
         StepVerifier.create(outboxEventRepository.claimPendingEvents(1))
-                .assertNext(
-                        claimed -> {
-                            assertThat(claimed.getId()).isEqualTo(event1.getId());
-                            assertThat(claimed.getStatus()).isEqualTo(OutboxEventStatus.PROCESSING);
-                            assertThat(claimed.getLockedAt()).isNotNull();
-                            assertThat(claimed.getVersion()).isEqualTo(1);
-                            assertThat(claimed.getPayload().content()).contains("P001");
-                        })
+                .assertNext(claimed -> {
+                    assertThat(claimed.getId()).isEqualTo(event1.getId());
+                    assertThat(claimed.getStatus()).isEqualTo(OutboxEventStatus.PROCESSING);
+                    assertThat(claimed.getLockedAt()).isNotNull();
+                    assertThat(claimed.getVersion()).isEqualTo(1);
+                    assertThat(claimed.getPayload().content()).contains("P001");
+                })
                 .verifyComplete();
 
         StepVerifier.create(outboxEventRepository.claimPendingEvents(1))
-                .assertNext(
-                        claimed -> {
-                            assertThat(claimed.getId()).isEqualTo(event2.getId());
-                            assertThat(claimed.getStatus()).isEqualTo(OutboxEventStatus.PROCESSING);
-                            assertThat(claimed.getLockedAt()).isNotNull();
-                            assertThat(claimed.getVersion()).isEqualTo(1);
-                            assertThat(claimed.getPayload().content()).contains("P002");
-                        })
+                .assertNext(claimed -> {
+                    assertThat(claimed.getId()).isEqualTo(event2.getId());
+                    assertThat(claimed.getStatus()).isEqualTo(OutboxEventStatus.PROCESSING);
+                    assertThat(claimed.getLockedAt()).isNotNull();
+                    assertThat(claimed.getVersion()).isEqualTo(1);
+                    assertThat(claimed.getPayload().content()).contains("P002");
+                })
                 .verifyComplete();
 
         StepVerifier.create(outboxEventRepository.claimPendingEvents(1)).verifyComplete();
