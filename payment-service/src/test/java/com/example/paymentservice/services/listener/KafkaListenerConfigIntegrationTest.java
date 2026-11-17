@@ -43,12 +43,11 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         assertThat(this.customerDAO.findById(customer.getId()))
                 .isPresent()
                 .get()
-                .satisfies(
-                        customer -> {
-                            assertThat(customer.getName()).isEqualTo(uniqueName);
-                            assertThat(customer.getEmail()).isEqualTo(uniqueEmail);
-                            assertThat(customer.getId()).isNotEqualTo(1);
-                        });
+                .satisfies(customer -> {
+                    assertThat(customer.getName()).isEqualTo(uniqueName);
+                    assertThat(customer.getEmail()).isEqualTo(uniqueEmail);
+                    assertThat(customer.getId()).isNotEqualTo(1);
+                });
     }
 
     /**
@@ -88,15 +87,14 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // Then
         await().pollInterval(Duration.ofMillis(100))
                 .atMost(Duration.ofSeconds(30))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(amountReserved.add(BigDecimal.TEN));
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(amountAvailable.subtract(BigDecimal.TEN));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).get();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(amountReserved.add(BigDecimal.TEN));
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(amountAvailable.subtract(BigDecimal.TEN));
+                });
     }
 
     @Test
@@ -114,10 +112,8 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // Allow asynchronous consumer delivery and match this order, since the latch is shared.
         await().pollInterval(Duration.ofMillis(100))
                 .atMost(Duration.ofSeconds(30))
-                .untilAsserted(
-                        () ->
-                                assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount())
-                                        .isZero());
+                .untilAsserted(() ->
+                        assertThat(kafkaListenerConfig.getDeadLetterLatch().getCount()).isZero());
     }
 
     /**
@@ -141,13 +137,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(500))
                 .atMost(Duration.ofSeconds(10))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(20));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).get();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.valueOf(20));
+                });
 
         // When rollback is received
         kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
@@ -155,15 +150,14 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         // Then funds are released back to available
         await().pollInterval(Duration.ofMillis(500))
                 .atMost(Duration.ofSeconds(10))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.TEN);
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).get();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.TEN);
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(BigDecimal.valueOf(100));
+                });
     }
 
     /** Verifies a payment-originated rollback event leaves customer balances unchanged. */
@@ -180,15 +174,14 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
         await().pollDelay(1, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofMillis(500))
                 .atMost(Duration.ofSeconds(5))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).get();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.TEN);
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).get();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.TEN);
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(BigDecimal.valueOf(100));
+                });
     }
 
     @Test
@@ -215,32 +208,27 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(200))
                 .atMost(Duration.ofSeconds(20))
-                .untilAsserted(
-                        () -> {
-                            // First order adds 10, sentinel adds 10 -> total +20 reserved, -20
-                            // available
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).orElseThrow();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(
-                                            amountReserved.add(BigDecimal.valueOf(20)));
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(
-                                            amountAvailable.subtract(BigDecimal.valueOf(20)));
+                .untilAsserted(() -> {
+                    // First order adds 10, sentinel adds 10 -> total +20 reserved, -20
+                    // available
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).orElseThrow();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(amountReserved.add(BigDecimal.valueOf(20)));
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(amountAvailable.subtract(BigDecimal.valueOf(20)));
 
-                            // Verify exactly one ledger entry for the original order's reserve
-                            String ledgerKey =
-                                    "downstream:payment:" + orderDto.orderId() + ":RESERVE";
-                            assertThat(ledgerRepository.findByDownstreamKey(ledgerKey)).isPresent();
+                    // Verify exactly one ledger entry for the original order's reserve
+                    String ledgerKey = "downstream:payment:" + orderDto.orderId() + ":RESERVE";
+                    assertThat(ledgerRepository.findByDownstreamKey(ledgerKey)).isPresent();
 
-                            // Verify exactly one outbox entry for the original order's reply
-                            String outboxEventType = "RESERVE_REPLY:" + orderDto.attemptId();
-                            assertThat(
-                                            outboxEventRepository.findByAggregateIdAndEventType(
-                                                    String.valueOf(orderDto.orderId()),
-                                                    outboxEventType))
-                                    .isPresent();
-                        });
+                    // Verify exactly one outbox entry for the original order's reply
+                    String outboxEventType = "RESERVE_REPLY:" + orderDto.attemptId();
+                    assertThat(
+                                    outboxEventRepository.findByAggregateIdAndEventType(
+                                            String.valueOf(orderDto.orderId()), outboxEventType))
+                            .isPresent();
+                });
     }
 
     @Test
@@ -260,13 +248,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(200))
                 .atMost(Duration.ofSeconds(15))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).orElseThrow();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(20));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).orElseThrow();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.valueOf(20));
+                });
 
         // Send duplicate CONFIRMED orders
         kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
@@ -296,27 +283,24 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(200))
                 .atMost(Duration.ofSeconds(20))
-                .untilAsserted(
-                        () -> {
-                            // Seed had initial 10 reserved + 10 = 20.
-                            // Order confirm captured 10 -> reserved becomes 10.
-                            // Sentinel reserve added 10 -> reserved becomes 20.
-                            // Sentinel confirm captured 10 -> reserved becomes 10.
-                            // Capture does not change available; the sentinel reserve deducted 10
-                            // (100 - 10 seed - 10 sentinel = 80).
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).orElseThrow();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.TEN);
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(80));
+                .untilAsserted(() -> {
+                    // Seed had initial 10 reserved + 10 = 20.
+                    // Order confirm captured 10 -> reserved becomes 10.
+                    // Sentinel reserve added 10 -> reserved becomes 20.
+                    // Sentinel confirm captured 10 -> reserved becomes 10.
+                    // Capture does not change available; the sentinel reserve deducted 10
+                    // (100 - 10 seed - 10 sentinel = 80).
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).orElseThrow();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.TEN);
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(BigDecimal.valueOf(80));
 
-                            // Single SETTLE ledger entry for orderDto
-                            String settleLedgerKey =
-                                    "downstream:payment:" + orderDto.orderId() + ":SETTLE";
-                            assertThat(ledgerRepository.findByDownstreamKey(settleLedgerKey))
-                                    .isPresent();
-                        });
+                    // Single SETTLE ledger entry for orderDto
+                    String settleLedgerKey = "downstream:payment:" + orderDto.orderId() + ":SETTLE";
+                    assertThat(ledgerRepository.findByDownstreamKey(settleLedgerKey)).isPresent();
+                });
     }
 
     @Test
@@ -336,13 +320,12 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(200))
                 .atMost(Duration.ofSeconds(15))
-                .untilAsserted(
-                        () -> {
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).orElseThrow();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(20));
-                        });
+                .untilAsserted(() -> {
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).orElseThrow();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.valueOf(20));
+                });
 
         // Send duplicate ROLLBACK orders
         kafkaTemplate.send("orders", String.valueOf(orderDto.orderId()), orderDto);
@@ -371,29 +354,26 @@ class KafkaListenerConfigIntegrationTest extends AbstractIntegrationTest {
 
         await().pollInterval(Duration.ofMillis(200))
                 .atMost(Duration.ofSeconds(20))
-                .untilAsserted(
-                        () -> {
-                            // Seed added 10 reserved, deducted 10 available (reserved 20, available
-                            // 90).
-                            // Rollback releases 10 reserved back to available (reserved 10,
-                            // available 100).
-                            // Sentinel reserve added 10 reserved, deducted 10 available (reserved
-                            // 20, available 90).
-                            // Sentinel rollback released 10 back to available (reserved 10,
-                            // available 100).
-                            CustomersRecord persistedCustomer =
-                                    customerDAO.findById(customer.getId()).orElseThrow();
-                            assertThat(persistedCustomer.getAmountReserved())
-                                    .isEqualByComparingTo(BigDecimal.TEN);
-                            assertThat(persistedCustomer.getAmountAvailable())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(100));
+                .untilAsserted(() -> {
+                    // Seed added 10 reserved, deducted 10 available (reserved 20, available
+                    // 90).
+                    // Rollback releases 10 reserved back to available (reserved 10,
+                    // available 100).
+                    // Sentinel reserve added 10 reserved, deducted 10 available (reserved
+                    // 20, available 90).
+                    // Sentinel rollback released 10 back to available (reserved 10,
+                    // available 100).
+                    CustomersRecord persistedCustomer =
+                            customerDAO.findById(customer.getId()).orElseThrow();
+                    assertThat(persistedCustomer.getAmountReserved())
+                            .isEqualByComparingTo(BigDecimal.TEN);
+                    assertThat(persistedCustomer.getAmountAvailable())
+                            .isEqualByComparingTo(BigDecimal.valueOf(100));
 
-                            // Single SETTLE ledger entry for orderDto
-                            String settleLedgerKey =
-                                    "downstream:payment:" + orderDto.orderId() + ":SETTLE";
-                            assertThat(ledgerRepository.findByDownstreamKey(settleLedgerKey))
-                                    .isPresent();
-                        });
+                    // Single SETTLE ledger entry for orderDto
+                    String settleLedgerKey = "downstream:payment:" + orderDto.orderId() + ":SETTLE";
+                    assertThat(ledgerRepository.findByDownstreamKey(settleLedgerKey)).isPresent();
+                });
     }
 
     /**

@@ -35,28 +35,25 @@ class LoggingAspectProxyTest {
 
     @Test
     void verifiesAopProxyAndInterception(CapturedOutput output) {
-        contextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
 
-                    MethodAnnotatedService methodService =
-                            context.getBean(MethodAnnotatedService.class);
-                    ClassAnnotatedService classService =
-                            context.getBean(ClassAnnotatedService.class);
+            MethodAnnotatedService methodService = context.getBean(MethodAnnotatedService.class);
+            ClassAnnotatedService classService = context.getBean(ClassAnnotatedService.class);
 
-                    assertThat(AopUtils.isAopProxy(methodService)).isTrue();
-                    assertThat(AopUtils.isAopProxy(classService)).isTrue();
+            assertThat(AopUtils.isAopProxy(methodService)).isTrue();
+            assertThat(AopUtils.isAopProxy(classService)).isTrue();
 
-                    methodService.serve("hello");
-                    assertThat(output.getOut())
-                            .contains("serve() start execution")
-                            .contains("serve() finished execution");
+            methodService.serve("hello");
+            assertThat(output.getOut())
+                    .contains("serve() start execution")
+                    .contains("serve() finished execution");
 
-                    classService.performAction("world");
-                    assertThat(output.getOut())
-                            .contains("performAction() start execution")
-                            .contains("performAction() finished execution");
-                });
+            classService.performAction("world");
+            assertThat(output.getOut())
+                    .contains("performAction() start execution")
+                    .contains("performAction() finished execution");
+        });
     }
 
     @Configuration(proxyBeanMethods = false)

@@ -131,7 +131,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -158,7 +158,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -185,7 +185,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -215,7 +215,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -252,7 +252,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -314,7 +314,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -341,13 +341,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         // Wait for first event
         await().atMost(Duration.ofSeconds(10))
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                                stockOrderListener.getReceivedOrders().stream()
-                                                        .filter(o -> orderId.equals(o.orderId()))
-                                                        .toList())
-                                        .hasSize(1));
+                .untilAsserted(() ->
+                        assertThat(
+                                        stockOrderListener.getReceivedOrders().stream()
+                                                .filter(o -> orderId.equals(o.orderId()))
+                                                .toList())
+                                .hasSize(1));
 
         // Inventory stock should reflect first reservation: available 90, reserved 60
         InventoryRecord afterFirst =
@@ -445,22 +444,21 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         // Verify events published: one for attempt A, one for attempt B
         await().atMost(Duration.ofSeconds(10))
-                .untilAsserted(
-                        () -> {
-                            List<OrderDto> orders =
-                                    stockOrderListener.getReceivedOrders().stream()
-                                            .filter(o -> orderId.equals(o.orderId()))
-                                            .toList();
-                            assertThat(orders).hasSize(2);
-                            assertThat(orders)
-                                    .extracting(OrderDto::attemptId)
-                                    .containsExactlyInAnyOrder("attempt-A", "attempt-B");
-                            assertThat(orders)
-                                    .filteredOn(order -> "attempt-B".equals(order.attemptId()))
-                                    .singleElement()
-                                    .extracting(OrderDto::status)
-                                    .isEqualTo("ACCEPT");
-                        });
+                .untilAsserted(() -> {
+                    List<OrderDto> orders =
+                            stockOrderListener.getReceivedOrders().stream()
+                                    .filter(o -> orderId.equals(o.orderId()))
+                                    .toList();
+                    assertThat(orders).hasSize(2);
+                    assertThat(orders)
+                            .extracting(OrderDto::attemptId)
+                            .containsExactlyInAnyOrder("attempt-A", "attempt-B");
+                    assertThat(orders)
+                            .filteredOn(order -> "attempt-B".equals(order.attemptId()))
+                            .singleElement()
+                            .extracting(OrderDto::status)
+                            .isEqualTo("ACCEPT");
+                });
     }
 
     @Test
@@ -472,23 +470,21 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         CountDownLatch startLatch = new CountDownLatch(1);
         CompletableFuture<OrderDto> future1 =
-                CompletableFuture.supplyAsync(
-                        () -> {
-                            try {
-                                startLatch.await();
-                            } catch (InterruptedException ignored) {
-                            }
-                            return inventoryOrderManageService.reserve(orderDto);
-                        });
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException ignored) {
+                    }
+                    return inventoryOrderManageService.reserve(orderDto);
+                });
         CompletableFuture<OrderDto> future2 =
-                CompletableFuture.supplyAsync(
-                        () -> {
-                            try {
-                                startLatch.await();
-                            } catch (InterruptedException ignored) {
-                            }
-                            return inventoryOrderManageService.reserve(orderDto);
-                        });
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException ignored) {
+                    }
+                    return inventoryOrderManageService.reserve(orderDto);
+                });
 
         startLatch.countDown();
         OrderDto r1 = future1.get();

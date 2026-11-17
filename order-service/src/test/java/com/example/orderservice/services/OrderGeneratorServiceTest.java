@@ -54,10 +54,8 @@ class OrderGeneratorServiceTest {
 
         // Verify all batches adhere to expected size
         assertThat(allBatches)
-                .allSatisfy(
-                        batch ->
-                                assertThat(batch)
-                                        .hasSize(100)); // Each batch should have 100 orders
+                .allSatisfy(batch ->
+                        assertThat(batch).hasSize(100)); // Each batch should have 100 orders
 
         // Verify no further interactions with orderService
         verifyNoMoreInteractions(orderService);
@@ -75,39 +73,35 @@ class OrderGeneratorServiceTest {
         for (List<OrderRequest> batch : allBatches) {
             assertThat(batch)
                     .isNotEmpty()
-                    .allSatisfy(
-                            order -> {
-                                // Customer ID assertions
-                                assertThat(order.customerId()).isPositive();
-                                assertThat(order.customerId())
-                                        .isBetween(1L, 100L); // Based on implementation
+                    .allSatisfy(order -> {
+                        // Customer ID assertions
+                        assertThat(order.customerId()).isPositive();
+                        assertThat(order.customerId())
+                                .isBetween(1L, 100L); // Based on implementation
 
-                                // Items assertions
-                                assertThat(order.items())
-                                        .isNotEmpty()
-                                        .hasSize(2)
-                                        .allSatisfy(
-                                                item -> {
-                                                    assertThat(item.productCode())
-                                                            .isNotNull()
-                                                            .isNotBlank()
-                                                            .startsWith("ProductCode");
-                                                    assertThat(item.quantity())
-                                                            .isPositive()
-                                                            .isBetween(1, 6); // RAND.nextInt(5) + 1
-                                                    assertThat(item.productPrice())
-                                                            .isNotNull()
-                                                            .isPositive();
-                                                });
+                        // Items assertions
+                        assertThat(order.items())
+                                .isNotEmpty()
+                                .hasSize(2)
+                                .allSatisfy(item -> {
+                                    assertThat(item.productCode())
+                                            .isNotNull()
+                                            .isNotBlank()
+                                            .startsWith("ProductCode");
+                                    assertThat(item.quantity())
+                                            .isPositive()
+                                            .isBetween(1, 6); // RAND.nextInt(5) + 1
+                                    assertThat(item.productPrice()).isNotNull().isPositive();
+                                });
 
-                                // Delivery address assertions
-                                assertThat(order.deliveryAddress()).isNotNull();
-                                assertThat(order.deliveryAddress().addressLine1()).isNotBlank();
-                                assertThat(order.deliveryAddress().city()).isNotBlank();
-                                assertThat(order.deliveryAddress().state()).isNotBlank();
-                                assertThat(order.deliveryAddress().zipCode()).isNotBlank();
-                                assertThat(order.deliveryAddress().country()).isNotBlank();
-                            });
+                        // Delivery address assertions
+                        assertThat(order.deliveryAddress()).isNotNull();
+                        assertThat(order.deliveryAddress().addressLine1()).isNotBlank();
+                        assertThat(order.deliveryAddress().city()).isNotBlank();
+                        assertThat(order.deliveryAddress().state()).isNotBlank();
+                        assertThat(order.deliveryAddress().zipCode()).isNotBlank();
+                        assertThat(order.deliveryAddress().country()).isNotBlank();
+                    });
         }
     }
 
@@ -147,11 +141,10 @@ class OrderGeneratorServiceTest {
 
         // Verify each batch has the correct size
         assertThat(allBatches)
-                .allSatisfy(
-                        batch ->
-                                assertThat(batch)
-                                        .hasSize(100)
-                                        .as("Each batch should contain exactly 100 orders"));
+                .allSatisfy(batch ->
+                        assertThat(batch)
+                                .hasSize(100)
+                                .as("Each batch should contain exactly 100 orders"));
 
         // Verify the total number of orders
         int totalOrders = allBatches.stream().mapToInt(List::size).sum();

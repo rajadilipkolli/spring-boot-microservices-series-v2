@@ -45,16 +45,15 @@ class InventoryGeneratorServiceTest {
         given(
                         inventoryService.updateInventoryByProductCode(
                                 anyString(), any(InventoryRequest.class)))
-                .willAnswer(
-                        invocation -> {
-                            InventoryRequest request = invocation.getArgument(1);
-                            assertThat(request.productCode()).contains("ProductCode");
-                            assertThat(
-                                            request.availableQuantity() >= 1
-                                                    && request.availableQuantity() <= 10000)
-                                    .isTrue();
-                            return Optional.of(mockResponse);
-                        });
+                .willAnswer(invocation -> {
+                    InventoryRequest request = invocation.getArgument(1);
+                    assertThat(request.productCode()).contains("ProductCode");
+                    assertThat(
+                                    request.availableQuantity() >= 1
+                                            && request.availableQuantity() <= 10000)
+                            .isTrue();
+                    return Optional.of(mockResponse);
+                });
 
         inventoryGeneratorService.updateGeneratedInventory("test-batch-123", null);
 
@@ -81,10 +80,9 @@ class InventoryGeneratorServiceTest {
     void shouldRejectInvalidBatchSizeWithoutConsumingIdempotencyKey(int batchSize) {
         String idempotencyKey = "invalid-batch";
 
-        assertThatThrownBy(
-                        () ->
-                                inventoryGeneratorService.updateGeneratedInventory(
-                                        idempotencyKey, batchSize))
+        assertThatThrownBy(() ->
+                        inventoryGeneratorService.updateGeneratedInventory(
+                                idempotencyKey, batchSize))
                 .isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(inventoryService);
 

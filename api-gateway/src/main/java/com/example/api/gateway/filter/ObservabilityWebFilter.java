@@ -84,21 +84,19 @@ class ObservabilityWebFilter implements WebFilter {
         }
 
         return exchange.mutate()
-                .request(
-                        request ->
-                                request.headers(headers -> headers.set(TRACE_ID_HEADER, traceId)))
+                .request(request ->
+                        request.headers(headers -> headers.set(TRACE_ID_HEADER, traceId)))
                 .build();
     }
 
     private void addTraceIdResponseHeader(ServerWebExchange exchange, String traceId) {
         exchange.getResponse()
-                .beforeCommit(
-                        () -> {
-                            if (StringUtils.hasText(traceId)) {
-                                exchange.getResponse().getHeaders().set(TRACE_ID_HEADER, traceId);
-                            }
-                            return Mono.empty();
-                        });
+                .beforeCommit(() -> {
+                    if (StringUtils.hasText(traceId)) {
+                        exchange.getResponse().getHeaders().set(TRACE_ID_HEADER, traceId);
+                    }
+                    return Mono.empty();
+                });
     }
 
     private boolean isActuatorRequest(ServerWebExchange exchange) {
@@ -111,40 +109,36 @@ class ObservabilityWebFilter implements WebFilter {
 
         long startTime = System.nanoTime();
 
-        return Mono.deferContextual(
-                contextView -> {
-                    String ctxTraceId = contextView.getOrDefault(MDC_TRACE_ID, traceId);
+        return Mono.deferContextual(contextView -> {
+            String ctxTraceId = contextView.getOrDefault(MDC_TRACE_ID, traceId);
 
-                    runWithMdc(
-                            ctxTraceId,
-                            () ->
-                                    log.info(
-                                            "Path of the request received -> {} with method {}",
-                                            exchange.getRequest().getPath(),
-                                            exchange.getRequest().getMethod()));
+            runWithMdc(
+                    ctxTraceId,
+                    () ->
+                            log.info(
+                                    "Path of the request received -> {} with method {}",
+                                    exchange.getRequest().getPath(),
+                                    exchange.getRequest().getMethod()));
 
-                    return chainMono.doFinally(
-                            _ -> {
-                                Integer status =
-                                        exchange.getResponse().getStatusCode() != null
-                                                ? exchange.getResponse().getStatusCode().value()
-                                                : null;
+            return chainMono.doFinally(_ -> {
+                Integer status =
+                        exchange.getResponse().getStatusCode() != null
+                                ? exchange.getResponse().getStatusCode().value()
+                                : null;
 
-                                long took =
-                                        TimeUnit.NANOSECONDS.toMillis(
-                                                System.nanoTime() - startTime);
+                long took = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
 
-                                runWithMdc(
-                                        ctxTraceId,
-                                        () ->
-                                                log.info(
-                                                        "Request {} {} -> status={} took={}ms",
-                                                        exchange.getRequest().getMethod(),
-                                                        exchange.getRequest().getURI().getPath(),
-                                                        status == null ? "UNKNOWN" : status,
-                                                        took));
-                            });
-                });
+                runWithMdc(
+                        ctxTraceId,
+                        () ->
+                                log.info(
+                                        "Request {} {} -> status={} took={}ms",
+                                        exchange.getRequest().getMethod(),
+                                        exchange.getRequest().getURI().getPath(),
+                                        status == null ? "UNKNOWN" : status,
+                                        took));
+            });
+        });
     }
 
     private void runWithMdc(String traceId, Runnable action) {

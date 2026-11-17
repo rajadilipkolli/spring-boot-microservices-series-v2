@@ -95,35 +95,27 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
             // Act
             for (int i = 0; i < numThreads; i++) {
-                executorService.submit(
-                        () -> {
-                            try {
-                                List<OrderRequest> requests =
-                                        generateOrderRequests(ordersPerThread);
-                                List<OrderResponse> responses =
-                                        orderService.saveBatchOrders(requests);
+                executorService.submit(() -> {
+                    try {
+                        List<OrderRequest> requests = generateOrderRequests(ordersPerThread);
+                        List<OrderResponse> responses = orderService.saveBatchOrders(requests);
 
-                                // Verify responses match requests in size
-                                assertThat(responses).hasSize(requests.size());
+                        // Verify responses match requests in size
+                        assertThat(responses).hasSize(requests.size());
 
-                                // Verify each response has a valid order ID
-                                assertThat(responses)
-                                        .allSatisfy(
-                                                response ->
-                                                        assertThat(response.orderId())
-                                                                .isNotNull()
-                                                                .isPositive());
+                        // Verify each response has a valid order ID
+                        assertThat(responses)
+                                .allSatisfy(response ->
+                                        assertThat(response.orderId()).isNotNull().isPositive());
 
-                                // Verify status is NEW for all orders
-                                assertThat(responses)
-                                        .allSatisfy(
-                                                response ->
-                                                        assertThat(response.status())
-                                                                .isEqualTo("NEW"));
-                            } finally {
-                                latch.countDown();
-                            }
-                        });
+                        // Verify status is NEW for all orders
+                        assertThat(responses)
+                                .allSatisfy(
+                                        response -> assertThat(response.status()).isEqualTo("NEW"));
+                    } finally {
+                        latch.countDown();
+                    }
+                });
             }
         }
 
@@ -143,15 +135,14 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
         assertThat(allOrders)
                 .hasSize(numThreads * ordersPerThread)
-                .allSatisfy(
-                        order -> {
-                            assertThat(order.customerId()).isEqualTo(1L);
-                            assertThat(order.status()).isEqualTo("NEW");
-                            assertThat(order.items()).hasSize(1);
-                            assertThat(order.items().getFirst().productId()).isEqualTo("PROD1");
-                            assertThat(order.items().getFirst().quantity()).isEqualTo(1);
-                            assertThat(order.deliveryAddress().addressLine1()).isEqualTo("addr1");
-                        });
+                .allSatisfy(order -> {
+                    assertThat(order.customerId()).isEqualTo(1L);
+                    assertThat(order.status()).isEqualTo("NEW");
+                    assertThat(order.items()).hasSize(1);
+                    assertThat(order.items().getFirst().productId()).isEqualTo("PROD1");
+                    assertThat(order.items().getFirst().quantity()).isEqualTo(1);
+                    assertThat(order.deliveryAddress().addressLine1()).isEqualTo("addr1");
+                });
     }
 
     @Test
@@ -212,12 +203,10 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
         assertThatThrownBy(() -> orderService.saveOrder(request))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessageContaining("NONEXISTENTPRODUCT")
-                .satisfies(
-                        exception -> {
-                            assertThat(exception.getMessage())
-                                    .contains(
-                                            "One or More products Not found from [NONEXISTENTPRODUCT]");
-                        });
+                .satisfies(exception -> {
+                    assertThat(exception.getMessage())
+                            .contains("One or More products Not found from [NONEXISTENTPRODUCT]");
+                });
 
         // Verify no order was saved
         assertThat(orderRepository.count() - initialCount).isZero();
@@ -379,14 +368,11 @@ class OrderServiceEdgeCasesIT extends AbstractIntegrationTest {
 
     private List<OrderRequest> generateOrderRequests(int count) {
         return IntStream.range(0, count)
-                .mapToObj(
-                        i ->
-                                new OrderRequest(
-                                        1L,
-                                        List.of(new OrderItemRequest("PROD1", 1, BigDecimal.TEN)),
-                                        new Address(
-                                                "addr1", "addr2", "city", "state", "zip",
-                                                "country")))
+                .mapToObj(i ->
+                        new OrderRequest(
+                                1L,
+                                List.of(new OrderItemRequest("PROD1", 1, BigDecimal.TEN)),
+                                new Address("addr1", "addr2", "city", "state", "zip", "country")))
                 .toList();
     }
 }

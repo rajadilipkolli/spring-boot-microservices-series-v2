@@ -69,9 +69,8 @@ public interface OrderMapper {
             OrderRequest orderRequest, @MappingTarget Order order) {
         orderRequest
                 .items()
-                .forEach(
-                        orderItemRequest ->
-                                order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
+                .forEach(orderItemRequest ->
+                        order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
     }
 
     @InheritConfiguration

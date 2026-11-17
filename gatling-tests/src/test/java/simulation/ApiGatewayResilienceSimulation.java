@@ -55,19 +55,18 @@ public class ApiGatewayResilienceSimulation extends BaseLoadSimulation {
                                                     .check(
                                                             status().saveAs("status"),
                                                             status().in(200, 429, 503)))
-                                    .exec(
-                                            session -> {
-                                                String statusStr = session.getString("status");
-                                                if (statusStr != null) {
-                                                    int status = Integer.parseInt(statusStr);
-                                                    if (status == 429) {
-                                                        rateLimitedCount.incrementAndGet();
-                                                    } else if (status == 503) {
-                                                        serviceUnavailableCount.incrementAndGet();
-                                                    }
-                                                }
-                                                return session;
-                                            })
+                                    .exec(session -> {
+                                        String statusStr = session.getString("status");
+                                        if (statusStr != null) {
+                                            int status = Integer.parseInt(statusStr);
+                                            if (status == 429) {
+                                                rateLimitedCount.incrementAndGet();
+                                            } else if (status == 503) {
+                                                serviceUnavailableCount.incrementAndGet();
+                                            }
+                                        }
+                                        return session;
+                                    })
                                     .pause(Duration.ofMillis(100)));
 
     // Define a chain to test circuit breaker on error responses

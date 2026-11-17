@@ -32,45 +32,41 @@ class CommonWebAutoConfigurationTest {
 
     @Test
     void registersProblemDetailTraceIdEnricherInServletWebApplication() {
-        webContextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(ProblemDetailTraceIdEnricher.class);
-                    assertThat(context).hasBean("problemDetailTraceIdEnricher");
-                });
+        webContextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ProblemDetailTraceIdEnricher.class);
+            assertThat(context).hasBean("problemDetailTraceIdEnricher");
+        });
     }
 
     @Test
     void backsOffWhenUserDefinesCustomProblemDetailTraceIdEnricher() {
         webContextRunner
                 .withUserConfiguration(CustomEnricherConfiguration.class)
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context).hasSingleBean(ProblemDetailTraceIdEnricher.class);
-                            assertThat(context).hasBean("customEnricher");
-                            assertThat(context).doesNotHaveBean("problemDetailTraceIdEnricher");
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(ProblemDetailTraceIdEnricher.class);
+                    assertThat(context).hasBean("customEnricher");
+                    assertThat(context).doesNotHaveBean("problemDetailTraceIdEnricher");
+                });
     }
 
     @Test
     void backsOffInNonWebApplication() {
-        nonWebContextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).doesNotHaveBean(ProblemDetailTraceIdEnricher.class);
-                });
+        nonWebContextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).doesNotHaveBean(ProblemDetailTraceIdEnricher.class);
+        });
     }
 
     @Test
     void backsOffWhenResponseBodyAdviceIsAbsent() {
         webContextRunner
                 .withClassLoader(new FilteredClassLoader(ResponseBodyAdvice.class))
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context).doesNotHaveBean(ProblemDetailTraceIdEnricher.class);
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean(ProblemDetailTraceIdEnricher.class);
+                });
     }
 
     @Configuration(proxyBeanMethods = false)

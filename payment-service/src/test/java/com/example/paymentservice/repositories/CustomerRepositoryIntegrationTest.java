@@ -104,15 +104,14 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer2))
                 .isInstanceOf(CustomerExistsException.class)
                 .hasMessage("Customer with email duplicate@example.com already exists.")
-                .satisfies(
-                        ex -> {
-                            PSQLException psqlEx = findCause(ex, PSQLException.class);
-                            assertThat((Throwable) psqlEx).isNotNull();
-                            assertThat(psqlEx.getSQLState()).isEqualTo("23505");
-                            assertThat(psqlEx.getServerErrorMessage()).isNotNull();
-                            assertThat(psqlEx.getServerErrorMessage().getConstraint())
-                                    .isEqualTo("uc_customers_name_email_key");
-                        });
+                .satisfies(ex -> {
+                    PSQLException psqlEx = findCause(ex, PSQLException.class);
+                    assertThat((Throwable) psqlEx).isNotNull();
+                    assertThat(psqlEx.getSQLState()).isEqualTo("23505");
+                    assertThat(psqlEx.getServerErrorMessage()).isNotNull();
+                    assertThat(psqlEx.getServerErrorMessage().getConstraint())
+                            .isEqualTo("uc_customers_name_email_key");
+                });
 
         assertThat(customerDAO.findByEmail("duplicate@example.com")).isPresent();
         assertThat(
@@ -143,12 +142,11 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer))
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .satisfies(
-                        ex -> {
-                            PSQLException psqlEx = findCause(ex, PSQLException.class);
-                            assertThat((Throwable) psqlEx).isNotNull();
-                            assertThat(psqlEx.getSQLState()).isEqualTo("23502");
-                        });
+                .satisfies(ex -> {
+                    PSQLException psqlEx = findCause(ex, PSQLException.class);
+                    assertThat((Throwable) psqlEx).isNotNull();
+                    assertThat(psqlEx.getSQLState()).isEqualTo("23502");
+                });
 
         assertThat(customerDAO.findByEmail("nullname@example.com")).isEmpty();
     }

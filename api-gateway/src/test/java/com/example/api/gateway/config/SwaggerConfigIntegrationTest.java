@@ -39,15 +39,12 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
         // Verify URL patterns for services and api-gateway
         swaggerUiConfigProperties
                 .getUrls()
-                .forEach(
-                        url ->
-                                assertThat(url.getUrl())
-                                        .isEqualTo(
-                                                url.getName().equals("api-gateway")
-                                                        ? "/v3/api-docs"
-                                                        : "/"
-                                                                + url.getName()
-                                                                + "-service/v3/api-docs"));
+                .forEach(url ->
+                        assertThat(url.getUrl())
+                                .isEqualTo(
+                                        url.getName().equals("api-gateway")
+                                                ? "/v3/api-docs"
+                                                : "/" + url.getName() + "-service/v3/api-docs"));
     }
 
     @Test
@@ -74,10 +71,8 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
         assertThat(groupedOpenApis)
                 .isNotNull()
                 .isNotEmpty()
-                .allSatisfy(
-                        api ->
-                                assertThat(api.getPathsToMatch())
-                                        .contains("/" + api.getGroup() + "/**"));
+                .allSatisfy(api ->
+                        assertThat(api.getPathsToMatch()).contains("/" + api.getGroup() + "/**"));
     }
 
     @Test
@@ -122,12 +117,11 @@ class SwaggerConfigIntegrationTest extends AbstractIntegrationTest {
         assertThat(groupedOpenApis)
                 .extracting("group")
                 .allMatch(group -> !((String) group).contains("actuator"))
-                .allMatch(
-                        group -> {
-                            String groupName = (String) group;
-                            return groupName.equals("api-gateway")
-                                    || List.of("order", "inventory", "catalog", "payment")
-                                            .contains(groupName);
-                        });
+                .allMatch(group -> {
+                    String groupName = (String) group;
+                    return groupName.equals("api-gateway")
+                            || List.of("order", "inventory", "catalog", "payment")
+                                    .contains(groupName);
+                });
     }
 }

@@ -68,26 +68,24 @@ class OrderExternalizationIT extends AbstractIntegrationTest {
         // Verify Kafka message shape
         await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () -> {
-                            Optional<OrderDto> orderDtoOpt =
-                                    testKafkaListenerConfig.getMessageByOrderId(orderId);
-                            assertThat(orderDtoOpt).isPresent();
-                            OrderDto orderDto = orderDtoOpt.get();
-                            assertThat(orderDto.customerId()).isEqualTo(1L);
-                            assertThat(orderDto.status()).isEqualTo("NEW");
-                        });
+                .untilAsserted(() -> {
+                    Optional<OrderDto> orderDtoOpt =
+                            testKafkaListenerConfig.getMessageByOrderId(orderId);
+                    assertThat(orderDtoOpt).isPresent();
+                    OrderDto orderDto = orderDtoOpt.get();
+                    assertThat(orderDto.customerId()).isEqualTo(1L);
+                    assertThat(orderDto.status()).isEqualTo("NEW");
+                });
 
         // Verify JobRunr Outbox Event Publication
         await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Integer count =
-                                    jdbcTemplate.queryForObject(
-                                            "SELECT count(*) FROM jobrunr_jobs WHERE state = 'SUCCEEDED' AND jobsignature LIKE '%externalize%'",
-                                            Integer.class);
-                            assertThat(count).isGreaterThanOrEqualTo(1);
-                        });
+                .untilAsserted(() -> {
+                    Integer count =
+                            jdbcTemplate.queryForObject(
+                                    "SELECT count(*) FROM jobrunr_jobs WHERE state = 'SUCCEEDED' AND jobsignature LIKE '%externalize%'",
+                                    Integer.class);
+                    assertThat(count).isGreaterThanOrEqualTo(1);
+                });
     }
 }

@@ -68,9 +68,7 @@ class OrderServiceRuntimeHintsTest {
                 .accepts(hints);
         assertThat(
                         RuntimeHintsPredicates.reflection()
-                                .onMethodInvocation(
-                                        com.example.orderservice.services.OrderRetryScheduler.class,
-                                        "retryNewOrders"))
+                                .onMethodInvocation(OrderRetryScheduler.class, "retryNewOrders"))
                 .accepts(hints);
         assertThat(
                         RuntimeHintsPredicates.reflection()

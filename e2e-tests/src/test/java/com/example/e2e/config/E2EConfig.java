@@ -188,20 +188,19 @@ public final class E2EConfig {
                 await("Endpoint " + endpoint + " should be UP via Gateway")
                         .atMost(Duration.ofSeconds(60))
                         .pollInterval(Duration.ofSeconds(2))
-                        .until(
-                                () -> {
-                                    try {
-                                        Response r =
-                                                RestAssured.given()
-                                                        .spec(defaultRequestSpec())
-                                                        .when()
-                                                        .get(endpoint);
-                                        return r.statusCode() == 200
-                                                && "UP".equals(r.jsonPath().getString("status"));
-                                    } catch (Exception ex) {
-                                        return false;
-                                    }
-                                });
+                        .until(() -> {
+                            try {
+                                Response r =
+                                        RestAssured.given()
+                                                .spec(defaultRequestSpec())
+                                                .when()
+                                                .get(endpoint);
+                                return r.statusCode() == 200
+                                        && "UP".equals(r.jsonPath().getString("status"));
+                            } catch (Exception ex) {
+                                return false;
+                            }
+                        });
                 log.info("Health check passed for: {}", endpoint);
             } catch (Exception ex) {
                 log.warn(

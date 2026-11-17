@@ -63,21 +63,19 @@ public class GenerationOrchestrator {
      *     deadline is reported as a {@link WorkflowTimeoutException}
      */
     public Mono<GenerationResponse> generate(Integer batchSize) {
-        return Mono.defer(
-                () -> {
-                    String batchId = UUID.randomUUID().toString();
+        return Mono.defer(() -> {
+            String batchId = UUID.randomUUID().toString();
 
-                    return executeSteps(batchId, batchSize, 0, new LinkedHashMap<>())
-                            .timeout(properties.getWorkflowTimeout())
-                            .doOnSuccess(
-                                    response ->
-                                            gatewayMetrics.incrementWorkflow(
-                                                    "success".equalsIgnoreCase(response.status())
-                                                            ? "success"
-                                                            : "failure"))
-                            .doOnError(exception -> gatewayMetrics.incrementWorkflow("failure"))
-                            .onErrorMap(TimeoutException.class, WorkflowTimeoutException::new);
-                });
+            return executeSteps(batchId, batchSize, 0, new LinkedHashMap<>())
+                    .timeout(properties.getWorkflowTimeout())
+                    .doOnSuccess(response ->
+                            gatewayMetrics.incrementWorkflow(
+                                    "success".equalsIgnoreCase(response.status())
+                                            ? "success"
+                                            : "failure"))
+                    .doOnError(exception -> gatewayMetrics.incrementWorkflow("failure"))
+                    .onErrorMap(TimeoutException.class, WorkflowTimeoutException::new);
+        });
     }
 
     private Mono<GenerationResponse> executeSteps(
@@ -95,29 +93,25 @@ public class GenerationOrchestrator {
 
         GenerationStep step = generationSteps.get(stepIndex);
         return step.execute(batchId, batchSize)
-                .flatMap(
-                        result -> {
-                            String serviceKey = step.getServiceType().getId();
-                            String responseBody =
-                                    result.response() == null ? "" : result.response();
-                            accumulatedResponses.put(serviceKey, responseBody);
+                .flatMap(result -> {
+                    String serviceKey = step.getServiceType().getId();
+                    String responseBody = result.response() == null ? "" : result.response();
+                    accumulatedResponses.put(serviceKey, responseBody);
 
-                            if (!isSuccessful(result)) {
-                                String failureMsg =
-                                        step.getServiceType().getDisplayName()
-                                                + " generation failed";
-                                return Mono.just(
-                                        new GenerationResponse(
-                                                "error", failureMsg, accumulatedResponses));
-                            }
+                    if (!isSuccessful(result)) {
+                        String failureMsg =
+                                step.getServiceType().getDisplayName() + " generation failed";
+                        return Mono.just(
+                                new GenerationResponse("error", failureMsg, accumulatedResponses));
+                    }
 
-                            return delay().then(
-                                            executeSteps(
-                                                    batchId,
-                                                    batchSize,
-                                                    stepIndex + 1,
-                                                    accumulatedResponses));
-                        });
+                    return delay().then(
+                                    executeSteps(
+                                            batchId,
+                                            batchSize,
+                                            stepIndex + 1,
+                                            accumulatedResponses));
+                });
     }
 
     private boolean isSuccessful(ServiceResult result) {

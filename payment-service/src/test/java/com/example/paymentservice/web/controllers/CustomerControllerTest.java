@@ -142,20 +142,19 @@ class CustomerControllerTest {
      */
     private List<CustomerResponse> getCustomerResponseList() {
         return customerList.stream()
-                .map(
-                        customer ->
-                                new CustomerResponse(
-                                        customer.getId(),
-                                        customer.getName(),
-                                        customer.getEmail(),
-                                        customer.getPhone(),
-                                        customer.getAddressLine1(),
-                                        customer.getAddressLine2(),
-                                        customer.getCity(),
-                                        customer.getState(),
-                                        customer.getZipCode(),
-                                        customer.getCountry(),
-                                        customer.getAmountAvailable()))
+                .map(customer ->
+                        new CustomerResponse(
+                                customer.getId(),
+                                customer.getName(),
+                                customer.getEmail(),
+                                customer.getPhone(),
+                                customer.getAddressLine1(),
+                                customer.getAddressLine2(),
+                                customer.getCity(),
+                                customer.getState(),
+                                customer.getZipCode(),
+                                customer.getCountry(),
+                                customer.getAmountAvailable()))
                 .toList();
     }
 
@@ -307,21 +306,16 @@ class CustomerControllerTest {
                     .hasStatus(HttpStatus.NOT_FOUND)
                     .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
                     .bodyJson()
-                    .satisfies(
-                            json -> {
-                                assertThat(json)
-                                        .extractingPath("$.type")
-                                        .isEqualTo(
-                                                "https://api.microservices.com/errors/not-found");
-                                assertThat(json)
-                                        .extractingPath("$.title")
-                                        .isEqualTo("Customer Not Found");
-                                assertThat(json).extractingPath("$.status").isEqualTo(404);
-                                assertThat(json)
-                                        .extractingPath("$.detail")
-                                        .isEqualTo(
-                                                "Customer with Email 'notfound@email.com' not found");
-                            });
+                    .satisfies(json -> {
+                        assertThat(json)
+                                .extractingPath("$.type")
+                                .isEqualTo("https://api.microservices.com/errors/not-found");
+                        assertThat(json).extractingPath("$.title").isEqualTo("Customer Not Found");
+                        assertThat(json).extractingPath("$.status").isEqualTo(404);
+                        assertThat(json)
+                                .extractingPath("$.detail")
+                                .isEqualTo("Customer with Email 'notfound@email.com' not found");
+                    });
         }
     }
 

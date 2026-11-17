@@ -182,11 +182,10 @@ class GenerationServiceUnitTest {
                 .thenReturn(Mono.just(new ServiceResult(400, "Bad input")));
 
         StepVerifier.create(orchestrator.generate(10))
-                .assertNext(
-                        resp -> {
-                            assertThat(resp.status()).isEqualTo("error");
-                            assertThat(resp.message()).isEqualTo("Catalog generation failed");
-                        })
+                .assertNext(resp -> {
+                    assertThat(resp.status()).isEqualTo("error");
+                    assertThat(resp.message()).isEqualTo("Catalog generation failed");
+                })
                 .verifyComplete();
 
         // 2. Catalog OK, Inventory returns 400 (not OK)
@@ -195,11 +194,10 @@ class GenerationServiceUnitTest {
                 .thenReturn(Mono.just(new ServiceResult(400, "Inventory failed")));
 
         StepVerifier.create(orchestrator.generate(10))
-                .assertNext(
-                        resp -> {
-                            assertThat(resp.status()).isEqualTo("error");
-                            assertThat(resp.message()).isEqualTo("Inventory generation failed");
-                        })
+                .assertNext(resp -> {
+                    assertThat(resp.status()).isEqualTo("error");
+                    assertThat(resp.message()).isEqualTo("Inventory generation failed");
+                })
                 .verifyComplete();
 
         // 3. Catalog OK, Inventory OK, Order returns 400 (not OK)
@@ -209,11 +207,10 @@ class GenerationServiceUnitTest {
                 .thenReturn(Mono.just(new ServiceResult(400, "Order failed")));
 
         StepVerifier.create(orchestrator.generate(10))
-                .assertNext(
-                        resp -> {
-                            assertThat(resp.status()).isEqualTo("error");
-                            assertThat(resp.message()).isEqualTo("Order generation failed");
-                        })
+                .assertNext(resp -> {
+                    assertThat(resp.status()).isEqualTo("error");
+                    assertThat(resp.message()).isEqualTo("Order generation failed");
+                })
                 .verifyComplete();
 
         // 4. Workflow timeout

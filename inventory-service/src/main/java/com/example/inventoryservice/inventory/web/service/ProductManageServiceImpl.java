@@ -52,11 +52,10 @@ class ProductManageServiceImpl implements ProductManageService {
     @Override
     public void manage(ProductDto productDto) {
         try {
-            retryHandler.executeWithRetry(
-                    () -> {
-                        manageAttempt(productDto);
-                        return null;
-                    });
+            retryHandler.executeWithRetry(() -> {
+                manageAttempt(productDto);
+                return null;
+            });
         } catch (DataIntegrityViolationException ex) {
             if (productDto.isDeleted()
                     || inventoryJOOQRepository.findByProductCode(productDto.code()).isEmpty()) {

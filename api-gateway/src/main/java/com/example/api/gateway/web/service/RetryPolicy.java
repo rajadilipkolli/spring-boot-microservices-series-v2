@@ -8,6 +8,8 @@ package com.example.api.gateway.web.service;
 
 import com.example.api.gateway.model.ServiceType;
 import com.example.api.gateway.observability.GatewayMetrics;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -56,17 +58,14 @@ public class RetryPolicy {
                 .maxBackoff(MAX_BACKOFF)
                 .jitter(JITTER)
                 .filter(this::isRetryable)
-                .doBeforeRetry(
-                        signal -> {
-                            gatewayMetrics.incrementRetry(serviceType);
-                        })
-                .onRetryExhaustedThrow(
-                        (spec, signal) -> {
-                            LOGGER.error(
-                                    "Downstream retries exhausted. attempts={}",
-                                    signal.totalRetries());
-                            return signal.failure();
-                        });
+                .doBeforeRetry(signal -> {
+                    gatewayMetrics.incrementRetry(serviceType);
+                })
+                .onRetryExhaustedThrow((spec, signal) -> {
+                    LOGGER.error(
+                            "Downstream retries exhausted. attempts={}", signal.totalRetries());
+                    return signal.failure();
+                });
     }
 
     /** Determines whether a failure is transient. */
@@ -82,8 +81,8 @@ public class RetryPolicy {
             return isRetryableStatus(responseException.getStatusCode().value());
         }
 
-        if (throwable instanceof io.github.resilience4j.circuitbreaker.CallNotPermittedException
-                || throwable instanceof io.github.resilience4j.bulkhead.BulkheadFullException) {
+        if (throwable instanceof CallNotPermittedException
+                || throwable instanceof BulkheadFullException) {
             return false;
         }
 

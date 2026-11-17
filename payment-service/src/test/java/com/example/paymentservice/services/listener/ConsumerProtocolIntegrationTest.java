@@ -27,26 +27,23 @@ class ConsumerProtocolIntegrationTest extends AbstractIntegrationTest {
                         Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
             await().atMost(Duration.ofSeconds(60))
                     .pollInterval(Duration.ofMillis(500))
-                    .untilAsserted(
-                            () -> {
-                                Map<String, ConsumerGroupDescription> descriptions =
-                                        admin.describeConsumerGroups(Set.of("payment")).all().get();
-                                assertThat(descriptions).containsKey("payment");
-                                ConsumerGroupDescription paymentGroup = descriptions.get("payment");
-                                assertThat(paymentGroup.type()).isEqualTo(GroupType.CONSUMER);
-                                assertThat(paymentGroup.groupState())
-                                        .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
+                    .untilAsserted(() -> {
+                        Map<String, ConsumerGroupDescription> descriptions =
+                                admin.describeConsumerGroups(Set.of("payment")).all().get();
+                        assertThat(descriptions).containsKey("payment");
+                        ConsumerGroupDescription paymentGroup = descriptions.get("payment");
+                        assertThat(paymentGroup.type()).isEqualTo(GroupType.CONSUMER);
+                        assertThat(paymentGroup.groupState())
+                                .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
 
-                                Collection<GroupListing> listings = admin.listGroups().all().get();
-                                assertThat(listings)
-                                        .filteredOn(group -> group.groupId().startsWith("payment-"))
-                                        .isNotEmpty()
-                                        .allSatisfy(
-                                                group -> {
-                                                    assertThat(group.type())
-                                                            .hasValue(GroupType.CONSUMER);
-                                                });
-                            });
+                        Collection<GroupListing> listings = admin.listGroups().all().get();
+                        assertThat(listings)
+                                .filteredOn(group -> group.groupId().startsWith("payment-"))
+                                .isNotEmpty()
+                                .allSatisfy(group -> {
+                                    assertThat(group.type()).hasValue(GroupType.CONSUMER);
+                                });
+                    });
         }
     }
 }

@@ -28,10 +28,10 @@ interface ProcessedOrderEventRepository
     @Query(
             value =
                     """
-            INSERT INTO processed_order_events (order_id, event_type, processed_at)
-            VALUES (:orderId, :eventType, :processedAt)
-            ON CONFLICT (order_id, event_type) DO NOTHING
-            """,
+                    INSERT INTO processed_order_events (order_id, event_type, processed_at)
+                    VALUES (:orderId, :eventType, :processedAt)
+                    ON CONFLICT (order_id, event_type) DO NOTHING
+                    """,
             nativeQuery = true)
     int claim(
             @Param("orderId") Long orderId,
@@ -50,10 +50,10 @@ interface ProcessedOrderEventRepository
     @Query(
             value =
                     """
-            UPDATE processed_order_events
-            SET result_status = :resultStatus
-            WHERE order_id = :orderId AND event_type = :eventType
-            """,
+                    UPDATE processed_order_events
+                    SET result_status = :resultStatus
+                    WHERE order_id = :orderId AND event_type = :eventType
+                    """,
             nativeQuery = true)
     int updateResultStatus(
             @Param("orderId") Long orderId,
@@ -69,10 +69,10 @@ interface ProcessedOrderEventRepository
     @Query(
             value =
                     """
-            SELECT result_status
-            FROM processed_order_events
-            WHERE order_id = :orderId AND event_type = 'RESERVE'
-            """,
+                    SELECT result_status
+                    FROM processed_order_events
+                    WHERE order_id = :orderId AND event_type = 'RESERVE'
+                    """,
             nativeQuery = true)
     Optional<String> findResultStatusByOrderIdAndReserveEventType(@Param("orderId") Long orderId);
 }

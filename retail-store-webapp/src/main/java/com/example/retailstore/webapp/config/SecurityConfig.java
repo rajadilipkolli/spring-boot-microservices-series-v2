@@ -38,8 +38,7 @@ public class SecurityConfig {
     /**
      * Configures public routes, authenticated access, OAuth2 login, logout, and response headers.
      * Prometheus and metrics endpoints require the OPERATOR role; other nonpublic routes require
-     * authentication. Registration bypasses CSRF checks; other requests use cookie-based CSRF
-     * protection.
+     * authentication. Uses cookie-based CSRF protection across all endpoints.
      *
      * @param http the security configuration builder
      * @param userAuthoritiesMapper mapper for authorities supplied by the identity provider
@@ -54,11 +53,8 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())
-                .csrf(
-                        csrf -> csrf.ignoringRequestMatchers("/api/register") // Allow registration without CSRF
-                                .csrfTokenRepository(
-                                        CookieCsrfTokenRepository.withHttpOnlyFalse()) // Store token in a cookie
-                        )
+                .csrf(csrf -> csrf.csrfTokenRepository(
+                        CookieCsrfTokenRepository.withHttpOnlyFalse())) // Store token in a cookie
                 .oauth2Login(oauth2 -> oauth2.loginPage("/login")
                         .defaultSuccessUrl("/", true)
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))

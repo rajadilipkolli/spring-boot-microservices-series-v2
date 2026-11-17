@@ -31,42 +31,37 @@ class ConsumerProtocolIntegrationTest extends AbstractIntegrationTest {
                         Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
             await().atMost(Duration.ofSeconds(60))
                     .pollInterval(Duration.ofMillis(500))
-                    .untilAsserted(
-                            () -> {
-                                Map<String, ConsumerGroupDescription> descriptions =
-                                        admin.describeConsumerGroups(Set.of("stock", "product"))
-                                                .all()
-                                                .get();
-                                assertThat(descriptions).containsKeys("stock", "product");
+                    .untilAsserted(() -> {
+                        Map<String, ConsumerGroupDescription> descriptions =
+                                admin.describeConsumerGroups(Set.of("stock", "product"))
+                                        .all()
+                                        .get();
+                        assertThat(descriptions).containsKeys("stock", "product");
 
-                                ConsumerGroupDescription stockGroup = descriptions.get("stock");
-                                assertThat(stockGroup.type()).isEqualTo(GroupType.CONSUMER);
-                                assertThat(stockGroup.groupState())
-                                        .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
+                        ConsumerGroupDescription stockGroup = descriptions.get("stock");
+                        assertThat(stockGroup.type()).isEqualTo(GroupType.CONSUMER);
+                        assertThat(stockGroup.groupState())
+                                .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
 
-                                ConsumerGroupDescription productGroup = descriptions.get("product");
-                                assertThat(productGroup.type()).isEqualTo(GroupType.CONSUMER);
-                                assertThat(productGroup.groupState())
-                                        .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
+                        ConsumerGroupDescription productGroup = descriptions.get("product");
+                        assertThat(productGroup.type()).isEqualTo(GroupType.CONSUMER);
+                        assertThat(productGroup.groupState())
+                                .isIn(GroupState.STABLE, GroupState.COMPLETING_REBALANCE);
 
-                                Collection<GroupListing> listings = admin.listGroups().all().get();
+                        Collection<GroupListing> listings = admin.listGroups().all().get();
 
-                                assertThat(listings)
-                                        .filteredOn(group -> group.groupId().startsWith("stock-"))
-                                        .isNotEmpty()
-                                        .allSatisfy(
-                                                group ->
-                                                        assertThat(group.type())
-                                                                .hasValue(GroupType.CONSUMER));
+                        assertThat(listings)
+                                .filteredOn(group -> group.groupId().startsWith("stock-"))
+                                .isNotEmpty()
+                                .allSatisfy(group ->
+                                        assertThat(group.type()).hasValue(GroupType.CONSUMER));
 
-                                assertThat(listings)
-                                        .filteredOn(group -> group.groupId().startsWith("product-"))
-                                        .isNotEmpty()
-                                        .allSatisfy(
-                                                group ->
-                                                        assertThat(group.type())
-                                                                .hasValue(GroupType.CONSUMER));
-                            });
+                        assertThat(listings)
+                                .filteredOn(group -> group.groupId().startsWith("product-"))
+                                .isNotEmpty()
+                                .allSatisfy(group ->
+                                        assertThat(group.type()).hasValue(GroupType.CONSUMER));
+                    });
         }
     }
 }

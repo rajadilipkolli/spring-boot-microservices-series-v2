@@ -16,6 +16,8 @@ import com.example.orderservice.mapper.OrderMapper;
 import com.example.orderservice.model.response.OrderResponse;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.repositories.OrderSearchRepository;
+import com.example.orderservice.services.search.KeywordOrderSearchStrategy;
+import com.example.orderservice.services.search.SimilarityOrderSearchStrategy;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -53,10 +55,8 @@ class OrderServiceTest {
                         null,
                         meterRegistry,
                         List.of(
-                                new com.example.orderservice.services.search
-                                        .KeywordOrderSearchStrategy(orderSearchRepository),
-                                new com.example.orderservice.services.search
-                                        .SimilarityOrderSearchStrategy(orderSearchRepository)));
+                                new KeywordOrderSearchStrategy(orderSearchRepository),
+                                new SimilarityOrderSearchStrategy(orderSearchRepository)));
     }
 
     @Test

@@ -44,21 +44,18 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                 String.valueOf(orderDto.orderId()),
                 jsonMapper.writeValueAsBytes(orderDto));
 
-        await().untilAsserted(
-                        () -> {
-                            Optional<InventoryRecord> optionalInventory =
-                                    inventoryJOOQRepository.findById(inventory.getId());
-                            assertThat(optionalInventory).isPresent();
-                            InventoryRecord inventoryFromDB = optionalInventory.get();
-                            assertThat(inventoryFromDB)
-                                    .satisfies(
-                                            inventory1 -> {
-                                                assertThat(inventory1.getQuantity()).isEqualTo(990);
-                                                assertThat(inventory1.getReservedItems())
-                                                        .isEqualTo(10);
-                                            });
-                            assertThat(stockOrderListener.getCountDownLatch().getCount()).isZero();
-                        });
+        await().untilAsserted(() -> {
+            Optional<InventoryRecord> optionalInventory =
+                    inventoryJOOQRepository.findById(inventory.getId());
+            assertThat(optionalInventory).isPresent();
+            InventoryRecord inventoryFromDB = optionalInventory.get();
+            assertThat(inventoryFromDB)
+                    .satisfies(inventory1 -> {
+                        assertThat(inventory1.getQuantity()).isEqualTo(990);
+                        assertThat(inventory1.getReservedItems()).isEqualTo(10);
+                    });
+            assertThat(stockOrderListener.getCountDownLatch().getCount()).isZero();
+        });
     }
 
     /** Verifies a catalog product event with a decimal price creates an inventory entry. */
@@ -72,12 +69,9 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         kafkaTemplate.send(
                 AppConstants.PRODUCT_TOPIC, "1001", jsonMapper.writeValueAsBytes(productDto));
 
-        await().untilAsserted(
-                        () ->
-                                assertThat(
-                                                inventoryJOOQRepository
-                                                        .findByProductCodeAndDeletedFalse("P001"))
-                                        .isPresent());
+        await().untilAsserted(() ->
+                assertThat(inventoryJOOQRepository.findByProductCodeAndDeletedFalse("P001"))
+                        .isPresent());
     }
 
     @Test
@@ -93,20 +87,16 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
         kafkaTemplate.send(
                 AppConstants.PRODUCT_TOPIC, "P_DEL_001", jsonMapper.writeValueAsBytes(deleteDto));
 
-        await().untilAsserted(
-                        () -> {
-                            // Unfiltered lookup shows it is retained with deleted = true
-                            Optional<InventoryRecord> opt =
-                                    inventoryJOOQRepository.findByProductCode("P_DEL_001");
-                            assertThat(opt).isPresent();
-                            assertThat(opt.get().getDeleted()).isTrue();
+        await().untilAsserted(() -> {
+            // Unfiltered lookup shows it is retained with deleted = true
+            Optional<InventoryRecord> opt = inventoryJOOQRepository.findByProductCode("P_DEL_001");
+            assertThat(opt).isPresent();
+            assertThat(opt.get().getDeleted()).isTrue();
 
-                            // Filtered lookup returns empty
-                            assertThat(
-                                            inventoryJOOQRepository
-                                                    .findByProductCodeAndDeletedFalse("P_DEL_001"))
-                                    .isEmpty();
-                        });
+            // Filtered lookup returns empty
+            assertThat(inventoryJOOQRepository.findByProductCodeAndDeletedFalse("P_DEL_001"))
+                    .isEmpty();
+        });
     }
 
     @Test
@@ -121,13 +111,11 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
                 "P_UNKNOWN_001",
                 rawJson.getBytes(StandardCharsets.UTF_8));
 
-        await().untilAsserted(
-                        () ->
-                                assertThat(
-                                                inventoryJOOQRepository
-                                                        .findByProductCodeAndDeletedFalse(
-                                                                "P_UNKNOWN_001"))
-                                        .isPresent());
+        await().untilAsserted(() ->
+                assertThat(
+                                inventoryJOOQRepository.findByProductCodeAndDeletedFalse(
+                                        "P_UNKNOWN_001"))
+                        .isPresent());
     }
 
     @Test
@@ -156,19 +144,18 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(200))
-                .untilAsserted(
-                        () -> {
-                            Optional<InventoryRecord> opt =
-                                    inventoryJOOQRepository.findById(inventory.getId());
-                            assertThat(opt).isPresent();
-                            // First order 8888 took 10 (reserved 10, available 90).
-                            // Sentinel 8889 took 10 (reserved 20, available 80).
-                            // If 8888 duplicate was processed, available would be 70 and reserved
-                            // 30.
-                            InventoryRecord record = opt.get();
-                            assertThat(record.getReservedItems()).isEqualTo(20);
-                            assertThat(record.getQuantity()).isEqualTo(80);
-                        });
+                .untilAsserted(() -> {
+                    Optional<InventoryRecord> opt =
+                            inventoryJOOQRepository.findById(inventory.getId());
+                    assertThat(opt).isPresent();
+                    // First order 8888 took 10 (reserved 10, available 90).
+                    // Sentinel 8889 took 10 (reserved 20, available 80).
+                    // If 8888 duplicate was processed, available would be 70 and reserved
+                    // 30.
+                    InventoryRecord record = opt.get();
+                    assertThat(record.getReservedItems()).isEqualTo(20);
+                    assertThat(record.getQuantity()).isEqualTo(80);
+                });
     }
 
     @Test
@@ -192,14 +179,13 @@ class KafkaListenerConfigIntTest extends AbstractIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(200))
-                .untilAsserted(
-                        () -> {
-                            assertThat(
-                                            inventoryJOOQRepository
-                                                    .findByProductCodeAndDeletedFalse(sentinelCode))
-                                    .isPresent();
-                            // Verify exactly one row for P_DUP_001
-                            assertThat(inventoryJOOQRepository.findByProductCode(code)).isPresent();
-                        });
+                .untilAsserted(() -> {
+                    assertThat(
+                                    inventoryJOOQRepository.findByProductCodeAndDeletedFalse(
+                                            sentinelCode))
+                            .isPresent();
+                    // Verify exactly one row for P_DUP_001
+                    assertThat(inventoryJOOQRepository.findByProductCode(code)).isPresent();
+                });
     }
 }

@@ -79,22 +79,21 @@ class SwaggerConfig {
                 .map(RouteDefinition::getId)
                 .filter(Objects::nonNull)
                 .filter(this::isServiceRoute)
-                .map(
-                        routeDefinitionId -> {
-                            String name = extractNameFromRouteDefinitionId(routeDefinitionId);
-                            log.debug("Configuring API documentation for service: {}", name);
+                .map(routeDefinitionId -> {
+                    String name = extractNameFromRouteDefinitionId(routeDefinitionId);
+                    log.debug("Configuring API documentation for service: {}", name);
 
-                            swaggerUrls.add(
-                                    new AbstractSwaggerUiConfigProperties.SwaggerUrl(
-                                            name,
-                                            "/" + routeDefinitionId + "/v3/api-docs",
-                                            routeDefinitionId));
-                            return GroupedOpenApi.builder()
-                                    .pathsToMatch("/" + name + "/**")
-                                    .group(name)
-                                    .displayName(name.toUpperCase() + " Service")
-                                    .build();
-                        })
+                    swaggerUrls.add(
+                            new AbstractSwaggerUiConfigProperties.SwaggerUrl(
+                                    name,
+                                    "/" + routeDefinitionId + "/v3/api-docs",
+                                    routeDefinitionId));
+                    return GroupedOpenApi.builder()
+                            .pathsToMatch("/" + name + "/**")
+                            .group(name)
+                            .displayName(name.toUpperCase() + " Service")
+                            .build();
+                })
                 .toList();
     }
 

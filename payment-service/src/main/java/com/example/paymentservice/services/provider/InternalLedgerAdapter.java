@@ -122,11 +122,10 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         setTimeouts();
         Optional<LedgerEntriesRecord> existing =
                 ledgerRepository.findByDownstreamKey(downstreamKey);
-        return existing.map(
-                        ledgerEntriesRecord ->
-                                "ACCEPT".equals(ledgerEntriesRecord.getStatus())
-                                        ? ProviderResult.accept()
-                                        : ProviderResult.reject())
+        return existing.map(ledgerEntriesRecord ->
+                        "ACCEPT".equals(ledgerEntriesRecord.getStatus())
+                                ? ProviderResult.accept()
+                                : ProviderResult.reject())
                 .orElseGet(ProviderResult::notFound);
     }
 
@@ -138,13 +137,12 @@ public class InternalLedgerAdapter implements PaymentProviderPort {
         try {
             long statementMs = properties.getOperation().getStatementTimeout().toMillis();
             long lockMs = properties.getOperation().getLockTimeout().toMillis();
-            dslContext.connection(
-                    connection -> {
-                        try (Statement stmt = connection.createStatement()) {
-                            stmt.execute("SET LOCAL statement_timeout = " + statementMs);
-                            stmt.execute("SET LOCAL lock_timeout = " + lockMs);
-                        }
-                    });
+            dslContext.connection(connection -> {
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("SET LOCAL statement_timeout = " + statementMs);
+                    stmt.execute("SET LOCAL lock_timeout = " + lockMs);
+                }
+            });
         } catch (Exception e) {
             log.debug("Could not set PostgreSQL session timeouts (e.g. non-postgres dialect)", e);
         }

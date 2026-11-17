@@ -120,16 +120,15 @@ class RetailStoreWebappAuthE2ETest {
         await("Inventory items should be fetchable via Gateway")
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
-                                        .queryParam("pageNo", 0)
-                                        .when()
-                                        .get("/inventory-service/api/inventory")
-                                        .then()
-                                        .statusCode(200)
-                                        .body("data", notNullValue())
-                                        .body("totalElements", greaterThanOrEqualTo(0)));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                                .queryParam("pageNo", 0)
+                                .when()
+                                .get("/inventory-service/api/inventory")
+                                .then()
+                                .statusCode(200)
+                                .body("data", notNullValue())
+                                .body("totalElements", greaterThanOrEqualTo(0)));
     }
 
     @Test

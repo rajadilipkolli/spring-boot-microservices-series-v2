@@ -51,22 +51,22 @@ class OrderProxyServiceTest {
                 .andRespond(
                         withSuccess(
                                 """
-                        {
-                          "data": [{
-                            "orderId": "9007199254740993", "customerId": "9007199254740995",
-                            "status": "COMPLETED", "source": "PAYMENT",
-                            "createdDate": "2026-10-10T12:00:00", "totalPrice": 20.00,
-                            "deliveryAddress": {
-                              "addressLine1": "Street", "addressLine2": "Suite",
-                              "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
-                            },
-                            "items": [{"itemId": "9007199254740997", "productId": "P1",
-                              "quantity": 2, "productPrice": 10.00, "price": 20.00}]
-                          }],
-                          "totalElements": 1, "pageNumber": 1, "totalPages": 1,
-                          "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
-                        }
-                        """,
+                                {
+                                  "data": [{
+                                    "orderId": "9007199254740993", "customerId": "9007199254740995",
+                                    "status": "COMPLETED", "source": "PAYMENT",
+                                    "createdDate": "2026-10-10T12:00:00", "totalPrice": 20.00,
+                                    "deliveryAddress": {
+                                      "addressLine1": "Street", "addressLine2": "Suite",
+                                      "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
+                                    },
+                                    "items": [{"itemId": "9007199254740997", "productId": "P1",
+                                      "quantity": 2, "productPrice": 10.00, "price": 20.00}]
+                                  }],
+                                  "totalElements": 1, "pageNumber": 1, "totalPages": 1,
+                                  "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
+                                }
+                                """,
                                 MediaType.APPLICATION_JSON));
 
         var result =
@@ -103,22 +103,22 @@ class OrderProxyServiceTest {
                 .andRespond(
                         withSuccess(
                                 """
-                        {
-                          "data": [{
-                            "orderId": "1", "customerId": "1",
-                            "status": "COMPLETED", "source": "PAYMENT",
-                            "createdDate": "%s", "totalPrice": 20.00,
-                            "deliveryAddress": {
-                              "addressLine1": "Street", "addressLine2": "Suite",
-                              "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
-                            },
-                            "items": [{"itemId": "1", "productId": "P1",
-                              "quantity": 2, "productPrice": 10.00, "price": 20.00}]
-                          }],
-                          "totalElements": 1, "pageNumber": 1, "totalPages": 1,
-                          "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
-                        }
-                        """
+                                {
+                                  "data": [{
+                                    "orderId": "1", "customerId": "1",
+                                    "status": "COMPLETED", "source": "PAYMENT",
+                                    "createdDate": "%s", "totalPrice": 20.00,
+                                    "deliveryAddress": {
+                                      "addressLine1": "Street", "addressLine2": "Suite",
+                                      "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
+                                    },
+                                    "items": [{"itemId": "1", "productId": "P1",
+                                      "quantity": 2, "productPrice": 10.00, "price": 20.00}]
+                                  }],
+                                  "totalElements": 1, "pageNumber": 1, "totalPages": 1,
+                                  "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
+                                }
+                                """
                                         .formatted(inputDate),
                                 MediaType.APPLICATION_JSON));
 

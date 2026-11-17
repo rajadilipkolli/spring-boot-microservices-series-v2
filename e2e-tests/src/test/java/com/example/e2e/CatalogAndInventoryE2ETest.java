@@ -77,14 +77,13 @@ class CatalogAndInventoryE2ETest {
         await("Inventory should be initialized for product " + productCode)
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .when()
-                                        .get("/inventory-service/api/inventory/" + productCode)
-                                        .then()
-                                        .statusCode(200)
-                                        .body("productCode", is(productCode)));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.defaultRequestSpec())
+                                .when()
+                                .get("/inventory-service/api/inventory/" + productCode)
+                                .then()
+                                .statusCode(200)
+                                .body("productCode", is(productCode)));
 
         InventoryRequest inventory = new InventoryRequest(productCode, 75);
         given().spec(E2EConfig.defaultRequestSpec())
@@ -104,18 +103,15 @@ class CatalogAndInventoryE2ETest {
         await("Catalog should reflect inStock status for product " + productCode)
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .queryParam("fetchInStock", true)
-                                        .when()
-                                        .get(
-                                                "/catalog-service/api/catalog/product-code/"
-                                                        + productCode)
-                                        .then()
-                                        .statusCode(200)
-                                        .body("productCode", is(productCode))
-                                        .body("inStock", is(true)));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.defaultRequestSpec())
+                                .queryParam("fetchInStock", true)
+                                .when()
+                                .get("/catalog-service/api/catalog/product-code/" + productCode)
+                                .then()
+                                .statusCode(200)
+                                .body("productCode", is(productCode))
+                                .body("inStock", is(true)));
     }
 
     @Test
@@ -150,12 +146,11 @@ class CatalogAndInventoryE2ETest {
         await("Inventory should be soft-deleted for product " + productCode)
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .when()
-                                        .get("/inventory-service/api/inventory/" + productCode)
-                                        .then()
-                                        .statusCode(404));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.defaultRequestSpec())
+                                .when()
+                                .get("/inventory-service/api/inventory/" + productCode)
+                                .then()
+                                .statusCode(404));
     }
 }

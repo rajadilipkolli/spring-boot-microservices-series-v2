@@ -118,18 +118,17 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("success");
-                            assertThat(response.message())
-                                    .isEqualTo("Generation process completed successfully");
-                            assertThat(response.serviceResponses())
-                                    .containsEntry("catalog", "Catalog generated successfully")
-                                    .containsEntry("inventory", "Inventory generated successfully")
-                                    .containsEntry("order", "Orders generated successfully");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("success");
+                    assertThat(response.message())
+                            .isEqualTo("Generation process completed successfully");
+                    assertThat(response.serviceResponses())
+                            .containsEntry("catalog", "Catalog generated successfully")
+                            .containsEntry("inventory", "Inventory generated successfully")
+                            .containsEntry("order", "Orders generated successfully");
+                });
 
         wireMock.verifyThat(
                 1,
@@ -175,27 +174,22 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
 
         webTestClient
                 .post()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/v1/generate")
-                                        .queryParam("batchSize", 50)
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder.path("/api/v1/generate").queryParam("batchSize", 50).build())
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("success");
-                            assertThat(response.serviceResponses())
-                                    .containsEntry("catalog", "50 items generated")
-                                    .containsEntry("inventory", "50 inventories created")
-                                    .containsEntry("order", "50 orders placed");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("success");
+                    assertThat(response.serviceResponses())
+                            .containsEntry("catalog", "50 items generated")
+                            .containsEntry("inventory", "50 inventories created")
+                            .containsEntry("order", "50 orders placed");
+                });
 
         wireMock.verifyThat(
                 1,
@@ -226,14 +220,12 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isEqualTo(HttpStatus.BAD_GATEWAY)
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("error");
-                            assertThat(response.message())
-                                    .contains("Generation failed in catalog service");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("error");
+                    assertThat(response.message()).contains("Generation failed in catalog service");
+                });
 
         wireMock.verifyThat(
                 0, postRequestedFor(urlPathEqualTo("/inventory-service/api/inventory/generate")));
@@ -267,14 +259,13 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isEqualTo(HttpStatus.BAD_GATEWAY)
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("error");
-                            assertThat(response.message())
-                                    .contains("Generation failed in inventory service");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("error");
+                    assertThat(response.message())
+                            .contains("Generation failed in inventory service");
+                });
 
         wireMock.verifyThat(
                 1, postRequestedFor(urlPathEqualTo("/catalog-service/api/catalog/generate")));
@@ -316,14 +307,12 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isEqualTo(HttpStatus.BAD_GATEWAY)
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("error");
-                            assertThat(response.message())
-                                    .contains("Generation failed in order service");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("error");
+                    assertThat(response.message()).contains("Generation failed in order service");
+                });
 
         wireMock.verifyThat(
                 1, postRequestedFor(urlPathEqualTo("/catalog-service/api/catalog/generate")));
@@ -349,14 +338,12 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("error");
-                            assertThat(response.message())
-                                    .contains("Generation failed in catalog service");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("error");
+                    assertThat(response.message()).contains("Generation failed in catalog service");
+                });
     }
 
     @Test
@@ -381,16 +368,15 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isOk()
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("success");
-                            assertThat(response.serviceResponses())
-                                    .containsEntry("catalog", "")
-                                    .containsEntry("inventory", "")
-                                    .containsEntry("order", "");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("success");
+                    assertThat(response.serviceResponses())
+                            .containsEntry("catalog", "")
+                            .containsEntry("inventory", "")
+                            .containsEntry("order", "");
+                });
     }
 
     @Test
@@ -437,14 +423,13 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
                 .expectStatus()
                 .isOk()
                 .expectBody(GenerationResponse.class)
-                .consumeWith(
-                        result -> {
-                            GenerationResponse response = result.getResponseBody();
-                            assertThat(response).isNotNull();
-                            assertThat(response.status()).isEqualTo("success");
-                            assertThat(response.serviceResponses().get("catalog"))
-                                    .isEqualTo("Catalog recovered");
-                        });
+                .consumeWith(result -> {
+                    GenerationResponse response = result.getResponseBody();
+                    assertThat(response).isNotNull();
+                    assertThat(response.status()).isEqualTo("success");
+                    assertThat(response.serviceResponses().get("catalog"))
+                            .isEqualTo("Catalog recovered");
+                });
 
         wireMock.verifyThat(
                 2, postRequestedFor(urlEqualTo("/catalog-service/api/catalog/generate")));
@@ -455,12 +440,11 @@ class GenerateControllerIntegrationTest extends AbstractIntegrationTest {
     void shouldReturnBadRequestForInvalidBatchSize(int batchSize) {
         webTestClient
                 .post()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/v1/generate")
-                                        .queryParam("batchSize", batchSize)
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/v1/generate")
+                                .queryParam("batchSize", batchSize)
+                                .build())
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .expectStatus()

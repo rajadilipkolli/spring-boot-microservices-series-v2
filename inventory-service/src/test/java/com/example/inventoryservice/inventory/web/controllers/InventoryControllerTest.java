@@ -249,12 +249,9 @@ class InventoryControllerTest {
 
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        result ->
-                                assertThat(
-                                                Boolean.parseBoolean(
-                                                        result.getResponse().getContentAsString()))
-                                        .isTrue());
+                .andExpect(result ->
+                        assertThat(Boolean.parseBoolean(result.getResponse().getContentAsString()))
+                                .isTrue());
 
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", null);
     }
@@ -268,12 +265,9 @@ class InventoryControllerTest {
                         post("/api/inventory/generate?batchSize=25")
                                 .header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        result ->
-                                assertThat(
-                                                Boolean.parseBoolean(
-                                                        result.getResponse().getContentAsString()))
-                                        .isTrue());
+                .andExpect(result ->
+                        assertThat(Boolean.parseBoolean(result.getResponse().getContentAsString()))
+                                .isTrue());
 
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", 25);
     }

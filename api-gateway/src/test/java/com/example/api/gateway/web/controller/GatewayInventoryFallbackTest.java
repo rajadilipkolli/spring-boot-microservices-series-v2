@@ -57,22 +57,19 @@ class GatewayInventoryFallbackTest {
                     .expectHeader()
                     .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getTitle())
-                                        .isEqualTo("Inventory Service Unavailable");
-                                assertThat(problem.getDetail())
-                                        .isEqualTo(
-                                                "Inventory service is currently unavailable for product P0001");
-                                assertThat(problem.getType())
-                                        .isEqualTo(
-                                                URI.create(
-                                                        "urn:problem-type:inventory-service-unavailable"));
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", "P0001");
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getTitle()).isEqualTo("Inventory Service Unavailable");
+                        assertThat(problem.getDetail())
+                                .isEqualTo(
+                                        "Inventory service is currently unavailable for product P0001");
+                        assertThat(problem.getType())
+                                .isEqualTo(
+                                        URI.create(
+                                                "urn:problem-type:inventory-service-unavailable"));
+                        assertThat(problem.getProperties()).containsEntry("productId", "P0001");
+                    });
         }
 
         @Test
@@ -87,14 +84,12 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail()).contains("12345");
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", "12345");
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail()).contains("12345");
+                        assertThat(problem.getProperties()).containsEntry("productId", "12345");
+                    });
         }
 
         @Test
@@ -109,13 +104,12 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail()).contains("A");
-                                assertThat(problem.getProperties()).containsEntry("productId", "A");
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail()).contains("A");
+                        assertThat(problem.getProperties()).containsEntry("productId", "A");
+                    });
         }
 
         @ParameterizedTest(name = "Should handle various valid product IDs: {0}")
@@ -130,14 +124,12 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail()).contains(productId);
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", productId);
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail()).contains(productId);
+                        assertThat(problem.getProperties()).containsEntry("productId", productId);
+                    });
         }
 
         @Test
@@ -150,15 +142,13 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getTitle())
-                                        .isEqualTo("Inventory Service Unavailable");
-                                assertThat(problem.getDetail())
-                                        .isEqualTo("Inventory service is currently unavailable");
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getTitle()).isEqualTo("Inventory Service Unavailable");
+                        assertThat(problem.getDetail())
+                                .isEqualTo("Inventory service is currently unavailable");
+                    });
         }
     }
 
@@ -179,12 +169,11 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", longProductId);
-                                assertThat(problem.getDetail()).contains(longProductId);
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getProperties())
+                                .containsEntry("productId", longProductId);
+                        assertThat(problem.getDetail()).contains(longProductId);
+                    });
         }
 
         @Test
@@ -199,12 +188,11 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", specialCharProductId);
-                                assertThat(problem.getDetail()).contains(specialCharProductId);
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getProperties())
+                                .containsEntry("productId", specialCharProductId);
+                        assertThat(problem.getDetail()).contains(specialCharProductId);
+                    });
         }
 
         @Test
@@ -219,12 +207,11 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", productIdWithSpaces);
-                                assertThat(problem.getDetail()).contains(productIdWithSpaces);
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getProperties())
+                                .containsEntry("productId", productIdWithSpaces);
+                        assertThat(problem.getDetail()).contains(productIdWithSpaces);
+                    });
         }
 
         @Test
@@ -239,12 +226,11 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", unicodeProductId);
-                                assertThat(problem.getDetail()).contains(unicodeProductId);
-                            });
+                    .value(problem -> {
+                        assertThat(problem.getProperties())
+                                .containsEntry("productId", unicodeProductId);
+                        assertThat(problem.getDetail()).contains(unicodeProductId);
+                    });
         }
     }
 
@@ -281,10 +267,9 @@ class GatewayInventoryFallbackTest {
                     .expectStatus()
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem ->
-                                    assertThat(problem.getProperties())
-                                            .containsEntry("productId", productId));
+                    .value(problem ->
+                            assertThat(problem.getProperties())
+                                    .containsEntry("productId", productId));
         }
 
         @Test
@@ -315,14 +300,12 @@ class GatewayInventoryFallbackTest {
             Mono<ProblemDetail> result = controller.fallback(productId);
 
             StepVerifier.create(result)
-                    .assertNext(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail()).contains("P0001");
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", "P0001");
-                            })
+                    .assertNext(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail()).contains("P0001");
+                        assertThat(problem.getProperties()).containsEntry("productId", "P0001");
+                    })
                     .verifyComplete();
         }
 
@@ -335,13 +318,11 @@ class GatewayInventoryFallbackTest {
             Mono<ProblemDetail> result = controller.fallback(productId);
 
             StepVerifier.create(result)
-                    .assertNext(
-                            problem -> {
-                                assertThat(problem).isNotNull();
-                                assertThat(problem.getDetail()).contains("TEST123");
-                                assertThat(problem.getTitle())
-                                        .isEqualTo("Inventory Service Unavailable");
-                            })
+                    .assertNext(problem -> {
+                        assertThat(problem).isNotNull();
+                        assertThat(problem.getDetail()).contains("TEST123");
+                        assertThat(problem.getTitle()).isEqualTo("Inventory Service Unavailable");
+                    })
                     .verifyComplete();
         }
 
@@ -360,10 +341,9 @@ class GatewayInventoryFallbackTest {
             for (int i = 0; i < productIds.length; i++) {
                 final String expectedId = productIds[i];
                 StepVerifier.create(monos[i])
-                        .assertNext(
-                                problem ->
-                                        assertThat(problem.getProperties())
-                                                .containsEntry("productId", expectedId))
+                        .assertNext(problem ->
+                                assertThat(problem.getProperties())
+                                        .containsEntry("productId", expectedId))
                         .verifyComplete();
             }
         }
@@ -381,14 +361,13 @@ class GatewayInventoryFallbackTest {
             Mono<ProblemDetail> result = controller.fallback(null);
 
             StepVerifier.create(result)
-                    .assertNext(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail())
-                                        .isEqualTo("Inventory service is currently unavailable");
-                                assertThat(problem.getProperties()).isNull();
-                            })
+                    .assertNext(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail())
+                                .isEqualTo("Inventory service is currently unavailable");
+                        assertThat(problem.getProperties()).isNull();
+                    })
                     .verifyComplete();
         }
 
@@ -401,13 +380,12 @@ class GatewayInventoryFallbackTest {
             Mono<ProblemDetail> result = controller.fallback(productId);
 
             StepVerifier.create(result)
-                    .assertNext(
-                            problem -> {
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getDetail())
-                                        .isEqualTo("Inventory service is currently unavailable");
-                            })
+                    .assertNext(problem -> {
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getDetail())
+                                .isEqualTo("Inventory service is currently unavailable");
+                    })
                     .verifyComplete();
         }
 
@@ -421,10 +399,9 @@ class GatewayInventoryFallbackTest {
 
             for (String input : problematicInputs) {
                 StepVerifier.create(controller.fallback(input))
-                        .assertNext(
-                                problem ->
-                                        assertThat(problem.getStatus())
-                                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value()))
+                        .assertNext(problem ->
+                                assertThat(problem.getStatus())
+                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value()))
                         .verifyComplete();
             }
         }
@@ -456,13 +433,12 @@ class GatewayInventoryFallbackTest {
                         .expectStatus()
                         .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                         .expectBody(ProblemDetail.class)
-                        .value(
-                                problem -> {
-                                    assertThat(problem.getStatus())
-                                            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                    assertThat(problem.getProperties())
-                                            .containsEntry("productId", productId);
-                                });
+                        .value(problem -> {
+                            assertThat(problem.getStatus())
+                                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                            assertThat(problem.getProperties())
+                                    .containsEntry("productId", productId);
+                        });
             }
         }
     }
@@ -486,23 +462,21 @@ class GatewayInventoryFallbackTest {
                     .expectHeader()
                     .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
                     .expectBody(ProblemDetail.class)
-                    .value(
-                            problem -> {
-                                assertThat(problem).isNotNull();
-                                assertThat(problem.getStatus())
-                                        .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                assertThat(problem.getTitle())
-                                        .isEqualTo("Inventory Service Unavailable");
-                                assertThat(problem.getDetail())
-                                        .isEqualTo(
-                                                "Inventory service is currently unavailable for product CONTRACT_TEST");
-                                assertThat(problem.getType())
-                                        .isEqualTo(
-                                                URI.create(
-                                                        "urn:problem-type:inventory-service-unavailable"));
-                                assertThat(problem.getProperties())
-                                        .containsEntry("productId", "CONTRACT_TEST");
-                            });
+                    .value(problem -> {
+                        assertThat(problem).isNotNull();
+                        assertThat(problem.getStatus())
+                                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        assertThat(problem.getTitle()).isEqualTo("Inventory Service Unavailable");
+                        assertThat(problem.getDetail())
+                                .isEqualTo(
+                                        "Inventory service is currently unavailable for product CONTRACT_TEST");
+                        assertThat(problem.getType())
+                                .isEqualTo(
+                                        URI.create(
+                                                "urn:problem-type:inventory-service-unavailable"));
+                        assertThat(problem.getProperties())
+                                .containsEntry("productId", "CONTRACT_TEST");
+                    });
         }
 
         @Test
@@ -518,13 +492,12 @@ class GatewayInventoryFallbackTest {
                         .expectStatus()
                         .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE)
                         .expectBody(ProblemDetail.class)
-                        .value(
-                                problem -> {
-                                    assertThat(problem.getStatus())
-                                            .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
-                                    assertThat(problem.getProperties())
-                                            .containsEntry("productId", productId);
-                                });
+                        .value(problem -> {
+                            assertThat(problem.getStatus())
+                                    .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value());
+                            assertThat(problem.getProperties())
+                                    .containsEntry("productId", productId);
+                        });
             }
         }
     }

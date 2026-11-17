@@ -8,6 +8,7 @@ package com.example.inventoryservice.inventory.shared;
 
 import com.example.common.dto.OrderDto;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ public class TestStockOrderListenerConfig {
     private static final Logger log = LoggerFactory.getLogger(TestStockOrderListenerConfig.class);
 
     private volatile CountDownLatch countDownLatch = new CountDownLatch(1);
-    private final List<OrderDto> receivedOrders = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<OrderDto> receivedOrders = new CopyOnWriteArrayList<>();
     private final JsonMapper jsonMapper;
 
     public TestStockOrderListenerConfig(JsonMapper jsonMapper) {

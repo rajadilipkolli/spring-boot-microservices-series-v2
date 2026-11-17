@@ -223,13 +223,11 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
         // Phase 1: Validation pass - no mutations
         boolean allItemsAvailable =
                 orderDto.items().stream()
-                        .allMatch(
-                                itemDto -> {
-                                    Inventory inventory = inventoryMap.get(itemDto.productId());
-                                    return inventory != null
-                                            && itemDto.quantity()
-                                                    <= inventory.getAvailableQuantity();
-                                });
+                        .allMatch(itemDto -> {
+                            Inventory inventory = inventoryMap.get(itemDto.productId());
+                            return inventory != null
+                                    && itemDto.quantity() <= inventory.getAvailableQuantity();
+                        });
 
         OrderDto finalOrderDto;
         List<Inventory> updatedInventoryList = new ArrayList<>();
@@ -297,11 +295,10 @@ class InventoryOrderManageServiceImpl implements InventoryOrderManageService {
      */
     @Override
     public void confirm(OrderDto orderDto) {
-        retryHandler.executeWithRetry(
-                () -> {
-                    confirmAttempt(orderDto);
-                    return null;
-                });
+        retryHandler.executeWithRetry(() -> {
+            confirmAttempt(orderDto);
+            return null;
+        });
     }
 
     private void confirmAttempt(OrderDto orderDto) {

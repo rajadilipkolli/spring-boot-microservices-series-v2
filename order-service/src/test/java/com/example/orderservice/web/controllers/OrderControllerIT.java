@@ -261,15 +261,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
             // Verify Kafka message
             await().atMost(Duration.ofSeconds(15))
                     .pollInterval(Duration.ofMillis(500))
-                    .untilAsserted(
-                            () -> {
-                                Optional<OrderDto> orderDtoOpt =
-                                        testKafkaListenerConfig.getMessageByOrderId(orderId);
-                                assertThat(orderDtoOpt).isPresent();
-                                OrderDto orderDto = orderDtoOpt.get();
-                                assertThat(orderDto.customerId()).isEqualTo(1L);
-                                assertThat(orderDto.status()).isEqualTo("NEW");
-                            });
+                    .untilAsserted(() -> {
+                        Optional<OrderDto> orderDtoOpt =
+                                testKafkaListenerConfig.getMessageByOrderId(orderId);
+                        assertThat(orderDtoOpt).isPresent();
+                        OrderDto orderDto = orderDtoOpt.get();
+                        assertThat(orderDto.customerId()).isEqualTo(1L);
+                        assertThat(orderDto.status()).isEqualTo("NEW");
+                    });
 
             // Waiting for a short duration to ensure the order is committed before sending events
             SECONDS.sleep(1);
@@ -295,18 +294,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
             await().atMost(15, SECONDS)
                     .pollDelay(1, SECONDS)
                     .pollInterval(Duration.ofSeconds(1))
-                    .untilAsserted(
-                            () ->
-                                    mockMvc.perform(get("/api/orders/{id}", orderId))
-                                            .andExpect(status().isOk())
-                                            .andExpect(
-                                                    jsonPath("$.orderId", is(orderId.toString())))
-                                            .andExpect(jsonPath("$.status", is("CONFIRMED")))
-                                            .andExpect(jsonPath("$.customerId", is("1")))
-                                            .andExpect(
-                                                    jsonPath(
-                                                            "$.items.size()",
-                                                            is(orderRequest.items().size()))));
+                    .untilAsserted(() ->
+                            mockMvc.perform(get("/api/orders/{id}", orderId))
+                                    .andExpect(status().isOk())
+                                    .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                                    .andExpect(jsonPath("$.status", is("CONFIRMED")))
+                                    .andExpect(jsonPath("$.customerId", is("1")))
+                                    .andExpect(
+                                            jsonPath(
+                                                    "$.items.size()",
+                                                    is(orderRequest.items().size()))));
         }
 
         @Test

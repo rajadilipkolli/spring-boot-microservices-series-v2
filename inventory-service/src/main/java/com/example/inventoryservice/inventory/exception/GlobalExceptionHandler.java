@@ -44,15 +44,14 @@ class GlobalExceptionHandler {
         log.warn("Validation failed: {}", ex.getMessage());
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
-                        .map(
-                                objectError -> {
-                                    FieldError fieldError = (FieldError) objectError;
-                                    return new ApiValidationError(
-                                            fieldError.getObjectName(),
-                                            fieldError.getField(),
-                                            fieldError.getRejectedValue(),
-                                            Objects.requireNonNull(fieldError.getDefaultMessage()));
-                                })
+                        .map(objectError -> {
+                            FieldError fieldError = (FieldError) objectError;
+                            return new ApiValidationError(
+                                    fieldError.getObjectName(),
+                                    fieldError.getField(),
+                                    fieldError.getRejectedValue(),
+                                    Objects.requireNonNull(fieldError.getDefaultMessage()));
+                        })
                         .sorted(
                                 Comparator.comparing(
                                         ApiValidationError::field,
@@ -82,15 +81,14 @@ class GlobalExceptionHandler {
         problemDetail.setProperty("timestamp", Instant.now());
         var violations =
                 ex.getConstraintViolations().stream()
-                        .map(
-                                cv ->
-                                        new ApiValidationError(
-                                                cv.getRootBeanClass().getSimpleName(),
-                                                cv.getPropertyPath() != null
-                                                        ? cv.getPropertyPath().toString()
-                                                        : null,
-                                                cv.getInvalidValue(),
-                                                cv.getMessage()))
+                        .map(cv ->
+                                new ApiValidationError(
+                                        cv.getRootBeanClass().getSimpleName(),
+                                        cv.getPropertyPath() != null
+                                                ? cv.getPropertyPath().toString()
+                                                : null,
+                                        cv.getInvalidValue(),
+                                        cv.getMessage()))
                         .sorted(
                                 Comparator.comparing(
                                         ApiValidationError::field,
