@@ -48,7 +48,7 @@
         <hypersistence-tsid.version>2.1.4</hypersistence-tsid.version>
 
         <properties-maven-plugin.version>1.4.0</properties-maven-plugin.version>
-        <sonar-maven-plugin.version>5.8.0.7211</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.9.0.7382</sonar-maven-plugin.version>
         <project.testresult.directory>${project.build.directory}/test-results</project.testresult.directory>
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <jacoco.minimum.coverage>0.80</jacoco.minimum.coverage>
