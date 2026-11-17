@@ -115,9 +115,8 @@ public class OrderController implements OrderApi {
             @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
-                .map(
-                        orderObj ->
-                                ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
+                .map(orderObj ->
+                        ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 

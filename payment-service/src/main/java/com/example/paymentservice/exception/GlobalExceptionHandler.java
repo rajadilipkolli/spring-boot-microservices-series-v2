@@ -83,15 +83,14 @@ public class GlobalExceptionHandler {
 
         List<ApiValidationError> validationErrorsList =
                 ex.getAllErrors().stream()
-                        .map(
-                                objectError -> {
-                                    FieldError fieldError = (FieldError) objectError;
-                                    return new ApiValidationError(
-                                            fieldError.getObjectName(),
-                                            fieldError.getField(),
-                                            fieldError.getRejectedValue(),
-                                            Objects.requireNonNull(fieldError.getDefaultMessage()));
-                                })
+                        .map(objectError -> {
+                            FieldError fieldError = (FieldError) objectError;
+                            return new ApiValidationError(
+                                    fieldError.getObjectName(),
+                                    fieldError.getField(),
+                                    fieldError.getRejectedValue(),
+                                    Objects.requireNonNull(fieldError.getDefaultMessage()));
+                        })
                         .sorted(Comparator.comparing(ApiValidationError::field))
                         .toList();
 

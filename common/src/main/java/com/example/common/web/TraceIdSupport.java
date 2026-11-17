@@ -6,6 +6,7 @@
 
 package com.example.common.web;
 
+import io.opentelemetry.api.trace.Span;
 import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -124,7 +125,7 @@ public final class TraceIdSupport {
          */
         static @Nullable String getTraceId() {
             try {
-                io.opentelemetry.api.trace.Span span = io.opentelemetry.api.trace.Span.current();
+                Span span = Span.current();
                 if (span != null && span.getSpanContext().isValid()) {
                     return span.getSpanContext().getTraceId();
                 }

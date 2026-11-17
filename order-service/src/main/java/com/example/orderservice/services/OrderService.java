@@ -208,13 +208,12 @@ public class OrderService {
                                 0,
                                 index -> index < allProductCodes.size(),
                                 index -> index + PRODUCT_VALIDATION_BATCH_SIZE)
-                        .mapToObj(
-                                start ->
-                                        allProductCodes.subList(
-                                                start,
-                                                Math.min(
-                                                        start + PRODUCT_VALIDATION_BATCH_SIZE,
-                                                        allProductCodes.size())))
+                        .mapToObj(start ->
+                                allProductCodes.subList(
+                                        start,
+                                        Math.min(
+                                                start + PRODUCT_VALIDATION_BATCH_SIZE,
+                                                allProductCodes.size())))
                         .allMatch(productBatch -> productsExistsAndInStock(productBatch).exists());
 
         if (allProductsExist) {
@@ -245,12 +244,10 @@ public class OrderService {
 
         // Publish an OrderCreatedEvent per saved order; Kafka dispatch happens in
         // OrderEventPublisher
-        savedOrders.forEach(
-                order -> {
-                    OrderDto dto =
-                            orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
-                    eventPublisher.publishEvent(dto);
-                });
+        savedOrders.forEach(order -> {
+            OrderDto dto = orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
+            eventPublisher.publishEvent(dto);
+        });
 
         this.ordersCreatedCounter.increment(savedOrders.size());
         return savedOrders.stream().map(this.orderMapper::toResponse).toList();
@@ -327,10 +324,9 @@ public class OrderService {
         List<CompletableFuture<OrderResponse>> completableFutureList =
                 ordersWithOrderItems.stream()
                         .sorted(Comparator.comparingInt(order -> positions.get(order.getId())))
-                        .map(
-                                order ->
-                                        CompletableFuture.supplyAsync(
-                                                () -> this.orderMapper.toResponse(order)))
+                        .map(order ->
+                                CompletableFuture.supplyAsync(
+                                        () -> this.orderMapper.toResponse(order)))
                         .toList();
         // Joining all completable Future to get DTOs
         List<OrderResponse> orderListDto =
@@ -364,10 +360,8 @@ public class OrderService {
                 searchStrategies.stream()
                         .filter(strategy -> strategy.supports(mode))
                         .findFirst()
-                        .map(
-                                strategy ->
-                                        strategy.search(
-                                                term, customerId, status, threshold, pageable))
+                        .map(strategy ->
+                                strategy.search(term, customerId, status, threshold, pageable))
                         .orElse(Page.empty(pageable));
 
         return getOrderResponsePagedResult(page);

@@ -242,17 +242,16 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .hasContentType(MediaType.APPLICATION_JSON)
                 .bodyJson()
                 .convertTo(CustomerResponse.class)
-                .satisfies(
-                        customerResponse -> {
-                            assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
-                            assertThat(customerResponse.name()).isEqualTo(customer.getName());
-                            assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
-                            assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
-                            assertThat(customerResponse.addressLine1())
-                                    .isEqualTo(customer.getAddressLine1());
-                            assertThat(customerResponse.amountAvailable())
-                                    .isEqualByComparingTo(customer.getAmountAvailable());
-                        });
+                .satisfies(customerResponse -> {
+                    assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
+                    assertThat(customerResponse.name()).isEqualTo(customer.getName());
+                    assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
+                    assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
+                    assertThat(customerResponse.addressLine1())
+                            .isEqualTo(customer.getAddressLine1());
+                    assertThat(customerResponse.amountAvailable())
+                            .isEqualByComparingTo(customer.getAmountAvailable());
+                });
     }
 
     /** Verifies that creating an existing customer returns a conflict error. */

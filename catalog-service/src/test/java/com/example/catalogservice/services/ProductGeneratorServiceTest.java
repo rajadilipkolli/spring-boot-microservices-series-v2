@@ -42,19 +42,18 @@ class ProductGeneratorServiceTest {
     @Test
     void shouldGenerateRandomProductsWithDefaultBatchSize() {
         given(productService.saveProduct(any(ProductRequest.class)))
-                .willAnswer(
-                        invocation -> {
-                            ProductRequest request = invocation.getArgument(0);
-                            return Mono.just(
-                                    new ProductResponse(
-                                            1L,
-                                            request.productCode(),
-                                            request.productName(),
-                                            request.description(),
-                                            null,
-                                            request.price(),
-                                            true));
-                        });
+                .willAnswer(invocation -> {
+                    ProductRequest request = invocation.getArgument(0);
+                    return Mono.just(
+                            new ProductResponse(
+                                    1L,
+                                    request.productCode(),
+                                    request.productName(),
+                                    request.description(),
+                                    null,
+                                    request.price(),
+                                    true));
+                });
 
         StepVerifier.create(generatorService.generateAndSaveProducts("test-batch-123", null))
                 .expectSubscription()
@@ -66,33 +65,30 @@ class ProductGeneratorServiceTest {
         List<ProductRequest> capturedProducts = productCaptor.getAllValues();
         assertThat(capturedProducts)
                 .hasSize(100)
-                .allSatisfy(
-                        product -> {
-                            assertThat(product.price()).isPositive();
-                            assertThat(product.imageUrl())
-                                    .startsWith("https://picsum.photos/seed/")
-                                    .endsWith("/300/200");
-                            assertThat(product.productCode())
-                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}");
-                        });
+                .allSatisfy(product -> {
+                    assertThat(product.price()).isPositive();
+                    assertThat(product.imageUrl())
+                            .startsWith("https://picsum.photos/seed/")
+                            .endsWith("/300/200");
+                    assertThat(product.productCode()).matches("PROD[0-9a-f]{64}_[0-9]{1,4}");
+                });
     }
 
     @Test
     void shouldGenerateRequestedBatchSize() {
         given(productService.saveProduct(any(ProductRequest.class)))
-                .willAnswer(
-                        invocation -> {
-                            ProductRequest request = invocation.getArgument(0);
-                            return Mono.just(
-                                    new ProductResponse(
-                                            1L,
-                                            request.productCode(),
-                                            request.productName(),
-                                            request.description(),
-                                            null,
-                                            request.price(),
-                                            true));
-                        });
+                .willAnswer(invocation -> {
+                    ProductRequest request = invocation.getArgument(0);
+                    return Mono.just(
+                            new ProductResponse(
+                                    1L,
+                                    request.productCode(),
+                                    request.productName(),
+                                    request.description(),
+                                    null,
+                                    request.price(),
+                                    true));
+                });
 
         StepVerifier.create(generatorService.generateAndSaveProducts("test-batch-456", 5))
                 .expectSubscription()
@@ -136,17 +132,16 @@ class ProductGeneratorServiceTest {
         assertThat(products).hasSize(10_000);
         assertThat(products).extracting(ProductRequest::productCode).doesNotHaveDuplicates();
         assertThat(products)
-                .allSatisfy(
-                        product -> {
-                            assertThat(product.productCode())
-                                    .matches("PROD[0-9a-f]{64}_[0-9]{1,4}")
-                                    .hasSizeLessThanOrEqualTo(73);
-                            assertThat(product.imageUrl())
-                                    .isEqualTo(
-                                            "https://picsum.photos/seed/"
-                                                    + product.productCode()
-                                                    + "/300/200");
-                        });
+                .allSatisfy(product -> {
+                    assertThat(product.productCode())
+                            .matches("PROD[0-9a-f]{64}_[0-9]{1,4}")
+                            .hasSizeLessThanOrEqualTo(73);
+                    assertThat(product.imageUrl())
+                            .isEqualTo(
+                                    "https://picsum.photos/seed/"
+                                            + product.productCode()
+                                            + "/300/200");
+                });
         assertThat(products.getLast().productCode()).endsWith("_9999");
     }
 }

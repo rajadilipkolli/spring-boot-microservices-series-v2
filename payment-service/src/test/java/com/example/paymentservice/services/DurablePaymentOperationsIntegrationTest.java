@@ -541,15 +541,14 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                     CompletableFuture.supplyAsync(
                             () -> ledgerAdapter.execute(operation.getDownstreamKey(), command));
             await().atMost(Duration.ofSeconds(1))
-                    .untilAsserted(
-                            () ->
-                                    assertThat(
-                                                    dslContext.fetchCount(
-                                                            dslContext
-                                                                    .selectFrom("pg_locks")
-                                                                    .where(
-                                                                            "locktype = 'advisory' and not granted")))
-                                            .isPositive());
+                    .untilAsserted(() ->
+                            assertThat(
+                                            dslContext.fetchCount(
+                                                    dslContext
+                                                            .selectFrom("pg_locks")
+                                                            .where(
+                                                                    "locktype = 'advisory' and not granted")))
+                                    .isPositive());
         } finally {
             releaseFirst.countDown();
         }

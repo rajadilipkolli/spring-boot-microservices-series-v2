@@ -59,31 +59,27 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                             .body(
                                     StringBody(
                                             """
-    {
-      "productCode": "#{productCode}",
-      "productName": "#{productName}",
-      "price": #{price},
-      "description": "Performance test product"
-    }
-    """))
+                                            {
+                                              "productCode": "#{productCode}",
+                                              "productName": "#{productName}",
+                                              "price": #{price},
+                                              "description": "Performance test product"
+                                            }
+                                            """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("productLocation")))
-                    .exec(
-                            session -> {
-                                LOGGER.debug(
-                                        "Created product at: {}",
-                                        session.getString("productLocation"));
-                                return session;
-                            });
+                    .exec(session -> {
+                        LOGGER.debug(
+                                "Created product at: {}", session.getString("productLocation"));
+                        return session;
+                    });
 
     private final ChainBuilder getProduct =
             exec(
                     http("Get created product")
-                            .get(
-                                    session ->
-                                            "/catalog-service"
-                                                    + session.getString("productLocation"))
+                            .get(session ->
+                                    "/catalog-service" + session.getString("productLocation"))
                             .check(status().is(200))
                             .check(
                                     jsonPath("$.productCode")
@@ -101,11 +97,9 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                             session.remove("inventoryId")
                                                                     .remove("availableQuantity")
                                                                     .remove("inventoryStatus"))
-                                                    .doIf(
-                                                            session ->
-                                                                    session.getInt(
-                                                                                    "inventoryRetryCounter")
-                                                                            > 0)
+                                                    .doIf(session ->
+                                                            session.getInt("inventoryRetryCounter")
+                                                                    > 0)
                                                     .then(
                                                             exec(session -> session)
                                                                     .pause(
@@ -119,15 +113,13 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                             status().in(200, 404)
                                                                                     .saveAs(
                                                                                             "inventoryStatus"))
-                                                                    .checkIf(
-                                                                            session ->
-                                                                                    session
-                                                                                                    .contains(
+                                                                    .checkIf(session ->
+                                                                            session.contains(
+                                                                                            "inventoryStatus")
+                                                                                    && session
+                                                                                                    .getInt(
                                                                                                             "inventoryStatus")
-                                                                                            && session
-                                                                                                            .getInt(
-                                                                                                                    "inventoryStatus")
-                                                                                                    == 200)
+                                                                                            == 200)
                                                                     .then(
                                                                             jsonPath("$.id")
                                                                                     .saveAs(
@@ -136,44 +128,39 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                                                                                             "$.availableQuantity")
                                                                                     .saveAs(
                                                                                             "availableQuantity")))
-                                                    .doIf(
-                                                            session ->
-                                                                    !session.contains("inventoryId")
-                                                                            || session.get(
-                                                                                            "inventoryId")
-                                                                                    == null)
+                                                    .doIf(session ->
+                                                            !session.contains("inventoryId")
+                                                                    || session.get("inventoryId")
+                                                                            == null)
                                                     .then(
-                                                            exec(
-                                                                    session -> {
-                                                                        LOGGER.warn(
-                                                                                "Inventory not yet"
-                                                                                        + " available"
-                                                                                        + " for product"
-                                                                                        + " code: {},"
-                                                                                        + " attempt: {},"
-                                                                                        + " status: {}",
-                                                                                session.getString(
-                                                                                        "productCode"),
-                                                                                session.getInt(
-                                                                                        "inventoryRetryCounter"),
-                                                                                session.get(
-                                                                                        "inventoryStatus"));
-                                                                        return session
-                                                                                .markAsFailed();
-                                                                    }))))
-                    .exec(
-                            session -> {
-                                if (!session.contains("inventoryId")
-                                        || session.get("inventoryId") == null) {
-                                    LOGGER.warn(
-                                            "Inventory not available after all retries for"
-                                                    + " product code: {}",
-                                            session.getString("productCode"));
-                                    return session.markAsFailed();
-                                }
-                                int newQuantity = ThreadLocalRandom.current().nextInt(100, 1000);
-                                return session.set("newAvailableQuantity", newQuantity);
-                            });
+                                                            exec(session -> {
+                                                                LOGGER.warn(
+                                                                        "Inventory not yet"
+                                                                                + " available"
+                                                                                + " for product"
+                                                                                + " code: {},"
+                                                                                + " attempt: {},"
+                                                                                + " status: {}",
+                                                                        session.getString(
+                                                                                "productCode"),
+                                                                        session.getInt(
+                                                                                "inventoryRetryCounter"),
+                                                                        session.get(
+                                                                                "inventoryStatus"));
+                                                                return session.markAsFailed();
+                                                            }))))
+                    .exec(session -> {
+                        if (!session.contains("inventoryId")
+                                || session.get("inventoryId") == null) {
+                            LOGGER.warn(
+                                    "Inventory not available after all retries for"
+                                            + " product code: {}",
+                                    session.getString("productCode"));
+                            return session.markAsFailed();
+                        }
+                        int newQuantity = ThreadLocalRandom.current().nextInt(100, 1000);
+                        return session.set("newAvailableQuantity", newQuantity);
+                    });
 
     private final ChainBuilder updateInventory =
             exec(http("Update inventory")
@@ -181,20 +168,19 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                             .body(
                                     StringBody(
                                             """
-    {
-      "productCode": "#{productCode}",
-      "availableQuantity": #{newAvailableQuantity}
-    }
-    """))
+                                            {
+                                              "productCode": "#{productCode}",
+                                              "availableQuantity": #{newAvailableQuantity}
+                                            }
+                                            """))
                             .asJson()
                             .check(status().is(200)))
-                    .exec(
-                            session -> {
-                                LOGGER.debug(
-                                        "Updated inventory for product: {}",
-                                        session.getString("productCode"));
-                                return session;
-                            });
+                    .exec(session -> {
+                        LOGGER.debug(
+                                "Updated inventory for product: {}",
+                                session.getString("productCode"));
+                        return session;
+                    });
 
     private final ChainBuilder createOrder =
             exec(http("Create order with product")
@@ -202,44 +188,41 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                             .body(
                                     StringBody(
                                             """
-    {
-      "customerId": #{customerId},
-      "items": [
-        {
-          "productCode": "#{productCode}",
-          "quantity": #{quantity},
-          "productPrice": #{price}
-        }
-      ],
-      "deliveryAddress": {
-        "addressLine1": "123 Performance Test St",
-        "addressLine2": "Suite 456",
-        "city": "Test City",
-        "state": "TS",
-        "zipCode": "12345",
-        "country": "Test Country"
-      }
-    }
-    """))
+                                            {
+                                              "customerId": #{customerId},
+                                              "items": [
+                                                {
+                                                  "productCode": "#{productCode}",
+                                                  "quantity": #{quantity},
+                                                  "productPrice": #{price}
+                                                }
+                                              ],
+                                              "deliveryAddress": {
+                                                "addressLine1": "123 Performance Test St",
+                                                "addressLine2": "Suite 456",
+                                                "city": "Test City",
+                                                "state": "TS",
+                                                "zipCode": "12345",
+                                                "country": "Test Country"
+                                              }
+                                            }
+                                            """))
                             .asJson()
                             .check(status().is(201))
                             .check(header("location").saveAs("orderLocation")))
-                    .exec(
-                            session -> {
-                                LOGGER.debug(
-                                        "Created order at: {}", session.getString("orderLocation"));
-                                return session;
-                            });
+                    .exec(session -> {
+                        LOGGER.debug("Created order at: {}", session.getString("orderLocation"));
+                        return session;
+                    });
 
     // Main scenario combining all steps
     private final ScenarioBuilder productWorkflow =
             scenario("E2E Product Creation Workflow")
                     .feed(enhancedProductFeeder())
-                    .exec(
-                            session -> {
-                                LOGGER.info(">>> Starting Workflow for user: {}", session.userId());
-                                return session;
-                            })
+                    .exec(session -> {
+                        LOGGER.info(">>> Starting Workflow for user: {}", session.userId());
+                        return session;
+                    })
                     .exec(createProduct)
                     .exitHereIfFailed()
                     .pause(_ -> randomPause())
@@ -253,11 +236,10 @@ public class CreateProductSimulation extends BaseLoadSimulation {
                     .exec(updateInventory)
                     .pause(_ -> randomPause())
                     .exec(createOrder)
-                    .exec(
-                            session -> {
-                                LOGGER.info(">>> Finished Workflow for user: {}", session.userId());
-                                return session;
-                            });
+                    .exec(session -> {
+                        LOGGER.info(">>> Finished Workflow for user: {}", session.userId());
+                        return session;
+                    });
 
     /** Simulation setup with configurable load profile */
     public CreateProductSimulation() {

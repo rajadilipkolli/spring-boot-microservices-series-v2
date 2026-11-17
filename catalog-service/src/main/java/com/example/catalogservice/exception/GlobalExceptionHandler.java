@@ -40,11 +40,10 @@ public class GlobalExceptionHandler {
         // Build violations list
         var violations =
                 ex.getFieldErrors().stream()
-                        .map(
-                                fieldError ->
-                                        Map.of(
-                                                "field", fieldError.getField(),
-                                                "message", fieldError.getDefaultMessage()))
+                        .map(fieldError ->
+                                Map.of(
+                                        "field", fieldError.getField(),
+                                        "message", fieldError.getDefaultMessage()))
                         .toList();
         problemDetail.setProperty("violations", violations);
         return Mono.just(problemDetail);
@@ -91,15 +90,14 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("timestamp", Instant.now());
         var violations =
                 ex.getConstraintViolations().stream()
-                        .map(
-                                violation ->
-                                        Map.of(
-                                                "field",
-                                                violation.getPropertyPath() != null
-                                                        ? violation.getPropertyPath().toString()
-                                                        : "",
-                                                "message",
-                                                violation.getMessage()))
+                        .map(violation ->
+                                Map.of(
+                                        "field",
+                                        violation.getPropertyPath() != null
+                                                ? violation.getPropertyPath().toString()
+                                                : "",
+                                        "message",
+                                        violation.getMessage()))
                         .toList();
         problemDetail.setProperty("violations", violations);
         return Mono.just(problemDetail);

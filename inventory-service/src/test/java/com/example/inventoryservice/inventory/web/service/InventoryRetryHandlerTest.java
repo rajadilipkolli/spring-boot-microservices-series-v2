@@ -34,9 +34,8 @@ class InventoryRetryHandlerTest {
         verify(manager).commit(second);
         verify(manager, times(2))
                 .getTransaction(
-                        argThat(
-                                definition ->
-                                        definition.getPropagationBehavior()
-                                                == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+                        argThat(definition ->
+                                definition.getPropagationBehavior()
+                                        == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
     }
 }

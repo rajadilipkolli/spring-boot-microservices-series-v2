@@ -56,20 +56,17 @@ class InventoryGeneratorService {
 
         try {
             IntStream.range(0, resolvedBatchSize)
-                    .forEach(
-                            operand -> {
-                                try {
-                                    int randomQuantity = RAND.nextInt(10_000) + 1;
-                                    String productCode =
-                                            "ProductCode_" + idempotencyKey + "_" + operand;
-                                    inventoryService.updateInventoryByProductCode(
-                                            productCode,
-                                            new InventoryRequest(productCode, randomQuantity));
-                                } catch (OptimisticLockingFailureException e) {
-                                    // Ignore optimistic locking failures when concurrently updating
-                                    // random inventory
-                                }
-                            });
+                    .forEach(operand -> {
+                        try {
+                            int randomQuantity = RAND.nextInt(10_000) + 1;
+                            String productCode = "ProductCode_" + idempotencyKey + "_" + operand;
+                            inventoryService.updateInventoryByProductCode(
+                                    productCode, new InventoryRequest(productCode, randomQuantity));
+                        } catch (OptimisticLockingFailureException e) {
+                            // Ignore optimistic locking failures when concurrently updating
+                            // random inventory
+                        }
+                    });
         } catch (RuntimeException e) {
             processedIdempotencyKeys.remove(idempotencyKey);
             throw e;

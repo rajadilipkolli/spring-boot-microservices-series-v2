@@ -28,14 +28,13 @@ class ActuatorHealthE2ETest {
         await("API Gateway health endpoint should return UP")
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .when()
-                                        .get("/actuator/health")
-                                        .then()
-                                        .statusCode(200)
-                                        .body("status", is("UP")));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.defaultRequestSpec())
+                                .when()
+                                .get("/actuator/health")
+                                .then()
+                                .statusCode(200)
+                                .body("status", is("UP")));
     }
 
     @ParameterizedTest(name = "Service {0} health endpoint should be UP via Gateway")
@@ -50,13 +49,12 @@ class ActuatorHealthE2ETest {
         await("Service " + healthPath + " health endpoint should be UP via Gateway")
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(2))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .when()
-                                        .get(healthPath)
-                                        .then()
-                                        .statusCode(200)
-                                        .body("status", is("UP")));
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.defaultRequestSpec())
+                                .when()
+                                .get(healthPath)
+                                .then()
+                                .statusCode(200)
+                                .body("status", is("UP")));
     }
 }

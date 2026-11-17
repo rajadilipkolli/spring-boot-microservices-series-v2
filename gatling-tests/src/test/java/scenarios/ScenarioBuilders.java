@@ -34,13 +34,13 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-            {
-              "productCode": "#{productCode}",
-              "productName": "#{productName}",
-              "price": #{price},
-              "description": "Performance test product"
-            }
-            """))
+                                        {
+                                          "productCode": "#{productCode}",
+                                          "productName": "#{productName}",
+                                          "price": #{price},
+                                          "description": "Performance test product"
+                                        }
+                                        """))
                         .asJson()
                         .check(status().is(201))
                         .check(header("location").saveAs("productLocation")))
@@ -62,11 +62,11 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-            {
-              "productCode": "#{productCode}",
-              "availableQuantity": #{quantity}
-            }
-            """))
+                                        {
+                                          "productCode": "#{productCode}",
+                                          "availableQuantity": #{quantity}
+                                        }
+                                        """))
                         .asJson()
                         .check(status().is(200)))
                 .pause(session -> randomPause());
@@ -79,25 +79,25 @@ public class ScenarioBuilders {
                         .body(
                                 StringBody(
                                         """
-            {
-              "customerId": #{customerId},
-              "deliveryAddress": {
-                "addressLine1": "#{street}",
-                "addressLine2": "",
-                "city": "#{city}",
-                "state": "TS",
-                "zipCode": "#{zipCode}",
-                "country": "#{country}"
-              },
-              "items": [
-                {
-                  "productCode": "#{productCode}",
-                  "quantity": #{quantity},
-                  "productPrice": #{price}
-                }
-              ]
-            }
-            """))
+                                        {
+                                          "customerId": #{customerId},
+                                          "deliveryAddress": {
+                                            "addressLine1": "#{street}",
+                                            "addressLine2": "",
+                                            "city": "#{city}",
+                                            "state": "TS",
+                                            "zipCode": "#{zipCode}",
+                                            "country": "#{country}"
+                                          },
+                                          "items": [
+                                            {
+                                              "productCode": "#{productCode}",
+                                              "quantity": #{quantity},
+                                              "productPrice": #{price}
+                                            }
+                                          ]
+                                        }
+                                        """))
                         .asJson()
                         .check(status().is(201)))
                 .pause(session -> randomPause());

@@ -172,7 +172,7 @@ sequenceDiagram
   - **`OPERATOR`** (Client Role): Restricts access to Actuator endpoints (`/actuator/prometheus`, `/actuator/metrics`, `/actuator/metrics/**`) via `hasRole("OPERATOR")` in `SecurityConfig`.
   - **`user`** (Realm Role): Granted to registered shoppers for store browsing, cart, and orders.
 - **Role Mapping**: `GrantedAuthoritiesMapper` in `SecurityConfig.java` maps Keycloak client roles from `resource_access.retailstore-webapp.roles` to `ROLE_ADMIN` and `ROLE_OPERATOR`.
-- **CSRF Protection**: Cookie-based CSRF tokens (`CookieCsrfTokenRepository.withHttpOnlyFalse()`), with `/api/register` exempt.
+- **CSRF Protection**: Cookie-based CSRF tokens (`CookieCsrfTokenRepository.withHttpOnlyFalse()`) enforced across all endpoints.
 
 ### 🌐 Communication Patterns
 - **API Gateway**: Single entry point (`http://localhost:8765`) routing to all backend services.

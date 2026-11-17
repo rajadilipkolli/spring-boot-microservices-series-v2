@@ -29,47 +29,43 @@ class CommonLoggingAutoConfigurationTest {
 
     @Test
     void autoConfigurationRegistersOneLoggingAspectWhenAspectJIsPresent() {
-        contextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(LoggingAspect.class);
-                    assertThat(context).hasBean("commonLoggingAspect");
-                });
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(LoggingAspect.class);
+            assertThat(context).hasBean("commonLoggingAspect");
+        });
     }
 
     @Test
     void autoConfigurationBacksOffWhenUserDefinesLoggingAspect() {
         contextRunner
                 .withUserConfiguration(CustomLoggingAspectConfiguration.class)
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context).hasSingleBean(LoggingAspect.class);
-                            assertThat(context).hasBean("customLoggingAspect");
-                            assertThat(context).doesNotHaveBean("commonLoggingAspect");
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(LoggingAspect.class);
+                    assertThat(context).hasBean("customLoggingAspect");
+                    assertThat(context).doesNotHaveBean("commonLoggingAspect");
+                });
     }
 
     @Test
     void autoConfigurationBacksOffWhenAspectJIsAbsent() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader(Aspect.class))
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context).doesNotHaveBean(LoggingAspect.class);
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean(LoggingAspect.class);
+                });
     }
 
     @Test
     void contextStartupSafeWhenSpringDataIsAbsent() {
         contextRunner
                 .withClassLoader(new FilteredClassLoader(Page.class))
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context).hasSingleBean(LoggingAspect.class);
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(LoggingAspect.class);
+                });
     }
 
     @Configuration(proxyBeanMethods = false)

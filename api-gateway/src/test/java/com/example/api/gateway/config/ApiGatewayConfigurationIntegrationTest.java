@@ -47,10 +47,9 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .expectHeader()
                 .exists("X-Trace-Id")
                 .expectBody(String.class)
-                .consumeWith(
-                        result -> {
-                            assertThat(result.getResponseBody()).contains("test route response");
-                        });
+                .consumeWith(result -> {
+                    assertThat(result.getResponseBody()).contains("test route response");
+                });
     }
 
     @Test

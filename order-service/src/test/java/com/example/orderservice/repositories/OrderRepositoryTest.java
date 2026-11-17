@@ -14,11 +14,14 @@ import com.example.orderservice.common.OrderServicePostGreSQLContainer;
 import com.example.orderservice.config.AuditConfiguration;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.util.TestData;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -161,7 +164,7 @@ class OrderRepositoryTest {
             Order order1 = TestData.getOrder();
             order1.setSource("WEB");
             order1.setDeliveryAddress(
-                    new com.example.orderservice.model.Address(
+                    new Address(
                             order1.getDeliveryAddress().addressLine1(),
                             order1.getDeliveryAddress().addressLine2(),
                             "New York",
@@ -173,7 +176,7 @@ class OrderRepositoryTest {
             Order order2 = TestData.getOrder();
             order2.setSource("MOBILE");
             order2.setDeliveryAddress(
-                    new com.example.orderservice.model.Address(
+                    new Address(
                             order2.getDeliveryAddress().addressLine1(),
                             order2.getDeliveryAddress().addressLine2(),
                             "Los Angeles",
@@ -249,10 +252,9 @@ class OrderRepositoryTest {
                             Sort.by("source"),
                             Sort.by("id", "source"),
                             Sort.by(Sort.Order.asc("id").ignoreCase()))) {
-                assertThatThrownBy(
-                                () ->
-                                        orderSearchRepository.searchOrdersByKeyword(
-                                                "Product", null, null, PageRequest.of(0, 10, sort)))
+                assertThatThrownBy(() ->
+                                orderSearchRepository.searchOrdersByKeyword(
+                                        "Product", null, null, PageRequest.of(0, 10, sort)))
                         .hasMessageContaining("Keyword search only supports sorting by id");
             }
         }
@@ -377,7 +379,7 @@ class OrderRepositoryTest {
                     VALUES (1005, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
                             'system', '2026-01-01 10:00:00+00', ?)
                     """,
-                    java.sql.Timestamp.from(now.minus(1, ChronoUnit.MINUTES)));
+                    Timestamp.from(now.minus(1, ChronoUnit.MINUTES)));
 
             // Also test JPA audited row persistence and epoch comparison
             Order auditedOrder = TestData.getOrder();
@@ -392,9 +394,7 @@ class OrderRepositoryTest {
                             Long.class,
                             savedOrder.getId());
             assertThat(epochSecondsFromDb)
-                    .isCloseTo(
-                            savedOrder.getCreatedDate().getEpochSecond(),
-                            org.assertj.core.data.Offset.offset(1L));
+                    .isCloseTo(savedOrder.getCreatedDate().getEpochSecond(), Offset.offset(1L));
 
             List<Order> result =
                     orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(

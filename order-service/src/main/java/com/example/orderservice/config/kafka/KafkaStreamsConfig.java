@@ -70,12 +70,8 @@ class KafkaStreamsConfig {
     StreamsBuilderFactoryBeanConfigurer configurer(
             DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
         return factoryBean -> {
-            factoryBean.setStateListener(
-                    (newState, oldState) ->
-                            log.info(
-                                    "Kafka Streams state transition from {} to {}",
-                                    oldState,
-                                    newState));
+            factoryBean.setStateListener((newState, oldState) ->
+                    log.info("Kafka Streams state transition from {} to {}", oldState, newState));
 
             Properties streamsConfiguration = factoryBean.getStreamsConfiguration();
             Assert.notNull(streamsConfiguration, "streamsConfiguration must not be null");
@@ -169,12 +165,11 @@ class KafkaStreamsConfig {
      */
     private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
         // Legacy responses cannot be correlated safely; NEW orders will be retried with an ID.
-        return stream.filter(
-                        (key, order) ->
-                                order != null
-                                        && order.orderId() != null
-                                        && order.attemptId() != null
-                                        && !order.attemptId().isBlank())
+        return stream.filter((key, order) ->
+                        order != null
+                                && order.orderId() != null
+                                && order.attemptId() != null
+                                && !order.attemptId().isBlank())
                 .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
     }
 }

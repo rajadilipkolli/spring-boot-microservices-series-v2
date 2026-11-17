@@ -40,12 +40,11 @@ public abstract class OrderMapperDecorator implements OrderMapper {
 
         detachedOrderItems.stream()
                 .filter(orderItem -> !newOrderItems.contains(orderItem))
-                .forEach(
-                        orderItem -> {
-                            orderItem.setOrder(order);
-                            orderItem.setId(getOrderItemId(order.getItems(), orderItem));
-                            order.getItems().set(order.getItems().indexOf(orderItem), orderItem);
-                        });
+                .forEach(orderItem -> {
+                    orderItem.setOrder(order);
+                    orderItem.setId(getOrderItemId(order.getItems(), orderItem));
+                    order.getItems().set(order.getItems().indexOf(orderItem), orderItem);
+                });
 
         // Add the rows found in the incoming collection,
         // which cannot be found in the current database snapshot

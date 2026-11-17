@@ -214,7 +214,7 @@ SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMap
                     .anyRequest()
                     .authenticated())
             .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register")
+            .csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
             .oauth2Login(oauth2 -> oauth2.loginPage("/login")
                     .defaultSuccessUrl("/", true)

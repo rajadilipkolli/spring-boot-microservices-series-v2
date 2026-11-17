@@ -57,24 +57,21 @@ public class OrderRetryService {
         List<Order> byStatusOrderByIdAsc =
                 orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
                         OrderStatus.NEW, Instant.now().minus(5, ChronoUnit.MINUTES));
-        byStatusOrderByIdAsc.forEach(
-                order -> {
-                    try {
-                        OrderDto persistedOrderDto =
-                                this.orderMapper
-                                        .toDto(order)
-                                        .withAttemptId(UUID.randomUUID().toString());
-                        log.info(
-                                "Retrying Order :{}",
-                                LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
-                        eventPublisher.publishEvent(persistedOrderDto);
+        byStatusOrderByIdAsc.forEach(order -> {
+            try {
+                OrderDto persistedOrderDto =
+                        this.orderMapper.toDto(order).withAttemptId(UUID.randomUUID().toString());
+                log.info(
+                        "Retrying Order :{}",
+                        LogSanitizer.sanitizeForLog(String.valueOf(persistedOrderDto)));
+                eventPublisher.publishEvent(persistedOrderDto);
 
-                        // Update lastModifiedDate to prevent immediate repolling and endless spam
-                        order.setLastModifiedDate(Instant.now());
-                        orderRepository.save(order);
-                    } catch (Exception e) {
-                        log.error("Failed to retry publishing order :{}", order.getId(), e);
-                    }
-                });
+                // Update lastModifiedDate to prevent immediate repolling and endless spam
+                order.setLastModifiedDate(Instant.now());
+                orderRepository.save(order);
+            } catch (Exception e) {
+                log.error("Failed to retry publishing order :{}", order.getId(), e);
+            }
+        });
     }
 }

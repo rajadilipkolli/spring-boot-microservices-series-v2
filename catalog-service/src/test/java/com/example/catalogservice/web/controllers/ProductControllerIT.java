@@ -150,19 +150,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody(PagedResult.class)
-                .consumeWith(
-                        response -> {
-                            PagedResult<Product> pagedResult = response.getResponseBody();
-                            assertThat(pagedResult).isNotNull();
-                            assertThat(pagedResult.isFirst()).isFalse();
-                            assertThat(pagedResult.isLast()).isTrue();
-                            assertThat(pagedResult.hasNext()).isFalse();
-                            assertThat(pagedResult.hasPrevious()).isTrue();
-                            assertThat(pagedResult.totalElements()).isEqualTo(3);
-                            assertThat(pagedResult.pageNumber()).isEqualTo(2);
-                            assertThat(pagedResult.totalPages()).isEqualTo(2);
-                            assertThat(pagedResult.data()).hasSize(1);
-                        });
+                .consumeWith(response -> {
+                    PagedResult<Product> pagedResult = response.getResponseBody();
+                    assertThat(pagedResult).isNotNull();
+                    assertThat(pagedResult.isFirst()).isFalse();
+                    assertThat(pagedResult.isLast()).isTrue();
+                    assertThat(pagedResult.hasNext()).isFalse();
+                    assertThat(pagedResult.hasPrevious()).isTrue();
+                    assertThat(pagedResult.totalElements()).isEqualTo(3);
+                    assertThat(pagedResult.pageNumber()).isEqualTo(2);
+                    assertThat(pagedResult.totalPages()).isEqualTo(2);
+                    assertThat(pagedResult.data()).hasSize(1);
+                });
 
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.CLOSED);
     }
@@ -176,33 +175,30 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder.queryParam("sortDir", "desc");
-                            uriBuilder.path("/api/catalog");
-                            return uriBuilder.build();
-                        })
+                .uri(uriBuilder -> {
+                    uriBuilder.queryParam("sortDir", "desc");
+                    uriBuilder.path("/api/catalog");
+                    return uriBuilder.build();
+                })
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody(PagedResult.class)
-                .value(
-                        response ->
-                                assertThat(response)
-                                        .isNotNull()
-                                        .satisfies(
-                                                r -> {
-                                                    assertThat(r.isFirst()).isTrue();
-                                                    assertThat(r.isLast()).isTrue();
-                                                    assertThat(r.hasNext()).isFalse();
-                                                    assertThat(r.hasPrevious()).isFalse();
-                                                    assertThat(r.totalElements()).isZero();
-                                                    assertThat(r.pageNumber()).isEqualTo(1);
-                                                    assertThat(r.totalPages()).isZero();
-                                                    assertThat(r.data()).isEmpty();
-                                                }));
+                .value(response ->
+                        assertThat(response)
+                                .isNotNull()
+                                .satisfies(r -> {
+                                    assertThat(r.isFirst()).isTrue();
+                                    assertThat(r.isLast()).isTrue();
+                                    assertThat(r.hasNext()).isFalse();
+                                    assertThat(r.hasPrevious()).isFalse();
+                                    assertThat(r.totalElements()).isZero();
+                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                    assertThat(r.totalPages()).isZero();
+                                    assertThat(r.data()).isEmpty();
+                                }));
 
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.CLOSED);
     }
@@ -216,8 +212,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 500,
                 """
-                                                {"message":"Product with id 100 not found"}
-                                                """);
+                {"message":"Product with id 100 not found"}
+                """);
 
         webTestClient
                 .get()
@@ -228,22 +224,19 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody(PagedResult.class)
-                .value(
-                        response ->
-                                assertThat(response)
-                                        .isNotNull()
-                                        .satisfies(
-                                                r -> {
-                                                    assertThat(r.isFirst()).isTrue();
-                                                    assertThat(r.isLast()).isTrue();
-                                                    assertThat(r.hasNext()).isFalse();
-                                                    assertThat(r.hasPrevious()).isFalse();
-                                                    assertThat(r.totalElements()).isEqualTo(3);
-                                                    assertThat(r.pageNumber()).isEqualTo(1);
-                                                    assertThat(r.totalPages()).isEqualTo(1);
-                                                    assertThat(r.data())
-                                                            .hasSameSizeAs(savedProductList);
-                                                }));
+                .value(response ->
+                        assertThat(response)
+                                .isNotNull()
+                                .satisfies(r -> {
+                                    assertThat(r.isFirst()).isTrue();
+                                    assertThat(r.isLast()).isTrue();
+                                    assertThat(r.hasNext()).isFalse();
+                                    assertThat(r.hasPrevious()).isFalse();
+                                    assertThat(r.totalElements()).isEqualTo(3);
+                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                    assertThat(r.totalPages()).isEqualTo(1);
+                                    assertThat(r.data()).hasSameSizeAs(savedProductList);
+                                }));
 
         // Then, As it is still failing state should not change
         checkHealthStatus("getInventoryByProductCodes", CircuitBreaker.State.HALF_OPEN);
@@ -328,13 +321,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
 
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
@@ -377,18 +370,18 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
 
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
@@ -423,13 +416,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
         mockBackendEndpoint(
                 500,
                 """
-                                                    {"message":"Product with id 100 not found"}
-                                                """);
+                    {"message":"Product with id 100 not found"}
+                """);
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(500, "ERROR");
         mockBackendEndpoint(
@@ -545,12 +538,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 jsonMapper.writeValueAsString(new InventoryResponse(product.getProductCode(), 10)));
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/product-code/{productCode}")
-                                        .queryParam("fetchInStock", true)
-                                        .build(product.getProductCode()))
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/product-code/{productCode}")
+                                .queryParam("fetchInStock", true)
+                                .build(product.getProductCode()))
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -578,12 +570,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder.queryParam("productCodes", productCodeList);
-                            uriBuilder.path("/api/catalog/exists");
-                            return uriBuilder.build();
-                        })
+                .uri(uriBuilder -> {
+                    uriBuilder.queryParam("productCodes", productCodeList);
+                    uriBuilder.path("/api/catalog/exists");
+                    return uriBuilder.build();
+                })
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -600,12 +591,11 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder.queryParam("productCodes", productCodeList);
-                            uriBuilder.path("/api/catalog/exists");
-                            return uriBuilder.build();
-                        })
+                .uri(uriBuilder -> {
+                    uriBuilder.queryParam("productCodes", productCodeList);
+                    uriBuilder.path("/api/catalog/exists");
+                    return uriBuilder.build();
+                })
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -652,26 +642,23 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         // Verify product was created in the database and version is 0
         StepVerifier.create(
                         productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("code 4"))
-                .assertNext(
-                        p -> {
-                            assertThat(p).isNotNull();
-                            assertThat(p.getVersion()).isZero();
-                        })
+                .assertNext(p -> {
+                    assertThat(p).isNotNull();
+                    assertThat(p.getVersion()).isZero();
+                })
                 .verifyComplete();
 
         // Verify OutboxEvent was created in the database
         await().atMost(5, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () -> {
-                            List<OutboxEvent> events =
-                                    outboxEventRepository.findAll().collectList().block();
-                            log.info("Outbox events found: {}", events.size());
-                            assertThat(events).hasSize(1);
-                            assertThat(events.getFirst().getStatus())
-                                    .isEqualTo(OutboxEventStatus.PENDING);
-                            assertThat(events.getFirst().getAggregateId()).isEqualTo("code 4");
-                        });
+                .untilAsserted(() -> {
+                    List<OutboxEvent> events =
+                            outboxEventRepository.findAll().collectList().block();
+                    log.info("Outbox events found: {}", events.size());
+                    assertThat(events).hasSize(1);
+                    assertThat(events.getFirst().getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+                    assertThat(events.getFirst().getAggregateId()).isEqualTo("code 4");
+                });
 
         // Verify Kafka message with Awaitility (Wait for outbox publisher to pick it
         // up)
@@ -681,17 +668,14 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         await().atMost(10, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            String message =
-                                    testKafkaListenerConfig.pollPayload(1, TimeUnit.SECONDS);
-                            assertThat(message).isNotNull();
-                            ProductDto productDto = jsonMapper.readValue(message, ProductDto.class);
-                            assertThat(productDto.code()).isEqualTo("code 4");
-                            assertThat(productDto.productName()).isEqualTo("name 4");
-                            assertThat(productDto.price())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(19.00));
-                        });
+                .untilAsserted(() -> {
+                    String message = testKafkaListenerConfig.pollPayload(1, TimeUnit.SECONDS);
+                    assertThat(message).isNotNull();
+                    ProductDto productDto = jsonMapper.readValue(message, ProductDto.class);
+                    assertThat(productDto.code()).isEqualTo("code 4");
+                    assertThat(productDto.productName()).isEqualTo("name 4");
+                    assertThat(productDto.price()).isEqualByComparingTo(BigDecimal.valueOf(19.00));
+                });
 
         // Verify the outbox event was updated successfully (status and version)
         OutboxEvent publishedEvent =
@@ -839,15 +823,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         Mono<Void> backgroundUpdate =
                 Mono.delay(java.time.Duration.ofMillis(150))
-                        .flatMap(
-                                i ->
-                                        productRepository
-                                                .findById(product.getId())
-                                                .flatMap(
-                                                        p -> {
-                                                            p.setPrice(BigDecimal.valueOf(500.00));
-                                                            return productRepository.save(p);
-                                                        }))
+                        .flatMap(i ->
+                                productRepository
+                                        .findById(product.getId())
+                                        .flatMap(p -> {
+                                            p.setPrice(BigDecimal.valueOf(500.00));
+                                            return productRepository.save(p);
+                                        }))
                         .then();
 
         // Subscribe to background update
@@ -863,16 +845,15 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
         List<Mono<EntityExchangeResult<Void>>> requests = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             requests.add(
-                    Mono.fromCallable(
-                                    () ->
-                                            webTestClient
-                                                    .put()
-                                                    .uri("/api/catalog/{id}", product.getId())
-                                                    .contentType(MediaType.APPLICATION_JSON)
-                                                    .bodyValue(productRequest)
-                                                    .exchange()
-                                                    .expectBody(Void.class)
-                                                    .returnResult())
+                    Mono.fromCallable(() ->
+                                    webTestClient
+                                            .put()
+                                            .uri("/api/catalog/{id}", product.getId())
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .bodyValue(productRequest)
+                                            .exchange()
+                                            .expectBody(Void.class)
+                                            .returnResult())
                             .subscribeOn(Schedulers.boundedElastic()));
         }
 
@@ -989,12 +970,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
 
         // Verify row is retained in database with deleted = true
         StepVerifier.create(productRepository.findById(product.getId()))
-                .assertNext(
-                        dbProduct -> {
-                            assertThat(dbProduct.isDeleted()).isTrue();
-                            assertThat(dbProduct.getProductCode())
-                                    .isEqualTo(product.getProductCode());
-                        })
+                .assertNext(dbProduct -> {
+                    assertThat(dbProduct.isDeleted()).isTrue();
+                    assertThat(dbProduct.getProductCode()).isEqualTo(product.getProductCode());
+                })
                 .verifyComplete();
 
         // Verify outbox event with PRODUCT_DELETED and deleted = true
@@ -1002,13 +981,10 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         outboxEventRepository
                                 .findAll()
                                 .filter(e -> "PRODUCT_DELETED".equals(e.getEventType())))
-                .assertNext(
-                        outboxEvent -> {
-                            assertThat(outboxEvent.getAggregateId())
-                                    .isEqualTo(product.getProductCode());
-                            assertThat(outboxEvent.getPayload().content())
-                                    .contains("\"deleted\": true");
-                        })
+                .assertNext(outboxEvent -> {
+                    assertThat(outboxEvent.getAggregateId()).isEqualTo(product.getProductCode());
+                    assertThat(outboxEvent.getPayload().content()).contains("\"deleted\": true");
+                })
                 .verifyComplete();
     }
 
@@ -1076,15 +1052,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         outboxEventRepository
                                 .findAll()
                                 .filter(event -> "PRODUCT_CREATED".equals(event.getEventType()))
-                                .filter(
-                                        event ->
-                                                product.getProductCode()
-                                                        .equalsIgnoreCase(event.getAggregateId())))
-                .assertNext(
-                        event ->
-                                assertThat(event.getPayload().content())
-                                        .contains("Restored name")
-                                        .contains("\"deleted\": false"))
+                                .filter(event ->
+                                        product.getProductCode()
+                                                .equalsIgnoreCase(event.getAggregateId())))
+                .assertNext(event ->
+                        assertThat(event.getPayload().content())
+                                .contains("Restored name")
+                                .contains("\"deleted\": false"))
                 .verifyComplete();
     }
 
@@ -1115,18 +1089,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                     .expectHeader()
                     .contentType(MediaType.APPLICATION_JSON)
                     .expectBody(PagedResult.class)
-                    .consumeWith(
-                            response -> {
-                                PagedResult<?> result = response.getResponseBody();
-                                assertThat(result).isNotNull();
-                                assertThat(result.data()).isNotNull();
-                                assertThat(result.data().size()).isEqualTo(3); // All
-                                // three
-                                // products have
-                                // "name" in their
-                                // name
-                                assertThat(result.totalElements()).isEqualTo(3);
-                            });
+                    .consumeWith(response -> {
+                        PagedResult<?> result = response.getResponseBody();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().size()).isEqualTo(3); // All
+                        // three
+                        // products have
+                        // "name" in their
+                        // name
+                        assertThat(result.totalElements()).isEqualTo(3);
+                    });
         }
 
         @Test
@@ -1155,16 +1128,14 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                     .expectHeader()
                     .contentType(MediaType.APPLICATION_JSON)
                     .expectBody(PagedResult.class)
-                    .consumeWith(
-                            response -> {
-                                PagedResult<?> result = response.getResponseBody();
-                                assertThat(result).isNotNull();
-                                assertThat(result.data()).isNotNull();
-                                assertThat(result.data().size())
-                                        .isEqualTo(2); // Products with price
-                                // between 10.0 and 12.0
-                                assertThat(result.totalElements()).isEqualTo(2);
-                            });
+                    .consumeWith(response -> {
+                        PagedResult<?> result = response.getResponseBody();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().size()).isEqualTo(2); // Products with price
+                        // between 10.0 and 12.0
+                        assertThat(result.totalElements()).isEqualTo(2);
+                    });
         }
 
         @Test
@@ -1195,15 +1166,14 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                     .expectHeader()
                     .contentType(MediaType.APPLICATION_JSON)
                     .expectBody(PagedResult.class)
-                    .consumeWith(
-                            response -> {
-                                PagedResult<?> result = response.getResponseBody();
-                                assertThat(result).isNotNull();
-                                assertThat(result.data()).isNotNull();
-                                assertThat(result.data().size()).isEqualTo(3);
-                                // Products with "name" AND price between 10.0 and 12.0
-                                assertThat(result.totalElements()).isEqualTo(3);
-                            });
+                    .consumeWith(response -> {
+                        PagedResult<?> result = response.getResponseBody();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().size()).isEqualTo(3);
+                        // Products with "name" AND price between 10.0 and 12.0
+                        assertThat(result.totalElements()).isEqualTo(3);
+                    });
         }
 
         @Test
@@ -1233,15 +1203,13 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                     .expectHeader()
                     .contentType(MediaType.APPLICATION_JSON)
                     .expectBody(PagedResult.class)
-                    .consumeWith(
-                            response -> {
-                                PagedResult<?> result = response.getResponseBody();
-                                assertThat(result).isNotNull();
-                                assertThat(result.data()).isNotNull();
-                                assertThat(result.data().size())
-                                        .isEqualTo(3); // All products returned
-                                assertThat(result.totalElements()).isEqualTo(3);
-                            });
+                    .consumeWith(response -> {
+                        PagedResult<?> result = response.getResponseBody();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().size()).isEqualTo(3); // All products returned
+                        assertThat(result.totalElements()).isEqualTo(3);
+                    });
         }
 
         @Test
@@ -1260,13 +1228,12 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                     .expectHeader()
                     .contentType(MediaType.APPLICATION_JSON)
                     .expectBody(PagedResult.class)
-                    .consumeWith(
-                            response -> {
-                                PagedResult<?> result = response.getResponseBody();
-                                assertThat(result).isNotNull();
-                                assertThat(result.data()).isEmpty();
-                                assertThat(result.totalElements()).isZero();
-                            });
+                    .consumeWith(response -> {
+                        PagedResult<?> result = response.getResponseBody();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isEmpty();
+                        assertThat(result.totalElements()).isZero();
+                    });
         }
     }
 
@@ -1295,20 +1262,17 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                         .setPrice(BigDecimal.TEN);
         // First save should succeed and set isNew to false
         StepVerifier.create(productRepository.save(product))
-                .assertNext(
-                        saved -> {
-                            assertThat(saved.isNew()).isFalse();
-                        })
+                .assertNext(saved -> {
+                    assertThat(saved.isNew()).isFalse();
+                })
                 .verifyComplete();
         // Update a field
         product.setPrice(BigDecimal.valueOf(15.00));
         // Second save should succeed (as an update, not a conflicting insert)
         StepVerifier.create(productRepository.save(product))
-                .assertNext(
-                        saved -> {
-                            assertThat(saved.getPrice())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(15.00));
-                        })
+                .assertNext(saved -> {
+                    assertThat(saved.getPrice()).isEqualByComparingTo(BigDecimal.valueOf(15.00));
+                })
                 .verifyComplete();
     }
 }

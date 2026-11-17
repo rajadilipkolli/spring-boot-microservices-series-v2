@@ -59,27 +59,23 @@ class OutboxPublisherTest {
                                 : Mono.just(false));
 
         StepVerifier.create(publisher.publishEvents())
-                .assertNext(
-                        saved -> {
-                            assertThat(saved.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
-                            assertThat(saved.getRetryCount()).isEqualTo(1);
-                            assertThat(saved.getProcessedAt()).isNull();
-                        })
+                .assertNext(saved -> {
+                    assertThat(saved.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+                    assertThat(saved.getRetryCount()).isEqualTo(1);
+                    assertThat(saved.getProcessedAt()).isNull();
+                })
                 .verifyComplete();
 
         OffsetDateTime beforeFailure = OffsetDateTime.now();
         StepVerifier.create(publisher.publishEvents())
-                .assertNext(
-                        saved -> {
-                            assertThat(saved.getStatus()).isEqualTo(OutboxEventStatus.FAILED);
-                            assertThat(saved.getProcessedAt())
-                                    .isBetween(beforeFailure, OffsetDateTime.now());
-                            assertThat(saved.getErrorMessage())
-                                    .isEqualTo(
-                                            sendThrows
-                                                    ? "Kafka unavailable"
-                                                    : "Kafka send returned false");
-                        })
+                .assertNext(saved -> {
+                    assertThat(saved.getStatus()).isEqualTo(OutboxEventStatus.FAILED);
+                    assertThat(saved.getProcessedAt())
+                            .isBetween(beforeFailure, OffsetDateTime.now());
+                    assertThat(saved.getErrorMessage())
+                            .isEqualTo(
+                                    sendThrows ? "Kafka unavailable" : "Kafka send returned false");
+                })
                 .verifyComplete();
         assertThat(registry.get("outbox.events.failed.count").counter().count()).isEqualTo(1);
     }

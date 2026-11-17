@@ -47,7 +47,7 @@ public class WebClientConfiguration {
     WebClient.Builder defaultWebClientBuilder(
             ObjectProvider<WebClientCustomizer> customizerProvider) {
         WebClient.Builder builder = WebClient.builder();
-        customizerProvider.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        customizerProvider.orderedStream().forEach(customizer -> customizer.customize(builder));
         return builder;
     }
 
@@ -56,7 +56,7 @@ public class WebClientConfiguration {
     @Qualifier("loadBalanced") WebClient.Builder loadBalancedWebClientBuilder(
             ObjectProvider<WebClientCustomizer> customizerProvider) {
         WebClient.Builder builder = WebClient.builder();
-        customizerProvider.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        customizerProvider.orderedStream().forEach(customizer -> customizer.customize(builder));
         return builder;
     }
 
@@ -71,34 +71,28 @@ public class WebClientConfiguration {
     WebClientCustomizer webClientCustomizer() {
         return webClientBuilder ->
                 webClientBuilder
-                        .defaultHeaders(
-                                httpHeaders -> {
-                                    httpHeaders.add(
-                                            HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
-                                    httpHeaders.add(
-                                            HttpHeaders.CONTENT_TYPE,
-                                            MediaType.APPLICATION_JSON_VALUE);
-                                })
+                        .defaultHeaders(httpHeaders -> {
+                            httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                            httpHeaders.add(
+                                    HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                        })
                         .filter(logRequestDetails())
                         .filter(logResponseDetails())
-                        .filter(
-                                (request, next) ->
-                                        next.exchange(request)
-                                                .retryWhen(
-                                                        Retry.backoff(3, Duration.ofMillis(100))))
+                        .filter((request, next) ->
+                                next.exchange(request)
+                                        .retryWhen(Retry.backoff(3, Duration.ofMillis(100))))
                         .clientConnector(new ReactorClientHttpConnector(clientConnectorConfig()));
     }
 
     private ExchangeFilterFunction logRequestDetails() {
-        return ExchangeFilterFunction.ofRequestProcessor(
-                clientRequest -> {
-                    log.info(
-                            "Sending [{}] request to URL [{}] with request headers [{}]",
-                            clientRequest.method(),
-                            clientRequest.url(),
-                            clientRequest.headers());
-                    return just(clientRequest);
-                });
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            log.info(
+                    "Sending [{}] request to URL [{}] with request headers [{}]",
+                    clientRequest.method(),
+                    clientRequest.url(),
+                    clientRequest.headers());
+            return just(clientRequest);
+        });
     }
 
     private ExchangeFilterFunction logResponseDetails() {
@@ -106,14 +100,13 @@ public class WebClientConfiguration {
         // binary/gzipped payloads here can corrupt the reactive pipeline
         // and lead to JSON parsing errors downstream. Instead, log status
         // and headers only and return the original response unchanged.
-        return ExchangeFilterFunction.ofResponseProcessor(
-                clientResponse -> {
-                    log.info(
-                            "Received response from API with status [{}] and response headers [{}]",
-                            clientResponse.statusCode(),
-                            clientResponse.headers().asHttpHeaders().toSingleValueMap());
-                    return just(clientResponse);
-                });
+        return ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+            log.info(
+                    "Received response from API with status [{}] and response headers [{}]",
+                    clientResponse.statusCode(),
+                    clientResponse.headers().asHttpHeaders().toSingleValueMap());
+            return just(clientResponse);
+        });
     }
 
     private HttpClient clientConnectorConfig() {
@@ -128,10 +121,9 @@ public class WebClientConfiguration {
         return HttpClient.create(connectionProvider)
                 .option(CONNECT_TIMEOUT_MILLIS, 10_000)
                 .responseTimeout(Duration.ofSeconds(10))
-                .doOnConnected(
-                        conn -> {
-                            conn.addHandlerLast(new ReadTimeoutHandler(15, TimeUnit.SECONDS));
-                            conn.addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS));
-                        });
+                .doOnConnected(conn -> {
+                    conn.addHandlerLast(new ReadTimeoutHandler(15, TimeUnit.SECONDS));
+                    conn.addHandlerLast(new WriteTimeoutHandler(10, TimeUnit.SECONDS));
+                });
     }
 }

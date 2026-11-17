@@ -138,12 +138,11 @@ public class OutboxHousekeepingService {
                 OffsetDateTime.now(ZoneOffset.UTC).minus(properties.outbox().getLockTimeout());
         outboxEventRepository
                 .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
-                .doOnNext(
-                        count -> {
-                            if (count > 0) {
-                                log.info("Reaped {} orphaned outbox events", count);
-                            }
-                        })
+                .doOnNext(count -> {
+                    if (count > 0) {
+                        log.info("Reaped {} orphaned outbox events", count);
+                    }
+                })
                 .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
                 .onErrorComplete()
                 .block();

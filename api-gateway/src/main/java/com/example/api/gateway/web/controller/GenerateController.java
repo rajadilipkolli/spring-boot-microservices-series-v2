@@ -44,13 +44,12 @@ public class GenerateController implements GenerateAPI {
 
         return orchestrator
                 .generate(batchSize)
-                .map(
-                        response -> {
-                            if ("success".equalsIgnoreCase(response.status())) {
-                                return ResponseEntity.ok(response);
-                            }
+                .map(response -> {
+                    if ("success".equalsIgnoreCase(response.status())) {
+                        return ResponseEntity.ok(response);
+                    }
 
-                            return ResponseEntity.status(502).body(response);
-                        });
+                    return ResponseEntity.status(502).body(response);
+                });
     }
 }

@@ -247,10 +247,9 @@ public class CustomerRepositoryImpl implements CustomerRepository, CustomerBalan
         CustomersRecord existingRecord =
                 customerDAO
                         .findById(requestCustomer.getId())
-                        .orElseThrow(
-                                () ->
-                                        new OptimisticLockingFailureException(
-                                                "Customer was updated or deleted by another transaction"));
+                        .orElseThrow(() ->
+                                new OptimisticLockingFailureException(
+                                        "Customer was updated or deleted by another transaction"));
 
         int expectedVersion = requestCustomer.getVersion();
         if (!existingRecord.getVersion().equals(expectedVersion)) {

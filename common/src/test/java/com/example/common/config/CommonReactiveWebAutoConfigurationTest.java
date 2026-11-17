@@ -34,49 +34,42 @@ class CommonReactiveWebAutoConfigurationTest {
 
     @Test
     void registersReactiveProblemDetailTraceIdEnricherInReactiveWebApplication() {
-        reactiveContextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(ReactiveProblemDetailTraceIdEnricher.class);
-                    assertThat(context).hasBean("reactiveProblemDetailTraceIdEnricher");
-                    assertThat(context).hasBean("reactiveProblemDetailWebFluxConfigurer");
-                });
+        reactiveContextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(ReactiveProblemDetailTraceIdEnricher.class);
+            assertThat(context).hasBean("reactiveProblemDetailTraceIdEnricher");
+            assertThat(context).hasBean("reactiveProblemDetailWebFluxConfigurer");
+        });
     }
 
     @Test
     void backsOffWhenUserDefinesCustomReactiveEnricher() {
         reactiveContextRunner
                 .withUserConfiguration(CustomReactiveEnricherConfiguration.class)
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context)
-                                    .hasSingleBean(ReactiveProblemDetailTraceIdEnricher.class);
-                            assertThat(context).hasBean("customReactiveEnricher");
-                            assertThat(context)
-                                    .doesNotHaveBean("reactiveProblemDetailTraceIdEnricher");
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(ReactiveProblemDetailTraceIdEnricher.class);
+                    assertThat(context).hasBean("customReactiveEnricher");
+                    assertThat(context).doesNotHaveBean("reactiveProblemDetailTraceIdEnricher");
+                });
     }
 
     @Test
     void backsOffInNonWebApplication() {
-        nonWebContextRunner.run(
-                context -> {
-                    assertThat(context).hasNotFailed();
-                    assertThat(context).doesNotHaveBean(ReactiveProblemDetailTraceIdEnricher.class);
-                });
+        nonWebContextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).doesNotHaveBean(ReactiveProblemDetailTraceIdEnricher.class);
+        });
     }
 
     @Test
     void backsOffWhenWebFluxConfigurerIsAbsent() {
         reactiveContextRunner
                 .withClassLoader(new FilteredClassLoader(WebFluxConfigurer.class))
-                .run(
-                        context -> {
-                            assertThat(context).hasNotFailed();
-                            assertThat(context)
-                                    .doesNotHaveBean(ReactiveProblemDetailTraceIdEnricher.class);
-                        });
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).doesNotHaveBean(ReactiveProblemDetailTraceIdEnricher.class);
+                });
     }
 
     @Configuration(proxyBeanMethods = false)

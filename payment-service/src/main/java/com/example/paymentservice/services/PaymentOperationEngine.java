@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -285,59 +286,57 @@ public class PaymentOperationEngine {
             String attemptId,
             String ownerId,
             OffsetDateTime leaseUntil) {
-        return transactionTemplate.execute(
-                status -> {
-                    PaymentOperationsRecord record = new PaymentOperationsRecord();
-                    record.setOperationKey(operationKey);
-                    record.setOrderId(orderId);
-                    record.setCustomerId(customerId);
-                    record.setOperationType(operationType);
-                    record.setAmount(amount);
-                    record.setFingerprint(fingerprint);
-                    record.setDownstreamKey("downstream:" + operationKey);
-                    record.setStatus("RECEIVED");
-                    record.setFencingToken(0L);
+        return transactionTemplate.execute(status -> {
+            PaymentOperationsRecord record = new PaymentOperationsRecord();
+            record.setOperationKey(operationKey);
+            record.setOrderId(orderId);
+            record.setCustomerId(customerId);
+            record.setOperationType(operationType);
+            record.setAmount(amount);
+            record.setFingerprint(fingerprint);
+            record.setDownstreamKey("downstream:" + operationKey);
+            record.setStatus("RECEIVED");
+            record.setFencingToken(0L);
 
-                    PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
+            PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
 
-                    PaymentOperationsRecord locked =
-                            operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
+            PaymentOperationsRecord locked =
+                    operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
 
-                    if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
-                        throw new OperationConflictException(
-                                "Operation fingerprint mismatch for key: " + operationKey);
-                    }
+            if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
+                throw new OperationConflictException(
+                        "Operation fingerprint mismatch for key: " + operationKey);
+            }
 
-                    if ("COMPLETED".equals(locked.getStatus())) {
-                        if (attemptId != null && "RESERVE".equals(operationType)) {
-                            insertPendingReply(orderId, attemptId, locked.getResult());
-                        }
-                        return new ArrivalResult(locked, true, false, locked.getResult());
-                    }
+            if ("COMPLETED".equals(locked.getStatus())) {
+                if (attemptId != null && "RESERVE".equals(operationType)) {
+                    insertPendingReply(orderId, attemptId, locked.getResult());
+                }
+                return new ArrivalResult(locked, true, false, locked.getResult());
+            }
 
-                    if (attemptId != null && "RESERVE".equals(operationType)) {
-                        insertAwaitingReply(orderId, attemptId);
-                    }
+            if (attemptId != null && "RESERVE".equals(operationType)) {
+                insertAwaitingReply(orderId, attemptId);
+            }
 
-                    boolean claimed = false;
-                    long currentToken = locked.getFencingToken();
-                    if ("RECEIVED".equals(locked.getStatus())) {
-                        claimed =
-                                operationRepository.claim(
-                                        locked.getId(), currentToken, ownerId, leaseUntil);
-                    } else if ("IN_FLIGHT".equals(locked.getStatus())
-                            && locked.getLeaseUntil() != null
-                            && locked.getLeaseUntil()
-                                    .isBefore(OffsetDateTime.now(ZoneOffset.UTC))) {
-                        claimed =
-                                operationRepository.claim(
-                                        locked.getId(), currentToken, ownerId, leaseUntil);
-                    }
+            boolean claimed = false;
+            long currentToken = locked.getFencingToken();
+            if ("RECEIVED".equals(locked.getStatus())) {
+                claimed =
+                        operationRepository.claim(
+                                locked.getId(), currentToken, ownerId, leaseUntil);
+            } else if ("IN_FLIGHT".equals(locked.getStatus())
+                    && locked.getLeaseUntil() != null
+                    && locked.getLeaseUntil().isBefore(OffsetDateTime.now(ZoneOffset.UTC))) {
+                claimed =
+                        operationRepository.claim(
+                                locked.getId(), currentToken, ownerId, leaseUntil);
+            }
 
-                    PaymentOperationsRecord updatedRecord =
-                            operationRepository.findById(locked.getId()).orElse(locked);
-                    return new ArrivalResult(updatedRecord, false, claimed, null);
-                });
+            PaymentOperationsRecord updatedRecord =
+                    operationRepository.findById(locked.getId()).orElse(locked);
+            return new ArrivalResult(updatedRecord, false, claimed, null);
+        });
     }
 
     /**
@@ -352,36 +351,33 @@ public class PaymentOperationEngine {
      */
     public boolean executeCompletion(
             Long operationId, long fencingToken, OrderDto orderDto, String outcome) {
-        return transactionTemplate.execute(
-                status -> {
-                    boolean completed =
-                            operationRepository.complete(
-                                    operationId, fencingToken, "COMPLETED", outcome);
-                    if (!completed) {
-                        return false;
-                    }
+        return transactionTemplate.execute(status -> {
+            boolean completed =
+                    operationRepository.complete(operationId, fencingToken, "COMPLETED", outcome);
+            if (!completed) {
+                return false;
+            }
 
-                    for (OutboxEventsRecord reply :
-                            outboxEventRepository.findAwaitingReserveReplies(
-                                    String.valueOf(orderDto.orderId()))) {
-                        String attemptId =
-                                reply.getEventType().substring("RESERVE_REPLY:".length());
-                        OrderDto replyDto =
-                                new OrderDto(
-                                        orderDto.orderId(),
-                                        orderDto.customerId(),
-                                        outcome,
-                                        AppConstants.SOURCE,
-                                        orderDto.items(),
-                                        attemptId);
-                        outboxEventRepository.promoteToPending(
-                                reply.getAggregateId(), reply.getEventType(), serialize(replyDto));
-                    }
-                    if (orderDto.attemptId() != null) {
-                        insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
-                    }
-                    return true;
-                });
+            for (OutboxEventsRecord reply :
+                    outboxEventRepository.findAwaitingReserveReplies(
+                            String.valueOf(orderDto.orderId()))) {
+                String attemptId = reply.getEventType().substring("RESERVE_REPLY:".length());
+                OrderDto replyDto =
+                        new OrderDto(
+                                orderDto.orderId(),
+                                orderDto.customerId(),
+                                outcome,
+                                AppConstants.SOURCE,
+                                orderDto.items(),
+                                attemptId);
+                outboxEventRepository.promoteToPending(
+                        reply.getAggregateId(), reply.getEventType(), serialize(replyDto));
+            }
+            if (orderDto.attemptId() != null) {
+                insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
+            }
+            return true;
+        });
     }
 
     /**
@@ -393,10 +389,9 @@ public class PaymentOperationEngine {
     public boolean executeSettlementCompletion(
             Long operationId, long fencingToken, String outcome) {
         return Boolean.TRUE.equals(
-                transactionTemplate.execute(
-                        status ->
-                                operationRepository.complete(
-                                        operationId, fencingToken, "COMPLETED", outcome)));
+                transactionTemplate.execute(status ->
+                        operationRepository.complete(
+                                operationId, fencingToken, "COMPLETED", outcome)));
     }
 
     /**
@@ -408,14 +403,13 @@ public class PaymentOperationEngine {
      */
     public boolean transitionToUnknown(Long operationId, long fencingToken) {
         return Boolean.TRUE.equals(
-                transactionTemplate.execute(
-                        status -> {
-                            OffsetDateTime nextReconcileAt =
-                                    OffsetDateTime.now(ZoneOffset.UTC)
-                                            .plus(properties.getReconciler().getInitialBackoff());
-                            return operationRepository.updateStatus(
-                                    operationId, fencingToken, "UNKNOWN", nextReconcileAt);
-                        }));
+                transactionTemplate.execute(status -> {
+                    OffsetDateTime nextReconcileAt =
+                            OffsetDateTime.now(ZoneOffset.UTC)
+                                    .plus(properties.getReconciler().getInitialBackoff());
+                    return operationRepository.updateStatus(
+                            operationId, fencingToken, "UNKNOWN", nextReconcileAt);
+                }));
     }
 
     /**
@@ -427,25 +421,23 @@ public class PaymentOperationEngine {
      */
     public PaymentOperationsRecord recordNotApplicableSettlement(
             OrderDto orderDto, String settlementType) {
-        return transactionTemplate.execute(
-                status -> {
-                    String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
-                    String fingerprint =
-                            generateFingerprint(
-                                    orderDto.customerId(), settlementType, BigDecimal.ZERO);
-                    PaymentOperationsRecord record = new PaymentOperationsRecord();
-                    record.setOperationKey(operationKey);
-                    record.setOrderId(orderDto.orderId());
-                    record.setCustomerId(orderDto.customerId());
-                    record.setOperationType(settlementType);
-                    record.setAmount(BigDecimal.ZERO);
-                    record.setFingerprint(fingerprint);
-                    record.setDownstreamKey("downstream:" + operationKey);
-                    record.setStatus("COMPLETED");
-                    record.setResult("NOT_APPLICABLE");
-                    record.setFencingToken(0L);
-                    return operationRepository.insertOrGet(record);
-                });
+        return transactionTemplate.execute(status -> {
+            String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
+            String fingerprint =
+                    generateFingerprint(orderDto.customerId(), settlementType, BigDecimal.ZERO);
+            PaymentOperationsRecord record = new PaymentOperationsRecord();
+            record.setOperationKey(operationKey);
+            record.setOrderId(orderDto.orderId());
+            record.setCustomerId(orderDto.customerId());
+            record.setOperationType(settlementType);
+            record.setAmount(BigDecimal.ZERO);
+            record.setFingerprint(fingerprint);
+            record.setDownstreamKey("downstream:" + operationKey);
+            record.setStatus("COMPLETED");
+            record.setResult("NOT_APPLICABLE");
+            record.setFencingToken(0L);
+            return operationRepository.insertOrGet(record);
+        });
     }
 
     /** Registers a payload-free reply awaiting the reserve result, preserving an existing reply. */
@@ -467,13 +459,7 @@ public class PaymentOperationEngine {
      */
     private OutboxEventsRecord insertPendingReply(Long orderId, String attemptId, String outcome) {
         OrderDto replyDto =
-                new OrderDto(
-                        orderId,
-                        null,
-                        outcome,
-                        AppConstants.SOURCE,
-                        java.util.List.of(),
-                        attemptId);
+                new OrderDto(orderId, null, outcome, AppConstants.SOURCE, List.of(), attemptId);
         String payloadJson = serialize(replyDto);
 
         OutboxEventsRecord outbox = new OutboxEventsRecord();

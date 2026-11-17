@@ -1,6 +1,7 @@
 /*** Licensed under MIT License Copyright (c) 2023-2026 Raja Kolli. ***/
 package com.example.paymentservice.mapper;
 
+import com.example.paymentservice.jooq.tables.Customers;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
@@ -55,15 +56,10 @@ public class CustomerMapper {
         boolean ascending = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name());
         TableField<CustomersRecord, ?> orderField;
         switch (sortBy) {
-            case "name" ->
-                    orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.NAME;
-            case "email" ->
-                    orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.EMAIL;
-            case "amountAvailable" ->
-                    orderField =
-                            com.example.paymentservice.jooq.tables.Customers.CUSTOMERS
-                                    .AMOUNT_AVAILABLE;
-            default -> orderField = com.example.paymentservice.jooq.tables.Customers.CUSTOMERS.ID;
+            case "name" -> orderField = Customers.CUSTOMERS.NAME;
+            case "email" -> orderField = Customers.CUSTOMERS.EMAIL;
+            case "amountAvailable" -> orderField = Customers.CUSTOMERS.AMOUNT_AVAILABLE;
+            default -> orderField = Customers.CUSTOMERS.ID;
         }
         return List.of(ascending ? orderField.asc() : orderField.desc());
     }

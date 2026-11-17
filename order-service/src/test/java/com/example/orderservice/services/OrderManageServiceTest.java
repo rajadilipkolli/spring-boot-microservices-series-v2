@@ -302,10 +302,8 @@ class OrderManageServiceTest {
         var payment =
                 new OrderDto(1L, 2L, "ACCEPT", "PAYMENT", Collections.emptyList(), "attempt-1");
         reset(orderRepository);
-        assertThatThrownBy(
-                        () ->
-                                orderManageService.confirm(
-                                        payment, payment.withAttemptId("attempt-2")))
+        assertThatThrownBy(() ->
+                        orderManageService.confirm(payment, payment.withAttemptId("attempt-2")))
                 .isInstanceOf(IllegalArgumentException.class);
         verifyNoMoreInteractions(orderRepository);
     }

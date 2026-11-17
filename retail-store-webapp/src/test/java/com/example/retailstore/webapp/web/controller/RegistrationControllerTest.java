@@ -103,10 +103,10 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
-    /** Verifies that anonymous registration succeeds without a CSRF token. */
+    /** Verifies that registration without a CSRF token is forbidden when CSRF is enforced. */
     @Test
     @WithAnonymousUser
-    void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
+    void shouldRejectRegistrationWithoutCsrfToken() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME,
                 TEST_EMAIL,
@@ -120,25 +120,13 @@ class RegistrationControllerTest {
                 "Test State",
                 "12345",
                 "Test Country");
-        when(userRegistrationService.registerUserAndCustomer(any(RegistrationRequest.class)))
-                .thenReturn(new CustomerResponse(
-                        1L,
-                        TEST_USERNAME,
-                        TEST_EMAIL,
-                        "9848022334",
-                        "junitAddress",
-                        null,
-                        "Test City",
-                        "Test State",
-                        "12345",
-                        "Test Country",
-                        BigDecimal.valueOf(10_000)));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message", is("User registered successfully")));
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(userRegistrationService);
     }
 
     /** Verifies that invalid registration fields produce HTTP 400. */
@@ -179,6 +167,7 @@ class RegistrationControllerTest {
         }
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());

@@ -72,20 +72,18 @@ class InventoryCreateConcurrencyIT {
         barrier = new CyclicBarrier(2);
         readCount = new AtomicInteger();
         when(reads.findByProductCode(anyString()))
-                .thenAnswer(
-                        invocation -> {
-                            Optional<InventoryRecord> record = find(invocation.getArgument(0));
-                            if (readCount.incrementAndGet() <= 2) {
-                                barrier.await(20, TimeUnit.SECONDS);
-                            }
-                            return record;
-                        });
+                .thenAnswer(invocation -> {
+                    Optional<InventoryRecord> record = find(invocation.getArgument(0));
+                    if (readCount.incrementAndGet() <= 2) {
+                        barrier.await(20, TimeUnit.SECONDS);
+                    }
+                    return record;
+                });
         when(reads.existsByProductCodeAndDeletedFalse(anyString()))
-                .thenAnswer(
-                        invocation ->
-                                find(invocation.getArgument(0))
-                                        .filter(record -> !record.getDeleted())
-                                        .isPresent());
+                .thenAnswer(invocation ->
+                        find(invocation.getArgument(0))
+                                .filter(record -> !record.getDeleted())
+                                .isPresent());
     }
 
     @ParameterizedTest
@@ -159,17 +157,16 @@ class InventoryCreateConcurrencyIT {
     private Optional<InventoryRecord> find(String code) {
         return jdbc.sql("SELECT * FROM inventory WHERE product_code = :code")
                 .param("code", code)
-                .query(
-                        (rs, row) -> {
-                            InventoryRecord record = new InventoryRecord();
-                            record.setId(rs.getLong("id"));
-                            record.setProductCode(rs.getString("product_code"));
-                            record.setQuantity(rs.getInt("quantity"));
-                            record.setReservedItems(rs.getInt("reserved_items"));
-                            record.setVersion(rs.getShort("version"));
-                            record.setDeleted(rs.getBoolean("deleted"));
-                            return record;
-                        })
+                .query((rs, row) -> {
+                    InventoryRecord record = new InventoryRecord();
+                    record.setId(rs.getLong("id"));
+                    record.setProductCode(rs.getString("product_code"));
+                    record.setQuantity(rs.getInt("quantity"));
+                    record.setReservedItems(rs.getInt("reserved_items"));
+                    record.setVersion(rs.getShort("version"));
+                    record.setDeleted(rs.getBoolean("deleted"));
+                    return record;
+                })
                 .optional();
     }
 

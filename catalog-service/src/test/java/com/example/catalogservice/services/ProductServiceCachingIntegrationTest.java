@@ -93,10 +93,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         productInDb = productRepository.save(productInDb).block();
 
         StepVerifier.create(productService.findProductByProductCode("p001", false))
-                .consumeNextWith(
-                        response ->
-                                assertThat(response.productName())
-                                        .isEqualTo(initialResponse.productName()))
+                .consumeNextWith(response ->
+                        assertThat(response.productName()).isEqualTo(initialResponse.productName()))
                 .verifyComplete();
 
         productService
@@ -111,9 +109,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .block();
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isFalse();
         StepVerifier.create(productService.findProductByProductCode("renamed", false))
-                .consumeNextWith(
-                        response ->
-                                assertThat(response.productName()).isEqualTo("Proper Update Name"))
+                .consumeNextWith(response ->
+                        assertThat(response.productName()).isEqualTo("Proper Update Name"))
                 .verifyComplete();
         StepVerifier.create(productService.findProductByProductCode("P001", false))
                 .expectError(ProductNotFoundException.class)

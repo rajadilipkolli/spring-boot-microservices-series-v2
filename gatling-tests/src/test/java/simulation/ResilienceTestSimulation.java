@@ -52,13 +52,13 @@ public class ResilienceTestSimulation extends BaseLoadSimulation {
                             .body(
                                     StringBody(
                                             """
-                            {
-                              "productCode": "",
-                              "productName": "#{productName}",
-                              "price": -100.0,
-                              "description": "Invalid product test"
-                            }
-                            """))
+                                            {
+                                              "productCode": "",
+                                              "productName": "#{productName}",
+                                              "price": -100.0,
+                                              "description": "Invalid product test"
+                                            }
+                                            """))
                             .asJson()
                             .check(status().in(400, 422)));
 
@@ -70,20 +70,18 @@ public class ResilienceTestSimulation extends BaseLoadSimulation {
                                             .check(
                                                     status().in(200, 429, 503)
                                                             .saveAs("responseStatus")))
-                                    .exec(
-                                            session -> {
-                                                String statusStr =
-                                                        session.getString("responseStatus");
-                                                if (statusStr != null) {
-                                                    int status = Integer.parseInt(statusStr);
-                                                    if (status == 429) {
-                                                        rateLimitedCount.incrementAndGet();
-                                                    } else if (status == 503) {
-                                                        serviceUnavailableCount.incrementAndGet();
-                                                    }
-                                                }
-                                                return session;
-                                            }));
+                                    .exec(session -> {
+                                        String statusStr = session.getString("responseStatus");
+                                        if (statusStr != null) {
+                                            int status = Integer.parseInt(statusStr);
+                                            if (status == 429) {
+                                                rateLimitedCount.incrementAndGet();
+                                            } else if (status == 503) {
+                                                serviceUnavailableCount.incrementAndGet();
+                                            }
+                                        }
+                                        return session;
+                                    }));
 
     ScenarioBuilder resilienceScenario =
             scenario("Resilience Test Workflow")

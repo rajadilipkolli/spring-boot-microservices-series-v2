@@ -119,11 +119,10 @@ class CustomerController implements CustomerApi {
     public ResponseEntity<CustomerResponse> deleteCustomer(@PathVariable Long id) {
         return customerService
                 .findCustomerById(id)
-                .map(
-                        customer -> {
-                            customerService.deleteCustomerById(id);
-                            return ResponseEntity.ok(customer);
-                        })
+                .map(customer -> {
+                    customerService.deleteCustomerById(id);
+                    return ResponseEntity.ok(customer);
+                })
                 .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 
@@ -164,11 +163,10 @@ class CustomerController implements CustomerApi {
         }
         return customerService
                 .findCustomerById(id)
-                .map(
-                        customer ->
-                                ResponseEntity.ok(
-                                        orderProxyService.getOrdersByCustomerId(
-                                                id, pageNo, pageSize, sortBy, sortDir)))
+                .map(customer ->
+                        ResponseEntity.ok(
+                                orderProxyService.getOrdersByCustomerId(
+                                        id, pageNo, pageSize, sortBy, sortDir)))
                 .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 }

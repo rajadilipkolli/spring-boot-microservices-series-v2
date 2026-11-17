@@ -21,14 +21,13 @@ public class CircuitBreakerConfiguration {
     @Bean
     Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
         return factory ->
-                factory.configureDefault(
-                        id ->
-                                new Resilience4JConfigBuilder(id)
-                                        .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
-                                        .timeLimiterConfig(
-                                                TimeLimiterConfig.custom()
-                                                        .timeoutDuration(Duration.ofSeconds(5))
-                                                        .build())
-                                        .build());
+                factory.configureDefault(id ->
+                        new Resilience4JConfigBuilder(id)
+                                .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
+                                .timeLimiterConfig(
+                                        TimeLimiterConfig.custom()
+                                                .timeoutDuration(Duration.ofSeconds(5))
+                                                .build())
+                                .build());
     }
 }

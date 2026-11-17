@@ -49,7 +49,7 @@ sequenceDiagram
     User->>Browser: Fill form & click Register
     Note right of Browser: JavaScript validation:<br/>- Email format<br/>- Password complexity<br/>- Password confirmation match
     
-    Browser->>WebApp: POST /api/register (JSON)
+    Browser->>WebApp: POST /api/register (JSON with CSRF token)
     Note right of WebApp: RegistrationController.register()<br/>File: RegistrationController.java<br/>@Valid @RequestBody RegistrationRequest
     
     WebApp->>WebApp: Validate Request (Bean Validation)
@@ -256,7 +256,7 @@ class SecurityConfig {
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/register")
+                .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .oauth2Login(oauth2 -> oauth2.loginPage("/login")
                         .defaultSuccessUrl("/", true)
@@ -670,7 +670,6 @@ resource "keycloak_role" "user_realm_role" {
 // Location: src/main/java/com/example/retailstore/webapp/config/SecurityConfig.java
 
 .csrf(csrf -> csrf
-    .ignoringRequestMatchers("/api/register") // Registration endpoint exempt
     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
 )
 ```

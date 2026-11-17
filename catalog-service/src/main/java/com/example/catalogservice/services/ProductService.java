@@ -128,30 +128,24 @@ public class ProductService {
 
         return productRepository
                 .countByDeletedFalse()
-                .flatMap(
-                        count -> {
-                            if (count == 0) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
+                .flatMap(count -> {
+                    if (count == 0) {
+                        return Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(Collections.emptyList(), pageable, 0)));
+                    }
 
-                            return productRepository
-                                    .findAllByDeletedFalse(pageable)
-                                    .collectList()
-                                    .flatMap(
-                                            products -> {
-                                                Flux<ProductResponse> productResponseFlux =
-                                                        Flux.fromIterable(products)
-                                                                .map(
-                                                                        productMapper
-                                                                                ::toProductResponse);
+                    return productRepository
+                            .findAllByDeletedFalse(pageable)
+                            .collectList()
+                            .flatMap(products -> {
+                                Flux<ProductResponse> productResponseFlux =
+                                        Flux.fromIterable(products)
+                                                .map(productMapper::toProductResponse);
 
-                                                return enrichWithAvailability(
-                                                        productResponseFlux, pageable, count);
-                                            });
-                        });
+                                return enrichWithAvailability(productResponseFlux, pageable, count);
+                            });
+                });
     }
 
     /**
@@ -268,31 +262,28 @@ public class ProductService {
     public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
         return productRepository
                 .findByProductCodeAllIgnoreCaseAndDeletedTrue(productRequest.productCode())
-                .map(
-                        product -> {
-                            String storedProductCode = product.getProductCode();
-                            productMapper.mapProductWithRequest(productRequest, product);
-                            product.setProductCode(storedProductCode);
-                            return product.setDeleted(false);
-                        })
+                .map(product -> {
+                    String storedProductCode = product.getProductCode();
+                    productMapper.mapProductWithRequest(productRequest, product);
+                    product.setProductCode(storedProductCode);
+                    return product.setDeleted(false);
+                })
                 .switchIfEmpty(
-                        Mono.fromSupplier(
-                                () -> {
-                                    Product product = productMapper.toEntity(productRequest);
-                                    product.setId(tsidFactory.generate().toLong());
-                                    product.setNew(true);
-                                    return product;
-                                }))
+                        Mono.fromSupplier(() -> {
+                            Product product = productMapper.toEntity(productRequest);
+                            product.setId(tsidFactory.generate().toLong());
+                            product.setNew(true);
+                            return product;
+                        }))
                 .flatMap(productRepository::save)
-                .flatMap(
-                        savedProduct ->
-                                outboxService
-                                        .createOutboxEvent(
-                                                "PRODUCT",
-                                                savedProduct.getProductCode(),
-                                                "PRODUCT_CREATED",
-                                                productMapper.toProductDto(savedProduct))
-                                        .thenReturn(savedProduct))
+                .flatMap(savedProduct ->
+                        outboxService
+                                .createOutboxEvent(
+                                        "PRODUCT",
+                                        savedProduct.getProductCode(),
+                                        "PRODUCT_CREATED",
+                                        productMapper.toProductDto(savedProduct))
+                                .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse);
     }
 
@@ -310,26 +301,21 @@ public class ProductService {
         return productRepository
                 .findByIdAndDeletedFalse(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
-                .flatMap(
-                        product -> {
-                            product.setDeleted(true);
-                            return productRepository
-                                    .save(product)
-                                    .flatMap(
-                                            savedProduct ->
-                                                    outboxService
-                                                            .createOutboxEvent(
-                                                                    "PRODUCT",
-                                                                    savedProduct.getProductCode(),
-                                                                    "PRODUCT_DELETED",
-                                                                    productMapper.toProductDto(
-                                                                            savedProduct))
-                                                            .then(
-                                                                    evictProductCache(
-                                                                            id,
-                                                                            savedProduct
-                                                                                    .getProductCode())));
-                        });
+                .flatMap(product -> {
+                    product.setDeleted(true);
+                    return productRepository
+                            .save(product)
+                            .flatMap(savedProduct ->
+                                    outboxService
+                                            .createOutboxEvent(
+                                                    "PRODUCT",
+                                                    savedProduct.getProductCode(),
+                                                    "PRODUCT_DELETED",
+                                                    productMapper.toProductDto(savedProduct))
+                                            .then(
+                                                    evictProductCache(
+                                                            id, savedProduct.getProductCode())));
+                });
     }
 
     /**
@@ -388,15 +374,14 @@ public class ProductService {
         // Save the updated post object
         return productRepository
                 .save(product)
-                .flatMap(
-                        savedProduct ->
-                                outboxService
-                                        .createOutboxEvent(
-                                                "PRODUCT",
-                                                savedProduct.getProductCode(),
-                                                "PRODUCT_UPDATED",
-                                                productMapper.toProductDto(savedProduct))
-                                        .thenReturn(savedProduct))
+                .flatMap(savedProduct ->
+                        outboxService
+                                .createOutboxEvent(
+                                        "PRODUCT",
+                                        savedProduct.getProductCode(),
+                                        "PRODUCT_UPDATED",
+                                        productMapper.toProductDto(savedProduct))
+                                .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse)
                 .delayUntil(p -> evictProductCache(p.id(), previousProductCode, p.productCode()));
     }
@@ -514,22 +499,19 @@ public class ProductService {
             Flux<Product> productFlux, Pageable pageable) {
         return productFlux
                 .collectList()
-                .flatMap(
-                        products -> {
-                            if (products.isEmpty()) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
+                .flatMap(products -> {
+                    if (products.isEmpty()) {
+                        return Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(Collections.emptyList(), pageable, 0)));
+                    }
 
-                            Flux<ProductResponse> productResponseFlux =
-                                    Flux.fromIterable(products)
-                                            .map(productMapper::toProductResponse);
+                    Flux<ProductResponse> productResponseFlux =
+                            Flux.fromIterable(products).map(productMapper::toProductResponse);
 
-                            return enrichWithAvailability(
-                                    productResponseFlux, pageable, (long) products.size());
-                        });
+                    return enrichWithAvailability(
+                            productResponseFlux, pageable, (long) products.size());
+                });
     }
 
     /**
@@ -577,23 +559,17 @@ public class ProductService {
      * @return the cached value or the source result
      */
     private <T> Mono<T> cached(String key, Supplier<Mono<T>> source) {
-        return Mono.defer(
-                () ->
-                        cacheGeneration()
-                                .flatMap(
-                                        generation -> {
-                                            String cacheKey = key + ":" + generation;
-                                            return this.<T>readCache(cacheKey)
-                                                    .switchIfEmpty(
-                                                            Mono.defer(source)
-                                                                    .flatMap(
-                                                                            result ->
-                                                                                    writeCache(
-                                                                                                    cacheKey,
-                                                                                                    result)
-                                                                                            .thenReturn(
-                                                                                                    result)));
-                                        }));
+        return Mono.defer(() ->
+                cacheGeneration()
+                        .flatMap(generation -> {
+                            String cacheKey = key + ":" + generation;
+                            return this.<T>readCache(cacheKey)
+                                    .switchIfEmpty(
+                                            Mono.defer(source)
+                                                    .flatMap(result ->
+                                                            writeCache(cacheKey, result)
+                                                                    .thenReturn(result)));
+                        }));
     }
 
     /**
@@ -605,11 +581,10 @@ public class ProductService {
     private <T> Mono<T> readCache(String cacheKey) {
         return Mono.defer(() -> redisOps.opsForValue().get(cacheKey))
                 .map(value -> (T) value)
-                .onErrorResume(
-                        ex -> {
-                            log.warn("Product cache read failed for {}", cacheKey, ex);
-                            return Mono.empty();
-                        });
+                .onErrorResume(ex -> {
+                    log.warn("Product cache read failed for {}", cacheKey, ex);
+                    return Mono.empty();
+                });
     }
 
     /**
@@ -618,11 +593,10 @@ public class ProductService {
      */
     private Mono<Void> writeCache(String cacheKey, Object result) {
         return Mono.defer(() -> redisOps.opsForValue().set(cacheKey, result, CACHE_EXPIRY))
-                .onErrorResume(
-                        ex -> {
-                            log.warn("Product cache write failed for {}", cacheKey, ex);
-                            return Mono.empty();
-                        })
+                .onErrorResume(ex -> {
+                    log.warn("Product cache write failed for {}", cacheKey, ex);
+                    return Mono.empty();
+                })
                 .then();
     }
 
@@ -639,24 +613,17 @@ public class ProductService {
     private Mono<Void> evictProductCache(Long id, String... productCodes) {
         // Rotate in the product transaction so every node stops using the old entries even
         // when Redis deletion fails. UUIDs also prevent reuse of a rolled-back generation.
-        return Mono.defer(
-                () ->
-                        cacheGeneration()
-                                .flatMap(
-                                        generation ->
-                                                productCacheGenerationRepository
-                                                        .updateCacheGeneration(
-                                                                UUID.randomUUID().toString())
-                                                        .filter(updated -> updated == 1)
-                                                        .switchIfEmpty(
-                                                                Mono.error(
-                                                                        new IllegalStateException(
-                                                                                "Missing product cache generation")))
-                                                        .then(
-                                                                deleteCacheEntries(
-                                                                        id,
-                                                                        productCodes,
-                                                                        generation))));
+        return Mono.defer(() ->
+                cacheGeneration()
+                        .flatMap(generation ->
+                                productCacheGenerationRepository
+                                        .updateCacheGeneration(UUID.randomUUID().toString())
+                                        .filter(updated -> updated == 1)
+                                        .switchIfEmpty(
+                                                Mono.error(
+                                                        new IllegalStateException(
+                                                                "Missing product cache generation")))
+                                        .then(deleteCacheEntries(id, productCodes, generation))));
     }
 
     /**
@@ -675,13 +642,10 @@ public class ProductService {
                         .distinct()
                         .toArray(String[]::new);
         return Mono.defer(() -> redisOps.delete(keys))
-                .onErrorResume(
-                        ex -> {
-                            log.warn(
-                                    "Product cache eviction failed; old generation is no longer used",
-                                    ex);
-                            return Mono.empty();
-                        })
+                .onErrorResume(ex -> {
+                    log.warn("Product cache eviction failed; old generation is no longer used", ex);
+                    return Mono.empty();
+                })
                 .then();
     }
 }

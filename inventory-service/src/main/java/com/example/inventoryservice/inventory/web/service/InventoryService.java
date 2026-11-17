@@ -120,23 +120,21 @@ class InventoryService {
      * if absent or already deleted; persistence failures propagate.
      */
     public void deleteInventoryById(Long id) {
-        retryHandler.executeWithRetry(
-                () -> {
-                    deleteInventoryByIdAttempt(id);
-                    return null;
-                });
+        retryHandler.executeWithRetry(() -> {
+            deleteInventoryByIdAttempt(id);
+            return null;
+        });
     }
 
     private void deleteInventoryByIdAttempt(Long id) {
         // Check active existence via jOOQ read
         inventoryJOOQRepository
                 .findByIdAndDeletedFalse(id)
-                .ifPresent(
-                        record -> {
-                            Inventory inventory = inventoryMapper.toEntity(record);
-                            inventory.markDeleted();
-                            saveWithCustomFallback(inventory);
-                        });
+                .ifPresent(record -> {
+                    Inventory inventory = inventoryMapper.toEntity(record);
+                    inventory.markDeleted();
+                    saveWithCustomFallback(inventory);
+                });
     }
 
     /** Applies the request to the entity, preserving reserved quantity, and saves it. */
@@ -183,12 +181,11 @@ class InventoryService {
             Long id, InventoryRequest inventoryRequest) {
         return inventoryJOOQRepository
                 .findByIdAndDeletedFalse(id)
-                .map(
-                        record -> {
-                            Inventory entity = inventoryMapper.toEntity(record);
-                            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
-                            return inventoryMapper.toResponse(inventoryRepository.save(entity));
-                        });
+                .map(record -> {
+                    Inventory entity = inventoryMapper.toEntity(record);
+                    inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+                    return inventoryMapper.toResponse(inventoryRepository.save(entity));
+                });
     }
 
     /**
@@ -208,12 +205,11 @@ class InventoryService {
             String productCode, InventoryRequest inventoryRequest) {
         return inventoryJOOQRepository
                 .findByProductCodeAndDeletedFalse(productCode)
-                .map(
-                        record -> {
-                            Inventory entity = inventoryMapper.toEntity(record);
-                            inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
-                            return inventoryMapper.toResponse(inventoryRepository.save(entity));
-                        });
+                .map(record -> {
+                    Inventory entity = inventoryMapper.toEntity(record);
+                    inventoryMapper.updateInventoryFromRequest(inventoryRequest, entity);
+                    return inventoryMapper.toResponse(inventoryRepository.save(entity));
+                });
     }
 
     /** Returns whether active inventory exists for the ID via jOOQ read. */

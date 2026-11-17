@@ -36,21 +36,16 @@ class ApiGatewayConfiguration {
             RouteLocatorBuilder builder,
             @Value("${app.gateway.httpbin:http://httpbin.org:80}") String httpbinUri) {
         return builder.routes()
-                .route(
-                        routeSpec ->
-                                routeSpec
-                                        .path("/get")
-                                        .filters(
-                                                filterSpec ->
-                                                        filterSpec
-                                                                .addRequestHeader(
-                                                                        "MyHeader", "MyURI")
-                                                                .addRequestParameter(
-                                                                        "Param", "MyValue")
-                                                                .addResponseHeader(
-                                                                        "X-Response-Header",
-                                                                        "Transformed"))
-                                        .uri(httpbinUri))
+                .route(routeSpec ->
+                        routeSpec
+                                .path("/get")
+                                .filters(filterSpec ->
+                                        filterSpec
+                                                .addRequestHeader("MyHeader", "MyURI")
+                                                .addRequestParameter("Param", "MyValue")
+                                                .addResponseHeader(
+                                                        "X-Response-Header", "Transformed"))
+                                .uri(httpbinUri))
                 .build();
     }
 }

@@ -61,37 +61,33 @@ class ProductCacheFailureTest {
                 .thenAnswer(ignored -> Mono.just(generation.get()));
         lenient()
                 .when(productCacheGeneration.updateCacheGeneration(anyString()))
-                .thenAnswer(
-                        invocation ->
-                                Mono.fromSupplier(
-                                        () -> {
-                                            generation.set(invocation.getArgument(0));
-                                            return 1;
-                                        }));
+                .thenAnswer(invocation ->
+                        Mono.fromSupplier(() -> {
+                            generation.set(invocation.getArgument(0));
+                            return 1;
+                        }));
         when(redis.opsForValue()).thenReturn(values);
         when(values.get(anyString()))
                 .thenAnswer(invocation -> Mono.justOrEmpty(cache.get(invocation.getArgument(0))));
         when(values.set(anyString(), any(), any(Duration.class)))
-                .thenAnswer(
-                        invocation -> {
-                            cache.put(invocation.getArgument(0), invocation.getArgument(1));
-                            return Mono.just(true);
-                        });
+                .thenAnswer(invocation -> {
+                    cache.put(invocation.getArgument(0), invocation.getArgument(1));
+                    return Mono.just(true);
+                });
         lenient().when(repository.findByIdAndDeletedFalse(1L)).thenReturn(Mono.just(product));
         lenient()
                 .when(repository.findByProductCodeAllIgnoreCaseAndDeletedFalse(anyString()))
                 .thenReturn(Mono.just(product));
         when(mapper.toProductResponse(product))
-                .thenAnswer(
-                        ignored ->
-                                new ProductResponse(
-                                        1L,
-                                        "P001",
-                                        product.getProductName(),
-                                        "Description",
-                                        null,
-                                        BigDecimal.TEN,
-                                        false));
+                .thenAnswer(ignored ->
+                        new ProductResponse(
+                                1L,
+                                "P001",
+                                product.getProductName(),
+                                "Description",
+                                null,
+                                BigDecimal.TEN,
+                                false));
     }
 
     @Test

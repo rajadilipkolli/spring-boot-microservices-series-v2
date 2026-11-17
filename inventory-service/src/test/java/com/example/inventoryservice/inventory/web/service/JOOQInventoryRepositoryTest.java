@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.shared.SQLContainersConfig;
+import io.hypersistence.tsid.TSID;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +38,12 @@ class JOOQInventoryRepositoryTest {
         List<InventoryRecord> inventoryList =
                 List.of(
                         new InventoryRecord()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setId(TSID.fast().toLong())
                                 .setProductCode("product1")
                                 .setQuantity(10)
                                 .setReservedItems(0),
                         new InventoryRecord()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                                .setId(TSID.fast().toLong())
                                 .setProductCode("product2")
                                 .setQuantity(0)
                                 .setReservedItems(0));
