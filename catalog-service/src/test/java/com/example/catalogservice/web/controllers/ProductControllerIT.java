@@ -410,6 +410,8 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
     @Test
     void shouldRetryAndFailAndBreakCloseTheCircuitTest() {
 
+        int requestCount = mockWebServer.getRequestCount();
+
         Product product = savedProductList.getFirst();
         Long productId = product.getId();
         // key here is adding 2nd enqueue request as call is made twice
@@ -443,7 +445,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .isEqualTo("/api/catalog/id/" + productId);
 
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
-        assertThat(mockWebServer.getRequestCount()).isEqualTo(3);
+        assertThat(mockWebServer.getRequestCount() - requestCount).isEqualTo(3);
 
         // 2nd try
         webTestClient
@@ -466,7 +468,7 @@ class ProductControllerIT extends AbstractCircuitBreakerTest {
                 .jsonPath("$.inStock")
                 .isEqualTo(true);
         checkHealthStatus("default", CircuitBreaker.State.CLOSED);
-        assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
+        assertThat(mockWebServer.getRequestCount() - requestCount).isEqualTo(5);
     }
 
     @Test
