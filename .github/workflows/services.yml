@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
-      - uses: graalvm/setup-graalvm@f70bc8032f90a104502824a54bcb94b6f01715bc
+      - uses: graalvm/setup-graalvm@d6eca2595046623d69d636041513c80abf745406
         with:
           distribution: 'graalvm'
           java-version: ${{ matrix.java }}
