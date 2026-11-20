@@ -20,7 +20,7 @@ This guide provides instructions on how to use Spring Boot Docker Compose suppor
 ```yaml
 services:
   postgres:
-    image: 'postgres:18-alpine'
+    image: 'postgres:19-alpine'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
