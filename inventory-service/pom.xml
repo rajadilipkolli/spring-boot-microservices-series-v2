@@ -373,7 +373,7 @@
                     <skip>${jooq.codegen.skip}</skip>
                     <database>
                         <type>POSTGRES</type>
-                        <containerImage>postgres:18-alpine</containerImage>
+                        <containerImage>postgres:19-alpine</containerImage>
                         <username>test</username>
                         <password>test</password>
                         <databaseName>test</databaseName>
