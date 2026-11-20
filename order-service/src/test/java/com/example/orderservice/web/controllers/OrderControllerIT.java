@@ -49,8 +49,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.NestedTestConfiguration;
 import org.springframework.test.web.servlet.MvcResult;
 
+@NestedTestConfiguration(NestedTestConfiguration.EnclosingConfiguration.OVERRIDE)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
@@ -102,7 +104,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Nested
     @DisplayName("find methods")
-    class Find {
+    class Find extends AbstractIntegrationTest {
 
         @Test
         void shouldFetchAllOrders() throws Exception {
@@ -188,7 +190,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Nested
     @DisplayName("save methods")
-    class SaveOrder {
+    class SaveOrder extends AbstractIntegrationTest {
 
         /**
          * Verifies that order creation returns the initial order details with a string customer ID.
