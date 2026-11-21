@@ -35,6 +35,9 @@ spec:
       backendRefs:
         - name: api-gateway
           port: 8765
+      timeouts:
+        request: 120s
+        backendRequest: 120s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
