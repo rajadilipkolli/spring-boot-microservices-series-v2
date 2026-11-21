@@ -22,7 +22,7 @@
         <java.version>25</java.version>
         <spring-cloud.version>2026.0.0</spring-cloud.version>
         <spring-modulith.version>2.2.0</spring-modulith.version>
-        <springdoc-openapi.version>3.2.0</springdoc-openapi.version>
+        <springdoc-openapi.version>3.2.1</springdoc-openapi.version>
 
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <testcontainers-jooq-codegen-maven-plugin.version>1.0.0</testcontainers-jooq-codegen-maven-plugin.version>
