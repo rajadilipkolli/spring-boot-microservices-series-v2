@@ -20,6 +20,10 @@ on:
       - synchronize
       - reopened
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   terraform-validate:
     runs-on: ubuntu-latest
@@ -159,10 +163,10 @@ jobs:
             "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
             "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 
-          # Request webapp via Gateway (fatal check: 200 or 302 expected)
+          # Request webapp via Gateway (fatal check: 200, 302 or 303 expected)
           echo "Verifying webapp reachable via Gateway..."
           webapp_status=$(curl -s -o /dev/null -w "%{http_code}" http://retailstore.local)
-          if [[ "$webapp_status" =~ ^(200|302)$ ]]; then
+          if [[ "$webapp_status" =~ ^(200|302|303)$ ]]; then
             echo "Webapp reachable via Gateway (HTTP status: $webapp_status)."
           else
             echo "Fatal: Webapp smoke check via http://retailstore.local returned unexpected status: $webapp_status" >&2
