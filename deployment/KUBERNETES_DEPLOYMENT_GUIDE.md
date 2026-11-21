@@ -33,7 +33,7 @@ Without Kubernetes you would have to manually restart crashed apps, manually mov
 | **Deployment**         | HR policy for a team             | Declares how many copies of an app should run and keeps them healthy                     |
 | **StatefulSet**        | A department with assigned desks | Like a Deployment, but for apps that need a stable identity (e.g. Kafka, databases)      |
 | **Service**            | The internal phone directory     | Gives each app a stable address so other apps can find it                                |
-| **Ingress**            | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app                  |
+| **Gateway API**        | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app via Gateway & HTTPRoute |
 | **Namespace**          | A separate wing of the building  | Logical boundary to group related resources — all retailstore apps live in `retailstore` |
 | **ConfigMap / Secret** | Employee handbook / safe         | ConfigMap stores non-sensitive configuration values; Secret stores sensitive values such as passwords and API keys |
 
@@ -48,13 +48,13 @@ Browser / curl
      │
      ▼
 ┌─────────────────────────────────────┐
-│           NGINX Ingress             │  ← Front door: routes api.retailstore.local
+│    Kubernetes Gateway API (Envoy)   │  ← Front door: routes api.retailstore.local
 │         (api.retailstore.local)     │    to the right service
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌──────────────────────────┐
-│       API Gateway        │  ← Reception desk: decides which service
+│       API Gateway        │  ← Reception desk: Spring Cloud Gateway decides which service
 │       (port 8765)        │    should handle the request
 └──┬──────┬──────┬─────────┘
    │      │      │
@@ -88,10 +88,10 @@ This means the retail store can survive individual failures without manual inter
 
 ### 📦 Namespaces Used in This Project
 
-| Namespace       | Purpose                                                                                                          |
-|-----------------|------------------------------------------------------------------------------------------------------------------|
-| `retailstore`   | All application services (catalog, order, payment, etc.) and infrastructure (Kafka, PostgreSQL, Redis, Keycloak) |
-| `ingress-nginx` | The NGINX Ingress Controller that handles external HTTP traffic                                                  |
+| Namespace              | Purpose                                                                                                          |
+|------------------------|------------------------------------------------------------------------------------------------------------------|
+| `retailstore`          | All application services (catalog, order, payment, etc.) and infrastructure (Kafka, PostgreSQL, Redis, Keycloak) |
+| `envoy-gateway-system` | The Envoy Gateway controller and proxy infrastructure that handles external HTTP traffic                         |
 
 ---
 
@@ -142,12 +142,11 @@ kind create cluster --name kind \
   --config deployment/k8s/kind-config.yaml --wait 120s
 ```
 
-### Install NGINX Ingress
+### Install Envoy Gateway and Gateway API CRDs
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller --timeout=120s
+kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
 ```
 
 ## Deployment Instructions
@@ -219,7 +218,7 @@ sequence locally as follows:
 
 1. Create Kind with `deployment/k8s/kind-config.yaml`, including port mappings for 80 and 443.
 2. Pull and load every published `dockertmt/mmv2-<service>:0.0.1-SNAPSHOT` image with `kind load docker-image`.
-3. Install ingress-nginx and wait for its controller pod to become ready.
+3. Install Envoy Gateway and Gateway API CRDs, then wait for its controller deployment to become available.
 4. Apply `kubectl apply -k deployment/k8s/overlays/ci/`.
 5. Wait for PostgreSQL, Redis, Kafka, and Keycloak; then wait for config-server and service-registry; then wait for all application deployments. Use `kubectl rollout status` and `kubectl wait --for=condition=ready pod` with explicit timeouts such as `300s`.
 6. Add the local hostnames shown above to `/etc/hosts`.
@@ -235,15 +234,15 @@ curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-con
   -d 'username=retail' -d 'password=demo-throwaway-retail-pass' | grep access_token
 ```
 
-The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through ingress instead.
+The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through Gateway API instead.
 
 ## Troubleshooting
 
 - **ImagePullBackOff**: Confirm every image was loaded into Kind and that the CI overlay uses `IfNotPresent`.
 - **Config-server ordering**: Inspect init containers and config-server logs if dependent pods restart.
 - **Service discovery**: Check service-registry logs and pod readiness before testing gateway routes.
-- **Keycloak hostname**: Verify `keycloak.local` and `retailstore.local` resolve to the ingress address.
-- **Ingress readiness**: Check the ingress-nginx controller pod and events if host requests fail.
+- **Keycloak hostname**: Verify `keycloak.local` and `retailstore.local` resolve to the gateway address.
+- **Gateway readiness**: Check the envoy-gateway controller and envoy proxy pods if host requests fail.
 
 ## CI Diagnostics
 

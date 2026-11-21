@@ -32,7 +32,10 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: ingress-nginx
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: retailstore-gateway
   podSelector:
     matchExpressions:
     - key: app

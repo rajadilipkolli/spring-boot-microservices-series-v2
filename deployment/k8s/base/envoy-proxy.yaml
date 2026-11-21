@@ -1,0 +1,26 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-proxy-config
+  namespace: retailstore
+spec:
+  mergeGateways: true
+  provider:
+    type: Kubernetes
+    kubernetes:
+      useListenerPortAsContainerPort: true
+      envoyService:
+        type: NodePort
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              ports:
+                - name: http
+                  port: 80
+                  targetPort: 80
+                  nodePort: 30080
+                - name: https
+                  port: 443
+                  targetPort: 443
+                  nodePort: 30443

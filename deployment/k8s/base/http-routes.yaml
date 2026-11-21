@@ -1,0 +1,75 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: retailstore-webapp-route
+  namespace: retailstore
+spec:
+  parentRefs:
+    - name: retailstore-gateway
+  hostnames:
+    - "retailstore.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: retail-store-webapp
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api-gateway-route
+  namespace: retailstore
+spec:
+  parentRefs:
+    - name: retailstore-gateway
+  hostnames:
+    - "api.retailstore.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: api-gateway
+          port: 8765
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak-route
+  namespace: retailstore
+spec:
+  parentRefs:
+    - name: retailstore-gateway
+  hostnames:
+    - "keycloak.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: keycloak
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: internal-jobrunr-route
+  namespace: retailstore
+spec:
+  parentRefs:
+    - name: retailstore-gateway
+  hostnames:
+    - "jobrunr.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: order-service
+          port: 28282
