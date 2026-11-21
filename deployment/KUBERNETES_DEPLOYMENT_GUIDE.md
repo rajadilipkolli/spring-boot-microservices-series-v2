@@ -119,9 +119,9 @@ deployment/k8s/
 - **Kind**: Used to create the local cluster.
 - **kubectl** and **Kustomize**: Recent kubectl versions include Kustomize.
 - **curl**, **jq**, and **sudo**: Required by the E2E validation and local host mapping.
-- **NGINX Ingress Controller**: Required for the host-based application routes.
+- **Envoy Gateway**: Required for host-based application routes (see [Install Envoy Gateway and Gateway API CRDs](#install-envoy-gateway-and-gateway-api-crds)).
 
-## Cluster Setup and Ingress
+## Cluster Setup and Gateway API
 
 ### Local Hostnames
 
