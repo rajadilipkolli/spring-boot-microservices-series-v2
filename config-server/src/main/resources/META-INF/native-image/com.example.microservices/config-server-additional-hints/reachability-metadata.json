@@ -7359,6 +7359,32 @@
       ]
     },
     {
+      "type": "org.springframework.cloud.config.server.ssh.HostKeyOrKnownHostsFileRequired",
+      "methods": [
+        {
+          "name": "groups",
+          "parameterTypes": []
+        },
+        {
+          "name": "message",
+          "parameterTypes": []
+        },
+        {
+          "name": "payload",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.cloud.config.server.ssh.HostKeyOrKnownHostsFileRequiredValidator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.springframework.cloud.config.server.ssh.KnownHostsFileIsValid",
       "methods": [
         {

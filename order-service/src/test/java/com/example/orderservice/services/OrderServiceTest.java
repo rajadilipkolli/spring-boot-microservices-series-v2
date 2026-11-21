@@ -20,6 +20,7 @@ import com.example.orderservice.services.search.KeywordOrderSearchStrategy;
 import com.example.orderservice.services.search.SimilarityOrderSearchStrategy;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,7 +45,7 @@ class OrderServiceTest {
 
     private OrderService orderService;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         orderService =
                 new OrderService(
