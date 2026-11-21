@@ -389,17 +389,12 @@ bash run.sh
 
 #### Option 4: Local Kubernetes with Kind
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:5582693c4b9f5950b40088f14c24a3ad454235cdd738296ae94efaf18671cfe0 -->
-
 For a local Kubernetes deployment, use Kind with the manifests under
 [`deployment/k8s/`](deployment/k8s/). See the
 [Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
 the complete setup and validation flow. For production, see the
 [TLS and DNS prerequisites](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#deploying-the-production-overlay).
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 ```bash
 ./deployment/k8s/run-k8s-e2e-local.sh

@@ -180,10 +180,10 @@ if (( mvn_exit != 0 )); then
   exit "$mvn_exit"
 fi
 
-# Request webapp via Gateway (fatal check: 200, 302 or 303 expected)
+# Request webapp via Gateway (fatal check: follows redirect, 200 expected)
 echo "Verifying webapp reachable via Gateway..."
-webapp_status=$(curl -s -o /dev/null -w "%{http_code}" http://retailstore.local)
-if [[ "$webapp_status" =~ ^(200|302|303)$ ]]; then
+webapp_status=$(curl -s -L -o /dev/null -w "%{http_code}" http://retailstore.local)
+if [[ "$webapp_status" == "200" ]]; then
   echo "Webapp reachable via Gateway (HTTP status: $webapp_status)."
 else
   echo "Fatal: Webapp smoke check via http://retailstore.local returned unexpected status: $webapp_status" >&2

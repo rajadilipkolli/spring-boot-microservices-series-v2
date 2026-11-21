@@ -71,13 +71,7 @@ Client (Browser / curl / test runner)
                                  Business Microservices
 ```
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:8167cd314049329254db4a033cc9590bc7d239a926564d5de553bf9ec9ac70b2 -->
-
 Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address. The diagram shows the local HTTP listener (port 80 / NodePort 30080). In production, port 80 redirects to HTTPS and Envoy Gateway terminates TLS on port 443 (NodePort 30443). Spring Cloud Gateway handles internal application routing, circuit breaking, and rate limiting behind Envoy Gateway.
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 ---
 
@@ -151,10 +145,6 @@ kind create cluster --name kind \
 
 ### Install Envoy Gateway and Gateway API CRDs
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:65f08267a12087f22e9c4d554524619b131051e2a16b65485ddbb76f807b598f -->
-
 Envoy Gateway is installed automatically by `deployment/k8s/deploy.sh` using `ENVOY_GATEWAY_VERSION` (default `v1.7.5`). Use a controller version that reports the observed generation on accepted policies. Envoy Gateway v1.3 does not report it.
 
 To install or upgrade manually:
@@ -164,12 +154,6 @@ kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/do
 kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io crd/backendtrafficpolicies.gateway.envoyproxy.io crd/securitypolicies.gateway.envoyproxy.io --timeout=120s
 kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
 ```
-
-<!-- /coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:4f2407644425a4946a06b3c07715a4c7162b7026ae87ca983b09113eeecb3223 -->
 
 ### Gateway API Reconciliation and Status Verification
 
@@ -181,20 +165,13 @@ From the repository root, run the same read-only check used by `deploy.sh`. Pass
 
 The script fails if a required resource cannot be read or its conditions do not become current and `True` within 60 seconds. It checks `Accepted` on GatewayClass `eg` and both `Accepted` and `Programmed` on Gateway `retailstore-gateway`. Each of the four application HTTPRoutes must report both `Accepted=True` and `ResolvedRefs=True` for that Gateway in the same parent status. The check also requires `Accepted=True` on BackendTrafficPolicy `base-traffic-policy` and SecurityPolicy `jobrunr-security-policy` for that Gateway. For `prod`, it verifies the HTTPS listener and the HTTP redirect route as well.
 
-<!-- /coderabbit-ai-generated:v1 -->
 
 ### Health Check and Traffic Policy Model
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:6a41b5be8f5f51bad2b4de6aeb8e3bc8c7b1eb79b6ef0a99555e5e6767b06331 -->
 
 Envoy Gateway implements traffic and resilience policies via Gateway API extension policies:
 - **`BackendTrafficPolicy` (`base-traffic-policy`)**: Configures a 10s TCP connect timeout and passive health checking (outlier detection) with 5 consecutive 5xx errors, 3 consecutive gateway errors, 10s interval, 30s base ejection time, and 50% max ejection percent. Kubernetes EndpointSlices reflect standard pod readiness, and passive health checking adds automatic outlier ejection for degraded backend pods.
 - **`SecurityPolicy` (`jobrunr-security-policy`)**: Enforces HTTP Basic Authentication directly at the Envoy Gateway perimeter for `jobrunr.local`.
 - **Overlay Patches**: Overlays such as `staging` and `prod` patch the base traffic policy to customize HTTP timeouts (120s) and local rate limits (20 req/s per client IP) while inheriting passive health checks and connect timeouts from `base`.
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 ## Deployment Instructions
 
@@ -243,10 +220,6 @@ kubectl apply -k deployment/k8s/overlays/ci/
 
 For the `prod` overlay, the data tier leverages Kubernetes Operators for High Availability (CloudNativePG for PostgreSQL and Strimzi for Kafka). Operators must be installed explicitly so their CustomResourceDefinitions (CRDs) are registered before Kustomize attempts to create the custom cluster resources.
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:2333a8a6d7bd275d335fbe2f31ff703217053d79cbc4c0a198b1c456e588da39 -->
-
 Before running the production deployment, provision a `kubernetes.io/tls` Secret named `retailstore-tls` in the `retailstore` namespace. Its certificate must be trusted by clients and the webapp and cover `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local`. Use your organization's CA for these `.local` names, or configure real DNS names consistently across the routes, certificate, and OAuth settings. For example, with a certificate and private key provisioned by your CA:
 
 ```bash
@@ -266,8 +239,6 @@ If upgrading an existing deployment, replace the existing Secret's data with the
 
 To apply the production overlay safely:
 
-<!-- /coderabbit-ai-generated:v1 -->
-
 ```bash
 cd deployment/k8s
 ./deploy.sh prod
@@ -277,10 +248,6 @@ cd deployment/k8s
 The `deploy.sh prod` command performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
 
 ### Teardown and Cleanup
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:355af1a99078d567bd168ccb9f8cf950bb03bc0c1c7a1232f62ee725cddb385b -->
 
 To tear down an overlay deployment while leaving the Envoy Gateway controller running for other workloads:
 
@@ -296,8 +263,6 @@ To opt in to uninstalling Envoy Gateway release manifests as well:
 ```bash
 UNINSTALL_ENVOY_GATEWAY=true ./undeploy.sh dev
 ```
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 ## CI Workflow Validation Locally
 

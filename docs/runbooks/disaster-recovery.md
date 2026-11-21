@@ -55,10 +55,6 @@ kubectl scale deployment/keycloak --replicas=3 --context secondary-region -n ret
 kubectl rollout status deployment/api-gateway --context secondary-region -n retailstore
 ```
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:f534a86abcc9470084e7f468498742e4b88f97e09e9c4d5329b077aa97b7aff9 -->
-
 ### Step 3: Switch Global DNS Traffic to Secondary Region
 
 1. From the repository root, verify the secondary Gateway is programmed, all four application HTTPRoutes are accepted with resolved references, and both policies (including JobRunr's SecurityPolicy) are accepted. This runs the same checks as `deploy.sh` without modifying the cluster. Stop if any check fails.
@@ -85,8 +81,6 @@ curl -fsS https://api.retailstore.local/actuator/health
 curl -fsS https://api.retailstore.local/catalog-service/api/catalog/products
 curl -fsS https://retailstore.local/
 ```
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 ## 5. Escalation
 - **Incident Commander (Lead SRE / VP Engineering)**: Declares DR event, oversees regional cutover, coordinates customer communication.

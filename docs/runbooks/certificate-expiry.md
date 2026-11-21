@@ -1,12 +1,6 @@
 # Operational Runbook: Certificate Expiry and Renewal Failure
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:332dde613201860bf2c16af8a926742a0df0fa78fa9952d2f4cb375f5f2b4ab3 -->
-
 > The production Gateway uses the `retailstore-tls` Secret for its HTTPS listener. The `.local` hostnames require a private CA; use public DNS names for public ACME validation.
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 ## 1. Symptoms
 - **Alert Triggered**: `CertificateExpiringSoon` (certificate expiration < 14 days or < 48 hours) or `CertificateRenewalFailed`.
@@ -51,15 +45,11 @@
    # Using cmctl / kubectl cert-manager plugin:
    kubectl cert-manager renew <cert-name> -n retailstore
    ```
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:71d7409ead37b76fb0b4c2a8834e7d68f02319927be6f0a19ea639e91ad964bb -->
 
 2. **Fix Failing HTTP-01 / DNS-01 ACME Challenge**:
    - If HTTP-01 is failing: verify that public DNS points to a load balancer or forwarding address and that public TCP port 80 reaches the Gateway HTTP listener (for example, by forwarding it to NodePort 30080). DNS does not specify a port. Verify that the Gateway serves `/.well-known/acme-challenge/` through the challenge route. If you cannot expose public port 80, use DNS-01.
    - If DNS-01 challenge is failing: verify cloud DNS credentials and API tokens stored in the `cert-manager` namespace secret.
 
-<!-- /coderabbit-ai-generated:v1 -->
 3. **Emergency Self-Signed / Fallback Certificate Injection**:
    If upstream CA is unavailable and expiration is imminent (< 1 hour):
    - Switch `issuerRef` to an internal self-signed `ClusterIssuer` to maintain encrypted transport while resolving upstream validation.
@@ -76,14 +66,26 @@
 - **Level 3 (Enterprise Network Operations)**: Escalate for external DNS registrar or commercial certificate authority contract issues.
 
 ## 6. Recovery Verification
-1. Verify `kubectl get certificate -n retailstore` reports `READY: True`.
-2. Inspect the expiration date of the live TLS certificate using OpenSSL (if TLS listener configured):
-   ```bash
-   echo | openssl s_client -connect api.retailstore.local:443 -servername api.retailstore.local 2>/dev/null | openssl x509 -noout -dates
-   ```
+1. Verify `kubectl get certificate -n retailstore` reports `READY: True` (e.g. for `keycloak-internal-tls`).
+2. Inspect the expiration date of the live TLS certificate using OpenSSL against the relevant TLS endpoint (when configured):
+   - For internal Keycloak TLS:
+     ```bash
+     kubectl run openssl-check --rm -i --image=alpine/openssl -n retailstore --restart=Never -- \
+       s_client -connect keycloak:8443 -servername keycloak 2>/dev/null | openssl x509 -noout -dates
+     ```
+   - For the Gateway HTTPS listener (`prod` overlay with `retailstore-tls` on port 443 / NodePort 30443):
+     ```bash
+     echo | openssl s_client -connect api.retailstore.local:443 -servername api.retailstore.local 2>/dev/null | openssl x509 -noout -dates
+     ```
    *Verify `notAfter` is at least 30-90 days in the future.*
-3. Verify client requests connect securely without SSL warnings:
-   ```bash
-   curl -vk https://api.retailstore.local:443/actuator/health
-   ```
+3. Verify client requests connect securely without SSL warnings against the verified TLS endpoint:
+   - For internal Keycloak HTTPS:
+     ```bash
+     kubectl run curl-check --rm -i --image=curlimages/curl -n retailstore --restart=Never -- \
+       curl -fsS --cacert /etc/x509/ca/tls.crt https://keycloak:8443/health/ready
+     ```
+   - For the Gateway HTTPS listener (when the `prod` HTTPS listener is active):
+     ```bash
+     curl -vk https://api.retailstore.local:443/actuator/health
+     ```
 4. Confirm Prometheus alert `CertificateExpiringSoon` has cleared.
