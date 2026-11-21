@@ -22,6 +22,7 @@ resources:
 - gateway.yaml
 - http-routes.yaml
 - jobrunr-security-policy.yaml
+- backend-traffic-policy.yaml
 - patch-job.yaml
 - network-policies.yaml
 - pdb.yaml

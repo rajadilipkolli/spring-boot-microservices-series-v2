@@ -41,36 +41,37 @@ Without Kubernetes you would have to manually restart crashed apps, manually mov
 
 ### 🏗️ How the Retail Store Fits Together
 
-Here is how a customer's web request travels through the system:
+Here is how client traffic travels through the system:
 
 ```
-Browser / curl
+Client (Browser / curl / test runner)
      │
      ▼
-┌─────────────────────────────────────┐
-│    Kubernetes Gateway API (Envoy)   │  ← Front door: routes api.retailstore.local
-│         (api.retailstore.local)     │    to the right service
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌──────────────────────────┐
-│       API Gateway        │  ← Reception desk: Spring Cloud Gateway decides which service
-│       (port 8765)        │    should handle the request
-└──┬──────┬──────┬─────────┘
-   │      │      │
-   ▼      ▼      ▼
-Catalog  Inventory  Order  ← The actual worker services
-Service  Service    Service
-   │                  │
-   │     ┌────────────┘
-   ▼     ▼
- Kafka (message bus)  ← Like an internal memo system between services
-   │
-   ▼
-Payment Service       ← Reacts to order events asynchronously
+┌─────────────────────────────────────────────────────────────┐
+│             Envoy Gateway (NodePort :80 / :443)             │
+│                    retailstore-gateway                      │
+└──────┬──────────────────┬───────────────────┬───────────────┘
+       │                  │                   │               │
+       │ host:            │ host:             │ host:         │ host:
+       │ retailstore.     │ keycloak.         │ jobrunr.      │ api.retailstore.
+       │ local            │ local             │ local         │ local
+       ▼                  ▼                   ▼               ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────────────────┐
+│ retail-store-│   │   Keycloak   │   │ order-service│   │       API Gateway        │
+│ webapp       │   │   (:8080)    │   │ (:28282      │   │       (:8765)            │
+│ (:8080)      │   │              │   │  dashboard)  │   │  Spring Cloud Gateway    │
+└──────────────┘   └──────────────┘   └──────────────┘   └──┬──────┬──────┬──────┬──┘
+                                                            │      │      │      │
+                                    /catalog-service ───────┘      │      │      └── /
+                                    /inventory-service ────────────┘      │        (actuator,
+                                    /order-service ───────────────────────┘         docs, etc.)
+                                    /payment-service
+                                           │
+                                           ▼
+                                 Business Microservices
 ```
 
-Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address.
+Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address. Notice that the external perimeter is currently **HTTP-only** (port 80 / NodePort 30080); TLS listener termination is future work. Spring Cloud Gateway continues to handle internal application-level routing, circuit-breaking, and rate limiting behind Envoy Gateway.
 
 ---
 
@@ -144,19 +145,58 @@ kind create cluster --name kind \
 
 ### Install Envoy Gateway and Gateway API CRDs
 
+Envoy Gateway is installed automatically by `deployment/k8s/deploy.sh` prior to applying application manifests using `ENVOY_GATEWAY_VERSION` (default `v1.3.0`).
+
+To install or upgrade manually:
+
 ```bash
 kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
-kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
 ```
+
+### Gateway API Reconciliation and Status Verification
+
+After applying manifests, verify that Envoy Gateway successfully reconciles all resources:
+
+```bash
+# Check GatewayClass
+kubectl get gatewayclass eg -o wide
+kubectl wait --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gatewayclass/eg --timeout=60s
+
+# Check Gateway
+kubectl get gateway retailstore-gateway -n retailstore
+kubectl wait -n retailstore --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gateway/retailstore-gateway --timeout=60s
+kubectl wait -n retailstore --for=jsonpath='{.status.conditions[?(@.type=="Programmed")].status}'=True gateway/retailstore-gateway --timeout=60s
+
+# Check HTTPRoutes
+kubectl get httproutes -n retailstore
+for route in retailstore-webapp-route api-gateway-route keycloak-route internal-jobrunr-route; do
+  kubectl get httproute "$route" -n retailstore -o jsonpath='{.status.parents[*].conditions[*].type}'
+done
+
+# Check Traffic Policies (BackendTrafficPolicy & SecurityPolicy)
+kubectl get backendtrafficpolicies -n retailstore
+kubectl get securitypolicies -n retailstore
+```
+
+### Health Check and Traffic Policy Model
+
+Envoy Gateway implements traffic and resilience policies via Gateway API extension policies:
+- **`BackendTrafficPolicy` (`retailstore-gateway`)**: Configures a 10s TCP connect timeout and passive health checking (outlier detection) with 5 consecutive 5xx errors, 3 consecutive gateway errors, 10s interval, 30s base ejection time, and 50% max ejection percent. Kubernetes EndpointSlices reflect standard pod readiness, and passive health checking adds automatic outlier ejection for degraded backend pods.
+- **`SecurityPolicy` (`internal-jobrunr-policy`)**: Enforces HTTP Basic Authentication directly at the Envoy Gateway perimeter for `jobrunr.local`.
+- **Overlay Patches**: Overlays such as `staging` and `prod` patch the base traffic policy to customize HTTP timeouts (120s) and local rate limits (20 req/s per client IP) while inheriting passive health checks and connect timeouts from `base`.
 
 ## Deployment Instructions
 
 The deployment manifests are packaged using Kustomize under `deployment/k8s/`:
 
-- `base`: Shared resources, stateful components, and service configurations.
+- `base`: Shared resources, stateful components, Gateway API routes, and base traffic policies.
 - `dev`: Local development overlay.
 - `ci`: Deterministic test overlay with `IfNotPresent` image policy.
-- `prod`: Production stub with multiple replicas and TLS.
+- `hardening-base`: Pod Security Standards (restricted) and baseline security constraints.
+- `staging`: Staging overlay with replica tuning and traffic policy rate limiting.
+- `prod`: Production overlay with high-availability operators (CloudNativePG & Strimzi Kafka) and rate limiting.
 - `observability`: OTEL LGTM stack and tracing configuration.
 - `autoscaling`: HorizontalPodAutoscalers for business services.
 
@@ -204,7 +244,22 @@ cd deployment/k8s
 **Note on Operator Sequencing (Step 4):**
 The `deploy.sh prod` command performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
 
-### Teardown
+### Teardown and Cleanup
+
+To tear down an overlay deployment while leaving the Envoy Gateway controller running for other workloads:
+
+```bash
+cd deployment/k8s
+./undeploy.sh [dev|ci|staging|prod]
+```
+
+To opt-in to uninstalling Envoy Gateway release manifests as well during undeployment:
+
+```bash
+UNINSTALL_ENVOY_GATEWAY=true ./undeploy.sh [dev|ci|staging|prod]
+```
+
+Or delete the entire Kind cluster:
 
 ```bash
 kind delete cluster --name kind

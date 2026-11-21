@@ -12,18 +12,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.TestRestTemplate;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.ResponseEntity;
+import org.springframework.test.web.servlet.client.EntityExchangeResult;
+import org.springframework.test.web.servlet.client.RestTestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureTestRestTemplate
+@AutoConfigureRestTestClient
 @ExtendWith(OutputCaptureExtension.class)
 class ServletFixtureTest {
 
@@ -31,18 +31,19 @@ class ServletFixtureTest {
 
     @Autowired private ServletFixtureController controller;
 
-    @Autowired private TestRestTemplate restTemplate;
+    @Autowired private RestTestClient restTestClient;
 
     @Test
-    void verifiesServletFixtureEndToEnd(CapturedOutput output) throws Exception {
+    void verifiesServletFixtureEndToEnd(CapturedOutput output) {
         assertThat(applicationContext).isNotNull();
         assertThat(AopUtils.isAopProxy(controller)).isTrue();
 
-        ResponseEntity<String> response = restTemplate.getForEntity("/api/fixtures", String.class);
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        EntityExchangeResult<String> response =
+                restTestClient.get().uri("/api/fixtures").exchange().returnResult(String.class);
+        assertThat(response.getStatus().is2xxSuccessful()).isTrue();
 
         JsonMapper mapper = JsonMapper.builder().build();
-        JsonNode root = mapper.readTree(response.getBody());
+        JsonNode root = mapper.readTree(response.getResponseBody());
 
         assertThat(root.has("data")).isTrue();
         assertThat(root.get("data").isArray()).isTrue();

@@ -14,6 +14,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY="${1:-dev}"
+ENVOY_GATEWAY_VERSION="${ENVOY_GATEWAY_VERSION:-v1.3.0}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
 POD_CREATION_TIMEOUT_SECONDS="${POD_CREATION_TIMEOUT_SECONDS:-300}"
 
@@ -90,6 +91,15 @@ wait_for_job_terminal_condition() {
 }
 
 echo "=== Deploying overlay: '${OVERLAY}' ==="
+
+echo "Installing Envoy Gateway (${ENVOY_GATEWAY_VERSION})..."
+kubectl apply --server-side -f "https://github.com/envoyproxy/gateway/releases/download/${ENVOY_GATEWAY_VERSION}/install.yaml"
+
+echo "Waiting for Gateway API CRDs to report Established..."
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s
+
+echo "Waiting for Envoy Gateway controller to report Available..."
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
 
 if [[ "$OVERLAY" == "prod" ]]; then
   echo "Ensuring retailstore namespace..."
@@ -205,14 +215,104 @@ while true; do
   elapsed=$((elapsed + 5))
 done
 
-echo "=== Deployment of '${OVERLAY}' complete ==="
-if [[ "$OVERLAY" == "prod" ]]; then
-  echo "Access URLs:"
-  echo "  Webapp (HTTPS): https://retailstore.local"
-  echo "  Keycloak (HTTPS): https://keycloak.local"
-else
-  echo "Access URLs:"
-  echo "  Webapp: http://retailstore.local"
-  echo "  Keycloak: http://keycloak.local"
-  echo "  JobRunr: http://jobrunr.local/dashboard"
+# Gateway API reconciliation verification
+echo "Verifying Gateway API resource reconciliation..."
+print_gateway_failure_diagnostics() {
+  local kind="$1"
+  local name="$2"
+  local ns="${3:-}"
+  echo "ERROR: Reconciliation failed for ${kind}/${name}" >&2
+  if [[ -n "$ns" ]]; then
+    kubectl get "${kind}" "${name}" -n "$ns" -o yaml >&2 || true
+  else
+    kubectl get "${kind}" "${name}" -o yaml >&2 || true
+  fi
+  echo "Envoy Gateway controller logs:" >&2
+  kubectl logs -n envoy-gateway-system deployment/envoy-gateway --tail=100 >&2 || true
+}
+
+echo "Checking GatewayClass/eg Accepted condition..."
+if ! kubectl wait --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gatewayclass/eg --timeout=60s; then
+  print_gateway_failure_diagnostics "gatewayclass" "eg"
+  exit 1
 fi
+
+echo "Checking Gateway/retailstore-gateway Accepted and Programmed conditions..."
+if ! kubectl wait -n retailstore --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gateway/retailstore-gateway --timeout=60s; then
+  print_gateway_failure_diagnostics "gateway" "retailstore-gateway" "retailstore"
+  exit 1
+fi
+if ! kubectl wait -n retailstore --for=jsonpath='{.status.conditions[?(@.type=="Programmed")].status}'=True gateway/retailstore-gateway --timeout=60s; then
+  print_gateway_failure_diagnostics "gateway" "retailstore-gateway" "retailstore"
+  exit 1
+fi
+
+echo "Checking HTTPRoutes Accepted and ResolvedRefs conditions..."
+for route in retailstore-webapp-route api-gateway-route keycloak-route internal-jobrunr-route; do
+  if kubectl get httproute "$route" -n retailstore >/dev/null 2>&1; then
+    deadline=$((SECONDS + 60))
+    reconciled=false
+    while ((SECONDS < deadline)); do
+      acc=$(kubectl get httproute "$route" -n retailstore -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || true)
+      res=$(kubectl get httproute "$route" -n retailstore -o jsonpath='{.status.parents[*].conditions[?(@.type=="ResolvedRefs")].status}' 2>/dev/null || true)
+      if [[ "$acc" =~ "True" ]] && [[ "$res" =~ "True" ]]; then
+        reconciled=true
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$reconciled" != "true" ]]; then
+      print_gateway_failure_diagnostics "httproute" "$route" "retailstore"
+      exit 1
+    fi
+  fi
+done
+
+# Check policies if present in the overlay
+rendered_manifests=$(kubectl kustomize "${SCRIPT_DIR}/overlays/${OVERLAY}/")
+if echo "$rendered_manifests" | grep -q "kind: SecurityPolicy"; then
+  echo "Checking SecurityPolicy Accepted status..."
+  for secpol in $(kubectl get securitypolicy -n retailstore -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+    deadline=$((SECONDS + 60))
+    reconciled=false
+    while ((SECONDS < deadline)); do
+      status=$(kubectl get securitypolicy "$secpol" -n retailstore -o jsonpath='{.status.ancestors[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || true)
+      if [[ "$status" =~ "True" ]]; then
+        reconciled=true
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$reconciled" != "true" ]]; then
+      print_gateway_failure_diagnostics "securitypolicy" "$secpol" "retailstore"
+      exit 1
+    fi
+  done
+fi
+
+if echo "$rendered_manifests" | grep -q "kind: BackendTrafficPolicy"; then
+  echo "Checking BackendTrafficPolicy Accepted status..."
+  for btp in $(kubectl get backendtrafficpolicy -n retailstore -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+    deadline=$((SECONDS + 60))
+    reconciled=false
+    while ((SECONDS < deadline)); do
+      status=$(kubectl get backendtrafficpolicy "$btp" -n retailstore -o jsonpath='{.status.ancestors[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || true)
+      if [[ "$status" =~ "True" ]]; then
+        reconciled=true
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$reconciled" != "true" ]]; then
+      print_gateway_failure_diagnostics "backendtrafficpolicy" "$btp" "retailstore"
+      exit 1
+    fi
+  done
+fi
+
+echo "=== Deployment of '${OVERLAY}' complete ==="
+echo "Access URLs:"
+echo "  Webapp: http://retailstore.local"
+echo "  Keycloak: http://keycloak.local"
+echo "  API: http://api.retailstore.local"
+echo "  JobRunr: http://jobrunr.local/dashboard"

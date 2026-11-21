@@ -37,11 +37,12 @@ Pull every configured service image and load it with `kind load docker-image --n
 
 ### 4. Install Gateway API and Controller
 
-Apply the Envoy Gateway installation manifest (which includes Gateway API CRDs) and wait for the controller deployment to become ready before applying application manifests:
+Envoy Gateway and Kubernetes Gateway API CRDs are installed automatically by `deployment/k8s/deploy.sh` before applying overlay manifests. The deployment script server-side applies the release manifest and waits for Gateway API CRDs to report `Established` and the controller deployment to report `Available`:
 
 ```bash
 kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
-kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
 ```
 
 Use an explicit timeout and allow failure to propagate.

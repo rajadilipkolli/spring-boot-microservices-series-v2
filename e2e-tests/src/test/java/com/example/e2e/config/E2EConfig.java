@@ -103,6 +103,42 @@ public final class E2EConfig {
         return DEFAULT_WEBAPP_URL;
     }
 
+    public static String getJobrunrUrl() {
+        String sysProp = System.getProperty("jobrunr.url");
+        if (sysProp != null && !sysProp.isBlank()) {
+            return sysProp.trim();
+        }
+        String env = System.getenv("JOBRUNR_URL");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return null;
+    }
+
+    public static String getJobrunrUsername() {
+        String sysProp = System.getProperty("jobrunr.username");
+        if (sysProp != null && !sysProp.isBlank()) {
+            return sysProp.trim();
+        }
+        String env = System.getenv("JOBRUNR_USERNAME");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return "admin";
+    }
+
+    public static String getJobrunrPassword() {
+        String sysProp = System.getProperty("jobrunr.password");
+        if (sysProp != null && !sysProp.isBlank()) {
+            return sysProp.trim();
+        }
+        String env = System.getenv("JOBRUNR_PASSWORD");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return "admin";
+    }
+
     /**
      * Returns a {@link RequestSpecification} pre-configured with the API Gateway base URL, JSON
      * content type, and the shared {@link RestAssuredConfig}.

@@ -14,7 +14,7 @@ Prior configuration patterns suffered from drifting manifest duplicates, acciden
 We adopt a declarative multi-layer **Kustomize overlay architecture** rooted in `deployment/k8s/`:
 
 1. **Base Layer (`deployment/k8s/base/`)**:
-   - Declares the single source of truth for canonical Kubernetes resources: `Deployments`, `Services`, `ServiceAccounts` (with `automountServiceAccountToken: false`), standard `Ingress`, baseline `NetworkPolicies`, baseline `ConfigMaps`, and development dummy `Secrets`.
+   - Declares the single source of truth for canonical Kubernetes resources: `Deployments`, `Services`, `ServiceAccounts` (with `automountServiceAccountToken: false`), Gateway API resources (`Gateway`, `HTTPRoutes`, `BackendTrafficPolicy`), baseline `NetworkPolicies`, baseline `ConfigMaps`, and development dummy `Secrets`.
    - Single-node topology with minimal resource footprint suitable for any standard cluster.
 
 2. **Hardening Base Layer (`deployment/k8s/overlays/hardening-base/`)**:

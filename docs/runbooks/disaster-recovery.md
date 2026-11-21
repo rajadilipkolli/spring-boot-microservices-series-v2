@@ -56,27 +56,29 @@ kubectl rollout status deployment/api-gateway --context secondary-region -n reta
 ```
 
 ### Step 3: Switch Global DNS Traffic to Secondary Region
-1. Update DNS routing records (Route53 / Cloudflare) to route traffic to the secondary region Ingress IP:
-   - `retailstore.local` -> `<Secondary-Ingress-IP>`
-   - `api.retailstore.local` -> `<Secondary-Ingress-IP>`
-   - `keycloak.local` -> `<Secondary-Ingress-IP>`
+1. Update DNS routing records (Route53 / Cloudflare) to route traffic to the secondary region Gateway address or NodePort:
+   - `retailstore.local` -> `<Secondary-Gateway-Address>`
+   - `api.retailstore.local` -> `<Secondary-Gateway-Address>`
+   - `keycloak.local` -> `<Secondary-Gateway-Address>`
+   - `jobrunr.local` -> `<Secondary-Gateway-Address>`
 2. Lower DNS TTL to 60 seconds to ensure rapid client cutover.
 
 ### Step 4: Validate Application Endpoints
-Execute automated smoke tests against the secondary region ingress:
+Execute automated smoke tests against the secondary region Gateway:
 ```bash
-curl -ik https://api.retailstore.local/actuator/health
-curl -ik https://api.retailstore.local/catalog-service/api/catalog/products
+curl -i http://api.retailstore.local/actuator/health
+curl -i http://api.retailstore.local/catalog-service/api/catalog/products
+curl -i http://retailstore.local/
 ```
 
 ## 5. Escalation
 - **Incident Commander (Lead SRE / VP Engineering)**: Declares DR event, oversees regional cutover, coordinates customer communication.
 - **Database Team Lead**: Validates database promotion integrity and signs off on data consistency.
-- **Network / Security Architect**: Executes Global DNS switch and validates TLS certificate validity on the secondary ingress.
+- **Network / Security Architect**: Executes Global DNS switch and validates Gateway configuration and route reconciliation on the secondary cluster.
 
 ## 6. Recovery Verification
-1. Verify global user traffic is arriving at the secondary region Ingress controller:
-   - Ingress controller access logs show incoming 200 OK responses.
+1. Verify global user traffic is arriving at the secondary region Gateway:
+   - Envoy Gateway proxy access logs show incoming 200 OK responses.
 2. Confirm active order processing works end-to-end:
    - Place a synthetic test order through the webapp and verify payment and inventory reservations succeed.
 3. Verify Prometheus and LGTM stack in secondary region are actively scraping all pods.

@@ -3,7 +3,6 @@ kind: Kustomization
 resources:
 - ../hardening-base
 - cluster-issuer.yaml
-- backend-traffic-policy.yaml
 - keycloak-internal-tls.yaml
 - postgresql-ha.yaml
 - kafka-ha.yaml
@@ -13,6 +12,7 @@ resources:
 - secrets/external-secrets.yaml
 # Terraform runner Job, RBAC, and ServiceAccount for declarative realm management.
 patches:
+- path: backend-traffic-policy.yaml
 - target:
     kind: Deployment
   patch: |-
