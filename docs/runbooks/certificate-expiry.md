@@ -1,6 +1,12 @@
 # Operational Runbook: Certificate Expiry and Renewal Failure
 
-> **Note**: The current external Gateway perimeter is configured for **HTTP-only** routing; external TLS listener termination via Gateway API `certificateRefs` is planned for future iterations. This runbook documents diagnosis and renewal for internal/future TLS certificates and Gateway listener bindings.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:332dde613201860bf2c16af8a926742a0df0fa78fa9952d2f4cb375f5f2b4ab3 -->
+
+> The production Gateway uses the `retailstore-tls` Secret for its HTTPS listener. The `.local` hostnames require a private CA; use public DNS names for public ACME validation.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## 1. Symptoms
 - **Alert Triggered**: `CertificateExpiringSoon` (certificate expiration < 14 days or < 48 hours) or `CertificateRenewalFailed`.
@@ -45,9 +51,15 @@
    # Using cmctl / kubectl cert-manager plugin:
    kubectl cert-manager renew <cert-name> -n retailstore
    ```
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:71d7409ead37b76fb0b4c2a8834e7d68f02319927be6f0a19ea639e91ad964bb -->
+
 2. **Fix Failing HTTP-01 / DNS-01 ACME Challenge**:
-   - If HTTP-01 challenge is failing: verify route configuration allows traffic to `.well-known/acme-challenge/` and that external DNS points to the cluster Gateway NodePort or external IP.
+   - If HTTP-01 is failing: verify that public DNS points to a load balancer or forwarding address and that public TCP port 80 reaches the Gateway HTTP listener (for example, by forwarding it to NodePort 30080). DNS does not specify a port. Verify that the Gateway serves `/.well-known/acme-challenge/` through the challenge route. If you cannot expose public port 80, use DNS-01.
    - If DNS-01 challenge is failing: verify cloud DNS credentials and API tokens stored in the `cert-manager` namespace secret.
+
+<!-- /coderabbit-ai-generated:v1 -->
 3. **Emergency Self-Signed / Fallback Certificate Injection**:
    If upstream CA is unavailable and expiration is imminent (< 1 hour):
    - Switch `issuerRef` to an internal self-signed `ClusterIssuer` to maintain encrypted transport while resolving upstream validation.

@@ -55,21 +55,38 @@ kubectl scale deployment/keycloak --replicas=3 --context secondary-region -n ret
 kubectl rollout status deployment/api-gateway --context secondary-region -n retailstore
 ```
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:f534a86abcc9470084e7f468498742e4b88f97e09e9c4d5329b077aa97b7aff9 -->
+
 ### Step 3: Switch Global DNS Traffic to Secondary Region
-1. Update DNS routing records (Route53 / Cloudflare) to route traffic to the secondary region Gateway address or NodePort:
-   - `retailstore.local` -> `<Secondary-Gateway-Address>`
-   - `api.retailstore.local` -> `<Secondary-Gateway-Address>`
-   - `keycloak.local` -> `<Secondary-Gateway-Address>`
-   - `jobrunr.local` -> `<Secondary-Gateway-Address>`
-2. Lower DNS TTL to 60 seconds to ensure rapid client cutover.
+
+1. From the repository root, verify the secondary Gateway is programmed, all four application HTTPRoutes are accepted with resolved references, and both policies (including JobRunr's SecurityPolicy) are accepted. This runs the same checks as `deploy.sh` without modifying the cluster. Stop if any check fails.
+
+   ```bash
+   KUBE_CONTEXT=secondary-region ./deployment/k8s/verify-gateway.sh prod
+   ```
+
+2. Ensure the secondary webapp resolves the Keycloak issuer to the secondary edge, using internal DNS if needed. Before updating public DNS, configure the secondary load balancer or forwarding rule to map TCP port 80 to NodePort 30080 and TCP port 443 to NodePort 30443. From a client network, verify that port 80 returns an HTTPS redirect and that the HTTPS endpoint presents a valid certificate and returns a healthy response. For example, with `SECONDARY_LB_IP` set to the secondary load balancer IP:
+
+   ```bash
+   curl -fsSI --resolve "api.retailstore.local:80:${SECONDARY_LB_IP}" http://api.retailstore.local/actuator/health
+   curl -fsS --resolve "api.retailstore.local:443:${SECONDARY_LB_IP}" https://api.retailstore.local/actuator/health
+   ```
+
+3. Lower the DNS TTL to 60 seconds ahead of cutover if possible. Point `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the verified secondary load balancer address.
 
 ### Step 4: Validate Application Endpoints
-Execute automated smoke tests against the secondary region Gateway:
+
+Run smoke tests against the secondary region Gateway after DNS cutover:
+
 ```bash
-curl -i http://api.retailstore.local/actuator/health
-curl -i http://api.retailstore.local/catalog-service/api/catalog/products
-curl -i http://retailstore.local/
+curl -fsS https://api.retailstore.local/actuator/health
+curl -fsS https://api.retailstore.local/catalog-service/api/catalog/products
+curl -fsS https://retailstore.local/
 ```
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## 5. Escalation
 - **Incident Commander (Lead SRE / VP Engineering)**: Declares DR event, oversees regional cutover, coordinates customer communication.

@@ -128,15 +128,7 @@ public final class E2EConfig {
     }
 
     public static String getJobrunrPassword() {
-        String sysProp = System.getProperty("jobrunr.password");
-        if (sysProp != null && !sysProp.isBlank()) {
-            return sysProp.trim();
-        }
-        String env = System.getenv("JOBRUNR_PASSWORD");
-        if (env != null && !env.isBlank()) {
-            return env.trim();
-        }
-        return "admin";
+        return getCredential("jobrunr.password", "JOBRUNR_PASSWORD", "admin");
     }
 
     /**

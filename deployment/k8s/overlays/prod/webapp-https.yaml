@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-store-webapp
+  namespace: retailstore
+spec:
+  template:
+    spec:
+      hostAliases: []
+      containers:
+        - name: retail-store-webapp
+          env:
+            - name: OAUTH2_SERVER_URL
+              value: https://keycloak.local
+            - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_RETAILSTORE_WEBAPP_ISSUER_URI
+              value: https://keycloak.local/realms/retailstore

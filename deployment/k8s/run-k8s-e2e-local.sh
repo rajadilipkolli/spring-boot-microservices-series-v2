@@ -144,12 +144,21 @@ sleep 10
 # 8. Run E2E Validations (Mirrors CI: Run E2E Validations)
 # ---------------------------------------------------------------------------
 echo "=> Step 8: Running E2E Validations..."
-# Map hostnames for local test runner if possible
-if command -v sudo >/dev/null 2>&1 && [[ -w /etc/hosts || $(sudo -n true 2>/dev/null; echo $?) -eq 0 ]]; then
-  if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
-    echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts || true
+# Add only missing names and ignore names mentioned in comments.
+for gateway_host in retailstore.local keycloak.local api.retailstore.local jobrunr.local; do
+  if awk -v host="$gateway_host" '
+    { sub(/#.*/, ""); for (i = 2; i <= NF; i++) if (tolower($i) == host) found = 1 }
+    END { exit !found }
+  ' /etc/hosts; then
+    continue
   fi
-fi
+  if [[ -w /etc/hosts ]]; then
+    printf '\n127.0.0.1 %s\n' "$gateway_host" >> /etc/hosts
+  elif ! printf '\n127.0.0.1 %s\n' "$gateway_host" | sudo -n tee -a /etc/hosts >/dev/null; then
+    echo "Add 127.0.0.1 $gateway_host to /etc/hosts before running the Kubernetes E2E tests." >&2
+    exit 1
+  fi
+done
 
 TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
 KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"

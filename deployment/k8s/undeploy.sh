@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY="${1:-dev}"
 UNDEPLOY_TIMEOUT="${UNDEPLOY_TIMEOUT:-300}"
 UNINSTALL_ENVOY_GATEWAY="${UNINSTALL_ENVOY_GATEWAY:-false}"
-ENVOY_GATEWAY_VERSION="${ENVOY_GATEWAY_VERSION:-v1.3.0}"
+ENVOY_GATEWAY_VERSION="${ENVOY_GATEWAY_VERSION:-v1.7.5}"
 
 if [[ ! -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
   echo "ERROR: Unknown overlay '${OVERLAY}'. Directory '${SCRIPT_DIR}/overlays/${OVERLAY}' does not exist." >&2
