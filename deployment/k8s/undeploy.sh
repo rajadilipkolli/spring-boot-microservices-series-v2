@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY="${1:-dev}"
 UNDEPLOY_TIMEOUT="${UNDEPLOY_TIMEOUT:-300}"
+UNINSTALL_ENVOY_GATEWAY="${UNINSTALL_ENVOY_GATEWAY:-false}"
+ENVOY_GATEWAY_VERSION="${ENVOY_GATEWAY_VERSION:-v1.7.5}"
 
 if [[ ! -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
   echo "ERROR: Unknown overlay '${OVERLAY}'. Directory '${SCRIPT_DIR}/overlays/${OVERLAY}' does not exist." >&2
@@ -47,5 +49,10 @@ while true; do
   sleep 5
   elapsed=$((elapsed + 5))
 done
+
+if [[ "$UNINSTALL_ENVOY_GATEWAY" == "true" ]]; then
+  echo "Opt-in Envoy Gateway uninstall requested. Deleting Envoy Gateway (${ENVOY_GATEWAY_VERSION})..."
+  kubectl delete -f "https://github.com/envoyproxy/gateway/releases/download/${ENVOY_GATEWAY_VERSION}/install.yaml" --ignore-not-found=true
+fi
 
 echo "=== Undeployment of '${OVERLAY}' complete ==="

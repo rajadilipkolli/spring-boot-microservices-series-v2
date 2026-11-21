@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: retailstore-https-redirect
+  namespace: retailstore
+spec:
+  parentRefs:
+    - name: retailstore-gateway
+      sectionName: http
+  hostnames:
+    - retailstore.local
+    - api.retailstore.local
+    - keycloak.local
+    - jobrunr.local
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

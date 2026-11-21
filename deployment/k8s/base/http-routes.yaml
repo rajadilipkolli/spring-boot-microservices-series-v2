@@ -31,6 +31,46 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /catalog-service
+      backendRefs:
+        - name: api-gateway
+          port: 8765
+      timeouts:
+        request: 120s
+        backendRequest: 120s
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /inventory-service
+      backendRefs:
+        - name: api-gateway
+          port: 8765
+      timeouts:
+        request: 120s
+        backendRequest: 120s
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /order-service
+      backendRefs:
+        - name: api-gateway
+          port: 8765
+      timeouts:
+        request: 120s
+        backendRequest: 120s
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /payment-service
+      backendRefs:
+        - name: api-gateway
+          port: 8765
+      timeouts:
+        request: 120s
+        backendRequest: 120s
+    - matches:
+        - path:
+            type: PathPrefix
             value: /
       backendRefs:
         - name: api-gateway

@@ -55,28 +55,65 @@ kubectl scale deployment/keycloak --replicas=3 --context secondary-region -n ret
 kubectl rollout status deployment/api-gateway --context secondary-region -n retailstore
 ```
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:716be880f111ea088b71aa0642e68e61316fb0f8037ce9ba0bea6200edccddff -->
+
 ### Step 3: Switch Global DNS Traffic to Secondary Region
-1. Update DNS routing records (Route53 / Cloudflare) to route traffic to the secondary region Ingress IP:
-   - `retailstore.local` -> `<Secondary-Ingress-IP>`
-   - `api.retailstore.local` -> `<Secondary-Ingress-IP>`
-   - `keycloak.local` -> `<Secondary-Ingress-IP>`
-2. Lower DNS TTL to 60 seconds to ensure rapid client cutover.
+
+1. From the repository root, verify the secondary Gateway is programmed, all four application HTTPRoutes are accepted with resolved references, and both policies (including JobRunr's SecurityPolicy) are accepted. This runs the same checks as `deploy.sh` without modifying the cluster. Stop if any check fails.
+
+   ```bash
+   KUBE_CONTEXT=secondary-region ./deployment/k8s/verify-gateway.sh prod
+   ```
+
+2. Ensure the secondary webapp resolves the Keycloak issuer to the secondary edge, using internal DNS if needed. Before updating public DNS, configure the secondary load balancer or forwarding rule to map TCP port 80 to NodePort 30080 and TCP port 443 to NodePort 30443.
+
+   From a client network that trusts the Gateway's CA, set `SECONDARY_LB_IP` to the secondary load balancer IP. Check that port 80 returns an HTTPS redirect, then verify that the HTTPS health response is JSON with a top-level Spring Boot status of `UP`. Stop the cutover if either check fails.
+
+   ```bash
+   curl -q -fsSI --noproxy '*' --resolve "api.retailstore.local:80:${SECONDARY_LB_IP}" http://api.retailstore.local/actuator/health
+   (
+     set -o pipefail
+     curl -q -fsS --noproxy '*' --resolve "api.retailstore.local:443:${SECONDARY_LB_IP}" \
+       https://api.retailstore.local/actuator/health |
+       jq -es 'length == 1 and .[0].status == "UP"'
+   )
+   ```
+
+3. Verify that the secondary JobRunr dashboard rejects an unauthenticated request with HTTP 401. Use `--resolve` as shown to reach the secondary address while keeping `jobrunr.local` in the request and TLS handshake. You can omit it if that hostname already resolves to the secondary Gateway. Stop the cutover if the request succeeds or fails to return HTTP 401.
+
+   ```bash
+   (
+     set -e
+     status=$(curl -q -sS --noproxy '*' -o /dev/null -w '%{http_code}' \
+       --resolve "jobrunr.local:443:${SECONDARY_LB_IP}" https://jobrunr.local/dashboard)
+     test "$status" = 401 || { echo "Expected JobRunr HTTP 401, got $status" >&2; exit 1; }
+   )
+   ```
+
+4. Only after all checks pass, lower the DNS TTL to 60 seconds ahead of cutover if possible. Point `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the verified secondary load balancer address.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ### Step 4: Validate Application Endpoints
-Execute automated smoke tests against the secondary region ingress:
+
+Run smoke tests against the secondary region Gateway after DNS cutover:
+
 ```bash
-curl -ik https://api.retailstore.local/actuator/health
-curl -ik https://api.retailstore.local/catalog-service/api/catalog/products
+curl -fsS https://api.retailstore.local/actuator/health
+curl -fsS https://api.retailstore.local/catalog-service/api/catalog/products
+curl -fsS https://retailstore.local/
 ```
 
 ## 5. Escalation
 - **Incident Commander (Lead SRE / VP Engineering)**: Declares DR event, oversees regional cutover, coordinates customer communication.
 - **Database Team Lead**: Validates database promotion integrity and signs off on data consistency.
-- **Network / Security Architect**: Executes Global DNS switch and validates TLS certificate validity on the secondary ingress.
+- **Network / Security Architect**: Executes Global DNS switch and validates Gateway configuration and route reconciliation on the secondary cluster.
 
 ## 6. Recovery Verification
-1. Verify global user traffic is arriving at the secondary region Ingress controller:
-   - Ingress controller access logs show incoming 200 OK responses.
+1. Verify global user traffic is arriving at the secondary region Gateway:
+   - Envoy Gateway proxy access logs show incoming 200 OK responses.
 2. Confirm active order processing works end-to-end:
    - Place a synthetic test order through the webapp and verify payment and inventory reservations succeed.
 3. Verify Prometheus and LGTM stack in secondary region are actively scraping all pods.

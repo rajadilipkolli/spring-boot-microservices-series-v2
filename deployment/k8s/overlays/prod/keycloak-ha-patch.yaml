@@ -20,6 +20,8 @@ spec:
         args:
         - start
         env:
+        - name: KC_HOSTNAME
+          value: https://keycloak.local
         - name: KC_CACHE
           value: ispn
         - name: KC_CACHE_STACK

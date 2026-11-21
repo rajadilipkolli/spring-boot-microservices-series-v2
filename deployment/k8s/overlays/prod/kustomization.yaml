@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 - ../hardening-base
 - cluster-issuer.yaml
-- backend-traffic-policy.yaml
+- https-redirect.yaml
 - keycloak-internal-tls.yaml
 - postgresql-ha.yaml
 - kafka-ha.yaml
@@ -13,6 +13,30 @@ resources:
 - secrets/external-secrets.yaml
 # Terraform runner Job, RBAC, and ServiceAccount for declarative realm management.
 patches:
+- path: backend-traffic-policy.yaml
+- path: gateway-tls.yaml
+- target:
+    kind: HTTPRoute
+    name: (retailstore-webapp-route|api-gateway-route|keycloak-route|internal-jobrunr-route)
+  patch: |-
+    - op: add
+      path: /spec/parentRefs/0/sectionName
+      value: https
+- path: webapp-https.yaml
+- patch: |-
+    $patch: delete
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: jobrunr-auth
+      namespace: retailstore
+- patch: |-
+    $patch: delete
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: patch-webapp-hostaliases
+      namespace: retailstore
 - target:
     kind: Deployment
   patch: |-

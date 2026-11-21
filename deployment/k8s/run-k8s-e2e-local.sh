@@ -5,14 +5,13 @@
 # Replicates the CI pipeline locally:
 # 1. Validates Terraform module format and configuration
 # 2. Creates the Kind cluster (with port mappings)
-# 3. Installs NGINX Ingress controller
-# 4. Builds the local Terraform runner image and loads all images into Kind
-# 5. Executes ./deployment/k8s/deploy.sh ci (unified deployment & readiness)
-# 6. Validates NetworkPolicy and PDBs
-# 7. Validates Kafka persistence
-# 8. Runs E2E integration tests against the local Ingress
-# 9. Validates NetworkPolicy isolation and deployment rollouts
-# 10. Automatically collects diagnostics on failure
+# 3. Builds the local Terraform runner image and loads all images into Kind
+# 4. Executes ./deployment/k8s/deploy.sh ci (installs Envoy Gateway, CRDs, deployment & readiness)
+# 5. Validates NetworkPolicy and PDBs
+# 6. Validates Kafka persistence
+# 7. Runs E2E integration tests against the local Gateway
+# 8. Validates NetworkPolicy isolation and deployment rollouts
+# 9. Automatically collects diagnostics on failure
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
@@ -22,7 +21,6 @@ KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
-ENVOY_GATEWAY_MANIFEST="https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml"
 
 SKIP_CLUSTER="${SKIP_CLUSTER:-false}"
 TEARDOWN="${TEARDOWN:-false}"
@@ -78,18 +76,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Gateway API & Controller (Mirrors CI: Install Envoy Gateway)
-# ---------------------------------------------------------------------------
-echo "=> Step 3: Installing Envoy Gateway & Gateway API CRDs..."
-kubectl apply --server-side -f "$ENVOY_GATEWAY_MANIFEST"
-kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
-
-# ---------------------------------------------------------------------------
-# 4. Image Preparation (Mirrors CI: Obtain and Load Images)
+# 3. Image Preparation (Mirrors CI: Obtain and Load Images)
 # Build the Terraform runner image locally so Kind tests against the current commit.
 # Dedicated workflow (.github/workflows/terraform-runner-image.yml) publishes to DockerHub.
 # ---------------------------------------------------------------------------
-echo "=> Step 4: Building Terraform Runner & Loading Images into Kind..."
+echo "=> Step 3: Building Terraform Runner & Loading Images into Kind..."
 docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f "$PROJECT_ROOT/deployment/terraform/Dockerfile" "$PROJECT_ROOT/deployment/terraform/"
 
 images=(
@@ -112,9 +103,9 @@ for image in "${images[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# 5. Deploy Overlay (Mirrors CI: Deploy CI Overlay via deploy.sh)
+# 4. Deploy Overlay (Mirrors CI: Deploy CI Overlay via deploy.sh)
 # ---------------------------------------------------------------------------
-echo "=> Step 5: Deploying CI Overlay via unified deploy.sh..."
+echo "=> Step 4: Deploying CI Overlay via unified deploy.sh..."
 "$PROJECT_ROOT/deployment/k8s/deploy.sh" ci
 
 # ---------------------------------------------------------------------------
@@ -153,12 +144,21 @@ sleep 10
 # 8. Run E2E Validations (Mirrors CI: Run E2E Validations)
 # ---------------------------------------------------------------------------
 echo "=> Step 8: Running E2E Validations..."
-# Map hostnames for local test runner if possible
-if command -v sudo >/dev/null 2>&1 && [[ -w /etc/hosts || $(sudo -n true 2>/dev/null; echo $?) -eq 0 ]]; then
-  if ! grep -Eq '(^|[[:space:]])retailstore\.local([[:space:]]|$)' /etc/hosts; then
-    echo "127.0.0.1 retailstore.local keycloak.local api.retailstore.local jobrunr.local" | sudo tee -a /etc/hosts || true
+# Add only missing names and ignore names mentioned in comments.
+for gateway_host in retailstore.local keycloak.local api.retailstore.local jobrunr.local; do
+  if awk -v host="$gateway_host" '
+    { sub(/#.*/, ""); for (i = 2; i <= NF; i++) if (tolower($i) == host) found = 1 }
+    END { exit !found }
+  ' /etc/hosts; then
+    continue
   fi
-fi
+  if [[ -w /etc/hosts ]]; then
+    printf '\n127.0.0.1 %s\n' "$gateway_host" >> /etc/hosts
+  elif ! printf '\n127.0.0.1 %s\n' "$gateway_host" | sudo -n tee -a /etc/hosts >/dev/null; then
+    echo "Add 127.0.0.1 $gateway_host to /etc/hosts before running the Kubernetes E2E tests." >&2
+    exit 1
+  fi
+done
 
 TF_VAR_webapp_client_secret="${TF_VAR_webapp_client_secret:-$(kubectl get secret webapp-oauth2-credentials -n "$NAMESPACE" -o jsonpath='{.data.OAUTH2_CLIENT_SECRET}' | base64 --decode)}"
 KEYCLOAK_RETAIL_PASSWORD="${KEYCLOAK_RETAIL_PASSWORD:-$(kubectl get secret keycloak-user-passwords -n "$NAMESPACE" -o jsonpath='{.data.RETAIL_PASSWORD}' | base64 --decode)}"
@@ -168,6 +168,8 @@ set +e
 "$PROJECT_ROOT/mvnw" -f "$PROJECT_ROOT/pom.xml" test -pl e2e-tests -DskipE2E=false \
   -Dbase.url=http://api.retailstore.local \
   -Dkeycloak.url=http://keycloak.local \
+  -Dwebapp.url=http://retailstore.local \
+  -Djobrunr.url=http://jobrunr.local/dashboard \
   "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
   "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 mvn_exit=$?
@@ -178,11 +180,14 @@ if (( mvn_exit != 0 )); then
   exit "$mvn_exit"
 fi
 
-# Request webapp via Ingress (best-effort smoke check)
-if curl -s -f http://retailstore.local > /dev/null; then
-  echo "Webapp reachable via ingress."
+# Request webapp via Gateway (fatal check: follows redirect, 200 expected)
+echo "Verifying webapp reachable via Gateway..."
+webapp_status=$(curl -s -L -o /dev/null -w "%{http_code}" http://retailstore.local)
+if [[ "$webapp_status" == "200" ]]; then
+  echo "Webapp reachable via Gateway (HTTP status: $webapp_status)."
 else
-  echo "Warning: Webapp smoke check via http://retailstore.local failed."
+  echo "Fatal: Webapp smoke check via http://retailstore.local returned unexpected status: $webapp_status" >&2
+  exit 1
 fi
 
 # OAuth2 Keycloak Test (best-effort smoke check)

@@ -6,17 +6,23 @@ on:
     paths:
       - 'deployment/k8s/**'
       - 'deployment/terraform/**'
+      - 'e2e-tests/**'
       - '.github/workflows/k8s-e2e.yml'
     branches: [main]
   pull_request:
     paths:
       - 'deployment/k8s/**'
       - 'deployment/terraform/**'
+      - 'e2e-tests/**'
       - '.github/workflows/k8s-e2e.yml'
     types:
       - opened
       - synchronize
       - reopened
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   terraform-validate:
@@ -59,11 +65,15 @@ jobs:
           cluster_name: kind
           config: deployment/k8s/kind-config.yaml
 
-      - name: Install Envoy Gateway and Gateway API CRDs
+      - name: Validate Manifests Rendering with Kustomize
         run: |
           set -Eeuo pipefail
-          kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
-          kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
+          echo "Validating kustomize build across all overlays..."
+          kubectl kustomize deployment/k8s/base/ > /dev/null
+          for overlay in dev ci hardening-base staging prod autoscaling observability; do
+            echo "Checking overlay: $overlay"
+            kubectl kustomize "deployment/k8s/overlays/${overlay}/" > /dev/null
+          done
 
       - name: Obtain and Load Images
         run: |
@@ -148,14 +158,19 @@ jobs:
           ./mvnw test -pl e2e-tests -DskipE2E=false \
             -Dbase.url=http://api.retailstore.local \
             -Dkeycloak.url=http://keycloak.local \
+            -Dwebapp.url=http://retailstore.local \
+            -Djobrunr.url=http://jobrunr.local/dashboard \
             "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
             "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 
-          # Request webapp via Ingress (best-effort smoke check; does not fail the job)
-          if curl -s -f http://retailstore.local > /dev/null; then
-            echo "Webapp reachable via ingress."
+          # Request webapp via Gateway (fatal check: follows redirect, 200 expected)
+          echo "Verifying webapp reachable via Gateway..."
+          webapp_status=$(curl -s -L -o /dev/null -w "%{http_code}" http://retailstore.local)
+          if [[ "$webapp_status" == "200" ]]; then
+            echo "Webapp reachable via Gateway (HTTP status: $webapp_status)."
           else
-            echo "::warning::Webapp smoke check via http://retailstore.local failed (non-fatal)."
+            echo "Fatal: Webapp smoke check via http://retailstore.local returned unexpected status: $webapp_status" >&2
+            exit 1
           fi
 
           # OAuth2 Keycloak Test (best-effort smoke check; does not fail the job)
@@ -264,6 +279,21 @@ jobs:
             kubectl rollout status "$resource" -n retailstore --timeout=5s > "k8s-diagnostics/${resource//\//-}-rollout.txt" 2>&1
           done
           
+          echo "Collecting Gateway API diagnostics..."
+          for crd in gatewayclasses gateways httproutes securitypolicies backendtrafficpolicies envoyproxies; do
+            kubectl get "$crd" -A -o yaml > "k8s-diagnostics/${crd}.yaml" 2>&1 || true
+          done
+
+          echo "Collecting envoy-gateway-system resources and pod labels..."
+          kubectl get pods,svc -n envoy-gateway-system --show-labels > k8s-diagnostics/envoy-gateway-system-resources.txt 2>&1 || true
+          kubectl describe pods -n envoy-gateway-system > k8s-diagnostics/envoy-gateway-system-pods-describe.txt 2>&1 || true
+
+          echo "Collecting controller and proxy logs..."
+          for pod in $(kubectl get pods -n envoy-gateway-system -o name); do
+            clean_pod=$(echo "$pod" | tr '/' '_')
+            kubectl logs "$pod" -n envoy-gateway-system --all-containers > "k8s-diagnostics/${clean_pod}.log" 2>&1 || true
+          done
+
           for pod in $(kubectl get pods -n retailstore -o name); do
             # Replace / in pod name (like pod/my-pod) with _ for filename
             clean_pod=$(echo $pod | tr '/' '_')

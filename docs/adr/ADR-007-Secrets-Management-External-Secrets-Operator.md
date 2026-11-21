@@ -9,7 +9,7 @@ Microservices handle sensitive credentials including:
 - Keycloak admin and service account credentials (`keycloak-admin-credentials`, `keycloak-user-passwords`)
 - Spring Cloud Config Server HTTP basic credentials (`config-server-credentials`)
 - OAuth2 client secrets (`webapp-oauth2-credentials`)
-- Ingress HTTP basic authentication (`jobrunr-auth`)
+- Envoy Gateway SecurityPolicy HTTP basic authentication (`jobrunr-auth`)
 
 Storing credentials in plaintext within Git repositories or static Kubernetes manifests creates severe security compliance violations. Hardcoded credentials in `base/secrets.yaml` risk leaking into production environments or colliding with dynamically injected secrets.
 

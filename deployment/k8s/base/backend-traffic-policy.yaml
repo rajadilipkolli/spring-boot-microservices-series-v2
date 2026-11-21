@@ -1,0 +1,22 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: base-traffic-policy
+  namespace: retailstore
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: retailstore-gateway
+  timeout:
+    tcp:
+      connectTimeout: 10s
+  # EndpointSlices reflect pod readiness; passive health checks add outlier ejection
+  # to remove misbehaving backend pods dynamically from the Envoy routing pool.
+  healthCheck:
+    passive:
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      consecutive5XxErrors: 5
+      consecutiveGatewayErrors: 3

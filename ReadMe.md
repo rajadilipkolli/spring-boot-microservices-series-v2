@@ -13,12 +13,18 @@
 ```mermaid
 flowchart TD
 
+subgraph group_edge["Gateway perimeter"]
+  node_envoy["Envoy Gateway"]
+end
+
 subgraph group_customer["Customer experience"]
   node_storefront["Retail web app"]
+  node_jobrunr["JobRunr dashboard"]
+  node_keycloak["Keycloak"]
 end
 
 subgraph group_platform["Platform access"]
-  node_gateway["API gateway"]
+  node_gateway["API gateway (Spring Cloud)"]
   node_registry["Service registry"]
   node_config["Configuration server"]
 end
@@ -36,16 +42,21 @@ subgraph group_operations["Platform operations"]
   node_observability["Metrics and tracing"]
 end
 
-node_shopper(("Shopper"))
+node_shopper(("Shopper / Client"))
 node_prometheus["Prometheus"]
 node_grafana["Grafana"]
 
-node_shopper -->|"uses"| node_storefront
-node_storefront -->|"requests APIs"| node_gateway
+node_shopper -->|"HTTP (retailstore.local, api.retailstore.local, keycloak.local, jobrunr.local)"| node_envoy
+node_envoy -->|"host: retailstore.local"| node_storefront
+node_envoy -->|"host: keycloak.local"| node_keycloak
+node_envoy -->|"host: jobrunr.local"| node_jobrunr
+node_envoy -->|"host: api.retailstore.local"| node_gateway
+node_storefront -->|"requests APIs via"| node_gateway
 node_gateway -->|"routes requests"| node_catalog
 node_gateway -->|"routes requests"| node_inventory
 node_gateway -->|"routes requests"| node_orders
 node_gateway -->|"routes requests"| node_payments
+node_orders -.->|"exposes dashboard"| node_jobrunr
 node_registry -->|"provides discovery"| node_gateway
 node_registry -->|"provides discovery"| node_catalog
 node_registry -->|"provides discovery"| node_inventory
@@ -181,7 +192,7 @@ This project demonstrates a complete **microservices architecture** built with S
 This project implements a **microservices pattern** where different functionalities are broken down into independent services. These services communicate asynchronously via **Apache Kafka** and are managed through **Spring Cloud Gateway** and **Eureka Service Discovery**.
 
 ### Architecture Highlights:
-- 🌐 **API Gateway** as the single entry point
+- 🌐 **API Gateway** as the single entry point for application APIs (behind Envoy Gateway on Kubernetes)
 - 📋 **Service Registry** for dynamic service discovery
 - ⚙️ **Configuration Server** for centralized config management
 - 📨 **Event-driven communication** via Kafka
@@ -193,7 +204,7 @@ This project implements a **microservices pattern** where different functionalit
 
 | Service                  | Port  | Description                                  | Tech Stack                    |
 |--------------------------|-------|----------------------------------------------|-------------------------------|
-| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 🌐 **API Gateway**       | 8765  | Single application API entry point, routing & load balancing | Spring Cloud Gateway          |
 | 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
 | 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
 | 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
@@ -381,7 +392,9 @@ bash run.sh
 For a local Kubernetes deployment, use Kind with the manifests under
 [`deployment/k8s/`](deployment/k8s/). See the
 [Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
-the complete setup and validation flow.
+the complete setup and validation flow. For production, see the
+[TLS and DNS prerequisites](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#deploying-the-production-overlay).
+
 
 ```bash
 ./deployment/k8s/run-k8s-e2e-local.sh
@@ -400,15 +413,17 @@ docker-compose -f deployment/docker-compose.yml down
 docker-compose -f deployment/docker-compose-tools.yml down
 ```
 
-### ✅ Verify Installation
+### ✅ Verify Installation (Docker Compose)
 
-Once all services are running, verify the setup:
+Once all services are running under Docker Compose, verify the setup:
 
 - 🌐 **Service Registry:** [http://localhost:8761](http://localhost:8761)
 - 📚 **API Documentation:** [http://localhost:8765/swagger-ui.html](http://localhost:8765/swagger-ui.html)
 - 🛒 **Retail Store App:** [http://localhost:8080](http://localhost:8080)
 - 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (user/password)
 - 🔍 **Loki Tracing:** [http://localhost:3000](http://localhost:3000)
+
+*(Note: On Kubernetes, access services via the Gateway hostnames `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local`)*
 
 ## 🎛️ Service Discovery & API Access
 

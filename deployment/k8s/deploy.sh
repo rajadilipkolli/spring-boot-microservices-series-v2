@@ -14,14 +14,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 OVERLAY="${1:-dev}"
+ENVOY_GATEWAY_VERSION="${ENVOY_GATEWAY_VERSION:-v1.7.5}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
 POD_CREATION_TIMEOUT_SECONDS="${POD_CREATION_TIMEOUT_SECONDS:-300}"
 
-if [[ ! -d "${SCRIPT_DIR}/overlays/${OVERLAY}" ]]; then
-  echo "ERROR: Unknown overlay '${OVERLAY}'. Directory '${SCRIPT_DIR}/overlays/${OVERLAY}' does not exist." >&2
-  echo "Available overlays: $(ls -m "${SCRIPT_DIR}/overlays")" >&2
-  exit 1
-fi
+case "$OVERLAY" in
+  dev|ci|staging|prod) ;;
+  *) echo "Usage: $0 [dev|ci|staging|prod]" >&2; exit 1 ;;
+esac
 
 wait_for_pod_creation() {
   local label="$1"
@@ -95,6 +95,29 @@ if [[ "$OVERLAY" == "prod" ]]; then
   echo "Ensuring retailstore namespace..."
   kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
 
+  if ! tls_type=$(kubectl get secret retailstore-tls -n retailstore \
+    --request-timeout=10s -o jsonpath='{.type}') || [[ "$tls_type" != kubernetes.io/tls ]]; then
+    echo "ERROR: Provision the retailstore/retailstore-tls TLS Secret before deploying prod." >&2
+    exit 1
+  fi
+
+  if ! kubectl get secret jobrunr-auth -n retailstore --request-timeout=10s -o json |
+    jq -e '.data[".htpasswd"] | type == "string" and length > 0' >/dev/null; then
+    echo "ERROR: Provision the retailstore/jobrunr-auth Secret with a .htpasswd entry before deploying prod." >&2
+    exit 1
+  fi
+fi
+
+echo "Installing Envoy Gateway (${ENVOY_GATEWAY_VERSION})..."
+kubectl apply --server-side -f "https://github.com/envoyproxy/gateway/releases/download/${ENVOY_GATEWAY_VERSION}/install.yaml"
+
+echo "Waiting for Gateway API CRDs to report Established..."
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io crd/backendtrafficpolicies.gateway.envoyproxy.io crd/securitypolicies.gateway.envoyproxy.io --timeout=120s
+
+echo "Waiting for Envoy Gateway controller to report Available..."
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
+
+if [[ "$OVERLAY" == "prod" ]]; then
   echo "Installing Cert-Manager (v1.16.1)..."
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
   kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout="$ROLLOUT_TIMEOUT" || true
@@ -205,14 +228,17 @@ while true; do
   elapsed=$((elapsed + 5))
 done
 
-echo "=== Deployment of '${OVERLAY}' complete ==="
+# Use the same read-only checks as the deployment and recovery guides.
+echo "Verifying Gateway API resource reconciliation..."
+KUBE_CONTEXT= "${SCRIPT_DIR}/verify-gateway.sh" "$OVERLAY"
+
+scheme=http
 if [[ "$OVERLAY" == "prod" ]]; then
-  echo "Access URLs:"
-  echo "  Webapp (HTTPS): https://retailstore.local"
-  echo "  Keycloak (HTTPS): https://keycloak.local"
-else
-  echo "Access URLs:"
-  echo "  Webapp: http://retailstore.local"
-  echo "  Keycloak: http://keycloak.local"
-  echo "  JobRunr: http://jobrunr.local/dashboard"
+  scheme=https
 fi
+echo "=== Deployment of '${OVERLAY}' complete ==="
+echo "Access URLs:"
+echo "  Webapp: ${scheme}://retailstore.local"
+echo "  Keycloak: ${scheme}://keycloak.local"
+echo "  API: ${scheme}://api.retailstore.local"
+echo "  JobRunr: ${scheme}://jobrunr.local/dashboard"

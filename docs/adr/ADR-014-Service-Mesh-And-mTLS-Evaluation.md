@@ -16,8 +16,8 @@ Two primary approaches exist:
 ## Decision
 We adopt **Approach B (Service Mesh)** with a phased evaluation and adoption path:
 
-1. **Current Baseline: Ingress TLS + Kubernetes NetworkPolicies**:
-   - Ingress controller terminates external North-South TLS via cert-manager.
+1. **Current Baseline: HTTP-Only Gateway API + Kubernetes NetworkPolicies**:
+   - Envoy Gateway provides North-South perimeter routing via Gateway API HTTP listeners (TLS termination is future work).
    - East-West container communication is strictly isolated using declarative Kubernetes `NetworkPolicies` (`default-deny-all`, `allow-apps-to-apps`, `allow-apps-to-infrastructure`).
    - Plaintext inter-service HTTP is permitted only within the isolated private overlay network bounded by network policies.
 
