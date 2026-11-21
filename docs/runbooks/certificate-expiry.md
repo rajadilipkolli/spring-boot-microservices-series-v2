@@ -11,10 +11,6 @@
 - **Cert-Manager Dashboard**: `http://grafana:3000/d/cert-manager` (Days until expiration per certificate, renewal status, ACME order failures).
 - **Gateway API Dashboard**: Status of Gateway listeners and Envoy proxy instances.
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:29fbd02c88f806b4788065cd5504d312959e8ec056e8ad8be8b400c4ee3895d3 -->
-
 ## 3. Diagnosis
 
 If cert-manager is installed, check whether a `Certificate` in `retailstore` has `spec.secretName: retailstore-tls`. If none manages the Secret, use the manual Gateway rotation in section 4. Cert-manager resource checks only apply to certificates it manages.
@@ -44,12 +40,6 @@ If cert-manager is installed, check whether a `Certificate` in `retailstore` has
    ```bash
    kubectl describe clusterissuer letsencrypt-prod
    ```
-
-<!-- /coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:6a7ed0b40bc12d667d4fc64b1a3b5b622f39d3c78cda4b4eb442490ad703cffc -->
 
 ## 4. Mitigation
 1. **Renew the certificate using its provisioning method**:
@@ -82,16 +72,10 @@ If cert-manager is installed, check whether a `Certificate` in `retailstore` has
    ```
    *(Or restart all proxy deployments in `envoy-gateway-system`)*
 
-<!-- /coderabbit-ai-generated:v1 -->
-
 ## 5. Escalation
 - **Level 1 (On-Call SRE)**: Check certificate expiration status, inspect cert-manager events, trigger manual renewal.
 - **Level 2 (Security / Infrastructure Lead)**: Escalate if domain DNS ownership validation fails or ACME rate-limits are reached.
 - **Level 3 (Enterprise Network Operations)**: Escalate for external DNS registrar or commercial certificate authority contract issues.
-
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:b8dfb03cb58ce54dd5d63ea0d83ca9958dc578f69d1866f26ba35cdee2fa62d4 -->
 
 ## 6. Recovery Verification
 1. For cert-manager managed certificates only, verify `kubectl get certificate -n retailstore` reports `READY: True` (e.g. for `keycloak-internal-tls`).
@@ -126,5 +110,3 @@ If cert-manager is installed, check whether a `Certificate` in `retailstore` has
      curl -fsS --cacert ca-bundle.pem https://api.retailstore.local:443/actuator/health
      ```
 4. Confirm Prometheus alert `CertificateExpiringSoon` has cleared.
-
-<!-- /coderabbit-ai-generated:v1 -->
