@@ -227,7 +227,39 @@ kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f
 kubectl -n retailstore create secret tls retailstore-tls --cert=fullchain.pem --key=privkey.pem
 ```
 
-Publish port 443 to NodePort 30443 for TLS termination at Envoy. Publish port 80 to NodePort 30080 for redirects to HTTPS. Ensure the retail webapp pods can resolve and reach `https://keycloak.local` through that HTTPS listener; the production overlay uses this issuer for OIDC discovery. On upgrades, remove any existing `patch-webapp-hostaliases` Job before applying `prod` so it cannot map that hostname back to Keycloak's internal HTTP service.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:a88ad0158f2e6b48c1b420a82771735feae0b8dee367e0cb32d0e9d62a5a1759 -->
+
+Publish port 443 to NodePort 30443 for TLS termination at Envoy. Publish port 80 to NodePort 30080 for redirects to HTTPS. Ensure the retail webapp pods can resolve and reach `https://keycloak.local` through that HTTPS listener; the production overlay uses this issuer for OIDC discovery.
+
+On upgrades, run the following in Bash before applying `prod`. Delete the old Job first so it cannot restore the mapping. Then remove only `keycloak.local` from the live webapp Deployment, keeping any other aliases. The cleanup skips the patch if the hostname is already absent; the overlay’s `hostAliases: []` does not reliably clear aliases added to the live Deployment. Stop the upgrade if any command fails.
+
+```bash
+(
+  set -e -o pipefail
+  kubectl -n retailstore delete job patch-webapp-hostaliases --ignore-not-found --wait=true
+  patch=$(kubectl -n retailstore get deployment retail-store-webapp -o json | jq -c '
+    (.spec.template.spec.hostAliases // []) as $current
+    | ($current | map(
+        if (.hostnames | index("keycloak.local")) != null then
+          .hostnames |= map(select(. != "keycloak.local"))
+          | select(.hostnames | length > 0)
+        else . end
+      )) as $updated
+    | select($current != $updated)
+    | {metadata: {resourceVersion: .metadata.resourceVersion},
+       spec: {template: {spec: {hostAliases: $updated}}}}
+  ')
+  if [ -n "$patch" ]; then
+    kubectl -n retailstore patch deployment retail-store-webapp --type=merge -p "$patch"
+  fi
+)
+```
+
+If the patch reports a conflict, rerun the cleanup to read the latest Deployment before applying `prod`.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 Provision a separate `jobrunr-auth` Secret for production. Use `htpasswd -cs jobrunr.htpasswd jobrunr-admin` to generate an Envoy compatible `{SHA}` entry with a strong password, and store the generated file as the `.htpasswd` key:
 

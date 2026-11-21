@@ -55,6 +55,10 @@ kubectl scale deployment/keycloak --replicas=3 --context secondary-region -n ret
 kubectl rollout status deployment/api-gateway --context secondary-region -n retailstore
 ```
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:716be880f111ea088b71aa0642e68e61316fb0f8037ce9ba0bea6200edccddff -->
+
 ### Step 3: Switch Global DNS Traffic to Secondary Region
 
 1. From the repository root, verify the secondary Gateway is programmed, all four application HTTPRoutes are accepted with resolved references, and both policies (including JobRunr's SecurityPolicy) are accepted. This runs the same checks as `deploy.sh` without modifying the cluster. Stop if any check fails.
@@ -63,14 +67,34 @@ kubectl rollout status deployment/api-gateway --context secondary-region -n reta
    KUBE_CONTEXT=secondary-region ./deployment/k8s/verify-gateway.sh prod
    ```
 
-2. Ensure the secondary webapp resolves the Keycloak issuer to the secondary edge, using internal DNS if needed. Before updating public DNS, configure the secondary load balancer or forwarding rule to map TCP port 80 to NodePort 30080 and TCP port 443 to NodePort 30443. From a client network, verify that port 80 returns an HTTPS redirect and that the HTTPS endpoint presents a valid certificate and returns a healthy response. For example, with `SECONDARY_LB_IP` set to the secondary load balancer IP:
+2. Ensure the secondary webapp resolves the Keycloak issuer to the secondary edge, using internal DNS if needed. Before updating public DNS, configure the secondary load balancer or forwarding rule to map TCP port 80 to NodePort 30080 and TCP port 443 to NodePort 30443.
+
+   From a client network that trusts the Gateway's CA, set `SECONDARY_LB_IP` to the secondary load balancer IP. Check that port 80 returns an HTTPS redirect, then verify that the HTTPS health response is JSON with a top-level Spring Boot status of `UP`. Stop the cutover if either check fails.
 
    ```bash
-   curl -fsSI --resolve "api.retailstore.local:80:${SECONDARY_LB_IP}" http://api.retailstore.local/actuator/health
-   curl -fsS --resolve "api.retailstore.local:443:${SECONDARY_LB_IP}" https://api.retailstore.local/actuator/health
+   curl -q -fsSI --noproxy '*' --resolve "api.retailstore.local:80:${SECONDARY_LB_IP}" http://api.retailstore.local/actuator/health
+   (
+     set -o pipefail
+     curl -q -fsS --noproxy '*' --resolve "api.retailstore.local:443:${SECONDARY_LB_IP}" \
+       https://api.retailstore.local/actuator/health |
+       jq -es 'length == 1 and .[0].status == "UP"'
+   )
    ```
 
-3. Lower the DNS TTL to 60 seconds ahead of cutover if possible. Point `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the verified secondary load balancer address.
+3. Verify that the secondary JobRunr dashboard rejects an unauthenticated request with HTTP 401. Use `--resolve` as shown to reach the secondary address while keeping `jobrunr.local` in the request and TLS handshake. You can omit it if that hostname already resolves to the secondary Gateway. Stop the cutover if the request succeeds or fails to return HTTP 401.
+
+   ```bash
+   (
+     set -e
+     status=$(curl -q -sS --noproxy '*' -o /dev/null -w '%{http_code}' \
+       --resolve "jobrunr.local:443:${SECONDARY_LB_IP}" https://jobrunr.local/dashboard)
+     test "$status" = 401 || { echo "Expected JobRunr HTTP 401, got $status" >&2; exit 1; }
+   )
+   ```
+
+4. Only after all checks pass, lower the DNS TTL to 60 seconds ahead of cutover if possible. Point `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the verified secondary load balancer address.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ### Step 4: Validate Application Endpoints
 

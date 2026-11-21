@@ -11,7 +11,14 @@
 - **Cert-Manager Dashboard**: `http://grafana:3000/d/cert-manager` (Days until expiration per certificate, renewal status, ACME order failures).
 - **Gateway API Dashboard**: Status of Gateway listeners and Envoy proxy instances.
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:29fbd02c88f806b4788065cd5504d312959e8ec056e8ad8be8b400c4ee3895d3 -->
+
 ## 3. Diagnosis
+
+If cert-manager is installed, check whether a `Certificate` in `retailstore` has `spec.secretName: retailstore-tls`. If none manages the Secret, use the manual Gateway rotation in section 4. Cert-manager resource checks only apply to certificates it manages.
+
 1. **List all cluster certificates and check expiration dates**:
    ```bash
    kubectl get certificates -A
@@ -38,13 +45,28 @@
    kubectl describe clusterissuer letsencrypt-prod
    ```
 
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:6a7ed0b40bc12d667d4fc64b1a3b5b622f39d3c78cda4b4eb442490ad703cffc -->
+
 ## 4. Mitigation
-1. **Trigger Manual Certificate Re-Issuance**:
-   Force cert-manager to re-attempt certificate issuance immediately:
-   ```bash
-   # Using cmctl / kubectl cert-manager plugin:
-   kubectl cert-manager renew <cert-name> -n retailstore
-   ```
+1. **Renew the certificate using its provisioning method**:
+   - **Cert-manager managed:** Renew the `Certificate` that owns the Secret:
+     ```bash
+     kubectl cert-manager renew <cert-name> -n retailstore
+     ```
+   - **Manually provisioned Gateway Secret:** Obtain a replacement certificate and full chain from your trusted CA, along with the matching private key. Include every configured Gateway hostname in the certificate SANs: `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` by default. Use your organization's CA for the `.local` names. Update the existing Secret in place from Bash:
+     ```bash
+     (
+       set -o pipefail
+       kubectl -n retailstore create secret tls retailstore-tls \
+         --cert=fullchain.pem --key=privkey.pem --dry-run=client -o yaml |
+         kubectl apply -f -
+     )
+     ```
+     Verify that the Gateway actually serves the replacement using section 6.
 
 2. **Fix Failing HTTP-01 / DNS-01 ACME Challenge**:
    - If HTTP-01 is failing: verify that public DNS points to a load balancer or forwarding address and that public TCP port 80 reaches the Gateway HTTP listener (for example, by forwarding it to NodePort 30080). DNS does not specify a port. Verify that the Gateway serves `/.well-known/acme-challenge/` through the challenge route. If you cannot expose public port 80, use DNS-01.
@@ -60,32 +82,49 @@
    ```
    *(Or restart all proxy deployments in `envoy-gateway-system`)*
 
+<!-- /coderabbit-ai-generated:v1 -->
+
 ## 5. Escalation
 - **Level 1 (On-Call SRE)**: Check certificate expiration status, inspect cert-manager events, trigger manual renewal.
 - **Level 2 (Security / Infrastructure Lead)**: Escalate if domain DNS ownership validation fails or ACME rate-limits are reached.
 - **Level 3 (Enterprise Network Operations)**: Escalate for external DNS registrar or commercial certificate authority contract issues.
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:b8dfb03cb58ce54dd5d63ea0d83ca9958dc578f69d1866f26ba35cdee2fa62d4 -->
+
 ## 6. Recovery Verification
-1. Verify `kubectl get certificate -n retailstore` reports `READY: True` (e.g. for `keycloak-internal-tls`).
+1. For cert-manager managed certificates only, verify `kubectl get certificate -n retailstore` reports `READY: True` (e.g. for `keycloak-internal-tls`).
 2. Inspect the expiration date of the live TLS certificate using OpenSSL against the relevant TLS endpoint (when configured):
    - For internal Keycloak TLS:
      ```bash
      kubectl run openssl-check --rm -i --image=alpine/openssl -n retailstore --restart=Never -- \
        s_client -connect keycloak:8443 -servername keycloak 2>/dev/null | openssl x509 -noout -dates
      ```
-   - For the Gateway HTTPS listener (`prod` overlay with `retailstore-tls` on port 443 / NodePort 30443):
+   - For the production Gateway HTTPS listener, verify the trusted chain and hostname, then compare the live leaf certificate's SHA-256 fingerprint with the replacement. Use the CA-issued `fullchain.pem` for a manual rotation, or save the renewed Secret's public `tls.crt` as `fullchain.pem` for a cert-manager renewal. Use the CA trust bundle in `ca-bundle.pem`. If DNS does not point at the Gateway you updated, replace the `-connect` value with that Gateway's reachable address and port; keep `-servername` and `-verify_hostname` set to the route hostname.
      ```bash
-     echo | openssl s_client -connect api.retailstore.local:443 -servername api.retailstore.local 2>/dev/null | openssl x509 -noout -dates
+     (
+       set -e -o pipefail
+       expected=$(openssl x509 -in fullchain.pem -noout -sha256 -fingerprint)
+       served=$(openssl s_client -connect api.retailstore.local:443 \
+         -servername api.retailstore.local -verify_hostname api.retailstore.local \
+         -verify_return_error -CAfile ca-bundle.pem </dev/null | openssl x509 -outform PEM)
+       actual=$(openssl x509 -noout -sha256 -fingerprint <<<"$served")
+       test "$actual" = "$expected" || { echo "Gateway is not serving the replacement certificate" >&2; exit 1; }
+       openssl x509 -noout -dates <<<"$served"
+     )
      ```
-   *Verify `notAfter` is at least 30-90 days in the future.*
+     Confirm the command succeeds and the new `notAfter` date matches the expected renewal window.
 3. Verify client requests connect securely without SSL warnings against the verified TLS endpoint:
    - For internal Keycloak HTTPS:
      ```bash
      kubectl run curl-check --rm -i --image=curlimages/curl -n retailstore --restart=Never -- \
        curl -fsS --cacert /etc/x509/ca/tls.crt https://keycloak:8443/health/ready
      ```
-   - For the Gateway HTTPS listener (when the `prod` HTTPS listener is active):
+   - For the production Gateway HTTPS listener, use curl's `--resolve` option if DNS does not point at the Gateway you updated:
      ```bash
-     curl -vk https://api.retailstore.local:443/actuator/health
+     curl -fsS --cacert ca-bundle.pem https://api.retailstore.local:443/actuator/health
      ```
 4. Confirm Prometheus alert `CertificateExpiringSoon` has cleared.
+
+<!-- /coderabbit-ai-generated:v1 -->
