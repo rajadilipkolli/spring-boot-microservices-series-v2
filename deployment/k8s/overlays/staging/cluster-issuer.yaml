@@ -10,5 +10,9 @@ spec:
       name: letsencrypt-staging
     solvers:
     - http01:
-        ingress:
-          class: nginx
+        gatewayHTTPRoute:
+          parentRefs:
+            - group: gateway.networking.k8s.io
+              kind: Gateway
+              name: retailstore-gateway
+              namespace: retailstore

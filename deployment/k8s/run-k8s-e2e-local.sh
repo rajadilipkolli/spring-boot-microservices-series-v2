@@ -22,7 +22,7 @@ KIND_CONFIG="$PROJECT_ROOT/deployment/k8s/kind-config.yaml"
 
 CLUSTER_NAME="kind"
 NAMESPACE="retailstore"
-INGRESS_MANIFEST="https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml"
+ENVOY_GATEWAY_MANIFEST="https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml"
 
 SKIP_CLUSTER="${SKIP_CLUSTER:-false}"
 TEARDOWN="${TEARDOWN:-false}"
@@ -78,11 +78,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Ingress Controller (Mirrors CI: Install NGINX Ingress Controller)
+# 3. Gateway API & Controller (Mirrors CI: Install Envoy Gateway)
 # ---------------------------------------------------------------------------
-echo "=> Step 3: Installing NGINX Ingress Controller..."
-kubectl apply -f "$INGRESS_MANIFEST"
-kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
+echo "=> Step 3: Installing Envoy Gateway & Gateway API CRDs..."
+kubectl apply --server-side -f "$ENVOY_GATEWAY_MANIFEST"
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
 
 # ---------------------------------------------------------------------------
 # 4. Image Preparation (Mirrors CI: Obtain and Load Images)

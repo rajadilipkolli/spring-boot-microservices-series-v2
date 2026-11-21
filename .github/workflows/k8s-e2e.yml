@@ -59,11 +59,11 @@ jobs:
           cluster_name: kind
           config: deployment/k8s/kind-config.yaml
 
-      - name: Install NGINX Ingress Controller
+      - name: Install Envoy Gateway and Gateway API CRDs
         run: |
           set -Eeuo pipefail
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
+          kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
+          kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=300s
 
       - name: Obtain and Load Images
         run: |
