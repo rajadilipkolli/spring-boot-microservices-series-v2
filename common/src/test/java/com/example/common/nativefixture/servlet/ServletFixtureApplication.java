@@ -8,9 +8,10 @@ package com.example.common.nativefixture.servlet;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ImportRuntimeHints;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
 @ImportRuntimeHints(ServletFixtureHints.class)
 public class ServletFixtureApplication {
 

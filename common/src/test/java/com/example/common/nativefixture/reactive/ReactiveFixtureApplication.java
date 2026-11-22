@@ -8,9 +8,10 @@ package com.example.common.nativefixture.reactive;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ImportRuntimeHints;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
 @ImportRuntimeHints(ReactiveFixtureHints.class)
 public class ReactiveFixtureApplication {
 

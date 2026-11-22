@@ -399,9 +399,33 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <!-- The regular JVM test job runs these suites. Native Image uses
+                                 Surefire's test IDs, so filter them before image generation. -->
+                            <excludes combine.children="append">
+                                <!-- Taikai scans JVM class files. -->
+                                <exclude>**/ArchitectureTest.java</exclude>
+                                <!-- These fixtures create contexts, mocks or proxies at runtime. -->
+                                <exclude>**/IdempotencyAutoConfigurationTest.java</exclude>
+                                <exclude>**/IdempotentAspectTest.java</exclude>
+                                <exclude>**/RedisIdempotencyStoreTest.java</exclude>
+                                <!-- GraalVM 25.0.4 crashes compiling H2's MathUtils.generateAlternativeSeed. -->
+                                <exclude>**/JdbcIdempotencyStoreTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                    <plugin>
                         <groupId>org.graalvm.buildtools</groupId>
                         <artifactId>native-maven-plugin</artifactId>
                         <configuration>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>com.h2database</groupId>
+                                    <artifactId>h2</artifactId>
+                                </exclusion>
+                            </exclusions>
                             <buildArgs>
                                 <!-- Netty's Java 25 direct buffer cleaner closes shared arenas. -->
                                 <buildArg>-H:+SharedArenaSupport</buildArg>
