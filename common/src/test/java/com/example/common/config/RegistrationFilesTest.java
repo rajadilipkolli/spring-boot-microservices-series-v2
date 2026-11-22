@@ -39,7 +39,8 @@ class RegistrationFilesTest {
             assertThat(content)
                     .contains("com.example.common.config.CommonLoggingAutoConfiguration")
                     .contains("com.example.common.config.CommonWebAutoConfiguration")
-                    .contains("com.example.common.config.CommonReactiveWebAutoConfiguration");
+                    .contains("com.example.common.config.CommonReactiveWebAutoConfiguration")
+                    .contains("com.example.common.idempotency.IdempotencyAutoConfiguration");
         }
     }
 }
