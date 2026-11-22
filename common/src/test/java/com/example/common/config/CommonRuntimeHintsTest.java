@@ -11,6 +11,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.common.dto.OrderDto;
 import com.example.common.dto.PagedResult;
 import com.example.common.dto.ProductDto;
+import com.example.common.kafka.dlt.DltRecordPayload;
+import com.example.common.tsid.TsidFactorySupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.aot.hint.RuntimeHints;
@@ -42,7 +44,8 @@ class CommonRuntimeHintsTest {
                         TypeReference.of(ProductDto.class),
                         TypeReference.of(OrderDto.class),
                         TypeReference.of(OrderDto.OrderItemDto.class),
-                        TypeReference.of("com.example.common.tsid.TsidFactorySupplier"));
+                        TypeReference.of(DltRecordPayload.class),
+                        TypeReference.of(TsidFactorySupplier.class));
         assertThat(hints.resources().resourcePatternHints()).isEmpty();
         assertThat(hints.proxies().jdkProxyHints()).isEmpty();
     }
@@ -64,7 +67,8 @@ class CommonRuntimeHintsTest {
                         TypeReference.of(ProductDto.class),
                         TypeReference.of(OrderDto.class),
                         TypeReference.of(OrderDto.OrderItemDto.class),
-                        TypeReference.of("com.example.common.tsid.TsidFactorySupplier"));
+                        TypeReference.of(DltRecordPayload.class),
+                        TypeReference.of(TsidFactorySupplier.class));
         assertThat(hints.resources().resourcePatternHints()).isEmpty();
         assertThat(hints.proxies().jdkProxyHints()).isEmpty();
     }

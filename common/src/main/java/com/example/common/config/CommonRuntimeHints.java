@@ -59,6 +59,12 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection()
+                .registerType(
+                        TypeReference.of("com.example.common.kafka.dlt.DltRecordPayload"),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
         if (ClassUtils.isPresent("io.hypersistence.tsid.TSID", classLoader)) {
             hints.reflection()
                     .registerType(

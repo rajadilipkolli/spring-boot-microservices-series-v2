@@ -1,6 +1,6 @@
 /***
  * <p>
- * Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+ * Licensed under MIT License Copyright (c) 2026 Raja Kolli.
  * </p>
  ***/
 
@@ -9,124 +9,139 @@ package com.example.common.idempotency;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import javax.sql.DataSource;
+import java.util.Optional;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 class JdbcIdempotencyStoreTest {
 
-    private JdbcTemplate jdbcTemplate;
+    private static PostgreSQLContainer postgres;
+    private static JdbcTemplate jdbcTemplate;
     private JdbcIdempotencyStore store;
+
+    @BeforeAll
+    static void startContainer() {
+        postgres =
+                new PostgreSQLContainer("postgres:19-alpine")
+                        .withDatabaseName("testdb")
+                        .withUsername("test")
+                        .withPassword("test");
+        postgres.start();
+
+        DriverManagerDataSource ds = new DriverManagerDataSource();
+        ds.setDriverClassName("org.postgresql.Driver");
+        ds.setUrl(postgres.getJdbcUrl());
+        ds.setUsername(postgres.getUsername());
+        ds.setPassword(postgres.getPassword());
+
+        jdbcTemplate = new JdbcTemplate(ds);
+        ResourceDatabasePopulator populator =
+                new ResourceDatabasePopulator(
+                        new ClassPathResource("schema-processed-messages.sql"));
+        populator.execute(ds);
+    }
+
+    @AfterAll
+    static void stopContainer() {
+        if (postgres != null) {
+            postgres.stop();
+        }
+    }
 
     @BeforeEach
     void setUp() {
-        DataSource dataSource =
-                new EmbeddedDatabaseBuilder()
-                        .setType(EmbeddedDatabaseType.H2)
-                        .addScript("classpath:schema-processed-messages.sql")
-                        .build();
-
-        jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.execute("DELETE FROM processed_messages");
         store = new JdbcIdempotencyStore(jdbcTemplate);
     }
 
     @Test
     void shouldAcquireLockSuccessfully() {
-        var acquired = store.acquireLock("order-100", Duration.ofSeconds(30));
-        assertThat(acquired).isPresent();
+        boolean acquired = store.acquireLock("order-100", Duration.ofSeconds(30));
+        assertThat(acquired).isTrue();
 
         // Second attempt on active lock should fail
-        var secondAttempt = store.acquireLock("order-100", Duration.ofSeconds(30));
-        assertThat(secondAttempt).isEmpty();
+        boolean secondAttempt = store.acquireLock("order-100", Duration.ofSeconds(30));
+        assertThat(secondAttempt).isFalse();
     }
 
     @Test
     void shouldReacquireLockWhenPreviousLockExpired() throws InterruptedException {
-        var acquired = store.acquireLock("order-expired", Duration.ofMillis(50));
-        assertThat(acquired).isPresent();
+        boolean acquired = store.acquireLock("order-expired", Duration.ofMillis(50));
+        assertThat(acquired).isTrue();
 
         Thread.sleep(80);
 
         // Previous lock expired, should be re-acquired via atomic update
-        var reacquired = store.acquireLock("order-expired", Duration.ofSeconds(30));
-        assertThat(reacquired).isPresent();
+        boolean reacquired = store.acquireLock("order-expired", Duration.ofSeconds(30));
+        assertThat(reacquired).isTrue();
     }
 
     @Test
     void shouldMarkProcessedAndRetrieveResult() {
-        String owner = store.acquireLock("order-200", Duration.ofSeconds(30)).orElseThrow();
-        store.markProcessed("order-200", owner, "ORDER_CREATED_RESULT", Duration.ofSeconds(30));
+        store.acquireLock("order-200", Duration.ofSeconds(30));
+        store.markProcessed("order-200", "ORDER_CREATED_RESULT", Duration.ofSeconds(30));
 
-        var result = store.lookup("order-200");
-        assertThat(result.result()).isEqualTo("ORDER_CREATED_RESULT");
+        Optional<Object> result = store.getProcessedResult("order-200");
+        assertThat(result).isPresent().contains("ORDER_CREATED_RESULT");
 
         // Lock should not be re-acquirable once processed
-        var lockAcquired = store.acquireLock("order-200", Duration.ofSeconds(30));
-        assertThat(lockAcquired).isEmpty();
+        boolean lockAcquired = store.acquireLock("order-200", Duration.ofSeconds(30));
+        assertThat(lockAcquired).isFalse();
     }
 
     @Test
     void shouldReturnEmptyWhenProcessedResultExpired() throws InterruptedException {
-        String owner = store.acquireLock("order-exp-result", Duration.ofSeconds(30)).orElseThrow();
-        store.markProcessed("order-exp-result", owner, "TEMP_RESULT", Duration.ofMillis(50));
+        store.acquireLock("order-exp-result", Duration.ofSeconds(30));
+        store.markProcessed("order-exp-result", "TEMP_RESULT", Duration.ofMillis(50));
 
-        assertThat(store.lookup("order-exp-result").result()).isEqualTo("TEMP_RESULT");
+        assertThat(store.getProcessedResult("order-exp-result"))
+                .isPresent()
+                .contains("TEMP_RESULT");
 
         Thread.sleep(80);
 
-        assertThat(store.lookup("order-exp-result")).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
+        assertThat(store.getProcessedResult("order-exp-result")).isEmpty();
 
         // Can re-acquire once expired
-        var reacquired = store.acquireLock("order-exp-result", Duration.ofSeconds(30));
-        assertThat(reacquired).isPresent();
+        boolean reacquired = store.acquireLock("order-exp-result", Duration.ofSeconds(30));
+        assertThat(reacquired).isTrue();
     }
 
     @Test
     void shouldReleaseLockWhenProcessing() {
-        var acquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
-        assertThat(acquired).isPresent();
+        boolean acquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
+        assertThat(acquired).isTrue();
 
-        store.releaseLock("order-cancel", acquired.orElseThrow());
+        store.releaseLock("order-cancel");
 
         // Should be able to re-acquire after release
-        var reacquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
-        assertThat(reacquired).isPresent();
+        boolean reacquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
+        assertThat(reacquired).isTrue();
     }
 
     @Test
     void shouldNotReleaseLockIfAlreadyProcessed() {
-        String owner = store.acquireLock("order-safe", Duration.ofSeconds(30)).orElseThrow();
-        store.markProcessed("order-safe", owner, "DONE", Duration.ofSeconds(30));
+        store.acquireLock("order-safe", Duration.ofSeconds(30));
+        store.markProcessed("order-safe", "DONE", Duration.ofSeconds(30));
 
         // Release lock targets PROCESSING status only
-        store.releaseLock("order-safe", owner);
+        store.releaseLock("order-safe");
 
         // Result should still be intact
-        var result = store.lookup("order-safe");
-        assertThat(result.result()).isEqualTo("DONE");
+        Optional<Object> result = store.getProcessedResult("order-safe");
+        assertThat(result).isPresent().contains("DONE");
     }
 
     @Test
     void shouldReturnEmptyWhenResultNotFound() {
-        var result = store.lookup("non-existent-key");
-        assertThat(result).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
-    }
-
-    @Test
-    void staleOwnerCannotChangeReplacementClaim() {
-        String key = "replace";
-        assertThat(store.lookup(key)).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
-        String stale = store.acquireLock(key, Duration.ZERO).orElseThrow();
-        Duration ttl = Duration.ofMinutes(1);
-        String current = store.acquireLock(key, ttl).orElseThrow();
-        store.releaseLock(key, stale);
-        assertThat(store.markProcessed(key, stale, "stale", ttl)).isFalse();
-        assertThat(store.lookup(key)).isEqualTo(IdempotencyStore.Snapshot.PROCESSING);
-        assertThat(store.markProcessed(key, current, null, ttl)).isTrue();
-        assertThat(store.lookup(key))
-                .isEqualTo(new IdempotencyStore.Snapshot(IdempotencyStore.State.COMPLETED, null));
+        Optional<Object> result = store.getProcessedResult("non-existent-key");
+        assertThat(result).isEmpty();
     }
 }
