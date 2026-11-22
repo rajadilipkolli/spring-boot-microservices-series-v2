@@ -9,39 +9,26 @@ package com.example.common.idempotency;
 import java.time.Duration;
 import java.util.Optional;
 
-/** Storage SPI contract for idempotency locking and result caching. */
+/** Storage contract for expiring, owner-scoped claims and nullable string results. */
 public interface IdempotencyStore {
+    enum State {
+        ABSENT,
+        PROCESSING,
+        COMPLETED
+    }
 
-    /**
-     * Atomically acquires an execution lock for the given idempotency key.
-     *
-     * @param key the idempotency key
-     * @param ttl time-to-live for the in-flight lock
-     * @return true if the lock was acquired, false if already locked or processed
-     */
-    boolean acquireLock(String key, Duration ttl);
+    record Snapshot(State state, String result) {
+        static final Snapshot ABSENT = new Snapshot(State.ABSENT, null);
+        static final Snapshot PROCESSING = new Snapshot(State.PROCESSING, null);
+    }
 
-    /**
-     * Marks the key as successfully processed, caching the result with the specified TTL.
-     *
-     * @param key the idempotency key
-     * @param result the result of the method execution
-     * @param ttl time-to-live for the cached result
-     */
-    void markProcessed(String key, Object result, Duration ttl);
+    /** Returns a unique owner token only if there is no live claim or result. */
+    Optional<String> acquireLock(String key, Duration ttl);
 
-    /**
-     * Retrieves the cached processed result if available.
-     *
-     * @param key the idempotency key
-     * @return Optional containing the cached result, or empty if not found / expired / in-flight
-     */
-    Optional<Object> getProcessedResult(String key);
+    /** Returns false if this execution no longer owns the claim. */
+    boolean markProcessed(String key, String owner, String result, Duration ttl);
 
-    /**
-     * Releases an in-flight lock (e.g., if execution failed with an exception).
-     *
-     * @param key the idempotency key
-     */
-    void releaseLock(String key);
+    Snapshot lookup(String key);
+
+    void releaseLock(String key, String owner);
 }

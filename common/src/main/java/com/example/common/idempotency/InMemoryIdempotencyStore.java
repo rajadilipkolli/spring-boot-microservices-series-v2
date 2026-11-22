@@ -8,8 +8,8 @@ package com.example.common.idempotency;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -18,93 +18,49 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class InMemoryIdempotencyStore implements IdempotencyStore {
 
-    private enum State {
-        IN_FLIGHT,
-        PROCESSED
-    }
-
-    private static final Object NULL_SENTINEL = new Object();
-
-    private record Entry(State state, Object result, Instant expiresAt) {
+    private record Entry(String owner, Snapshot snapshot, Instant expiresAt) {
         boolean isExpired(Instant now) {
-            return now.isAfter(expiresAt);
+            return !now.isBefore(expiresAt);
         }
     }
 
     private final ConcurrentHashMap<String, Entry> store = new ConcurrentHashMap<>();
 
     @Override
-    public boolean acquireLock(String key, Duration ttl) {
-        Objects.requireNonNull(key, "Key must not be null");
-        Objects.requireNonNull(ttl, "TTL must not be null");
-
+    public Optional<String> acquireLock(String key, Duration ttl) {
+        String owner = UUID.randomUUID().toString();
         Instant now = Instant.now();
-        Instant expiresAt = now.plus(ttl);
-
-        boolean[] acquired = new boolean[1];
-
-        store.compute(
-                key,
-                (k, existing) -> {
-                    if (existing == null || existing.isExpired(now)) {
-                        acquired[0] = true;
-                        return new Entry(State.IN_FLIGHT, null, expiresAt);
-                    }
-                    acquired[0] = false;
-                    return existing;
-                });
-
-        return acquired[0];
+        Entry claim = new Entry(owner, Snapshot.PROCESSING, now.plus(ttl));
+        Entry entry =
+                store.compute(key, (k, old) -> old == null || old.isExpired(now) ? claim : old);
+        return entry == claim ? Optional.of(owner) : Optional.empty();
     }
 
     @Override
-    public void markProcessed(String key, Object result, Duration ttl) {
-        Objects.requireNonNull(key, "Key must not be null");
-        Objects.requireNonNull(ttl, "TTL must not be null");
-
+    public boolean markProcessed(String key, String owner, String result, Duration ttl) {
         Instant now = Instant.now();
-        Instant expiresAt = now.plus(ttl);
-        Object storedResult = result == null ? NULL_SENTINEL : result;
-
-        store.put(key, new Entry(State.PROCESSED, storedResult, expiresAt));
+        Entry completed = new Entry(null, new Snapshot(State.COMPLETED, result), now.plus(ttl));
+        return store.computeIfPresent(
+                        key,
+                        (k, old) ->
+                                owner.equals(old.owner()) && !old.isExpired(now) ? completed : old)
+                == completed;
     }
 
     @Override
-    public Optional<Object> getProcessedResult(String key) {
-        Objects.requireNonNull(key, "Key must not be null");
-
-        Instant now = Instant.now();
+    public Snapshot lookup(String key) {
         Entry entry = store.get(key);
-
-        if (entry == null) {
-            return Optional.empty();
-        }
-
-        if (entry.isExpired(now)) {
+        if (entry == null) return Snapshot.ABSENT;
+        if (entry.isExpired(Instant.now())) {
             store.remove(key, entry);
-            return Optional.empty();
+            return Snapshot.ABSENT;
         }
-
-        if (entry.state() == State.PROCESSED) {
-            Object res = entry.result();
-            return Optional.ofNullable(res == NULL_SENTINEL ? null : res);
-        }
-
-        return Optional.empty();
+        return entry.snapshot();
     }
 
     @Override
-    public void releaseLock(String key) {
-        Objects.requireNonNull(key, "Key must not be null");
-
-        store.computeIfPresent(
-                key,
-                (k, existing) -> {
-                    if (existing.state() == State.IN_FLIGHT) {
-                        return null;
-                    }
-                    return existing;
-                });
+    public void releaseLock(String key, String owner) {
+        store.computeIfPresent(key, (k, old) -> owner.equals(old.owner()) ? null : old);
     }
 
     /** Evicts all expired entries from the store. */

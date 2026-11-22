@@ -7,100 +7,89 @@
 package com.example.common.idempotency;
 
 import java.time.Duration;
-import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 
-/**
- * Distributed implementation of {@link IdempotencyStore} backed by Spring Data Redis. Uses atomic
- * Redis operations (SET NX EX, Lua scripts) for distributed locking and state transitions.
- */
+/** One expiring Redis string per key, shared by the claim and its result. */
 public class RedisIdempotencyStore implements IdempotencyStore {
+    private static final DefaultRedisScript<Long> ACQUIRE =
+            script(
+                    """
+                    if redis.call('set', KEYS[1], ARGV[1], 'NX', 'PX', ARGV[2]) then return 1 end
+                    return 0
+                    """);
+    private static final DefaultRedisScript<Long> COMPLETE =
+            script(
+                    """
+                    if redis.call('get', KEYS[1]) ~= ARGV[1] then return 0 end
+                    redis.call('set', KEYS[1], ARGV[2], 'PX', ARGV[3])
+                    return 1
+                    """);
+    private static final DefaultRedisScript<Long> RELEASE =
+            script(
+                    """
+                    if redis.call('get', KEYS[1]) ~= ARGV[1] then return 0 end
+                    return redis.call('del', KEYS[1])
+                    """);
 
-    private static final String LOCK_PREFIX = "idempotency:lock:";
-    private static final String RESULT_PREFIX = "idempotency:result:";
-    private static final String LOCK_VALUE = "IN_FLIGHT";
-    private static final String NULL_SENTINEL = "__NULL__";
+    private final StringRedisTemplate redis;
 
-    // Lua script to release lock only if the current value is still IN_FLIGHT
-    private static final String RELEASE_LOCK_SCRIPT =
-            "if redis.call('get', KEYS[1]) == ARGV[1] then "
-                    + "return redis.call('del', KEYS[1]) "
-                    + "else "
-                    + "return 0 "
-                    + "end";
+    public RedisIdempotencyStore(StringRedisTemplate redis) {
+        this.redis = Objects.requireNonNull(redis);
+    }
 
-    private final StringRedisTemplate redisTemplate;
-    private final RedisScript<Long> releaseLockRedisScript;
+    private static DefaultRedisScript<Long> script(String lua) {
+        return new DefaultRedisScript<>(lua, Long.class);
+    }
 
-    public RedisIdempotencyStore(StringRedisTemplate redisTemplate) {
-        this.redisTemplate =
-                Objects.requireNonNull(redisTemplate, "StringRedisTemplate must not be null");
-        this.releaseLockRedisScript = new DefaultRedisScript<>(RELEASE_LOCK_SCRIPT, Long.class);
+    private static String key(String key) {
+        return "idempotency:state:" + Objects.requireNonNull(key);
     }
 
     @Override
-    public boolean acquireLock(String key, Duration ttl) {
-        Objects.requireNonNull(key, "Key must not be null");
-        Objects.requireNonNull(ttl, "TTL must not be null");
-
-        // If result already exists, lock cannot be acquired
-        Boolean hasResult = redisTemplate.hasKey(resultKey(key));
-        if (Boolean.TRUE.equals(hasResult)) {
-            return false;
-        }
-
-        // Atomically set lock if not already exists (SET NX EX)
-        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey(key), LOCK_VALUE, ttl);
-        return Boolean.TRUE.equals(acquired);
+    public Optional<String> acquireLock(String key, Duration ttl) {
+        String owner = UUID.randomUUID().toString();
+        return Long.valueOf(1)
+                        .equals(
+                                redis.execute(
+                                        ACQUIRE,
+                                        List.of(key(key)),
+                                        "P" + owner,
+                                        Long.toString(ttl.toMillis())))
+                ? Optional.of(owner)
+                : Optional.empty();
     }
 
     @Override
-    public void markProcessed(String key, Object result, Duration ttl) {
-        Objects.requireNonNull(key, "Key must not be null");
-        Objects.requireNonNull(ttl, "TTL must not be null");
-
-        String serializedResult = result == null ? NULL_SENTINEL : result.toString();
-
-        // Store result with TTL
-        redisTemplate.opsForValue().set(resultKey(key), serializedResult, ttl);
-
-        // Remove the lock
-        redisTemplate.delete(lockKey(key));
+    public boolean markProcessed(String key, String owner, String result, Duration ttl) {
+        return Long.valueOf(1)
+                .equals(
+                        redis.execute(
+                                COMPLETE,
+                                List.of(key(key)),
+                                "P" + owner,
+                                result == null ? "N" : "V" + result,
+                                Long.toString(ttl.toMillis())));
     }
 
     @Override
-    public Optional<Object> getProcessedResult(String key) {
-        Objects.requireNonNull(key, "Key must not be null");
-
-        String val = redisTemplate.opsForValue().get(resultKey(key));
-        if (val == null) {
-            return Optional.empty();
-        }
-
-        if (NULL_SENTINEL.equals(val)) {
-            return Optional.empty();
-        }
-
-        return Optional.of(val);
+    public Snapshot lookup(String key) {
+        String value = redis.opsForValue().get(key(key));
+        if (value == null) return Snapshot.ABSENT;
+        return switch (value.charAt(0)) {
+            case 'P' -> Snapshot.PROCESSING;
+            case 'N' -> new Snapshot(State.COMPLETED, null);
+            case 'V' -> new Snapshot(State.COMPLETED, value.substring(1));
+            default -> throw new IllegalStateException("Invalid persisted idempotency state");
+        };
     }
 
     @Override
-    public void releaseLock(String key) {
-        Objects.requireNonNull(key, "Key must not be null");
-
-        redisTemplate.execute(
-                releaseLockRedisScript, Collections.singletonList(lockKey(key)), LOCK_VALUE);
-    }
-
-    private String lockKey(String key) {
-        return LOCK_PREFIX + key;
-    }
-
-    private String resultKey(String key) {
-        return RESULT_PREFIX + key;
+    public void releaseLock(String key, String owner) {
+        redis.execute(RELEASE, List.of(key(key)), "P" + owner);
     }
 }

@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 import java.time.temporal.ChronoUnit;
 
 /**
- * Annotation to mark a method as idempotent.
+ * Marks a method returning String (including null) or void as idempotent.
  *
  * <p>Duplicate requests with the same evaluated key will either return the previously cached result
  * or throw an {@link IdempotencyConflictException} if an execution is currently in flight.

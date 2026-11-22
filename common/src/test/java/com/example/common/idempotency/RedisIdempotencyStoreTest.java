@@ -7,17 +7,16 @@
 package com.example.common.idempotency;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -38,74 +37,42 @@ class RedisIdempotencyStoreTest {
     }
 
     @Test
-    void shouldAcquireLockWhenNoResultAndNotLocked() {
-        when(redisTemplate.hasKey("idempotency:result:test-key")).thenReturn(false);
-        when(valueOperations.setIfAbsent(
-                        "idempotency:lock:test-key", "IN_FLIGHT", Duration.ofSeconds(30)))
-                .thenReturn(true);
-
-        boolean acquired = store.acquireLock("test-key", Duration.ofSeconds(30));
-
-        assertThat(acquired).isTrue();
-    }
-
-    @Test
-    void shouldNotAcquireLockWhenResultAlreadyExists() {
-        when(redisTemplate.hasKey("idempotency:result:test-key")).thenReturn(true);
-
-        boolean acquired = store.acquireLock("test-key", Duration.ofSeconds(30));
-
-        assertThat(acquired).isFalse();
-    }
-
-    @Test
-    void shouldNotAcquireLockWhenLockAlreadyHeld() {
-        when(redisTemplate.hasKey("idempotency:result:test-key")).thenReturn(false);
-        when(valueOperations.setIfAbsent(
-                        "idempotency:lock:test-key", "IN_FLIGHT", Duration.ofSeconds(30)))
-                .thenReturn(false);
-
-        boolean acquired = store.acquireLock("test-key", Duration.ofSeconds(30));
-
-        assertThat(acquired).isFalse();
-    }
-
-    @Test
-    void shouldMarkProcessedAndRemoveLock() {
-        store.markProcessed("test-key", "SUCCESS_RESPONSE", Duration.ofMinutes(1));
-
-        verify(valueOperations)
-                .set("idempotency:result:test-key", "SUCCESS_RESPONSE", Duration.ofMinutes(1));
-        verify(redisTemplate).delete("idempotency:lock:test-key");
-    }
-
-    @Test
-    void shouldGetProcessedResult() {
-        when(valueOperations.get("idempotency:result:test-key")).thenReturn("CACHED_VAL");
-
-        Optional<Object> result = store.getProcessedResult("test-key");
-
-        assertThat(result).isPresent().contains("CACHED_VAL");
-    }
-
-    @Test
-    void shouldReturnEmptyWhenResultNotFound() {
-        when(valueOperations.get("idempotency:result:test-key")).thenReturn(null);
-
-        Optional<Object> result = store.getProcessedResult("test-key");
-
-        assertThat(result).isEmpty();
+    void distinguishesAllStoredStatesAndLiteralNullSentinel() {
+        when(valueOperations.get("idempotency:state:k"))
+                .thenReturn(null, "Powner", "N", "V__NULL__");
+        assertThat(store.lookup("k")).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
+        assertThat(store.lookup("k")).isEqualTo(IdempotencyStore.Snapshot.PROCESSING);
+        assertThat(store.lookup("k"))
+                .isEqualTo(new IdempotencyStore.Snapshot(IdempotencyStore.State.COMPLETED, null));
+        assertThat(store.lookup("k"))
+                .isEqualTo(
+                        new IdempotencyStore.Snapshot(
+                                IdempotencyStore.State.COMPLETED, "__NULL__"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldReleaseLockUsingScript() {
-        store.releaseLock("test-key");
-
+    void passesTheAcquiredOwnerAndResultEncodingToRedis() {
+        var keys = List.of("idempotency:state:k");
+        var ttl = Duration.ofSeconds(5);
+        when(redisTemplate.execute(
+                        ArgumentMatchers.<RedisScript<Long>>any(),
+                        eq(keys),
+                        startsWith("P"),
+                        eq("5000")))
+                .thenReturn(1L, 0L);
+        String owner = store.acquireLock("k", ttl).orElseThrow();
+        assertThat(store.acquireLock("k", ttl)).isEmpty();
+        when(redisTemplate.execute(
+                        ArgumentMatchers.<RedisScript<Long>>any(),
+                        eq(keys),
+                        eq("P" + owner),
+                        eq("V__NULL__"),
+                        eq("5000")))
+                .thenReturn(1L);
+        assertThat(store.markProcessed("k", owner, "__NULL__", ttl)).isTrue();
+        store.releaseLock("k", owner);
         verify(redisTemplate)
-                .execute(
-                        any(RedisScript.class),
-                        eq(Collections.singletonList("idempotency:lock:test-key")),
-                        eq("IN_FLIGHT"));
+                .execute(ArgumentMatchers.<RedisScript<Long>>any(), eq(keys), eq("P" + owner));
     }
 }

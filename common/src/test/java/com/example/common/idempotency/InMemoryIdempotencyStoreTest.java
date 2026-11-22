@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -33,82 +32,81 @@ class InMemoryIdempotencyStoreTest {
 
     @Test
     void shouldAcquireLockSuccessfully() {
-        boolean acquired = store.acquireLock("key-1", Duration.ofSeconds(10));
-        assertThat(acquired).isTrue();
+        var acquired = store.acquireLock("key-1", Duration.ofSeconds(10));
+        assertThat(acquired).isPresent();
 
         // Second attempt should fail
-        boolean secondAttempt = store.acquireLock("key-1", Duration.ofSeconds(10));
-        assertThat(secondAttempt).isFalse();
+        var secondAttempt = store.acquireLock("key-1", Duration.ofSeconds(10));
+        assertThat(secondAttempt).isEmpty();
     }
 
     @Test
     void shouldReleaseLockAndAllowReacquire() {
-        boolean acquired = store.acquireLock("key-1", Duration.ofSeconds(10));
-        assertThat(acquired).isTrue();
+        var acquired = store.acquireLock("key-1", Duration.ofSeconds(10));
+        assertThat(acquired).isPresent();
 
-        store.releaseLock("key-1");
+        store.releaseLock("key-1", acquired.orElseThrow());
 
-        boolean reacquired = store.acquireLock("key-1", Duration.ofSeconds(10));
-        assertThat(reacquired).isTrue();
+        var reacquired = store.acquireLock("key-1", Duration.ofSeconds(10));
+        assertThat(reacquired).isPresent();
     }
 
     @Test
     void shouldMarkProcessedAndReturnResult() {
-        store.acquireLock("key-1", Duration.ofSeconds(10));
-        store.markProcessed("key-1", "RESULT_OK", Duration.ofSeconds(10));
+        String owner = store.acquireLock("key-1", Duration.ofSeconds(10)).orElseThrow();
+        store.markProcessed("key-1", owner, "RESULT_OK", Duration.ofSeconds(10));
 
-        Optional<Object> result = store.getProcessedResult("key-1");
-        assertThat(result).isPresent().contains("RESULT_OK");
+        var result = store.lookup("key-1");
+        assertThat(result.result()).isEqualTo("RESULT_OK");
 
         // Lock should not be re-acquirable once processed
-        boolean lockAcquired = store.acquireLock("key-1", Duration.ofSeconds(10));
-        assertThat(lockAcquired).isFalse();
+        var lockAcquired = store.acquireLock("key-1", Duration.ofSeconds(10));
+        assertThat(lockAcquired).isEmpty();
 
         // Releasing lock on processed entry should not remove the processed state
-        store.releaseLock("key-1");
-        assertThat(store.getProcessedResult("key-1")).isPresent().contains("RESULT_OK");
+        store.releaseLock("key-1", owner);
+        assertThat(store.lookup("key-1").result()).isEqualTo("RESULT_OK");
     }
 
     @Test
     void shouldHandleNullProcessedResult() {
-        store.acquireLock("key-null", Duration.ofSeconds(10));
-        store.markProcessed("key-null", null, Duration.ofSeconds(10));
+        String owner = store.acquireLock("key-null", Duration.ofSeconds(10)).orElseThrow();
+        store.markProcessed("key-null", owner, null, Duration.ofSeconds(10));
 
-        // When processed with null, Optional is empty (representing null return)
-        Optional<Object> result = store.getProcessedResult("key-null");
-        assertThat(result).isEmpty();
+        // Completion is independent of the nullable value.
+        var result = store.lookup("key-null");
+        assertThat(result)
+                .isEqualTo(new IdempotencyStore.Snapshot(IdempotencyStore.State.COMPLETED, null));
 
         // But lock cannot be reacquired because state is PROCESSED and not expired
-        boolean lockAcquired = store.acquireLock("key-null", Duration.ofSeconds(10));
-        assertThat(lockAcquired).isFalse();
+        var lockAcquired = store.acquireLock("key-null", Duration.ofSeconds(10));
+        assertThat(lockAcquired).isEmpty();
     }
 
     @Test
     void shouldExpireLockAfterTtl() throws InterruptedException {
         store.acquireLock("key-expire", Duration.ofMillis(50));
-        assertThat(store.acquireLock("key-expire", Duration.ofMillis(50))).isFalse();
+        assertThat(store.acquireLock("key-expire", Duration.ofMillis(50))).isEmpty();
 
         Thread.sleep(80);
 
         // After TTL expired, acquiring lock should succeed
-        boolean acquiredAfterExpiry = store.acquireLock("key-expire", Duration.ofSeconds(10));
-        assertThat(acquiredAfterExpiry).isTrue();
+        var acquiredAfterExpiry = store.acquireLock("key-expire", Duration.ofSeconds(10));
+        assertThat(acquiredAfterExpiry).isPresent();
     }
 
     @Test
     void shouldExpireProcessedResultAfterTtl() throws InterruptedException {
-        store.acquireLock("key-proc-expire", Duration.ofSeconds(10));
-        store.markProcessed("key-proc-expire", "EXPIRED_DATA", Duration.ofMillis(50));
+        String owner = store.acquireLock("key-proc-expire", Duration.ofSeconds(10)).orElseThrow();
+        store.markProcessed("key-proc-expire", owner, "EXPIRED_DATA", Duration.ofMillis(50));
 
-        assertThat(store.getProcessedResult("key-proc-expire"))
-                .isPresent()
-                .contains("EXPIRED_DATA");
+        assertThat(store.lookup("key-proc-expire").result()).isEqualTo("EXPIRED_DATA");
 
         Thread.sleep(80);
 
-        assertThat(store.getProcessedResult("key-proc-expire")).isEmpty();
+        assertThat(store.lookup("key-proc-expire")).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
         // After expiry, should be able to acquire lock again
-        assertThat(store.acquireLock("key-proc-expire", Duration.ofSeconds(10))).isTrue();
+        assertThat(store.acquireLock("key-proc-expire", Duration.ofSeconds(10))).isPresent();
     }
 
     @Test
@@ -136,11 +134,11 @@ class InMemoryIdempotencyStoreTest {
         for (int i = 0; i < threads; i++) {
             tasks.add(() -> {
                 latch.await();
-                boolean acquired = store.acquireLock("concurrent-key", Duration.ofSeconds(10));
-                if (acquired) {
+                var acquired = store.acquireLock("concurrent-key", Duration.ofSeconds(10));
+                if (acquired.isPresent()) {
                     successCount.incrementAndGet();
                 }
-                return acquired;
+                return acquired.isPresent();
             });
         }
 
@@ -158,12 +156,27 @@ class InMemoryIdempotencyStoreTest {
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> store.acquireLock("k", null))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> store.markProcessed(null, "val", Duration.ofSeconds(1)))
+        assertThatThrownBy(() -> store.markProcessed(null, "owner", "val", Duration.ofSeconds(1)))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> store.markProcessed("k", "val", null))
+        assertThatThrownBy(() -> store.markProcessed("k", "owner", "val", null))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> store.getProcessedResult(null))
+        assertThatThrownBy(() -> store.lookup(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> store.releaseLock(null, "owner"))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> store.releaseLock(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void staleOwnerCannotChangeReplacementClaim() {
+        String key = "replace";
+        assertThat(store.lookup(key)).isEqualTo(IdempotencyStore.Snapshot.ABSENT);
+        String stale = store.acquireLock(key, Duration.ZERO).orElseThrow();
+        Duration ttl = Duration.ofMinutes(1);
+        String current = store.acquireLock(key, ttl).orElseThrow();
+        store.releaseLock(key, stale);
+        assertThat(store.markProcessed(key, stale, "stale", ttl)).isFalse();
+        assertThat(store.lookup(key)).isEqualTo(IdempotencyStore.Snapshot.PROCESSING);
+        assertThat(store.markProcessed(key, current, null, ttl)).isTrue();
+        assertThat(store.lookup(key))
+                .isEqualTo(new IdempotencyStore.Snapshot(IdempotencyStore.State.COMPLETED, null));
     }
 }

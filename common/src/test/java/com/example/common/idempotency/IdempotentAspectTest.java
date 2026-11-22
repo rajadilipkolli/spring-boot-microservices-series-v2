@@ -47,6 +47,27 @@ class IdempotentAspectTest {
             return "OK:" + id;
         }
 
+        @Idempotent
+        public String array(Object... args) {
+            return String.valueOf(invocationCount.incrementAndGet());
+        }
+
+        @Idempotent
+        public String array(String arg) {
+            return String.valueOf(invocationCount.incrementAndGet());
+        }
+
+        @Idempotent
+        public String nullable() {
+            invocationCount.incrementAndGet();
+            return null;
+        }
+
+        @Idempotent
+        public int unsupported() {
+            return invocationCount.incrementAndGet();
+        }
+
         public int getInvocationCount() {
             return invocationCount.get();
         }
@@ -138,5 +159,46 @@ class IdempotentAspectTest {
                 .hasMessageContaining("in-flight-id");
 
         assertThat(target.getInvocationCount()).isEqualTo(0);
+    }
+
+    @Test
+    void preservesArgumentBoundariesTypesAndOverloads() {
+        assertThat(proxy.array("a, b")).isEqualTo("1");
+        assertThat(proxy.array(new Object[] {"a, b"})).isEqualTo("2");
+        assertThat(proxy.array("a", "b")).isEqualTo("3");
+        assertThat(proxy.array(1)).isEqualTo("4");
+        assertThat(proxy.array(new Object[] {"1"})).isEqualTo("5");
+        assertThat(proxy.array(new Object[] {"a, b"})).isEqualTo("2");
+    }
+
+    @Test
+    void replaysNullAndRejectsUnsupportedMethodsBeforeInvocation() {
+        assertThat(proxy.nullable()).isNull();
+        assertThat(proxy.nullable()).isNull();
+        assertThatThrownBy(proxy::unsupported).isInstanceOf(IllegalArgumentException.class);
+        assertThat(target.getInvocationCount()).isOne();
+    }
+
+    @Test
+    void failedCompletionRetriesOnlyTheWriteAndLeavesClaimInPlace() {
+        var writes = new AtomicInteger();
+        var broken =
+                new InMemoryIdempotencyStore() {
+                    @Override
+                    public boolean markProcessed(
+                            String key, String owner, String result, Duration ttl) {
+                        writes.incrementAndGet();
+                        throw new IllegalStateException("store offline");
+                    }
+                };
+        var factory = new AspectJProxyFactory(target);
+        factory.addAspect(new IdempotentAspect(broken));
+        SampleService service = factory.getProxy();
+        assertThatThrownBy(() -> service.processOrder("k", "p"))
+                .isInstanceOf(RuntimeException.class);
+        assertThat(writes.get()).isGreaterThan(1);
+        assertThatThrownBy(() -> service.processOrder("k", "p"))
+                .isInstanceOf(IdempotencyConflictException.class);
+        assertThat(target.getInvocationCount()).isOne();
     }
 }

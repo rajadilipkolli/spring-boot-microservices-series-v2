@@ -9,9 +9,14 @@ package com.example.common.idempotency;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.time.Duration;
 import javax.sql.DataSource;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.JdbcTemplateAutoConfiguration;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -96,6 +101,37 @@ class IdempotencyAutoConfigurationTest {
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(IdempotencyStore.class);
                     assertThat(context).doesNotHaveBean(IdempotentAspect.class);
+                });
+    }
+
+    @Test
+    void selectsJdbcAfterBootRegistersDataSource() {
+        runner.withConfiguration(
+                        AutoConfigurations.of(
+                                DataSourceAutoConfiguration.class,
+                                JdbcTemplateAutoConfiguration.class))
+                .run(context ->
+                        assertThat(context.getBean(IdempotencyStore.class))
+                                .isInstanceOf(JdbcIdempotencyStore.class));
+    }
+
+    @Test
+    void handlesMissingOptionalDependencies() {
+        runner.withClassLoader(
+                        new FilteredClassLoader(
+                                "org.springframework.jdbc", "org.springframework.data.redis"))
+                .run(context ->
+                        assertThat(context.getBean(IdempotencyStore.class))
+                                .isInstanceOf(InMemoryIdempotencyStore.class));
+    }
+
+    @Test
+    void periodicallyEvictsUnreadKeys() {
+        runner.withPropertyValues("app.idempotency.cleanup-interval=10ms")
+                .run(context -> {
+                    var store = context.getBean(InMemoryIdempotencyStore.class);
+                    store.acquireLock("unused", Duration.ofMillis(10));
+                    Awaitility.await().until(() -> store.size() == 0);
                 });
     }
 }
