@@ -40,7 +40,8 @@ class RegistrationFilesTest {
                     .contains("com.example.common.config.CommonLoggingAutoConfiguration")
                     .contains("com.example.common.config.CommonWebAutoConfiguration")
                     .contains("com.example.common.config.CommonReactiveWebAutoConfiguration")
-                    .contains("com.example.common.idempotency.IdempotencyAutoConfiguration");
+                    .contains("com.example.common.idempotency.IdempotencyAutoConfiguration")
+                    .contains("com.example.common.kafka.dlt.DltAutoConfiguration");
         }
     }
 }

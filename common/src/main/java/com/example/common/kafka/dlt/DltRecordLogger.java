@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.function.ToLongFunction;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -55,19 +56,50 @@ public class DltRecordLogger {
      */
     public DltRecordPayload processAndLog(ConsumerRecord<?, ?> record, String serviceName) {
         Headers headers = record.headers();
-        String originalTopic = getHeaderAsString(headers, KafkaHeaders.ORIGINAL_TOPIC);
+        String originalTopic =
+                getHeaderAsString(
+                        headers, KafkaHeaders.DLT_ORIGINAL_TOPIC, KafkaHeaders.ORIGINAL_TOPIC);
         if (originalTopic == null) {
             originalTopic = record.topic();
         }
 
         int originalPartition =
-                getHeaderAsInt(headers, KafkaHeaders.ORIGINAL_PARTITION, record.partition());
+                (int)
+                        getNumericHeader(
+                                headers,
+                                KafkaHeaders.DLT_ORIGINAL_PARTITION,
+                                KafkaHeaders.ORIGINAL_PARTITION,
+                                record.partition(),
+                                Integer.BYTES,
+                                Integer::parseInt,
+                                ByteBuffer::getInt);
         long originalOffset =
-                getHeaderAsLong(headers, KafkaHeaders.ORIGINAL_OFFSET, record.offset());
-        String exceptionClass = getHeaderAsString(headers, KafkaHeaders.EXCEPTION_FQCN);
-        String exceptionMessage = getHeaderAsString(headers, KafkaHeaders.EXCEPTION_MESSAGE);
-        String stackTrace = getHeaderAsString(headers, KafkaHeaders.EXCEPTION_STACKTRACE);
-        String payload = record.value() != null ? String.valueOf(record.value()) : null;
+                getNumericHeader(
+                        headers,
+                        KafkaHeaders.DLT_ORIGINAL_OFFSET,
+                        KafkaHeaders.ORIGINAL_OFFSET,
+                        record.offset(),
+                        Long.BYTES,
+                        Long::parseLong,
+                        ByteBuffer::getLong);
+        String exceptionClass =
+                getHeaderAsString(
+                        headers, KafkaHeaders.DLT_EXCEPTION_FQCN, KafkaHeaders.EXCEPTION_FQCN);
+        String exceptionMessage =
+                getHeaderAsString(
+                        headers,
+                        KafkaHeaders.DLT_EXCEPTION_MESSAGE,
+                        KafkaHeaders.EXCEPTION_MESSAGE);
+        String stackTrace =
+                getHeaderAsString(
+                        headers,
+                        KafkaHeaders.DLT_EXCEPTION_STACKTRACE,
+                        KafkaHeaders.EXCEPTION_STACKTRACE);
+        Object value = record.value();
+        String payload =
+                value instanceof byte[] bytes
+                        ? new String(bytes, StandardCharsets.UTF_8)
+                        : Objects.toString(value, null);
 
         DltRecordPayload dltPayload =
                 DltRecordPayload.builder()
@@ -156,40 +188,47 @@ public class DltRecordLogger {
         return dltPayload;
     }
 
-    private @Nullable String getHeaderAsString(Headers headers, String headerName) {
-        Header header = headers.lastHeader(headerName);
-        if (header != null && header.value() != null) {
-            return new String(header.value(), StandardCharsets.UTF_8);
-        }
-        return null;
+    private static @Nullable byte[] getHeader(Headers headers, String name) {
+        Header header = headers.lastHeader(name);
+        return header == null ? null : header.value();
     }
 
-    private int getHeaderAsInt(Headers headers, String headerName, int defaultValue) {
-        Header header = headers.lastHeader(headerName);
-        if (header != null && header.value() != null) {
-            try {
-                if (header.value().length == 4) {
-                    return ByteBuffer.wrap(header.value()).getInt();
-                }
-                return Integer.parseInt(new String(header.value(), StandardCharsets.UTF_8));
-            } catch (Exception ignored) {
-            }
+    private static @Nullable String getHeaderAsString(
+            Headers headers, String dltName, String retryName) {
+        byte[] bytes = getHeader(headers, dltName);
+        if (bytes == null) {
+            bytes = getHeader(headers, retryName);
         }
-        return defaultValue;
+        return bytes == null ? null : new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private long getHeaderAsLong(Headers headers, String headerName, long defaultValue) {
-        Header header = headers.lastHeader(headerName);
-        if (header != null && header.value() != null) {
-            try {
-                if (header.value().length == 8) {
-                    return ByteBuffer.wrap(header.value()).getLong();
-                }
-                return Long.parseLong(new String(header.value(), StandardCharsets.UTF_8));
-            } catch (Exception ignored) {
-            }
+    private static long getNumericHeader(
+            Headers headers,
+            String dltName,
+            String retryName,
+            long defaultValue,
+            int binaryWidth,
+            ToLongFunction<String> parseDecimal,
+            ToLongFunction<ByteBuffer> readBinary) {
+        // The dead-letter recoverer writes standard DLT coordinates as fixed-width binary.
+        byte[] bytes = getHeader(headers, dltName);
+        if (bytes != null && bytes.length == binaryWidth) {
+            return readBinary.applyAsLong(ByteBuffer.wrap(bytes));
         }
-        return defaultValue;
+
+        bytes = getHeader(headers, retryName);
+        if (bytes == null) {
+            return defaultValue;
+        }
+        // Retry-topic headers also carry fixed-width binary coordinates. Prefer decimal
+        // text for these names to support producers that send coordinates as strings.
+        try {
+            return parseDecimal.applyAsLong(new String(bytes, StandardCharsets.UTF_8));
+        } catch (NumberFormatException ignored) {
+            return bytes.length == binaryWidth
+                    ? readBinary.applyAsLong(ByteBuffer.wrap(bytes))
+                    : defaultValue;
+        }
     }
 
     private String getStackTraceAsString(Throwable throwable) {

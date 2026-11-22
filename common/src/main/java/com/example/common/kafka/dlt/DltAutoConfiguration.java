@@ -16,8 +16,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 /** Auto-configuration for the Dead Letter Topic (DLT) Engine. */
-@AutoConfiguration
-@ConditionalOnClass(MeterRegistry.class)
+@AutoConfiguration(
+        afterName =
+                "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration")
+@ConditionalOnClass(
+        name = {
+            "io.micrometer.core.instrument.MeterRegistry",
+            "org.apache.kafka.clients.consumer.ConsumerRecord"
+        })
 @ConditionalOnBean(MeterRegistry.class)
 @ConditionalOnProperty(
         prefix = "app.kafka.dlt",

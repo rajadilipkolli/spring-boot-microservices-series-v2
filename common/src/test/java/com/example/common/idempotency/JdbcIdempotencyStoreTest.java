@@ -8,8 +8,9 @@ package com.example.common.idempotency;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.common.idempotency.IdempotencyStore.Snapshot;
+import com.example.common.idempotency.IdempotencyStore.State;
 import java.time.Duration;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,85 +64,71 @@ class JdbcIdempotencyStoreTest {
 
     @Test
     void shouldAcquireLockSuccessfully() {
-        boolean acquired = store.acquireLock("order-100", Duration.ofSeconds(30));
-        assertThat(acquired).isTrue();
-
-        // Second attempt on active lock should fail
-        boolean secondAttempt = store.acquireLock("order-100", Duration.ofSeconds(30));
-        assertThat(secondAttempt).isFalse();
+        assertThat(store.acquireLock("order-100", Duration.ofSeconds(30))).isPresent();
+        assertThat(store.acquireLock("order-100", Duration.ofSeconds(30))).isEmpty();
     }
 
     @Test
     void shouldReacquireLockWhenPreviousLockExpired() throws InterruptedException {
-        boolean acquired = store.acquireLock("order-expired", Duration.ofMillis(50));
-        assertThat(acquired).isTrue();
+        assertThat(store.acquireLock("order-expired", Duration.ofMillis(50))).isPresent();
 
         Thread.sleep(80);
 
-        // Previous lock expired, should be re-acquired via atomic update
-        boolean reacquired = store.acquireLock("order-expired", Duration.ofSeconds(30));
-        assertThat(reacquired).isTrue();
+        assertThat(store.acquireLock("order-expired", Duration.ofSeconds(30))).isPresent();
     }
 
     @Test
     void shouldMarkProcessedAndRetrieveResult() {
-        store.acquireLock("order-200", Duration.ofSeconds(30));
-        store.markProcessed("order-200", "ORDER_CREATED_RESULT", Duration.ofSeconds(30));
+        Duration ttl = Duration.ofSeconds(30);
+        String owner = store.acquireLock("order-200", ttl).orElseThrow();
+        assertThat(store.markProcessed("order-200", owner, "ORDER_CREATED_RESULT", ttl)).isTrue();
 
-        Optional<Object> result = store.getProcessedResult("order-200");
-        assertThat(result).isPresent().contains("ORDER_CREATED_RESULT");
-
-        // Lock should not be re-acquirable once processed
-        boolean lockAcquired = store.acquireLock("order-200", Duration.ofSeconds(30));
-        assertThat(lockAcquired).isFalse();
+        assertThat(store.lookup("order-200"))
+                .isEqualTo(new Snapshot(State.COMPLETED, "ORDER_CREATED_RESULT"));
+        assertThat(store.acquireLock("order-200", ttl)).isEmpty();
     }
 
     @Test
     void shouldReturnEmptyWhenProcessedResultExpired() throws InterruptedException {
-        store.acquireLock("order-exp-result", Duration.ofSeconds(30));
-        store.markProcessed("order-exp-result", "TEMP_RESULT", Duration.ofMillis(50));
+        Duration ttl = Duration.ofSeconds(30);
+        String owner = store.acquireLock("order-exp-result", ttl).orElseThrow();
+        assertThat(
+                        store.markProcessed(
+                                "order-exp-result", owner, "TEMP_RESULT", Duration.ofMillis(50)))
+                .isTrue();
 
-        assertThat(store.getProcessedResult("order-exp-result"))
-                .isPresent()
-                .contains("TEMP_RESULT");
+        assertThat(store.lookup("order-exp-result"))
+                .isEqualTo(new Snapshot(State.COMPLETED, "TEMP_RESULT"));
 
         Thread.sleep(80);
 
-        assertThat(store.getProcessedResult("order-exp-result")).isEmpty();
-
-        // Can re-acquire once expired
-        boolean reacquired = store.acquireLock("order-exp-result", Duration.ofSeconds(30));
-        assertThat(reacquired).isTrue();
+        assertThat(store.lookup("order-exp-result")).isEqualTo(Snapshot.ABSENT);
+        assertThat(store.acquireLock("order-exp-result", ttl)).isPresent();
     }
 
     @Test
     void shouldReleaseLockWhenProcessing() {
-        boolean acquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
-        assertThat(acquired).isTrue();
+        Duration ttl = Duration.ofSeconds(30);
+        String owner = store.acquireLock("order-cancel", ttl).orElseThrow();
 
-        store.releaseLock("order-cancel");
+        store.releaseLock("order-cancel", owner);
 
-        // Should be able to re-acquire after release
-        boolean reacquired = store.acquireLock("order-cancel", Duration.ofSeconds(30));
-        assertThat(reacquired).isTrue();
+        assertThat(store.acquireLock("order-cancel", ttl)).isPresent();
     }
 
     @Test
     void shouldNotReleaseLockIfAlreadyProcessed() {
-        store.acquireLock("order-safe", Duration.ofSeconds(30));
-        store.markProcessed("order-safe", "DONE", Duration.ofSeconds(30));
+        Duration ttl = Duration.ofSeconds(30);
+        String owner = store.acquireLock("order-safe", ttl).orElseThrow();
+        assertThat(store.markProcessed("order-safe", owner, "DONE", ttl)).isTrue();
 
-        // Release lock targets PROCESSING status only
-        store.releaseLock("order-safe");
+        store.releaseLock("order-safe", owner);
 
-        // Result should still be intact
-        Optional<Object> result = store.getProcessedResult("order-safe");
-        assertThat(result).isPresent().contains("DONE");
+        assertThat(store.lookup("order-safe")).isEqualTo(new Snapshot(State.COMPLETED, "DONE"));
     }
 
     @Test
     void shouldReturnEmptyWhenResultNotFound() {
-        Optional<Object> result = store.getProcessedResult("non-existent-key");
-        assertThat(result).isEmpty();
+        assertThat(store.lookup("non-existent-key")).isEqualTo(Snapshot.ABSENT);
     }
 }
