@@ -16,9 +16,10 @@ import org.springframework.util.ClassUtils;
 
 /**
  * Registers runtime reflection hints for common cross-cutting DTOs serialized/deserialized with
- * Jackson. Logging classes and aspects do not require reflection hints, and Java serialization
- * hints are not registered. Consuming services are responsible for registering reflection hints for
- * their specific {@code PagedResult<T>} element types.
+ * Jackson and includes the JDBC idempotency schema resource. Logging classes and aspects do not
+ * require reflection hints, and Java serialization hints are not registered. Consuming services are
+ * responsible for registering reflection hints for their specific {@code PagedResult<T>} element
+ * types.
  */
 public class CommonRuntimeHints implements RuntimeHintsRegistrar {
 
@@ -65,6 +66,7 @@ public class CommonRuntimeHints implements RuntimeHintsRegistrar {
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS,
                         MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.resources().registerPattern("schema-processed-messages.sql");
         if (ClassUtils.isPresent("io.hypersistence.tsid.TSID", classLoader)) {
             hints.reflection()
                     .registerType(

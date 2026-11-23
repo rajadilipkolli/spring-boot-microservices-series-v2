@@ -13,8 +13,11 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
+// AspectJProxyFactory generates a CGLIB proxy at runtime.
+@DisabledInNativeImage
 class IdempotentAspectTest {
 
     static class SampleService {

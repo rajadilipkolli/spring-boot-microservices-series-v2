@@ -16,11 +16,14 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.mockito.ArgumentMatchers;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 
+// Mockito creates Redis test doubles at runtime.
+@DisabledInNativeImage
 class RedisIdempotencyStoreTest {
 
     private StringRedisTemplate redisTemplate;

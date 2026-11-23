@@ -46,7 +46,8 @@ class CommonRuntimeHintsTest {
                         TypeReference.of(OrderDto.OrderItemDto.class),
                         TypeReference.of(DltRecordPayload.class),
                         TypeReference.of(TsidFactorySupplier.class));
-        assertThat(hints.resources().resourcePatternHints()).isEmpty();
+        assertThat(RuntimeHintsPredicates.resource().forResource("schema-processed-messages.sql"))
+                .accepts(hints);
         assertThat(hints.proxies().jdkProxyHints()).isEmpty();
     }
 
@@ -69,7 +70,8 @@ class CommonRuntimeHintsTest {
                         TypeReference.of(OrderDto.OrderItemDto.class),
                         TypeReference.of(DltRecordPayload.class),
                         TypeReference.of(TsidFactorySupplier.class));
-        assertThat(hints.resources().resourcePatternHints()).isEmpty();
+        assertThat(RuntimeHintsPredicates.resource().forResource("schema-processed-messages.sql"))
+                .accepts(hints);
         assertThat(hints.proxies().jdkProxyHints()).isEmpty();
     }
 }
