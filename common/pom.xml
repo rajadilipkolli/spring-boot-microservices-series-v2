@@ -431,6 +431,9 @@
                                 <!-- Netty's Java 25 direct buffer cleaner closes shared arenas. -->
                                 <buildArg>-H:+SharedArenaSupport</buildArg>
                                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                                <!-- Work around the GraalVM 25.0.x compiler crash with shared arenas and Kafka:
+                                     https://github.com/oracle/graal/issues/15113 -->
+                                <buildArg>-Ob</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>
