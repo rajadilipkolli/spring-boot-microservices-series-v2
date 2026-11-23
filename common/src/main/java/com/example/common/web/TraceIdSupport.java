@@ -118,7 +118,9 @@ public final class TraceIdSupport {
         return null;
     }
 
-    private static class OtelTraceIdExtractor {
+    private static final class OtelTraceIdExtractor {
+        private OtelTraceIdExtractor() {}
+
         /**
          * Returns the current valid span's trace ID, or {@code null} if unavailable or retrieval
          * fails.
