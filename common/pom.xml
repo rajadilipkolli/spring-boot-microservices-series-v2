@@ -144,11 +144,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
@@ -202,6 +197,11 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>r2dbc-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -430,6 +430,7 @@
                             <buildArgs>
                                 <!-- Netty's Java 25 direct buffer cleaner closes shared arenas. -->
                                 <buildArg>-H:+SharedArenaSupport</buildArg>
+                                <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

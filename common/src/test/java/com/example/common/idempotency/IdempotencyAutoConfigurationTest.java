@@ -110,6 +110,11 @@ class IdempotencyAutoConfigurationTest {
                         AutoConfigurations.of(
                                 DataSourceAutoConfiguration.class,
                                 JdbcTemplateAutoConfiguration.class))
+                .withPropertyValues(
+                        "spring.datasource.type=org.springframework.jdbc.datasource.SimpleDriverDataSource",
+                        "spring.datasource.url=jdbc:postgresql://localhost:5432/testdb",
+                        "spring.datasource.username=test",
+                        "spring.datasource.password=test")
                 .run(context ->
                         assertThat(context.getBean(IdempotencyStore.class))
                                 .isInstanceOf(JdbcIdempotencyStore.class));
