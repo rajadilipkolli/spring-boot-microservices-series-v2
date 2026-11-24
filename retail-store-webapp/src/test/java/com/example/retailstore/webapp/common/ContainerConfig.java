@@ -40,7 +40,7 @@ public class ContainerConfig {
     @RestartScope
     @ServiceConnection(name = "redis")
     RedisContainer redisContainer() {
-        return new RedisContainer(DockerImageName.parse("redis").withTag("8.10.3-alpine")).withReuse(true);
+        return new RedisContainer(DockerImageName.parse("redis").withTag("8.12.0-alpine")).withReuse(true);
     }
 
     @Bean
