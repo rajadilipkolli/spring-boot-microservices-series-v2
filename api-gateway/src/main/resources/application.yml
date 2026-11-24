@@ -49,6 +49,7 @@ spring:
                 - Path=/order-service/**
               uri: lb://order-service
               filters:
+                - TokenRelay=
                 - name: RequestRateLimiter
                   args:
                     redis-rate-limiter:
@@ -59,6 +60,7 @@ spring:
                 - Path=/inventory-service/**
               uri: lb://inventory-service
               filters:
+                - TokenRelay=
                 - name: CircuitBreaker
                   args:
                     name: exampleSlowCircuitBreaker
@@ -67,6 +69,7 @@ spring:
               predicates:
                 - Path=/catalog-service/**
               filters:
+                - TokenRelay=
                 - name: Retry
                   args:
                     retries: 3
@@ -81,6 +84,8 @@ spring:
               predicates:
                 - Path=/payment-service/**
               uri: lb://payment-service
+              filters:
+                - TokenRelay=
     refresh:
       enabled: false
   config:

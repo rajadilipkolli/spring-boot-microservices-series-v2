@@ -1,6 +1,6 @@
 /***
  * <p>
- * Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+ * Licensed under MIT License Copyright (c) 2026 Raja Kolli.
  * </p>
  ***/
 
@@ -127,10 +127,14 @@ class IdempotencyAutoConfigurationTest {
     void handlesMissingOptionalDependencies() {
         runner.withClassLoader(
                         new FilteredClassLoader(
-                                "org.springframework.jdbc", "org.springframework.data.redis"))
-                .run(context ->
-                        assertThat(context.getBean(IdempotencyStore.class))
-                                .isInstanceOf(InMemoryIdempotencyStore.class));
+                                "org.springframework.jdbc",
+                                "org.springframework.data.redis",
+                                "org.aspectj"))
+                .run(context -> {
+                    assertThat(context.getBean(IdempotencyStore.class))
+                            .isInstanceOf(InMemoryIdempotencyStore.class);
+                    assertThat(context).doesNotHaveBean(IdempotentAspect.class);
+                });
     }
 
     @Test
