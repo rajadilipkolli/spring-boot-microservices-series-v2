@@ -71,6 +71,15 @@ jobs:
       - name: Build and analyze
         run: ./mvnw clean verify
 
+      - name: Verify CycloneDX SBOM Generation
+        run: |
+          SBOM_FILE="target/classes/META-INF/sbom/application.cdx.json"
+          if [ ! -f "$SBOM_FILE" ]; then
+            echo "Error: SBOM file $SBOM_FILE does not exist!"
+            exit 1
+          fi
+          echo "Verified SBOM file: $SBOM_FILE"
+
       - if: ${{ github.ref == 'refs/heads/main' }}
         name: Verify Docker credentials
         env:

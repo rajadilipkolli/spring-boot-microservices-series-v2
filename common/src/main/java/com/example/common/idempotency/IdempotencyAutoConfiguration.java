@@ -1,6 +1,6 @@
 /***
  * <p>
- * Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
+ * Licensed under MIT License Copyright (c) 2026 Raja Kolli.
  * </p>
  ***/
 
@@ -106,6 +106,7 @@ public class IdempotencyAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "org.aspectj.lang.ProceedingJoinPoint")
     public IdempotentAspect idempotentAspect(IdempotencyStore idempotencyStore) {
         return new IdempotentAspect(idempotencyStore);
     }
