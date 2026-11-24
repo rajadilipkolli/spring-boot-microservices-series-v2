@@ -16,10 +16,9 @@ class VirtualThreadsExecutionTest {
         AtomicBoolean isVirtualThread = new AtomicBoolean(false);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<?> future =
-                    executor.submit(
-                            () -> {
-                                isVirtualThread.set(Thread.currentThread().isVirtual());
-                            });
+                    executor.submit(() -> {
+                        isVirtualThread.set(Thread.currentThread().isVirtual());
+                    });
             future.get();
         }
         assertThat(isVirtualThread.get()).isTrue();
