@@ -53,6 +53,13 @@ class GatewaySecurityAutoConfigurationTest {
                     assertThat(context).hasSingleBean(SecurityWebFilterChain.class);
                     WebTestClient client = WebTestClient.bindToApplicationContext(context).build();
                     client.get().uri("/").exchange().expectStatus().isOk();
+                    client.get().uri("/actuator/health").exchange().expectStatus().isOk();
+                    client.get()
+                            .uri("/catalog-service/actuator/health")
+                            .exchange()
+                            .expectStatus()
+                            .isOk();
+                    client.get().uri("/order-service/v3/api-docs").exchange().expectStatus().isOk();
                     client.post().uri("/private").exchange().expectStatus().isUnauthorized();
                 });
     }
@@ -74,8 +81,11 @@ class GatewaySecurityAutoConfigurationTest {
         @Bean
         RouterFunction<ServerResponse> routes() {
             return RouterFunctions.route()
-                    .GET("/", request -> ServerResponse.ok().build())
-                    .POST("/private", request -> ServerResponse.ok().build())
+                    .GET("/", _ -> ServerResponse.ok().build())
+                    .GET("/actuator/health", _ -> ServerResponse.ok().build())
+                    .GET("/catalog-service/actuator/health", _ -> ServerResponse.ok().build())
+                    .GET("/order-service/v3/api-docs", _ -> ServerResponse.ok().build())
+                    .POST("/private", _ -> ServerResponse.ok().build())
                     .build();
         }
     }

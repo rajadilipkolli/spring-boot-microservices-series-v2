@@ -3,6 +3,7 @@ package com.example.e2e;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.e2e.auth.KeycloakAuthClient;
 import com.example.e2e.config.E2EConfig;
 import com.example.e2e.models.ProductRequest;
 import io.restassured.response.Response;
@@ -17,9 +18,12 @@ import org.junit.jupiter.api.Test;
 @DisplayName("E2E - Resilience & Circuit Breaker Verification")
 class ResilienceE2ETest {
 
+    private static String bearerToken;
+
     @BeforeAll
     static void setup() {
         E2EConfig.initRestAssured();
+        bearerToken = KeycloakAuthClient.getAccessToken();
     }
 
     @Test
@@ -54,7 +58,7 @@ class ResilienceE2ETest {
                         "https://example.com/item.png",
                         new BigDecimal("19.99"));
 
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
                 .body(product)
                 .when()
                 .post("/catalog-service/api/catalog")
@@ -63,7 +67,7 @@ class ResilienceE2ETest {
 
         // Querying an existing product with ?delay=4 triggers delay logic in controller
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
                         .queryParam("delay", 4)
                         .when()
                         .get("/catalog-service/api/catalog/product-code/" + productCode)
