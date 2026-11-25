@@ -54,7 +54,7 @@ class ResilienceE2ETest {
                         "https://example.com/item.png",
                         new BigDecimal("19.99"));
 
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(product)
                 .when()
                 .post("/catalog-service/api/catalog")
@@ -63,7 +63,7 @@ class ResilienceE2ETest {
 
         // Querying an existing product with ?delay=4 triggers delay logic in controller
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .queryParam("delay", 4)
                         .when()
                         .get("/catalog-service/api/catalog/product-code/" + productCode)

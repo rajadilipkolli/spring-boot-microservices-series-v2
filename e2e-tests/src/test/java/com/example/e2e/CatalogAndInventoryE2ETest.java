@@ -46,7 +46,7 @@ class CatalogAndInventoryE2ETest {
                         new BigDecimal("49.99"));
 
         createdProductId =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(product)
                         .when()
                         .post("/catalog-service/api/catalog")
@@ -61,7 +61,7 @@ class CatalogAndInventoryE2ETest {
     @Order(2)
     @DisplayName("Step 2: Should fetch created product by code")
     void shouldFetchProductByCode() {
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/catalog-service/api/catalog/product-code/" + productCode)
                 .then()
@@ -78,7 +78,7 @@ class CatalogAndInventoryE2ETest {
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        given().spec(E2EConfig.defaultRequestSpec())
+                        given().spec(E2EConfig.authenticatedRequestSpec())
                                 .when()
                                 .get("/inventory-service/api/inventory/" + productCode)
                                 .then()
@@ -86,7 +86,7 @@ class CatalogAndInventoryE2ETest {
                                 .body("productCode", is(productCode)));
 
         InventoryRequest inventory = new InventoryRequest(productCode, 75);
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(inventory)
                 .when()
                 .put("/inventory-service/api/inventory/product/" + productCode)
@@ -104,7 +104,7 @@ class CatalogAndInventoryE2ETest {
                 .atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        given().spec(E2EConfig.defaultRequestSpec())
+                        given().spec(E2EConfig.authenticatedRequestSpec())
                                 .queryParam("fetchInStock", true)
                                 .when()
                                 .get("/catalog-service/api/catalog/product-code/" + productCode)
@@ -120,7 +120,7 @@ class CatalogAndInventoryE2ETest {
     void shouldDeleteProductAndPropagateSoftDelete() {
         if (createdProductId == null) {
             createdProductId =
-                    given().spec(E2EConfig.defaultRequestSpec())
+                    given().spec(E2EConfig.authenticatedRequestSpec())
                             .when()
                             .get("/catalog-service/api/catalog/product-code/" + productCode)
                             .then()
@@ -129,14 +129,14 @@ class CatalogAndInventoryE2ETest {
                             .path("id");
         }
 
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .delete("/catalog-service/api/catalog/" + createdProductId)
                 .then()
                 .statusCode(200);
 
         // Catalog reads should return 404
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/catalog-service/api/catalog/product-code/" + productCode)
                 .then()
@@ -147,7 +147,7 @@ class CatalogAndInventoryE2ETest {
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(500))
                 .untilAsserted(() ->
-                        given().spec(E2EConfig.defaultRequestSpec())
+                        given().spec(E2EConfig.authenticatedRequestSpec())
                                 .when()
                                 .get("/inventory-service/api/inventory/" + productCode)
                                 .then()

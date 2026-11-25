@@ -57,6 +57,7 @@ public final class KeycloakAuthClient {
         log.info(
                 "Requesting Keycloak user access token for '{}' from: {}", username, tokenEndpoint);
 
+        Instant requestedAt = Instant.now();
         try {
             Response response =
                     given().contentType(ContentType.URLENC)
@@ -74,7 +75,7 @@ public final class KeycloakAuthClient {
             if (response.statusCode() == 200) {
                 String token = response.jsonPath().getString("access_token");
                 int expiresIn = response.jsonPath().getInt("expires_in");
-                Instant expiry = Instant.now().plusSeconds(Math.max(10, expiresIn - 30));
+                Instant expiry = requestedAt.plusSeconds(expiresIn - 30L);
                 TOKEN_CACHE.put(cacheKey, new CachedToken(token, expiry));
                 log.info("Successfully acquired Keycloak access token for user '{}'", username);
                 return token;

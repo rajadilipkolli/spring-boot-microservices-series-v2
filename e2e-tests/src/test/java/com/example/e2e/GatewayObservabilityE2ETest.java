@@ -42,7 +42,7 @@ class GatewayObservabilityE2ETest {
             })
     void shouldInjectTraceIdOnSuccessfulDownstreamRouting(String path) {
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .when()
                         .get(path)
                         .then()
@@ -61,7 +61,7 @@ class GatewayObservabilityE2ETest {
         String clientTraceId = UUID.randomUUID().toString().replace("-", "");
 
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .header(TRACE_ID_HEADER, clientTraceId)
                         .when()
                         .get("/inventory-service/api/inventory/product")
@@ -83,7 +83,7 @@ class GatewayObservabilityE2ETest {
     @DisplayName("Gateway should inject X-Trace-Id header even on downstream 404 responses")
     void shouldInjectTraceIdOnNotFoundResponses() {
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .when()
                         .get(
                                 "/catalog-service/api/catalog/product-code/NON_EXISTENT_PROD_"

@@ -35,14 +35,16 @@ class GatewaySecurityAutoConfiguration {
                         authorize
                                 .pathMatchers(
                                         "/actuator/**",
+                                        "/*-service/actuator/**",
                                         "/v3/api-docs/**",
+                                        "/*-service/v3/api-docs/**",
+                                        "/*-service/v3/api-docs",
                                         "/swagger-ui/**",
                                         "/swagger-ui.html",
                                         "/webjars/**",
                                         "/fallback/**",
                                         "/api/v1/generate",
-                                        "/",
-                                        "/*-service/v3/api-docs")
+                                        "/")
                                 .permitAll()
                                 .anyExchange()
                                 .authenticated())
