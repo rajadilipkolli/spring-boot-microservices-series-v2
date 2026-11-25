@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 
-import com.example.e2e.auth.KeycloakAuthClient;
 import com.example.e2e.config.E2EConfig;
 import com.example.e2e.models.Address;
 import com.example.e2e.models.CustomerRequest;
@@ -36,7 +35,6 @@ class OrderSagaFulfillmentE2ETest {
 
     private static final Logger log = LoggerFactory.getLogger(OrderSagaFulfillmentE2ETest.class);
 
-    private static String bearerToken;
     private static final String TEST_PRODUCT_CODE =
             "E2E-PROD-" + UUID.randomUUID().toString().substring(0, 8);
     private static Long customerId;
@@ -44,7 +42,6 @@ class OrderSagaFulfillmentE2ETest {
     @BeforeAll
     static void setup() {
         E2EConfig.initRestAssured();
-        bearerToken = KeycloakAuthClient.getAccessToken();
 
         // 1. Ensure product exists in Catalog
         ProductRequest product =
@@ -56,7 +53,7 @@ class OrderSagaFulfillmentE2ETest {
                         new BigDecimal("25.00"));
 
         log.info("Creating product in catalog: {}", TEST_PRODUCT_CODE);
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(product)
                 .when()
                 .post("/catalog-service/api/catalog")
@@ -70,7 +67,7 @@ class OrderSagaFulfillmentE2ETest {
                 .pollDelay(Duration.ofSeconds(1))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(() ->
-                        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                        given().spec(E2EConfig.authenticatedRequestSpec())
                                 .when()
                                 .get(
                                         "/inventory-service/api/inventory/{productCode}",
@@ -80,7 +77,7 @@ class OrderSagaFulfillmentE2ETest {
 
         InventoryRequest inventory = new InventoryRequest(TEST_PRODUCT_CODE, 100);
         log.info("Provisioning inventory for product: {}", TEST_PRODUCT_CODE);
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(inventory)
                 .when()
                 .put("/inventory-service/api/inventory/product/{productCode}", TEST_PRODUCT_CODE)
@@ -103,7 +100,7 @@ class OrderSagaFulfillmentE2ETest {
 
         log.info("Creating customer in payment service");
         Response customerResponse =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(customer)
                         .when()
                         .post("/payment-service/api/customers")
@@ -128,7 +125,7 @@ class OrderSagaFulfillmentE2ETest {
 
         // Submit order
         Response createOrderResponse =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -148,7 +145,7 @@ class OrderSagaFulfillmentE2ETest {
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(() -> {
                     Response orderCheck =
-                            given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                            given().spec(E2EConfig.authenticatedRequestSpec())
                                     .when()
                                     .accept(ContentType.JSON)
                                     .get("/order-service/api/orders/{id}", orderId)
@@ -163,7 +160,7 @@ class OrderSagaFulfillmentE2ETest {
                 });
 
         // Verify customer balance was deducted in payment-service (1000.00 - 50.00 = 950.00)
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/payment-service/api/customers/" + customerId)
                 .then()
@@ -183,7 +180,7 @@ class OrderSagaFulfillmentE2ETest {
         OrderRequest orderRequest = new OrderRequest(customerId, List.of(item), address);
 
         Response createOrderResponse =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -202,7 +199,7 @@ class OrderSagaFulfillmentE2ETest {
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(() -> {
                     Response orderCheck =
-                            given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                            given().spec(E2EConfig.authenticatedRequestSpec())
                                     .accept(ContentType.JSON)
                                     .when()
                                     .get("/order-service/api/orders/{id}", orderId)
@@ -236,7 +233,7 @@ class OrderSagaFulfillmentE2ETest {
                         new BigDecimal("10.00"));
 
         Response customerResponse =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(lowBalanceCustomer)
                         .when()
                         .post("/payment-service/api/customers")
@@ -254,7 +251,7 @@ class OrderSagaFulfillmentE2ETest {
         OrderRequest orderRequest = new OrderRequest(poorCustomerId, List.of(item), address);
 
         Response createOrderResponse =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -272,7 +269,7 @@ class OrderSagaFulfillmentE2ETest {
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(() -> {
                     Response orderCheck =
-                            given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                            given().spec(E2EConfig.authenticatedRequestSpec())
                                     .accept(ContentType.JSON)
                                     .when()
                                     .get("/order-service/api/orders/{id}", orderId)

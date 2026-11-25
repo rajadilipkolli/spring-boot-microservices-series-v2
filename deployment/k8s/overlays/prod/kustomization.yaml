@@ -24,6 +24,20 @@ patches:
       value: https
 - path: webapp-https.yaml
 - patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: api-gateway
+      namespace: retailstore
+    spec:
+      template:
+        spec:
+          containers:
+          - name: api-gateway
+            env:
+            - name: KEYCLOAK_ISSUER_URI
+              value: https://keycloak.local/realms/retailstore
+- patch: |-
     $patch: delete
     apiVersion: v1
     kind: Secret

@@ -15,7 +15,6 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.example.e2e.auth.KeycloakAuthClient;
 import com.example.e2e.config.E2EConfig;
 import com.example.e2e.models.Address;
 import com.example.e2e.models.CustomerRequest;
@@ -52,7 +51,6 @@ class RetailStoreWebappAuthE2ETest {
 
     private static final Logger log = LoggerFactory.getLogger(RetailStoreWebappAuthE2ETest.class);
 
-    private static String bearerToken;
     private static String testProductCode;
     private static String testCustomerEmail;
     private static String testCustomerName;
@@ -63,12 +61,6 @@ class RetailStoreWebappAuthE2ETest {
     static void setup() {
         E2EConfig.initRestAssured();
 
-        bearerToken = KeycloakAuthClient.getAccessToken();
-        assertThat(bearerToken)
-                .as("Must acquire a valid Keycloak access token for retailstore-webapp client")
-                .isNotBlank();
-        log.info("Acquired OAuth2 Bearer token for retailstore-webapp client");
-
         testProductCode = "WEBAPP-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
@@ -76,7 +68,7 @@ class RetailStoreWebappAuthE2ETest {
     @Order(1)
     @DisplayName("CatalogServiceClient: GET /catalog-service/api/catalog (paginated products)")
     void shouldFetchCatalogProductsWithAuthToken() {
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .queryParam("pageNo", 0)
                 .when()
                 .get("/catalog-service/api/catalog")
@@ -99,7 +91,7 @@ class RetailStoreWebappAuthE2ETest {
                         new BigDecimal("29.99"));
 
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(product)
                         .when()
                         .post("/catalog-service/api/catalog")
@@ -121,7 +113,7 @@ class RetailStoreWebappAuthE2ETest {
                 .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofSeconds(1))
                 .untilAsserted(() ->
-                        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                        given().spec(E2EConfig.authenticatedRequestSpec())
                                 .queryParam("pageNo", 0)
                                 .when()
                                 .get("/inventory-service/api/inventory")
@@ -152,7 +144,7 @@ class RetailStoreWebappAuthE2ETest {
                         new BigDecimal("500.00"));
 
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(customer)
                         .when()
                         .post("/payment-service/api/customers")
@@ -174,7 +166,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetCustomerByIdWithAuthToken() {
         assertThat(createdCustomerId).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/payment-service/api/customers/" + createdCustomerId)
                 .then()
@@ -189,7 +181,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetCustomerByEmailWithAuthToken() {
         assertThat(testCustomerEmail).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .queryParam("email", testCustomerEmail)
                 .when()
                 .get("/payment-service/api/customers/by-email")
@@ -206,7 +198,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetCustomerByNameWithAuthToken() {
         assertThat(testCustomerName).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/payment-service/api/customers/name/" + testCustomerName)
                 .then()
@@ -227,7 +219,7 @@ class RetailStoreWebappAuthE2ETest {
         OrderRequest orderRequest = new OrderRequest(createdCustomerId, List.of(item), address);
 
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -246,7 +238,7 @@ class RetailStoreWebappAuthE2ETest {
     @Order(9)
     @DisplayName("OrderServiceClient: GET /order-service/api/orders (paged orders)")
     void shouldGetOrdersWithAuthToken() {
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/order-service/api/orders")
                 .then()
@@ -260,7 +252,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetOrderByIdWithAuthToken() {
         assertThat(createdOrderId).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/order-service/api/orders/" + createdOrderId)
                 .then()
@@ -277,7 +269,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetOrdersByCustomerWithAuthToken() {
         assertThat(createdCustomerId).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/order-service/api/orders/customer/" + createdCustomerId)
                 .then()
@@ -292,7 +284,7 @@ class RetailStoreWebappAuthE2ETest {
     void shouldGetOrdersViaPaymentServiceCustomerEndpointWithAuthToken() {
         assertThat(createdCustomerId).isNotNull();
 
-        given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/payment-service/api/customers/" + createdCustomerId + "/orders")
                 .then()

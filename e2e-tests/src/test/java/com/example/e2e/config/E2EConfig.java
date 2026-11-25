@@ -8,6 +8,7 @@ package com.example.e2e.config;
 
 import static org.awaitility.Awaitility.await;
 
+import com.example.e2e.auth.KeycloakAuthClient;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.HttpClientConfig;
@@ -145,14 +146,14 @@ public final class E2EConfig {
     }
 
     /**
-     * Returns a {@link RequestSpecification} identical to {@link #defaultRequestSpec()} but with
-     * the supplied bearer token attached as an {@code Authorization: Bearer} header. Use this when
-     * testing endpoints that require an authenticated caller (e.g. the APIs consumed by
-     * retail-store-webapp).
-     *
-     * @param bearerToken a valid OAuth2 access token
+     * Returns a {@link RequestSpecification} identical to {@link #defaultRequestSpec()} but with a
+     * current bearer token attached as an {@code Authorization: Bearer} header for this request.
      */
-    public static RequestSpecification authenticatedRequestSpec(String bearerToken) {
+    public static RequestSpecification authenticatedRequestSpec() {
+        String bearerToken = KeycloakAuthClient.getAccessToken();
+        if (bearerToken == null || bearerToken.isBlank()) {
+            throw new IllegalStateException("Could not acquire a Keycloak access token");
+        }
         return new RequestSpecBuilder()
                 .setBaseUri(getBaseUrl())
                 .setConfig(restAssuredConfig())

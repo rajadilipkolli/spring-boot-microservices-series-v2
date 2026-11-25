@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.example.e2e.auth.KeycloakAuthClient;
 import com.example.e2e.config.E2EConfig;
 import io.restassured.response.Response;
 import java.util.UUID;
@@ -27,12 +26,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 class GatewayObservabilityE2ETest {
 
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
-    private static String bearerToken;
 
     @BeforeAll
     static void setup() {
         E2EConfig.initRestAssured();
-        bearerToken = KeycloakAuthClient.getAccessToken();
     }
 
     @ParameterizedTest(name = "Gateway should inject X-Trace-Id when routing to {0}")
@@ -45,7 +42,7 @@ class GatewayObservabilityE2ETest {
             })
     void shouldInjectTraceIdOnSuccessfulDownstreamRouting(String path) {
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .when()
                         .get(path)
                         .then()
@@ -64,7 +61,7 @@ class GatewayObservabilityE2ETest {
         String clientTraceId = UUID.randomUUID().toString().replace("-", "");
 
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .header(TRACE_ID_HEADER, clientTraceId)
                         .when()
                         .get("/inventory-service/api/inventory/product")
@@ -86,7 +83,7 @@ class GatewayObservabilityE2ETest {
     @DisplayName("Gateway should inject X-Trace-Id header even on downstream 404 responses")
     void shouldInjectTraceIdOnNotFoundResponses() {
         Response response =
-                given().spec(E2EConfig.authenticatedRequestSpec(bearerToken))
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .when()
                         .get(
                                 "/catalog-service/api/catalog/product-code/NON_EXISTENT_PROD_"
